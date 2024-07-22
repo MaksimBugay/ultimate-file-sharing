@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Ultimate File Sharing",
+  "version": "1.0",
+  "description": "A Chrome extension for secure file sharing from your machine.",
+  "permissions": [
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "html/newtab.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "html/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/uuid.min.js", "js/callable-future.js", "js/pnotifications.js", "js/ws-connection.js"]
+    }
+  ],
+  "icons": {
+    "16": "images/file-sharing.png",
+    "48": "images/file-sharing.png",
+    "128": "images/file-sharing.png"
+  }
+}
