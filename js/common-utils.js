@@ -145,6 +145,20 @@ function shiftFirstNBytes(sourceBuffer, n) {
     return remainingBytesBuffer;
 }
 
+function splitArrayBuffer(arrayBuffer, chunkSize) {
+    const chunks = [];
+    const numChunks = Math.ceil(arrayBuffer.byteLength / chunkSize);
+
+    for (let i = 0; i < numChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, arrayBuffer.byteLength);
+        const chunk = arrayBuffer.slice(start, end);
+        chunks.push(chunk);
+    }
+
+    return chunks;
+}
+
 function isNotEmpty(x) {
     return (typeof x !== 'undefined') && x !== null && x !== undefined && x !== ''
 }
