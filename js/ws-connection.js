@@ -1,3 +1,5 @@
+console.log('ws-connection.js running on', window.location.href);
+
 const wsUrl = 'wss://vasilii.prodpushca.com:30085';
 
 let tabWithWsConnectionId = null;
@@ -63,50 +65,50 @@ async function tabWithWsConnectionCheck(tabId) {
     return result;
 }
 
-if (!wsConnectionCreated) {
-    console.log('ws-connection.js running on', window.location.href);
-
+function openWsConnectionIfNotExists(sendResponse) {
     getAllOpenTabIds(function (tabIds) {
         //console.log('Open Tab IDs:', tabIds);
         allTabsCheck(tabIds).then(result => {
             if (result) {
                 console.log("Connection to Pushca already exists");
+                if (typeof sendResponse === 'function') {
+                    sendResponse({result: 'alreadyExists'});
+                }
             } else {
                 console.log(`Open connection to pushca: tab id = ${ownTabId}`);
                 wsConnectionCreated = true;
                 tabWithWsConnectionId = ownTabId;
                 openWsConnection();
+                if (typeof sendResponse === 'function') {
+                    sendResponse({result: 'created'});
+                }
             }
         });
     });
-
-    chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-        if (request.message === "was-ws-connection-created") {
-            sendResponse({loaded: wsConnectionCreated});
-            return true;
-        }
-
-        if (request.message === "get-tab-with-ws-connection-id") {
-            sendResponse({tabId: tabWithWsConnectionId});
-            return true;
-        }
-
-        if (request.message === "open-ws-connection") {
-            if (wsConnectionCreated) {
-                console.log("Connection to Pushca already exists on page");
-                sendResponse({result: 'alreadyExists'});
-            } else {
-                wsConnectionCreated = true;
-                console.log("Connection to Pushca was added");
-                openWsConnection();
-                sendResponse({result: 'created'});
-            }
-            return true;
-        }
-    });
-} else {
-    console.log('ws-connection.js already executed on', window.location.href)
 }
+
+openWsConnectionIfNotExists();
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    if (request.message === "was-ws-connection-created") {
+        sendResponse({loaded: wsConnectionCreated});
+        return true;
+    }
+
+    if (request.message === "get-tab-with-ws-connection-id") {
+        sendResponse({tabId: tabWithWsConnectionId});
+        return true;
+    }
+
+    if (request.message === "open-ws-connection") {
+        if (wsConnectionCreated) {
+            console.log("Connection to Pushca already exists on page");
+            sendResponse({result: 'alreadyExists'});
+        } else {
+            openWsConnectionIfNotExists(sendResponse);
+        }
+        return true;
+    }
+});
 
 function openWsConnection() {
     if (!PushcaClient.isOpen()) {
