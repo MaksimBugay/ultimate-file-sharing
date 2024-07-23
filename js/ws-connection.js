@@ -116,14 +116,14 @@ function openWsConnection() {
             wsUrl,
             new ClientFilter(
                 "main",
-                uuid.v4().toString(),
+                "mbugai",
                 "my-device",
                 "ultimate-file-sharing-listener"
             ),
             function (clientObj) {
                 return new ClientFilter(
                     clientObj.workSpaceId,
-                    uuid.v4().toString(),
+                    clientObj.accountId,
                     clientObj.deviceId,
                     clientObj.applicationId
                 );
