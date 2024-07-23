@@ -1,3 +1,9 @@
+
+const MemoryBlock = Object.freeze({
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024
+});
+
 function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
@@ -212,4 +218,12 @@ function decodeFromBase64UrlSafe(base64UrlSafe) {
     const decoder = new TextDecoder();
     return decoder.decode(uint8Array);
 }
+//---------------------------------------------------------------------------------------
+
+//---------------------------------FILES-------------------------------------------------
+function getFileExtension(filename) {
+    const parts = filename.split('.');
+    return parts.length > 1 ? parts.pop() : '';
+}
+
 //---------------------------------------------------------------------------------------

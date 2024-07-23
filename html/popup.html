@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Webcam Recorder</title>
+    <title>Ultimate File Sharing</title>
     <style>
         /* Add some basic styling */
         body {
@@ -17,9 +17,12 @@
     </style>
 </head>
 <body>
-<h1>Webcam Recorder</h1>
-<button id="startBtn">Start Recording</button>
-<button id="stopBtn" disabled>Stop Recording</button>
+<h1>Share any file from your PC</h1>
+<input type="file" id="fileInput">
+<button id="copy-link-btn">Copy link</button>
+<script src="../js/uuid.min.js"></script>
+<script src="../js/common-utils.js"></script>
+<script src="../js/index-db.js"></script>
 <script src="../js/popup.js"></script>
 </body>
 </html>
