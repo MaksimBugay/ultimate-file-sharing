@@ -5,7 +5,7 @@ let pingIntervalId = null;
 
 
 function getAllOpenTabIds(tabIdsConsumer) {
-    chrome.runtime.sendMessage({action: 'get-open-tab-ids'}, (response) => {
+    chrome.runtime.sendMessage({action: 'get-open-tab-ids', reason: 'ws-connection-exists-check'}, (response) => {
         if (response && response.tabIds) {
             if (typeof tabIdsConsumer === 'function') {
                 tabIdsConsumer(response.tabIds);
@@ -15,6 +15,9 @@ function getAllOpenTabIds(tabIdsConsumer) {
 }
 
 async function allTabsCheck(tabIds) {
+    if (tabIds.length === 0) {
+        return true;
+    }
     let wsConnectionExists = false;
 
     for (let i = 0; i < tabIds.length; i++) {

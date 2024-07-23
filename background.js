@@ -1,3 +1,4 @@
+let wsConnectionExistsCheckAlreadyExecuted = false;
 chrome.runtime.onInstalled.addListener(() => {
     injectConnectionToPushca(null);
 });
@@ -6,6 +7,7 @@ chrome.runtime.onStartup.addListener(() => {
     injectConnectionToPushca(null);
 });
 chrome.tabs.onRemoved.addListener((tabId) => {
+    wsConnectionExistsCheckAlreadyExecuted = false;
     injectConnectionToPushca(tabId);
 });
 
@@ -41,12 +43,19 @@ function injectConnectionToPushca(excludedTabId) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'get-open-tab-ids') {
-        chrome.tabs.query({}, (tabs) => {
-            let tabIds = tabs
-                .map(tab => tab.id)
-                .filter(tabId => tabId !== sender.tab.id);
-            sendResponse({tabIds: tabIds});
-        });
+        if ((message.reason === 'ws-connection-exists-check') && wsConnectionExistsCheckAlreadyExecuted) {
+            sendResponse({tabIds: []});
+        } else {
+            chrome.tabs.query({}, (tabs) => {
+                let tabIds = tabs
+                    .map(tab => tab.id)
+                    .filter(tabId => tabId !== sender.tab.id);
+                sendResponse({tabIds: tabIds});
+            });
+            if (message.reason === 'ws-connection-exists-check') {
+                wsConnectionExistsCheckAlreadyExecuted = true;
+            }
+        }
         return true; // Indicate that the response will be sent asynchronously
     }
 
