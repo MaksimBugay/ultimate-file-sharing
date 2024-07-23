@@ -1,5 +1,7 @@
 const wsUrl = 'wss://vasilii.prodpushca.com:30085/';
 
+let tabWithWsConnectionId = null;
+let ownTabId = null;
 let wsConnectionCreated = false;
 let pingIntervalId = null;
 
@@ -7,6 +9,7 @@ let pingIntervalId = null;
 function getAllOpenTabIds(tabIdsConsumer) {
     chrome.runtime.sendMessage({action: 'get-open-tab-ids', reason: 'ws-connection-exists-check'}, (response) => {
         if (response && response.tabIds) {
+            ownTabId = response.senderTabId;
             if (typeof tabIdsConsumer === 'function') {
                 tabIdsConsumer(response.tabIds);
             }
@@ -24,6 +27,7 @@ async function allTabsCheck(tabIds) {
         if (!wsConnectionExists) {
             const result = await tabWithWsConnectionCheck(tabIds[i]);
             if ((ResponseType.SUCCESS === result.type) && result.body) {
+                tabWithWsConnectionId = tabIds[i];
                 wsConnectionExists = true;
             }
         }
@@ -68,8 +72,9 @@ if (!wsConnectionCreated) {
             if (result) {
                 console.log("Connection to Pushca already exists");
             } else {
-                console.log("Open connection to pushca");
+                console.log(`Open connection to pushca: tab id = ${ownTabId}`);
                 wsConnectionCreated = true;
+                tabWithWsConnectionId = ownTabId;
                 //TODO open ws connection here
             }
         });
@@ -78,6 +83,11 @@ if (!wsConnectionCreated) {
     chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         if (request.message === "was-ws-connection-created") {
             sendResponse({loaded: wsConnectionCreated});
+            return true;
+        }
+
+        if (request.message === "get-tab-with-ws-connection-id") {
+            sendResponse({tabId: tabWithWsConnectionId});
             return true;
         }
 

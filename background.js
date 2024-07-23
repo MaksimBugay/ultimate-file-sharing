@@ -1,4 +1,13 @@
+//------------------------------common functions----------------------------
+function delay(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+//--------------------------------------------------------------------------
+
 let wsConnectionExistsCheckAlreadyExecuted = false;
+let tabWithWsConnectionId = null;
+
 chrome.runtime.onInstalled.addListener(() => {
     injectConnectionToPushca(null);
 });
@@ -10,6 +19,38 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     wsConnectionExistsCheckAlreadyExecuted = false;
     injectConnectionToPushca(tabId);
 });
+
+delay(5000).then(() => {
+    getTabWithWsConnectionId(function (tabId) {
+        console.log(`Tab with ws connection id = ${tabId}`);
+    })
+})
+
+function getTabWithWsConnectionId(tabIdConsumer) {
+    if (tabWithWsConnectionId) {
+        if (typeof tabIdConsumer === 'function') {
+            tabIdConsumer(tabWithWsConnectionId);
+        }
+        return;
+    }
+
+    chrome.tabs.query({}, (tabs) => {
+        for (let i = 0; i < tabs.length; i++) {
+            chrome.tabs.sendMessage(tabs[i].id, {
+                message: "get-tab-with-ws-connection-id"
+            }, response => {
+                if (chrome.runtime.lastError) {
+                    //console.error(`Free comments tab is not activated: ${chrome.runtime.lastError}`);
+                } else if (response && response.tabId) {
+                    tabWithWsConnectionId = response.tabId;
+                    if (typeof tabIdConsumer === 'function') {
+                        tabIdConsumer(tabWithWsConnectionId);
+                    }
+                }
+            });
+        }
+    });
+}
 
 function injectConnectionToPushca(excludedTabId) {
     chrome.tabs.query({}, (tabs) => {
@@ -50,7 +91,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 let tabIds = tabs
                     .map(tab => tab.id)
                     .filter(tabId => tabId !== sender.tab.id);
-                sendResponse({tabIds: tabIds});
+                sendResponse({tabIds: tabIds, senderTabId: sender.tab.id});
             });
             if (message.reason === 'ws-connection-exists-check') {
                 wsConnectionExistsCheckAlreadyExecuted = true;
@@ -75,7 +116,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-function delay(milliseconds) {
-    return new Promise(resolve => setTimeout(resolve, milliseconds));
-}
 
