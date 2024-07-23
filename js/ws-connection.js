@@ -59,11 +59,7 @@ async function tabWithWsConnectionCheck(tabId) {
     return result;
 }
 
-if (!(document.getElementById('wsConnectionScript'))) {
-    const loaded = document.createElement('div');
-    loaded.id = 'wsConnectionScript';
-    loaded.style.display = 'none';
-    document.body.appendChild(loaded);
+if (!wsConnectionCreated) {
     console.log('ws-connection.js running on', window.location.href);
 
     getAllOpenTabIds(function (tabIds) {
@@ -87,7 +83,7 @@ if (!(document.getElementById('wsConnectionScript'))) {
 
         if (request.message === "open-ws-connection") {
             if (wsConnectionCreated) {
-                console.log("Connection to Pushca already exists");
+                console.log("Connection to Pushca already exists on page");
                 sendResponse({result: 'alreadyExists'});
             } else {
                 wsConnectionCreated = true;
