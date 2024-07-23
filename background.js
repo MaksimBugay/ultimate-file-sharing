@@ -1,7 +1,18 @@
+chrome.runtime.onInstalled.addListener(() => {
+    injectConnectionToPushca(null);
+});
+
+chrome.runtime.onStartup.addListener(() => {
+    injectConnectionToPushca(null);
+});
 chrome.tabs.onRemoved.addListener((tabId) => {
+    injectConnectionToPushca(tabId);
+});
+
+function injectConnectionToPushca(excludedTabId) {
     chrome.tabs.query({}, (tabs) => {
         for (let i = 0; i < tabs.length; i++) {
-            if (tabs[i].id !== tabId) {
+            if (tabs[i].id !== excludedTabId) {
                 chrome.tabs.sendMessage(tabs[i].id, {
                     message: "open-ws-connection"
                 }, response => {
@@ -26,7 +37,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
             }
         }
     });
-});
+}
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'get-open-tab-ids') {

@@ -84,9 +84,11 @@ if (!(document.getElementById('wsConnectionScript'))) {
 
         if (request.message === "open-ws-connection") {
             if (wsConnectionCreated) {
+                console.log("Connection to Pushca already exists");
                 sendResponse({result: 'alreadyExists'});
             } else {
                 wsConnectionCreated = true;
+                console.log("Connection to Pushca was added");
                 //TODO open ws connection here
 
                 sendResponse({result: 'created'});
