@@ -1,12 +1,12 @@
 console.log('callable-future.js running on', window.location.href);
 const CallableFuture = {};
 
-const FCResponseType = Object.freeze({
+const WaiterResponseType = Object.freeze({
     SUCCESS: "SUCCESS",
     ERROR: "ERROR"
 });
 
-class FCWaiter {
+class Waiter {
     constructor() {
         this.promise = new Promise((resolve, reject) => {
             this.resolve = resolve; // Assign resolve function to the outer scope variable
@@ -15,7 +15,7 @@ class FCWaiter {
     }
 }
 
-class FCWaiterResponse {
+class WaiterResponse {
     constructor(type, body) {
         this.type = type;
         this.body = body;
@@ -23,17 +23,17 @@ class FCWaiterResponse {
 }
 
 CallableFuture.releaseWaiterWithSuccess = function (waiter, response) {
-    waiter.resolve(new FCWaiterResponse(FCResponseType.SUCCESS, response));
+    waiter.resolve(new WaiterResponse(WaiterResponseType.SUCCESS, response));
 }
 
 CallableFuture.releaseWaiterWithError = function (waiter, error) {
-    waiter.reject(new FCWaiterResponse(FCResponseType.ERROR, error));
+    waiter.reject(new WaiterResponse(WaiterResponseType.ERROR, error));
 }
 
 CallableFuture.waitingHall = new Map();
 
 CallableFuture.addToWaitingHall = function (id) {
-    let waiter = new FCWaiter();
+    let waiter = new Waiter();
     CallableFuture.waitingHall.set(id, waiter);
     return waiter.promise;
 }

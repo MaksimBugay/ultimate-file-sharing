@@ -24,7 +24,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["js/uuid.min.js", "js/callable-future.js", "js/pnotifications.js", "js/ws-connection.js"]
+      "js": ["js/uuid.min.js", "js/common-utils.js", "js/callable-future.js", "js/pnotifications.js", "js/ws-connection.js"]
     }
   ],
   "icons": {

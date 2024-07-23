@@ -1,4 +1,4 @@
-const wsUrl = 'wss://vasilii.prodpushca.com:30085/';
+const wsUrl = 'wss://vasilii.prodpushca.com:30085';
 
 let tabWithWsConnectionId = null;
 let ownTabId = null;
@@ -26,7 +26,7 @@ async function allTabsCheck(tabIds) {
     for (let i = 0; i < tabIds.length; i++) {
         if (!wsConnectionExists) {
             const result = await tabWithWsConnectionCheck(tabIds[i]);
-            if ((ResponseType.SUCCESS === result.type) && result.body) {
+            if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
                 tabWithWsConnectionId = tabIds[i];
                 wsConnectionExists = true;
             }
@@ -46,19 +46,19 @@ async function tabWithWsConnectionCheck(tabId) {
     let result;
     chrome.runtime.sendMessage({action: 'is-tab-with-ws-connection', tabId: tabId}, (response) => {
         if (response && response.withWsConnection) {
-            PushcaClient.releaseWaiterIfExists(tabId, true);
+            CallableFuture.releaseWaiterIfExistsWithSuccess(tabId, true);
         } else {
-            PushcaClient.releaseWaiterIfExists(tabId, false);
+            CallableFuture.releaseWaiterIfExistsWithSuccess(tabId, false);
         }
     });
     try {
         result = await Promise.race([
-            PushcaClient.addToWaitingHall(tabId),
+            CallableFuture.addToWaitingHall(tabId),
             timeout(timeoutMs)
         ]);
     } catch (error) {
-        PushcaClient.waitingHall.delete(tabId);
-        result = new WaiterResponse(ResponseType.ERROR, error);
+        CallableFuture.waitingHall.delete(tabId);
+        result = new WaiterResponse(WaiterResponseType.ERROR, error);
     }
     return result;
 }
@@ -75,7 +75,7 @@ if (!wsConnectionCreated) {
                 console.log(`Open connection to pushca: tab id = ${ownTabId}`);
                 wsConnectionCreated = true;
                 tabWithWsConnectionId = ownTabId;
-                //TODO open ws connection here
+                openWsConnection();
             }
         });
     });
@@ -98,8 +98,7 @@ if (!wsConnectionCreated) {
             } else {
                 wsConnectionCreated = true;
                 console.log("Connection to Pushca was added");
-                //TODO open ws connection here
-
+                openWsConnection();
                 sendResponse({result: 'created'});
             }
             return true;
@@ -107,5 +106,53 @@ if (!wsConnectionCreated) {
     });
 } else {
     console.log('ws-connection.js already executed on', window.location.href)
+}
+
+function openWsConnection() {
+    if (!PushcaClient.isOpen()) {
+        PushcaClient.openWsConnection(
+            wsUrl,
+            new ClientFilter(
+                "main",
+                uuid.v4().toString(),
+                "my-device",
+                "ultimate-file-sharing-listener"
+            ),
+            function (clientObj) {
+                return new ClientFilter(
+                    clientObj.workSpaceId,
+                    uuid.v4().toString(),
+                    clientObj.deviceId,
+                    clientObj.applicationId
+                );
+            },
+            function () {
+                console.log("Connected to Pushca!");
+                pingIntervalId = window.setInterval(function () {
+                    PushcaClient.sendPing();
+                }, 30000);
+            },
+            function (ws, event) {
+                window.clearInterval(pingIntervalId);
+                if (!event.wasClean) {
+                    console.error("Your connection died, refresh the page please");
+                }
+            },
+            function (ws, messageText) {
+                if (messageText !== "PONG") {
+                    console.log(messageText);
+                }
+            },
+            function (channelEvent) {
+                //console.log(channelEvent);
+            },
+            function (channelMessage) {
+                //console.log(channelMessage);
+            },
+            function (binary) {
+                //console.log(binary.length)
+            }
+        );
+    }
 }
 

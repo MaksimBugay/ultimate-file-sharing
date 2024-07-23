@@ -147,7 +147,69 @@ function isEmpty(x) {
     return !isNotEmpty(x);
 }
 
+function isArrayNotEmpty(arr) {
+    return arr !== null && arr !== undefined && Array.isArray(arr) && arr.length > 0;
+}
+
 function extractNumber(str) {
     const match = str.match(/\d+/);
     return match ? parseInt(match[0], 10) : null;
 }
+
+//-----------------------------printing--------------------------------------------------
+function printDateTime(dt) {
+    const dateTime = new Date(dt);
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed, add 1 to get the correct month
+    const day = String(dateTime.getDate()).padStart(2, '0');
+    const hours = String(dateTime.getHours()).padStart(2, '0');
+    const minutes = String(dateTime.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+function printObject(obj) {
+    return Object.values(obj)
+        .filter(value => value !== undefined && value !== null)
+        .join('/');
+}
+//---------------------------------------------------------------------------------------
+//----------------------------------------BASE64-----------------------------------------
+function encodeToBase64UrlSafe(str) {
+    // Encode UTF-8 string to Uint8Array
+    const encoder = new TextEncoder();
+    const uint8Array = encoder.encode(str);
+
+    // Convert Uint8Array to binary string
+    const binaryString = String.fromCharCode.apply(null, uint8Array);
+
+    // Encode to standard Base64 string
+    const base64 = btoa(binaryString);
+
+    // Make the Base64 string URL safe
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeFromBase64UrlSafe(base64UrlSafe) {
+    // Replace URL safe characters with Base64 standard characters
+    let base64 = base64UrlSafe.replace(/-/g, '+').replace(/_/g, '/');
+
+    // Add padding if necessary
+    while (base64.length % 4) {
+        base64 += '=';
+    }
+
+    // Decode from Base64 to binary string
+    const binaryString = atob(base64);
+
+    // Convert binary string to Uint8Array
+    const uint8Array = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        uint8Array[i] = binaryString.charCodeAt(i);
+    }
+
+    // Decode UTF-8 Uint8Array to string
+    const decoder = new TextDecoder();
+    return decoder.decode(uint8Array);
+}
+//---------------------------------------------------------------------------------------

@@ -65,6 +65,7 @@ function injectConnectionToPushca(excludedTabId) {
                             target: {tabId: tabs[i].id},
                             files: [
                                 "js/uuid.min.js",
+                                "js/common-utils.js",
                                 "js/callable-future.js",
                                 "js/pnotifications.js",
                                 "js/ws-connection.js"
