@@ -5,7 +5,8 @@
   "description": "A Chrome extension for secure file sharing from your machine.",
   "permissions": [
     "activeTab",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "http://*/*",

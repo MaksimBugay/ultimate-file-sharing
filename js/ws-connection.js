@@ -81,8 +81,20 @@ if (!(document.getElementById('wsConnectionScript'))) {
             sendResponse({loaded: wsConnectionCreated});
             return true;
         }
+
+        if (request.message === "open-ws-connection") {
+            if (wsConnectionCreated) {
+                sendResponse({result: 'alreadyExists'});
+            } else {
+                wsConnectionCreated = true;
+                //TODO open ws connection here
+
+                sendResponse({result: 'created'});
+            }
+            return true;
+        }
     });
 } else {
-
+    console.log('ws-connection.js already executed on', window.location.href)
 }
 
