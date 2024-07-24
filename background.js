@@ -81,6 +81,24 @@ function openFileSharingManagerIfNotExists() {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "get-pushca-connection-attributes") {
+        processWithFileSharingManager(function (tabId) {
+            chrome.tabs.sendMessage(tabId, {
+                message: "get-connection-attributes"
+            }, response => {
+                if (chrome.runtime.lastError) {
+                    console.log(`Cannot get Pushca connection attributes: ${chrome.runtime.lastError}`);
+                    sendResponse({clientObj: null, pusherInstanceId: null});
+                } else if (response && response.clientObj) {
+                    sendResponse({clientObj: response.clientObj, pusherInstanceId: response.pusherInstanceId})
+                } else {
+                    console.log(`Cannot get Pushca connection attributes: empty response`);
+                    sendResponse({clientObj: null, pusherInstanceId: null});
+                }
+            });
+        })
+        return true;
+    }
     if (message.action === "open-file-sharing-manager") {
         openFileSharingManagerIfNotExists();
         return false;

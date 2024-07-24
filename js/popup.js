@@ -46,30 +46,38 @@ function processSelectedFile(event) {
 
 function saveBinary(binaryId, order, originalFileName, arrayBuffer, mimeType) {
 
-    const chunks = splitArrayBuffer(arrayBuffer, MemoryBlock.MB);
-
-    for (let order = 0; order < chunks.length; order++) {
-        const chunkId = buildSharedFileChunkId(binaryId, order);
-        const blob = new Blob([chunks[order]], {type: mimeType});
-        addBinaryChunk(chunkId, blob);
-    }
-
-    loadAllBinaryChunks(binaryId, chunks.length,
-        function (loadedChunks) {
-            const binaryBlob = new Blob(loadedChunks, {type: mimeType});
-            const url = URL.createObjectURL(binaryBlob);
-            chrome.runtime.sendMessage({
-                action: 'save-file',
-                mimeType: mimeType,
-                fileName: originalFileName,
-                url: url
-            }, (response) => {
-                if (response && response.downloadId) {
-                    console.log(`Download id = ${response.downloadId}`);
-                }
-                URL.revokeObjectURL(url);
-            });
+    createBinaryManifest(binaryId, originalFileName, mimeType, function (binaryManifest) {
+        if (!binaryManifest) {
+            console.log(`Cannot create binary manifest: ${originalFileName}`);
+            return;
+        }
+        const chunks = splitArrayBuffer(arrayBuffer, MemoryBlock.MB);
+        for (let order = 0; order < chunks.length; order++) {
+            const chunkId = buildSharedFileChunkId(binaryId, order);
+            addChunkToBinaryManifest(binaryManifest, order, chunks[order]);
+            const blob = new Blob([chunks[order]], {type: mimeType});
+            addBinaryChunk(chunkId, blob);
+        }
+        delay(5000).then(() => {
+            console.log(JSON.stringify(binaryManifest));
         });
+        loadAllBinaryChunks(binaryId, chunks.length,
+            function (loadedChunks) {
+                const binaryBlob = new Blob(loadedChunks, {type: mimeType});
+                const url = URL.createObjectURL(binaryBlob);
+                chrome.runtime.sendMessage({
+                    action: 'save-file',
+                    mimeType: mimeType,
+                    fileName: originalFileName,
+                    url: url
+                }, (response) => {
+                    if (response && response.downloadId) {
+                        console.log(`Download id = ${response.downloadId}`);
+                    }
+                    URL.revokeObjectURL(url);
+                });
+            });
+    });
 }
 
 async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer) {

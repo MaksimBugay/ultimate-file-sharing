@@ -286,10 +286,11 @@ class ChannelMessage {
     }
 }
 
-function allClientFieldsAreNotEmpty(obj) {
-    return requiredClientFields.every(field => {
-        return obj.hasOwnProperty(field) && obj[field] !== null && obj[field] !== undefined && obj[field] !== '';
-    });
+class CommandWithId {
+    constructor(id, message) {
+        this.id = id;
+        this.message = message;
+    }
 }
 
 class OpenConnectionRequest {
@@ -319,15 +320,15 @@ class OpenConnectionResponse {
     }
 }
 
-class CommandWithId {
-    constructor(id, message) {
-        this.id = id;
-        this.message = message;
-    }
-}
-
 let PushcaClient = {};
 PushcaClient.serverBaseUrl = 'http://localhost:8080'
+PushcaClient.pusherInstanceId = null;
+
+function allClientFieldsAreNotEmpty(obj) {
+    return requiredClientFields.every(field => {
+        return obj.hasOwnProperty(field) && obj[field] !== null && obj[field] !== undefined && obj[field] !== '';
+    });
+}
 
 PushcaClient.executeWithRepeatOnFailure = async function (id, commandWithId, inTimeoutMs, numberOfRepeatAttempts) {
     if (isEmpty(PushcaClient.ws)) {
@@ -494,6 +495,7 @@ async function getAuthorizedWsUrl(baseUrl, clientObj) {
         tmpWs.onmessage = function (event) {
             try {
                 const response = OpenConnectionResponse.fromJSON(event.data);
+                PushcaClient.pusherInstanceId = response.pusherInstanceId;
                 CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, response.browserAdvertisedUrl);
                 console.log("Authorised web socket url: " + response.browserAdvertisedUrl);
             } catch (error) {

@@ -9,6 +9,10 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         sendResponse({result: 'all good', binaryId: request.binaryId, order: request.order});
         return true;
     }
+
+    if (request.message === "get-connection-attributes") {
+        sendResponse({clientObj: PushcaClient.ClientObj, pusherInstanceId: PushcaClient.pusherInstanceId});
+    }
 });
 
 function openWsConnection() {
@@ -16,8 +20,8 @@ function openWsConnection() {
         PushcaClient.openWsConnection(
             wsUrl,
             new ClientFilter(
-                "main",
-                "mbugai",
+                IndexDbDeviceId,
+                "anonymous",
                 uuid.v4().toString(),
                 "ultimate-file-sharing-listener"
             ),

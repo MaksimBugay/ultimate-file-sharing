@@ -1,7 +1,7 @@
 const dbNamePrefix = "UfsData";
 let dbName;
 const storeName = "binaryChunks";
-const deviceId = "calculatedDeviceFingerPrint";
+const IndexDbDeviceId = "calculatedDeviceFingerPrint";
 const dbRegistry = new Map();
 
 navigator.storage.estimate().then(estimate => {
@@ -19,7 +19,7 @@ navigator.storage.estimate().then(estimate => {
 });
 
 function openDataBase(onSuccessHandler) {
-    dbName = `${dbNamePrefix}_${deviceId}`;
+    dbName = `${dbNamePrefix}_${IndexDbDeviceId}`;
     const request = indexedDB.open(dbName, 1);
 
     request.onerror = function (event) {
@@ -37,7 +37,7 @@ function openDataBase(onSuccessHandler) {
 
     request.onsuccess = function (event) {
         const db = event.target.result;
-        dbRegistry.set(deviceId, db);
+        dbRegistry.set(IndexDbDeviceId, db);
         console.log(`Database ${dbName} opened successfully`);
         if (typeof onSuccessHandler === 'function') {
             onSuccessHandler();
@@ -47,7 +47,7 @@ function openDataBase(onSuccessHandler) {
 
 function closeDataBase() {
     try {
-        const db = dbRegistry.get(deviceId);
+        const db = dbRegistry.get(IndexDbDeviceId);
         if (db) {
             db.close();
         }
@@ -56,10 +56,10 @@ function closeDataBase() {
 }
 
 function getActiveDb() {
-    if (isEmpty(deviceId)) {
+    if (isEmpty(IndexDbDeviceId)) {
         return null;
     }
-    return dbRegistry.get(deviceId);
+    return dbRegistry.get(IndexDbDeviceId);
 }
 
 function addBinaryChunk(chunkId, chunkBlob) {
