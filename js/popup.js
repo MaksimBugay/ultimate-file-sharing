@@ -1,4 +1,10 @@
-document.getElementById('fileInput').addEventListener('change', processSelectedFile);
+const fileInput = document.getElementById('fileInput');
+fileInput.addEventListener('change', processSelectedFile);
+
+const port = chrome.runtime.connect();
+window.addEventListener('unload', () => {
+    port.disconnect();
+});
 
 openDataBase(function () {
     clearAllBinaries();

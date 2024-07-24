@@ -1,7 +1,7 @@
 const dbNamePrefix = "UfsData";
 let dbName;
 const storeName = "binaryChunks";
-const deviceId = uuid.v4().toString();
+const deviceId = "calculatedDeviceFingerPrint";
 const dbRegistry = new Map();
 
 navigator.storage.estimate().then(estimate => {
@@ -45,7 +45,7 @@ function openDataBase(onSuccessHandler) {
     };
 }
 
-function closeDataBase(accountId) {
+function closeDataBase() {
     try {
         const db = dbRegistry.get(deviceId);
         if (db) {

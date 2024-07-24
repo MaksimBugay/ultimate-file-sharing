@@ -402,7 +402,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onCloseHandler, onMessageH
                 }
                 return;
             }
-            //console.log('message', event.data);
+            console.log('message', event.data);
             let parts = event.data.split(MessagePartsDelimiter);
             if (parts[1] === MessageType.ACKNOWLEDGE) {
                 CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], null);
