@@ -58,7 +58,41 @@ class BinaryManifest {
     }
 }
 
-function createBinaryManifest(id, name, mimeType, consumer) {
+async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer) {
+    let binaryManifest;
+    const result = await createBinaryManifest(binaryId, originalFileName, mimeType);
+    if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+        binaryManifest = result.body;
+    }
+    if (!binaryManifest) {
+        console.log(`Cannot create binary manifest: ${originalFileName}`);
+        return null;
+    }
+
+    const chunks = splitArrayBuffer(arrayBuffer, MemoryBlock.MB);
+    for (let order = 0; order < chunks.length; order++) {
+        const chunkId = buildSharedFileChunkId(binaryId, order);
+        const result = await addChunkToBinaryManifest(binaryManifest, order, chunks[order]);
+        if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+            binaryManifest = result.body;
+        } else {
+            console.log(`Cannot append binary chunk: name ${originalFileName}, order ${order}`);
+            return null;
+        }
+        const blob = new Blob([chunks[order]], {type: mimeType});
+        addBinaryChunk(chunkId, blob);
+    }
+    return binaryManifest;
+}
+
+async function createBinaryManifest(id, name, mimeType) {
+    let timeoutMs = 2000;
+
+    let timeout = (ms) => new Promise((resolve, reject) => {
+        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
+    });
+
+    let result;
     chrome.runtime.sendMessage({action: 'get-pushca-connection-attributes'}, (response) => {
         let binaryManifest = null;
         if (response && response.clientObj) {
@@ -76,27 +110,60 @@ function createBinaryManifest(id, name, mimeType, consumer) {
                 response.pusherInstanceId,
                 []
             );
+            CallableFuture.releaseWaiterIfExistsWithSuccess(id, binaryManifest);
         } else {
-            console.log("Cannot fetch Pushca connection attributes");
-        }
-        if (typeof consumer === 'function') {
-            consumer(binaryManifest);
+            CallableFuture.releaseWaiterIfExistsWithError(id, "Cannot fetch Pushca connection attributes");
         }
     });
+
+    try {
+        result = await Promise.race([
+            CallableFuture.addToWaitingHall(id),
+            timeout(timeoutMs)
+        ]);
+    } catch (error) {
+        CallableFuture.waitingHall.delete(id);
+        result = new WaiterResponse(WaiterResponseType.ERROR, error);
+    }
+    return result;
 }
 
-function addChunkToBinaryManifest(binaryManifest, order, arrayBuffer) {
-    chunk2Datagram(order, arrayBuffer, function (datagram) {
-        binaryManifest.datagrams.push(datagram);
-    })
 
+async function addChunkToBinaryManifest(binaryManifest, order, arrayBuffer) {
+    let timeoutMs = 2000;
+    const id = uuid.v4().toString();
+
+    let timeout = (ms) => new Promise((resolve, reject) => {
+        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
+    });
+
+    let result;
+    chunk2Datagram(order, arrayBuffer, function (datagram) {
+        if (datagram) {
+            binaryManifest.datagrams.push(datagram);
+            CallableFuture.releaseWaiterIfExistsWithSuccess(id, binaryManifest);
+        } else {
+            CallableFuture.releaseWaiterIfExistsWithError(id, "Cannot convert bytes to datagram");
+        }
+    });
+
+    try {
+        result = await Promise.race([
+            CallableFuture.addToWaitingHall(id),
+            timeout(timeoutMs)
+        ]);
+    } catch (error) {
+        CallableFuture.waitingHall.delete(id);
+        result = new WaiterResponse(WaiterResponseType.ERROR, error);
+    }
+    return result;
 }
 
 function chunk2Datagram(order, arrayBuffer, consumer) {
-    if (!arrayBuffer) {
-        return;
-    }
-    if (arrayBuffer.byteLength === 0) {
+    if ((!arrayBuffer) || (arrayBuffer.byteLength === 0)) {
+        if (typeof consumer === 'function') {
+            consumer(null);
+        }
         return;
     }
 

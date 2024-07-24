@@ -27,7 +27,6 @@ function processSelectedFile(event) {
             const arrayBuffer = e.target.result;
             saveBinary(
                 uuid.v4().toString(),
-                0,
                 file.name,
                 arrayBuffer,
                 file.type
@@ -44,24 +43,10 @@ function processSelectedFile(event) {
     }
 }
 
-function saveBinary(binaryId, order, originalFileName, arrayBuffer, mimeType) {
-
-    createBinaryManifest(binaryId, originalFileName, mimeType, function (binaryManifest) {
-        if (!binaryManifest) {
-            console.log(`Cannot create binary manifest: ${originalFileName}`);
-            return;
-        }
-        const chunks = splitArrayBuffer(arrayBuffer, MemoryBlock.MB);
-        for (let order = 0; order < chunks.length; order++) {
-            const chunkId = buildSharedFileChunkId(binaryId, order);
-            addChunkToBinaryManifest(binaryManifest, order, chunks[order]);
-            const blob = new Blob([chunks[order]], {type: mimeType});
-            addBinaryChunk(chunkId, blob);
-        }
-        delay(5000).then(() => {
-            console.log(JSON.stringify(binaryManifest));
-        });
-        loadAllBinaryChunks(binaryId, chunks.length,
+function saveBinary(binaryId, originalFileName, arrayBuffer, mimeType) {
+    addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer).then((binaryManifest) => {
+        console.log(binaryManifest);
+        loadAllBinaryChunks(binaryId, binaryManifest.datagrams.length,
             function (loadedChunks) {
                 const binaryBlob = new Blob(loadedChunks, {type: mimeType});
                 const url = URL.createObjectURL(binaryBlob);
@@ -77,7 +62,7 @@ function saveBinary(binaryId, order, originalFileName, arrayBuffer, mimeType) {
                     URL.revokeObjectURL(url);
                 });
             });
-    });
+    })
 }
 
 async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer) {
