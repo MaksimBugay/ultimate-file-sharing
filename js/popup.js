@@ -44,7 +44,6 @@ function processSelectedFile(event) {
 function saveBinary(binaryId, originalFileName, arrayBuffer, mimeType) {
     addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer).then((binaryManifest) => {
         console.log(JSON.stringify(binaryManifest.toJSON()));
-        addBinaryManifest(binaryManifest);
         loadAllBinaryChunks(binaryId, binaryManifest.datagrams.length,
             function (loadedChunks) {
                 const binaryBlob = new Blob(loadedChunks, {type: mimeType});

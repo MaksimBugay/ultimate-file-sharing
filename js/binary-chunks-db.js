@@ -71,7 +71,7 @@ function getActiveDb() {
 }
 
 //==============================Binary Manifests queries=============================
-function addBinaryManifest(binaryManifest) {
+function saveBinaryManifest(binaryManifest, onSuccessHandler, onErrorHandler) {
     const db = getActiveDb();
     if (!db) {
         console.error('Binary chunks DB is not open');
@@ -91,10 +91,16 @@ function addBinaryManifest(binaryManifest) {
 
     request.onsuccess = function () {
         console.log(`Manifest for binary with id ${binaryManifest.id} was successfully added to the database`);
+        if (typeof onSuccessHandler === 'function') {
+            onSuccessHandler();
+        }
     };
 
     request.onerror = function (event) {
         console.error(`Failed attempt of adding Manifest for binary with id ${binaryManifest.id} to the database`, event.target.error);
+        if (typeof onErrorHandler === 'function') {
+            onErrorHandler(event);
+        }
     };
 }
 
@@ -123,6 +129,26 @@ function getAllManifests(manifestsConsumer) {
     };
 }
 
+function removeBinaryManifest(binaryId) {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+        return;
+    }
+
+    const transaction = db.transaction([binaryManifestsStoreName], "readwrite");
+    const store = transaction.objectStore(binaryManifestsStoreName);
+    const request = store.delete(binaryId);
+
+    request.onsuccess = function () {
+        console.log(`Manifest for binary with id ${binaryId} was successfully removed from the database`);
+    };
+
+    request.onerror = function (event) {
+        console.error(`Failed to remove Manifest for binary with id ${binaryId}`, event.target.error);
+    };
+}
+
 function clearAllManifests() {
     const db = getActiveDb();
     if (!db) {
@@ -148,7 +174,7 @@ function clearAllManifests() {
 
 //===================================================================================
 //==============================Binary Chunks queries================================
-function addBinaryChunk(binaryId, order, chunkBlob) {
+function saveBinaryChunk(binaryId, order, chunkBlob) {
     const db = getActiveDb();
     if (!db) {
         console.error('Binary chunks DB is not open');

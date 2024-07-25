@@ -86,7 +86,7 @@ class BinaryManifest {
 
 async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer) {
     let binaryManifest;
-    const result = await createBinaryManifest(binaryId, originalFileName, mimeType);
+    let result = await createBinaryManifest(binaryId, originalFileName, mimeType);
     if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
         binaryManifest = result.body;
     }
@@ -94,7 +94,21 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
         console.log(`Cannot create binary manifest: ${originalFileName}`);
         return null;
     }
-
+    result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        saveBinaryManifest(
+            binaryManifest,
+            function () {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
+            },
+            function (event) {
+                alert(event.target.error);
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, false);
+            }
+        );
+    });
+    if (WaiterResponseType.ERROR === result.type) {
+        return null;
+    }
     const chunks = splitArrayBuffer(arrayBuffer, MemoryBlock.MB);
     for (let order = 0; order < chunks.length; order++) {
         const result = await addChunkToBinaryManifest(binaryManifest, order, chunks[order]);
@@ -105,7 +119,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
             return null;
         }
         const blob = new Blob([chunks[order]], {type: mimeType});
-        addBinaryChunk(binaryId, order, blob);
+        saveBinaryChunk(binaryId, order, blob);
     }
     return binaryManifest;
 }
