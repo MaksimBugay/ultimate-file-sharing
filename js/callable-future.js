@@ -53,3 +53,40 @@ CallableFuture.releaseWaiterIfExistsWithError = function (id, error) {
         CallableFuture.waitingHall.delete(id);
     }
 }
+
+CallableFuture.callAsynchronouslyWithRepeatOfFailure = async function (inTimeoutMs, numberOfRepeat, asyncOperation) {
+    let result;
+    for (let i = 0; i < numberOfRepeat; i++) {
+        result = CallableFuture.callAsynchronously(inTimeoutMs, asyncOperation);
+        if (WaiterResponseType.SUCCESS === result.type) {
+            return result;
+        }
+    }
+    return result;
+}
+
+CallableFuture.callAsynchronously = async function (inTimeoutMs, asyncOperation) {
+    const timeoutMs = inTimeoutMs ? inTimeoutMs : 1000;
+
+    let timeout = (ms) => new Promise((resolve, reject) => {
+        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
+    });
+
+    const waiterId = uuid.v4().toString();
+    let result;
+
+    if (typeof asyncOperation === 'function') {
+        asyncOperation(waiterId);
+    }
+
+    try {
+        result = await Promise.race([
+            CallableFuture.addToWaitingHall(waiterId),
+            timeout(timeoutMs)
+        ]);
+    } catch (error) {
+        CallableFuture.waitingHall.delete(waiterId);
+        result = new WaiterResponse(WaiterResponseType.ERROR, error);
+    }
+    return result;
+}

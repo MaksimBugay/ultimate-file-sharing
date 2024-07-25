@@ -86,46 +86,31 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
 }
 
 async function createBinaryManifest(id, name, mimeType) {
-    let timeoutMs = 2000;
 
-    let timeout = (ms) => new Promise((resolve, reject) => {
-        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
+    return CallableFuture.callAsynchronously(2000, function (waiteId) {
+        chrome.runtime.sendMessage({action: 'get-pushca-connection-attributes'}, (response) => {
+            let binaryManifest = null;
+            if (response && response.clientObj) {
+                const sender = new ClientFilter(
+                    response.clientObj.workSpaceId,
+                    response.clientObj.accountId,
+                    null,
+                    response.clientObj.applicationId
+                );
+                binaryManifest = new BinaryManifest(
+                    id,
+                    name,
+                    mimeType,
+                    sender,
+                    response.pusherInstanceId,
+                    []
+                );
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
+            } else {
+                CallableFuture.releaseWaiterIfExistsWithError(waiteId, "Cannot fetch Pushca connection attributes");
+            }
+        });
     });
-
-    let result;
-    chrome.runtime.sendMessage({action: 'get-pushca-connection-attributes'}, (response) => {
-        let binaryManifest = null;
-        if (response && response.clientObj) {
-            const sender = new ClientFilter(
-                response.clientObj.workSpaceId,
-                response.clientObj.accountId,
-                null,
-                response.clientObj.applicationId
-            );
-            binaryManifest = new BinaryManifest(
-                id,
-                name,
-                mimeType,
-                sender,
-                response.pusherInstanceId,
-                []
-            );
-            CallableFuture.releaseWaiterIfExistsWithSuccess(id, binaryManifest);
-        } else {
-            CallableFuture.releaseWaiterIfExistsWithError(id, "Cannot fetch Pushca connection attributes");
-        }
-    });
-
-    try {
-        result = await Promise.race([
-            CallableFuture.addToWaitingHall(id),
-            timeout(timeoutMs)
-        ]);
-    } catch (error) {
-        CallableFuture.waitingHall.delete(id);
-        result = new WaiterResponse(WaiterResponseType.ERROR, error);
-    }
-    return result;
 }
 
 
