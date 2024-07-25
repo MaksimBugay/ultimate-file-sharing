@@ -71,7 +71,6 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
 
     const chunks = splitArrayBuffer(arrayBuffer, MemoryBlock.MB);
     for (let order = 0; order < chunks.length; order++) {
-        const chunkId = buildSharedFileChunkId(binaryId, order);
         const result = await addChunkToBinaryManifest(binaryManifest, order, chunks[order]);
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             binaryManifest = result.body;
@@ -80,7 +79,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
             return null;
         }
         const blob = new Blob([chunks[order]], {type: mimeType});
-        addBinaryChunk(chunkId, blob);
+        addBinaryChunk(binaryId, order, blob);
     }
     return binaryManifest;
 }
@@ -169,4 +168,11 @@ async function calculateSha256(content) {
     const hashBuffer = await crypto.subtle.digest('SHA-256', content);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return btoa(String.fromCharCode.apply(null, hashArray));
+}
+
+function calculateTotalSize(datagrams) {
+    if (!isArrayNotEmpty(datagrams)) {
+        return 0;
+    }
+    return datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
 }

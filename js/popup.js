@@ -6,9 +6,7 @@ window.addEventListener('unload', () => {
     port.disconnect();
 });
 
-openDataBase(function () {
-    clearAllBinaries();
-});
+openDataBase();
 
 document.getElementById("copy-link-btn").addEventListener('click', function () {
     chrome.runtime.sendMessage({action: 'save-file'}, (response) => {
@@ -46,6 +44,7 @@ function processSelectedFile(event) {
 function saveBinary(binaryId, originalFileName, arrayBuffer, mimeType) {
     addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer).then((binaryManifest) => {
         console.log(binaryManifest);
+        addBinaryManifest(binaryManifest);
         loadAllBinaryChunks(binaryId, binaryManifest.datagrams.length,
             function (loadedChunks) {
                 const binaryBlob = new Blob(loadedChunks, {type: mimeType});
@@ -59,6 +58,9 @@ function saveBinary(binaryId, originalFileName, arrayBuffer, mimeType) {
                     if (response && response.downloadId) {
                         console.log(`Download id = ${response.downloadId}`);
                     }
+                    removeAllRecordsWithBinaryId(binaryId, function () {
+                        console.log("cleaned");
+                    });
                     URL.revokeObjectURL(url);
                 });
             });
@@ -72,7 +74,7 @@ async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer
 
     while (order < totalNumberOfChunks) {
         const chunkId = buildSharedFileChunkId(binaryId, order);
-        const result = await loadBinaryChunk(chunkId);
+        const result = await loadBinaryChunk(binaryId, order);
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             chunks.push(result.body);
         } else {
@@ -87,9 +89,9 @@ async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer
     }
 }
 
-async function loadBinaryChunk(chunkId) {
+async function loadBinaryChunk(binaryId, order) {
     return await CallableFuture.callAsynchronously(3000, null, function (waiterId) {
-        getBinaryChunk(chunkId, function (chunkBlob) {
+        getBinaryChunk(binaryId, order, function (chunkBlob) {
             CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, chunkBlob);
         });
     });
