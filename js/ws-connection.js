@@ -69,7 +69,7 @@ delay(5000).then(() => {
     getAllManifests(function (manifests) {
         console.log("Fetched manifests");
         console.log(manifests);
-        manifests.forEach(manifest => removeBinaryManifest(manifest.id));
+        manifests.forEach(manifest => removeBinary(manifest.id));
     });
 });
 

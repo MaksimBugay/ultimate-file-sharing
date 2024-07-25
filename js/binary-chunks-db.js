@@ -129,7 +129,7 @@ function getAllManifests(manifestsConsumer) {
     };
 }
 
-function removeBinaryManifest(binaryId) {
+function removeBinaryManifest(binaryId, onSuccessHandler) {
     const db = getActiveDb();
     if (!db) {
         console.error('Binary chunks DB is not open');
@@ -142,6 +142,9 @@ function removeBinaryManifest(binaryId) {
 
     request.onsuccess = function () {
         console.log(`Manifest for binary with id ${binaryId} was successfully removed from the database`);
+        if (typeof onSuccessHandler === 'function') {
+            onSuccessHandler();
+        }
     };
 
     request.onerror = function (event) {
@@ -227,7 +230,7 @@ function getBinaryChunk(binaryId, order, chunkConsumer) {
     };
 }
 
-function removeAllRecordsWithBinaryId(binaryId, callback) {
+function removeAllRecordsWithBinaryId(binaryId, onSuccessHandler) {
     const db = getActiveDb();
     if (!db) {
         console.error('Binary chunks DB is not open');
@@ -246,8 +249,8 @@ function removeAllRecordsWithBinaryId(binaryId, callback) {
             };
         } else {
             console.log(`All records with binaryId ${binaryId} have been deleted`);
-            if (callback) {
-                callback();
+            if (typeof onSuccessHandler === 'function') {
+                onSuccessHandler();
             }
         }
     };
@@ -282,6 +285,13 @@ function clearAllBinaries() {
 }
 
 //=====================================================================================
+
+function removeBinary(binaryId, onSuccessHandler) {
+    removeAllRecordsWithBinaryId(binaryId, function () {
+        removeBinaryManifest(binaryId, onSuccessHandler);
+    });
+}
+
 window.addEventListener('beforeunload', function () {
     try {
         const db = getActiveDb();
