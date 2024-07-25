@@ -16,7 +16,8 @@ const Command = Object.freeze({
     MARK_CHANNEL_AS_READ: "MARK_CHANNEL_AS_READ",
     GET_IMPRESSION_STAT: "GET_IMPRESSION_STAT",
     ADD_IMPRESSION: "ADD_IMPRESSION",
-    REMOVE_IMPRESSION: "REMOVE_IMPRESSION"
+    REMOVE_IMPRESSION: "REMOVE_IMPRESSION",
+    SEND_UPLOAD_BINARY_APPEAL: "SEND_UPLOAD_BINARY_APPEAL"
 });
 
 const MessageType = Object.freeze({
@@ -319,6 +320,46 @@ class OpenConnectionResponse {
         );
     }
 }
+
+class UploadBinaryAppeal {
+    constructor(sender, owner, binaryId, chunkSize, manifestOnly, requestedChunks) {
+        this.sender = sender;
+        this.owner = owner;
+        this.binaryId = binaryId;
+        this.chunkSize = chunkSize ? chunkSize : MemoryBlock.MB;
+        this.manifestOnly = manifestOnly;
+        this.requestedChunks = requestedChunks;
+    }
+
+    static fromObject(jsonObject) {
+        const sender = new ClientFilter(
+            jsonObject.sender.workSpaceId,
+            jsonObject.sender.accountId,
+            jsonObject.sender.deviceId,
+            jsonObject.sender.applicationId
+        );
+        const owner = new ClientFilter(
+            jsonObject.owner.workSpaceId,
+            jsonObject.owner.accountId,
+            jsonObject.owner.deviceId,
+            jsonObject.owner.applicationId
+        );
+        return new UploadBinaryAppeal(
+            sender,
+            owner,
+            jsonObject.binaryId,
+            jsonObject.chunkSize,
+            jsonObject.manifestOnly,
+            jsonObject.requestedChunks
+        );
+    }
+
+    static fromJSON(jsonString) {
+        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        return this.fromObject(jsonObject);
+    }
+}
+
 
 let PushcaClient = {};
 PushcaClient.serverBaseUrl = 'http://localhost:8080'
@@ -802,6 +843,35 @@ PushcaClient.sendPing = function () {
     let commandWithId = PushcaClient.buildCommandMessage(Command.PING);
     PushcaClient.ws.send(commandWithId.message);
 }
+
+
+/**
+ * Ask binary owner to send some binary
+ *
+ * @param owner           - binary owner
+ * @param binaryId        - binary identifier
+ * @param chunkSize       - pushca client splits file into chunks before sending and sends it
+ *                        chunk by chunk
+ * @param manifestOnly    - only binary manifest should be sent, not data
+ *                        send the next chunk
+ * @param requestedChunks - upload only chunks with provided identifiers, if empty - upload all
+ */
+PushcaClient.sendUploadBinaryAppeal = async function (owner, binaryId, chunkSize, manifestOnly, requestedChunks) {
+    let metaData = {};
+    metaData["owner"] = owner;
+    metaData["binaryId"] = binaryId;
+    metaData["chunkSize"] = chunkSize;
+    metaData["manifestOnly"] = manifestOnly;
+    metaData["requestedChunks"] = requestedChunks;
+
+    let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_UPLOAD_BINARY_APPEAL, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log("Failed send upload binary appeal attempt: " + result.body);
+    }
+    return result;
+}
+
 
 window.addEventListener('beforeunload', function () {
     cleanRefreshBrokenConnectionInterval();

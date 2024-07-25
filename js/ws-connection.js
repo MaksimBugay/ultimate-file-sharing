@@ -74,6 +74,23 @@ delay(3000).then(() => {
         /*manifests.forEach(manifest => removeBinary(manifest.id, function () {
             console.log(`Binary with id ${manifest.id} was completely removed from DB`);
         }));*/
+        const owner = new ClientFilter(
+            IndexDbDeviceId,
+            "anonymous-sharing",
+            null,
+            "ultimate-file-sharing-listener"
+        )
+        manifests.forEach(manifest => {
+            PushcaClient.sendUploadBinaryAppeal(
+                owner,
+                manifest.id,
+                MemoryBlock.MB,
+                true,
+                null
+            ).then(result => {
+                console.log(result);
+            });
+        });
     });
 });
 
