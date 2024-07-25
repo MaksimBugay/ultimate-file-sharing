@@ -117,7 +117,7 @@ function getAllManifests(manifestsConsumer) {
 
     request.onsuccess = function (event) {
         const results = event.target.result;
-        console.log('All binary manifests retrieved successfully', results);
+        //console.log('All binary manifests retrieved successfully', results);
         const manifests = results.map(record => BinaryManifest.fromJSON(record.manifest, record.totalSize));
         if (manifestsConsumer) {
             manifestsConsumer(manifests);

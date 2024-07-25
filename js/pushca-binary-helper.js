@@ -121,6 +121,20 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
         const blob = new Blob([chunks[order]], {type: mimeType});
         saveBinaryChunk(binaryId, order, blob);
     }
+
+    await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        saveBinaryManifest(
+            binaryManifest,
+            function () {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
+            },
+            function (event) {
+                alert(event.target.error);
+                removeAllRecordsWithBinaryId(binaryManifest.id);
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, false);
+            }
+        );
+    });
     return binaryManifest;
 }
 

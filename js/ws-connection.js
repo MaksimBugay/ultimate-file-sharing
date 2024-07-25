@@ -65,11 +65,15 @@ function openWsConnection() {
     }
 }
 
-delay(5000).then(() => {
+delay(3000).then(() => {
     getAllManifests(function (manifests) {
+        //clearAllManifests();
+        //clearAllBinaries();
         console.log("Fetched manifests");
         console.log(manifests);
-        manifests.forEach(manifest => removeBinary(manifest.id));
+        /*manifests.forEach(manifest => removeBinary(manifest.id, function () {
+            console.log(`Binary with id ${manifest.id} was completely removed from DB`);
+        }));*/
     });
 });
 
