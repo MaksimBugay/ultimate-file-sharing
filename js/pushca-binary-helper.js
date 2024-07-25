@@ -87,7 +87,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
 
 async function createBinaryManifest(id, name, mimeType) {
 
-    return CallableFuture.callAsynchronously(2000, function (waiteId) {
+    return await CallableFuture.callAsynchronously(2000, null, function (waiteId) {
         chrome.runtime.sendMessage({action: 'get-pushca-connection-attributes'}, (response) => {
             let binaryManifest = null;
             if (response && response.clientObj) {
@@ -115,33 +115,17 @@ async function createBinaryManifest(id, name, mimeType) {
 
 
 async function addChunkToBinaryManifest(binaryManifest, order, arrayBuffer) {
-    let timeoutMs = 2000;
-    const id = uuid.v4().toString();
 
-    let timeout = (ms) => new Promise((resolve, reject) => {
-        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
+    return await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        chunk2Datagram(order, arrayBuffer, function (datagram) {
+            if (datagram) {
+                binaryManifest.datagrams.push(datagram);
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, binaryManifest);
+            } else {
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, "Cannot convert bytes to datagram");
+            }
+        });
     });
-
-    let result;
-    chunk2Datagram(order, arrayBuffer, function (datagram) {
-        if (datagram) {
-            binaryManifest.datagrams.push(datagram);
-            CallableFuture.releaseWaiterIfExistsWithSuccess(id, binaryManifest);
-        } else {
-            CallableFuture.releaseWaiterIfExistsWithError(id, "Cannot convert bytes to datagram");
-        }
-    });
-
-    try {
-        result = await Promise.race([
-            CallableFuture.addToWaitingHall(id),
-            timeout(timeoutMs)
-        ]);
-    } catch (error) {
-        CallableFuture.waitingHall.delete(id);
-        result = new WaiterResponse(WaiterResponseType.ERROR, error);
-    }
-    return result;
 }
 
 function chunk2Datagram(order, arrayBuffer, consumer) {

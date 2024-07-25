@@ -54,10 +54,10 @@ CallableFuture.releaseWaiterIfExistsWithError = function (id, error) {
     }
 }
 
-CallableFuture.callAsynchronouslyWithRepeatOfFailure = async function (inTimeoutMs, numberOfRepeat, asyncOperation) {
+CallableFuture.callAsynchronouslyWithRepeatOfFailure = async function (inTimeoutMs, inWaiterId, numberOfRepeat, asyncOperation) {
     let result;
     for (let i = 0; i < numberOfRepeat; i++) {
-        result = CallableFuture.callAsynchronously(inTimeoutMs, asyncOperation);
+        result = await CallableFuture.callAsynchronously(inTimeoutMs, inWaiterId, asyncOperation);
         if (WaiterResponseType.SUCCESS === result.type) {
             return result;
         }
@@ -65,14 +65,14 @@ CallableFuture.callAsynchronouslyWithRepeatOfFailure = async function (inTimeout
     return result;
 }
 
-CallableFuture.callAsynchronously = async function (inTimeoutMs, asyncOperation) {
+CallableFuture.callAsynchronously = async function (inTimeoutMs, inWaiterId, asyncOperation) {
     const timeoutMs = inTimeoutMs ? inTimeoutMs : 1000;
 
     let timeout = (ms) => new Promise((resolve, reject) => {
         setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
     });
 
-    const waiterId = uuid.v4().toString();
+    const waiterId = inWaiterId ? inWaiterId : uuid.v4().toString();
     let result;
 
     if (typeof asyncOperation === 'function') {

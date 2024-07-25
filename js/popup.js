@@ -88,27 +88,11 @@ async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer
 }
 
 async function loadBinaryChunk(chunkId) {
-    let timeoutMs = 3000;
-
-    let timeout = (ms) => new Promise((resolve, reject) => {
-        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
+    return await CallableFuture.callAsynchronously(3000, null, function (waiterId) {
+        getBinaryChunk(chunkId, function (chunkBlob) {
+            CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, chunkBlob);
+        });
     });
-
-    let result;
-    getBinaryChunk(chunkId, function (chunkBlob) {
-        CallableFuture.releaseWaiterIfExistsWithSuccess(chunkId, chunkBlob);
-    });
-
-    try {
-        result = await Promise.race([
-            CallableFuture.addToWaitingHall(chunkId),
-            timeout(timeoutMs)
-        ]);
-    } catch (error) {
-        CallableFuture.waitingHall.delete(chunkId);
-        result = new WaiterResponse(WaiterResponseType.ERROR, error);
-    }
-    return result;
 }
 
 function buildSharedFileChunkId(binaryId, order) {

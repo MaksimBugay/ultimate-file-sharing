@@ -339,37 +339,14 @@ PushcaClient.executeWithRepeatOnFailure = async function (id, commandWithId, inT
         console.error(errorMsg);
         return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
     }
+
     let n = numberOfRepeatAttempts || 3
-    let result;
-    for (let i = 0; i < n; i++) {
-        result = await PushcaClient.execute(id, commandWithId, inTimeoutMs);
-        if (WaiterResponseType.SUCCESS === result.type) {
-            break;
-        }
-    }
-    return result;
-}
-PushcaClient.execute = async function (id, commandWithId, inTimeoutMs) {
     let timeoutMs = inTimeoutMs || 5000;
     let ackId = id || commandWithId.id;
 
-    let timeout = (ms) => new Promise((resolve, reject) => {
-        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
+    return await CallableFuture.callAsynchronouslyWithRepeatOfFailure(timeoutMs, ackId, n, function (waiterId) {
+        PushcaClient.ws.send(commandWithId.message);
     });
-
-    PushcaClient.ws.send(commandWithId.message);
-    let result;
-    try {
-        result = await Promise.race([
-            CallableFuture.addToWaitingHall(ackId),
-            timeout(timeoutMs)
-        ]);
-    } catch (error) {
-        CallableFuture.waitingHall.delete(ackId);
-        result = new WaiterResponse(WaiterResponseType.ERROR, error);
-    }
-    //console.log(result);
-    return result;
 }
 
 PushcaClient.buildCommandMessage = function (command, args) {
