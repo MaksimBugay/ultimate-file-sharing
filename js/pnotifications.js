@@ -24,7 +24,8 @@ const MessageType = Object.freeze({
     ACKNOWLEDGE: "ACKNOWLEDGE",
     RESPONSE: "RESPONSE",
     CHANNEL_MESSAGE: "CHANNEL_MESSAGE",
-    CHANNEL_EVENT: "CHANNEL_EVENT"
+    CHANNEL_EVENT: "CHANNEL_EVENT",
+    UPLOAD_BINARY_APPEAL: "UPLOAD_BINARY_APPEAL"
 });
 
 const ResourceType = Object.freeze({
@@ -402,7 +403,8 @@ PushcaClient.buildCommandMessage = function (command, args) {
 }
 
 PushcaClient.openWebSocket = function (onOpenHandler, onCloseHandler, onMessageHandler,
-                                       onChannelEventHandler, onChannelMessageHandler, onDataHandler) {
+                                       onChannelEventHandler, onChannelMessageHandler,
+                                       onDataHandler, onUploadBinaryAppealHandler) {
     PushcaClient.ws = new window.WebSocket(PushcaClient.wsUrl);
     PushcaClient.ws.binaryType = 'arraybuffer';
     if (PushcaClient.ws) {
@@ -421,7 +423,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onCloseHandler, onMessageH
                 }
                 return;
             }
-            console.log('message', event.data);
+            //console.log('message', event.data);
             let parts = event.data.split(MessagePartsDelimiter);
             if (parts[1] === MessageType.ACKNOWLEDGE) {
                 CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], null);
@@ -437,13 +439,19 @@ PushcaClient.openWebSocket = function (onOpenHandler, onCloseHandler, onMessageH
             }
             if (parts[1] === MessageType.CHANNEL_EVENT) {
                 if (typeof onChannelEventHandler === 'function') {
-                    onChannelEventHandler(ChannelEvent.fromJSON(parts[2]))
+                    onChannelEventHandler(ChannelEvent.fromJSON(parts[2]));
                 }
                 return;
             }
             if (parts[1] === MessageType.CHANNEL_MESSAGE) {
                 if (typeof onChannelMessageHandler === 'function') {
-                    onChannelMessageHandler(ChannelMessage.fromJSON(parts[2]))
+                    onChannelMessageHandler(ChannelMessage.fromJSON(parts[2]));
+                }
+                return;
+            }
+            if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
+                if (typeof onUploadBinaryAppealHandler === 'function') {
+                    onUploadBinaryAppealHandler(UploadBinaryAppeal.fromJSON(parts[2]));
                 }
                 return;
             }
@@ -546,7 +554,7 @@ async function getAuthorizedWsUrl(baseUrl, clientObj) {
 
 PushcaClient.openWsConnection = function (baseUrl, clientObj, clientObjRefresher, onOpenHandler, onCloseHandler,
                                           onMessageHandler, onChannelEventHandler,
-                                          onChannelMessageHandler, onDataHandler,
+                                          onChannelMessageHandler, onDataHandler, onUploadBinaryAppealHandler,
                                           withoutRefresh) {
     PushcaClient.serverBaseUrl = baseUrl;
     PushcaClient.ClientObj = clientObj;
@@ -561,7 +569,8 @@ PushcaClient.openWsConnection = function (baseUrl, clientObj, clientObjRefresher
                     onMessageHandler,
                     onChannelEventHandler,
                     onChannelMessageHandler,
-                    onDataHandler
+                    onDataHandler,
+                    onUploadBinaryAppealHandler
                 );
             } catch (err) {
                 PushcaClient.recoveryAttempt += 1;
@@ -607,6 +616,7 @@ PushcaClient.openWsConnection = function (baseUrl, clientObj, clientObjRefresher
                                 onChannelEventHandler,
                                 onChannelMessageHandler,
                                 onDataHandler,
+                                onUploadBinaryAppealHandler,
                                 true
                             );
                         });

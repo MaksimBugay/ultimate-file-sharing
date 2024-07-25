@@ -60,6 +60,11 @@ function openWsConnection() {
             },
             function (binary) {
                 //console.log(binary.length)
+            },
+            function (uploadBinaryAppeal) {
+                if (uploadBinaryAppeal.manifestOnly) {
+                    console.log(uploadBinaryAppeal);
+                }
             }
         );
     }
