@@ -65,3 +65,14 @@ function openWsConnection() {
     }
 }
 
+delay(5000).then(() => {
+    clearAllManifests();
+    delay(1000).then(() => {
+        getAllManifests(function (manifests) {
+            console.log("Fetched manifests");
+            console.log(manifests);
+        });
+    });
+});
+
+

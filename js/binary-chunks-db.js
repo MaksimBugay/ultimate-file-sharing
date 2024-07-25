@@ -2,7 +2,7 @@ const dbNamePrefix = "UfsData";
 let dbName;
 const binaryChunksStoreName = "binaryChunks";
 const binaryManifestsStoreName = "binaryManifests";
-const IndexDbDeviceId = "calculatedDeviceFingerPrint1";
+const IndexDbDeviceId = "calculatedDeviceFingerPrint10";
 const dbRegistry = new Map();
 
 navigator.storage.estimate().then(estimate => {
@@ -37,6 +37,7 @@ function openDataBase(onSuccessHandler) {
         }
         if (!db.objectStoreNames.contains(binaryManifestsStoreName)) {
             const objectStore = db.createObjectStore(binaryManifestsStoreName, {keyPath: "binaryId"});
+            objectStore.createIndex("fileName", "fileName", {unique: true});
             objectStore.createIndex("timestampIdx", "timestamp", {unique: false});
             //console.log(`Store ${binaryManifestsStoreName} was created`);
         }
@@ -78,10 +79,12 @@ function addBinaryManifest(binaryManifest) {
     const transaction = db.transaction([binaryManifestsStoreName], "readwrite");
     const store = transaction.objectStore(binaryManifestsStoreName);
     const timestamp = new Date().getTime();
+    const totalSize = binaryManifest.getTotalSize();
     const data = {
         binaryId: binaryManifest.id,
-        manifest: JSON.stringify(binaryManifest),
-        totalSize: calculateTotalSize(binaryManifest.datagrams),
+        fileName: binaryManifest.name,
+        manifest: JSON.stringify(binaryManifest.toJSON()),
+        totalSize: totalSize,
         timestamp: timestamp
     };
     const request = store.put(data);
@@ -91,7 +94,55 @@ function addBinaryManifest(binaryManifest) {
     };
 
     request.onerror = function (event) {
-        console.error("Failed attempt of adding Manifest for binary with id ${binaryId} to the database", event.target.error);
+        console.error(`Failed attempt of adding Manifest for binary with id ${binaryManifest.id} to the database`, event.target.error);
+    };
+}
+
+function getAllManifests(manifestsConsumer) {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+        return;
+    }
+
+    const transaction = db.transaction([binaryManifestsStoreName], "readonly");
+    const store = transaction.objectStore(binaryManifestsStoreName);
+    const request = store.getAll();
+
+    request.onsuccess = function (event) {
+        const results = event.target.result;
+        console.log('All binary manifests retrieved successfully', results);
+        const manifests = results.map(record => BinaryManifest.fromJSON(record.manifest, record.totalSize));
+        if (manifestsConsumer) {
+            manifestsConsumer(manifests);
+        }
+    };
+
+    request.onerror = function (event) {
+        console.error('Failed to retrieve binary manifests', event.target.error);
+    };
+}
+
+function clearAllManifests() {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+    }
+    // Open a read-write transaction on your database
+    const transaction = db.transaction([binaryManifestsStoreName], "readwrite");
+
+    // Get the object store from the transaction
+    const store = transaction.objectStore(binaryManifestsStoreName);
+
+    // Request to clear all the entries in the store
+    const request = store.clear();
+
+    request.onsuccess = function () {
+        console.log("All entries have been successfully removed from the Binary manifests store.");
+    };
+
+    request.onerror = function (event) {
+        console.error("Error clearing the Binary manifests store:", event.target.error);
     };
 }
 
@@ -114,7 +165,7 @@ function addBinaryChunk(binaryId, order, chunkBlob) {
     const request = store.put(data);
 
     request.onsuccess = function () {
-        //console.log("Screenshot added to the database successfully with custom ID:", postId);
+        console.log(`Binary chunk was successfully added to DB: binaryId = ${binaryId}, order = ${order}`);
     };
 
     request.onerror = function (event) {
@@ -196,11 +247,11 @@ function clearAllBinaries() {
     const request = store.clear();
 
     request.onsuccess = function () {
-        console.log("All entries have been successfully removed from the store.");
+        console.log("All entries have been successfully removed from the Binary chunks store.");
     };
 
     request.onerror = function (event) {
-        console.error("Error clearing the store:", event.target.error);
+        console.error("Error clearing the Binary chunks store:", event.target.error);
     };
 }
 

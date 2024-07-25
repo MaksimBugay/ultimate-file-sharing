@@ -13,20 +13,45 @@ class Datagram {
 }
 
 class BinaryManifest {
-    constructor(id, name, mimeType, sender, pusherInstanceId, datagrams) {
+    constructor(id, name, mimeType, sender, pusherInstanceId, datagrams, totalSize) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
         this.sender = sender;
         this.pusherInstanceId = pusherInstanceId;
-        if (isArrayNotEmpty(datagrams)) {
-            this.datagrams = datagrams;
-        } else {
-            this.datagrams = [];
-        }
+        this.datagrams = isArrayNotEmpty(datagrams) ? datagrams : [];
+        this.totalSize = totalSize;
     }
 
-    static fromObject(jsonObject) {
+    getTotalSize() {
+        if (this.totalSize) {
+            return this.totalSize;
+        }
+        this.totalSize = calculateTotalSize(this.datagrams);
+        return this.totalSize;
+    }
+
+    resetTotalSize() {
+        this.totalSize = null;
+    }
+
+    appendDatagram(datagram) {
+        this.resetTotalSize();
+        this.datagrams.push(datagram);
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            mimeType: this.mimeType,
+            sender: this.sender,
+            pusherInstanceId: this.pusherInstanceId,
+            datagrams: this.datagrams
+        };
+    }
+
+    static fromObject(jsonObject, totalSize) {
         const sender = new ClientFilter(
             jsonObject.sender.workSpaceId,
             jsonObject.sender.accountId,
@@ -35,7 +60,7 @@ class BinaryManifest {
         );
         let datagrams = [];
         if (isArrayNotEmpty(jsonObject.datagrams)) {
-            datagrams = jsonObject.mentioned.map(obj => new Datagram(
+            datagrams = jsonObject.datagrams.map(obj => new Datagram(
                     obj.order,
                     obj.size,
                     obj.md5
@@ -48,13 +73,14 @@ class BinaryManifest {
             jsonObject.mimeType,
             sender,
             jsonObject.pusherInstanceId,
-            datagrams
+            datagrams,
+            totalSize
         );
     }
 
-    static fromJSON(jsonString) {
+    static fromJSON(jsonString, totalSize) {
         const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
-        return this.fromObject(jsonObject);
+        return this.fromObject(jsonObject, totalSize);
     }
 }
 
@@ -118,7 +144,7 @@ async function addChunkToBinaryManifest(binaryManifest, order, arrayBuffer) {
     return await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         chunk2Datagram(order, arrayBuffer, function (datagram) {
             if (datagram) {
-                binaryManifest.datagrams.push(datagram);
+                binaryManifest.appendDatagram(datagram);
                 CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, binaryManifest);
             } else {
                 CallableFuture.releaseWaiterIfExistsWithError(waiterId, "Cannot convert bytes to datagram");
