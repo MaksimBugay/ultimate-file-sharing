@@ -36,9 +36,7 @@ PushcaClient.onCloseHandler = function (ws, event) {
 };
 
 PushcaClient.onMessageHandler = function (ws, messageText) {
-    if (messageText !== "PONG") {
-        console.log(messageText);
-    }
+    console.log(messageText);
 };
 
 PushcaClient.onUploadBinaryAppealHandler = processUploadBinaryAppeal;
