@@ -102,7 +102,7 @@ class BinaryWithHeader {
 }
 
 function buildSharedFileChunkId(binaryId, order) {
-    return `${binaryId}_${order}`;
+    return `${binaryId}-${order}`;
 }
 
 async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer) {

@@ -42,8 +42,12 @@ PushcaClient.onBinaryManifestHandler = function (manifest) {
     console.log(`Binary manifest was received: id = ${manifest.id}`);
     console.log(manifest);
 }
-PushcaClient.onDataHandler = function (data) {
-    console.log('binary', data.byteLength);
+PushcaClient.onDataHandler = function (arrayBuffer) {
+    console.log('binary', arrayBuffer.byteLength);
+    const binaryWithHeader = new BinaryWithHeader(arrayBuffer);
+    const ackId = buildSharedFileChunkId(binaryWithHeader.binaryId, binaryWithHeader.order);
+    console.log(`send acknowledge: ${ackId}`);
+    PushcaClient.sendAcknowledge(ackId);
 }
 
 function openWsConnection() {
@@ -87,8 +91,8 @@ delay(3000).then(() => {
                     owner,
                     manifest.id,
                     MemoryBlock.MB,
-                    true,
-                    null
+                    false,
+                    [0]
                 ).then(result => {
                     console.log(result.type);
                 });
@@ -98,7 +102,7 @@ delay(3000).then(() => {
                         manifest.id,
                         MemoryBlock.MB,
                         false,
-                        [0]
+                        [1]
                     ).then(result => {
                         console.log(result.type);
                     });

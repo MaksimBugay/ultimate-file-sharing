@@ -440,7 +440,6 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
 
     PushcaClient.ws.onmessage = function (event) {
         if (event.data instanceof ArrayBuffer) {
-            alert("!!!");
             //console.log('binary', event.data.byteLength);
             if (typeof PushcaClient.onDataHandler === 'function') {
                 PushcaClient.onDataHandler(event.data);

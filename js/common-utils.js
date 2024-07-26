@@ -64,11 +64,11 @@ function shortIntToBytes(int) {
     return uint8Array;
 }
 
-function bytesToShortInt(uint8Array) {
-    if (uint8Array.byteLength !== 1) {
-        throw new Error(`Invalid byte array length ${uint8Array.byteLength}. Must be 1 byte.`);
+function bytesToShortInt(arrayBuffer) {
+    if (arrayBuffer.byteLength !== 1) {
+        throw new Error(`Invalid byte array length ${arrayBuffer.byteLength}. Must be 1 byte.`);
     }
-    const view = new DataView(uint8Array.buffer);
+    const view = new DataView(arrayBuffer);
     return view.getInt8(0);
 }
 
