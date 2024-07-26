@@ -40,6 +40,10 @@ class BinaryManifest {
         this.datagrams.push(datagram);
     }
 
+    setSender(sender) {
+        this.sender = sender;
+    }
+
     setPusherInstanceId(pusherInstanceId) {
         this.pusherInstanceId = pusherInstanceId;
     }
@@ -264,9 +268,8 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
         return;
     }
     manifest.setPusherInstanceId(PushcaClient.pusherInstanceId);
+    manifest.setSender(PushcaClient.ClientObj);
     if (uploadBinaryAppeal.manifestOnly || isArrayEmpty(uploadBinaryAppeal.requestedChunks)) {
-        console.log(`Ready to send manifest for binary with id ${binaryId}`);
-        console.log(manifest);
         result = await PushcaClient.sendBinaryManifest(uploadBinaryAppeal.sender, manifest);
         if (WaiterResponseType.ERROR === result.type) {
             return;

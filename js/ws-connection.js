@@ -38,6 +38,10 @@ PushcaClient.onMessageHandler = function (ws, messageText) {
 };
 
 PushcaClient.onUploadBinaryAppealHandler = processUploadBinaryAppeal;
+PushcaClient.onBinaryManifestHandler = function (manifest) {
+    console.log(`Binary manifest was received: id = ${manifest.id}`);
+    console.log(manifest);
+}
 
 function openWsConnection() {
     if (!PushcaClient.isOpen()) {
@@ -76,16 +80,21 @@ delay(3000).then(() => {
             null,
             "ultimate-file-sharing-listener"
         )
+        let n;
         manifests.forEach(manifest => {
-            PushcaClient.sendUploadBinaryAppeal(
-                owner,
-                manifest.id,
-                MemoryBlock.MB,
-                true,
-                null
-            ).then(result => {
-                console.log(result.type);
-            });
+            //PushcaClient.broadcastMessage(id, owner, false, msg);
+            if (!n) {
+                n = 1;
+                PushcaClient.sendUploadBinaryAppeal(
+                    owner,
+                    manifest.id,
+                    MemoryBlock.MB,
+                    true,
+                    null
+                ).then(result => {
+                    console.log(result.type);
+                });
+            }
         });
     });
 });

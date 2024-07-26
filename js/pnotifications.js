@@ -26,7 +26,8 @@ const MessageType = Object.freeze({
     RESPONSE: "RESPONSE",
     CHANNEL_MESSAGE: "CHANNEL_MESSAGE",
     CHANNEL_EVENT: "CHANNEL_EVENT",
-    UPLOAD_BINARY_APPEAL: "UPLOAD_BINARY_APPEAL"
+    UPLOAD_BINARY_APPEAL: "UPLOAD_BINARY_APPEAL",
+    BINARY_MANIFEST: "BINARY_MANIFEST"
 });
 
 const ResourceType = Object.freeze({
@@ -375,6 +376,7 @@ PushcaClient.onChannelEventHandler = null;
 PushcaClient.onChannelMessageHandler = null;
 PushcaClient.onDataHandler = null;
 PushcaClient.onUploadBinaryAppealHandler = null;
+PushcaClient.onBinaryManifestHandler = null;
 
 function allClientFieldsAreNotEmpty(obj) {
     return requiredClientFields.every(field => {
@@ -473,6 +475,13 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
         if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
             if (typeof PushcaClient.onUploadBinaryAppealHandler === 'function') {
                 PushcaClient.onUploadBinaryAppealHandler(UploadBinaryAppeal.fromJSON(parts[2]));
+            }
+            return;
+        }
+        if (parts[1] === MessageType.BINARY_MANIFEST) {
+            PushcaClient.sendAcknowledge(parts[0]);
+            if (typeof PushcaClient.onBinaryManifestHandler === 'function') {
+                PushcaClient.onBinaryManifestHandler(BinaryManifest.fromJSON(parts[2]));
             }
             return;
         }
@@ -891,7 +900,7 @@ PushcaClient.sendBinaryManifest = async function (dest, manifest) {
     metaData["manifest"] = manifest.toJSON();
 
     let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_BINARY_MANIFEST, metaData);
-    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    let result = await PushcaClient.executeWithRepeatOnFailure(manifest.id, commandWithId)
     if (WaiterResponseType.ERROR === result.type) {
         console.log(`Failed send manifest for binary with id ${manifest.id} attempt: ` + result.body);
     }
