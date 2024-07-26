@@ -2,7 +2,7 @@ const dbNamePrefix = "UfsData";
 let dbName;
 const binaryChunksStoreName = "binaryChunks";
 const binaryManifestsStoreName = "binaryManifests";
-const IndexDbDeviceId = "calculatedDeviceFingerPrint10";
+const IndexDbDeviceId = "calculatedDeviceFingerPrint11";
 const dbRegistry = new Map();
 
 navigator.storage.estimate().then(estimate => {
@@ -30,7 +30,7 @@ function openDataBase(onSuccessHandler) {
     request.onupgradeneeded = function (event) {
         const db = event.target.result;
         if (!db.objectStoreNames.contains(binaryChunksStoreName)) {
-            const objectStore = db.createObjectStore(binaryChunksStoreName, {keyPath: ["binaryId", "orderN"]});
+            const objectStore = db.createObjectStore(binaryChunksStoreName, {keyPath: ['binaryId', 'orderN']});
             objectStore.createIndex("timestampIdx", "timestamp", {unique: false});
             objectStore.createIndex("binaryIdIdx", "binaryId", {unique: false});
             //console.log(`Store ${binaryChunksStoreName} was created`);
@@ -246,6 +246,7 @@ function getBinaryChunk(binaryId, order, chunkConsumer) {
 
     request.onsuccess = function () {
         if (!request.result) {
+            console.error(`Binary chunk record was not found: binaryId = ${binaryId}, order = ${order}`);
             return;
         }
         const chunkBlob = request.result.chunk;

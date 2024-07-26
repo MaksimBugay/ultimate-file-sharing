@@ -42,6 +42,9 @@ PushcaClient.onBinaryManifestHandler = function (manifest) {
     console.log(`Binary manifest was received: id = ${manifest.id}`);
     console.log(manifest);
 }
+PushcaClient.onDataHandler = function (data) {
+    console.log('binary', data.byteLength);
+}
 
 function openWsConnection() {
     if (!PushcaClient.isOpen()) {
@@ -74,12 +77,7 @@ delay(3000).then(() => {
         /*manifests.forEach(manifest => removeBinary(manifest.id, function () {
             console.log(`Binary with id ${manifest.id} was completely removed from DB`);
         }));*/
-        const owner = new ClientFilter(
-            IndexDbDeviceId,
-            "anonymous-sharing",
-            null,
-            "ultimate-file-sharing-listener"
-        )
+        const owner = PushcaClient.ClientObj;
         let n;
         manifests.forEach(manifest => {
             //PushcaClient.broadcastMessage(id, owner, false, msg);
@@ -93,6 +91,17 @@ delay(3000).then(() => {
                     null
                 ).then(result => {
                     console.log(result.type);
+                });
+                delay(2000).then(() => {
+                    PushcaClient.sendUploadBinaryAppeal(
+                        owner,
+                        manifest.id,
+                        MemoryBlock.MB,
+                        false,
+                        [0]
+                    ).then(result => {
+                        console.log(result.type);
+                    });
                 });
             }
         });

@@ -440,6 +440,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
 
     PushcaClient.ws.onmessage = function (event) {
         if (event.data instanceof ArrayBuffer) {
+            alert("!!!");
             //console.log('binary', event.data.byteLength);
             if (typeof PushcaClient.onDataHandler === 'function') {
                 PushcaClient.onDataHandler(event.data);
@@ -903,6 +904,36 @@ PushcaClient.sendBinaryManifest = async function (dest, manifest) {
     let result = await PushcaClient.executeWithRepeatOnFailure(manifest.id, commandWithId)
     if (WaiterResponseType.ERROR === result.type) {
         console.log(`Failed send manifest for binary with id ${manifest.id} attempt: ` + result.body);
+    }
+    return result;
+}
+
+PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, arrayBuffer) {
+    if (isEmpty(PushcaClient.ws)) {
+        return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
+    }
+    if (PushcaClient.ws.readyState !== window.WebSocket.OPEN) {
+        const errorMsg = `WebSocket is not open. State: ${PushcaClient.ws.readyState}`;
+        console.error(errorMsg);
+        return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
+    }
+
+    const customHeader = buildPushcaBinaryHeader(
+        BinaryType.FILE, destHashCode, true, binaryId, order
+    );
+    const combinedBuffer = new ArrayBuffer(customHeader.length + arrayBuffer.byteLength);
+    const combinedView = new Uint8Array(combinedBuffer);
+    combinedView.set(customHeader, 0);
+    combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
+
+    const id = buildSharedFileChunkId(binaryId, order);
+    const result = CallableFuture.callAsynchronouslyWithRepeatOfFailure(
+        5000, id, function () {
+            PushcaClient.ws.send(combinedBuffer);
+        }
+    );
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log(`Failed send chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);
     }
     return result;
 }

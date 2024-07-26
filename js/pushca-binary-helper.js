@@ -275,5 +275,33 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
             return;
         }
     }
+    if (isArrayNotEmpty(uploadBinaryAppeal.requestedChunks)) {
+        const destHashCode = calculateClientHashCode(
+            uploadBinaryAppeal.sender.workSpaceId,
+            uploadBinaryAppeal.sender.accountId,
+            uploadBinaryAppeal.sender.deviceId,
+            uploadBinaryAppeal.sender.applicationId
+        );
+        for (let i = 0; i < uploadBinaryAppeal.requestedChunks.length; i++) {
+            const order = uploadBinaryAppeal.requestedChunks[i];
+            const result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+                getBinaryChunk(binaryId, order, function (arrayBuffer) {
+                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, arrayBuffer);
+                });
+            });
+            if ((WaiterResponseType.ERROR === result.type) || (!result.body)) {
+                console.warn(`Chunk ${order} of binary with id ${binaryId} not found`);
+                return;
+            }
+            const chunk = result.body;
+
+            await  PushcaClient.sendBinaryChunk(
+                binaryId,
+                order,
+                destHashCode,
+                chunk
+            );
+        }
+    }
     console.log("All good");
 }
