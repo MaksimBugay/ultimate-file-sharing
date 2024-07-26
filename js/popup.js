@@ -57,9 +57,6 @@ function saveBinary(binaryId, originalFileName, arrayBuffer, mimeType) {
                     if (response && response.downloadId) {
                         console.log(`Download id = ${response.downloadId}`);
                     }
-                    removeAllRecordsWithBinaryId(binaryId, function () {
-                        console.log("cleaned");
-                    });
                     URL.revokeObjectURL(url);
                 });
             });
@@ -94,8 +91,4 @@ async function loadBinaryChunk(binaryId, order) {
             CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, chunkBlob);
         });
     });
-}
-
-function buildSharedFileChunkId(binaryId, order) {
-    return `${binaryId}_${order}`;
 }

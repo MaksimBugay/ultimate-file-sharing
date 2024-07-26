@@ -101,6 +101,10 @@ class BinaryWithHeader {
     }
 }
 
+function buildSharedFileChunkId(binaryId, order) {
+    return `${binaryId}_${order}`;
+}
+
 async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer) {
     let binaryManifest;
     let result = await createBinaryManifest(binaryId, originalFileName, mimeType);
@@ -293,9 +297,9 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
                 console.warn(`Chunk ${order} of binary with id ${binaryId} not found`);
                 return;
             }
-            const chunk = result.body;
+            const chunk = await result.body.arrayBuffer();
 
-            await  PushcaClient.sendBinaryChunk(
+            await PushcaClient.sendBinaryChunk(
                 binaryId,
                 order,
                 destHashCode,
