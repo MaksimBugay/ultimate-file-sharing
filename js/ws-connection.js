@@ -15,6 +15,30 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     }
 });
 
+PushcaClient.onOpenHandler = function () {
+    console.log("Connected to Pushca!");
+    pingIntervalId = window.setInterval(function () {
+        PushcaClient.sendPing();
+    }, 30000);
+    openDataBase();
+};
+
+PushcaClient.onCloseHandler = function (ws, event) {
+    window.clearInterval(pingIntervalId);
+    closeDataBase();
+    if (!event.wasClean) {
+        console.error("Your connection died, refresh the page please");
+    }
+};
+
+PushcaClient.onMessageHandler = function (ws, messageText) {
+    if (messageText !== "PONG") {
+        console.log(messageText);
+    }
+};
+
+PushcaClient.onUploadBinaryAppealHandler = processUploadBinaryAppeal;
+
 function openWsConnection() {
     if (!PushcaClient.isOpen()) {
         PushcaClient.openWsConnection(
@@ -32,37 +56,6 @@ function openWsConnection() {
                     uuid.v4().toString(),
                     clientObj.applicationId
                 );
-            },
-            function () {
-                console.log("Connected to Pushca!");
-                pingIntervalId = window.setInterval(function () {
-                    PushcaClient.sendPing();
-                }, 30000);
-                openDataBase();
-            },
-            function (ws, event) {
-                window.clearInterval(pingIntervalId);
-                closeDataBase();
-                if (!event.wasClean) {
-                    console.error("Your connection died, refresh the page please");
-                }
-            },
-            function (ws, messageText) {
-                if (messageText !== "PONG") {
-                    console.log(messageText);
-                }
-            },
-            function (channelEvent) {
-                //console.log(channelEvent);
-            },
-            function (channelMessage) {
-                //console.log(channelMessage);
-            },
-            function (binary) {
-                //console.log(binary.length)
-            },
-            function (uploadBinaryAppeal) {
-                processUploadBinaryAppeal(uploadBinaryAppeal)
             }
         );
     }

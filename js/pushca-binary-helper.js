@@ -246,9 +246,8 @@ function calculateTotalSize(datagrams) {
 
 async function processUploadBinaryAppeal(uploadBinaryAppeal) {
     const binaryId = uploadBinaryAppeal.binaryId;
-    const waiterId = uuid.v4().toString();
     let manifest;
-    let result = await CallableFuture.callAsynchronously(2000, waiterId, function () {
+    let result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         getManifest(
             binaryId,
             function (manifest) {

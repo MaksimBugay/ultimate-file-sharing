@@ -367,6 +367,15 @@ let PushcaClient = {};
 PushcaClient.serverBaseUrl = 'http://localhost:8080'
 PushcaClient.pusherInstanceId = null;
 
+//handlers
+PushcaClient.onOpenHandler = null;
+PushcaClient.onCloseHandler = null;
+PushcaClient.onMessageHandler = null;
+PushcaClient.onChannelEventHandler = null;
+PushcaClient.onChannelMessageHandler = null;
+PushcaClient.onDataHandler = null;
+PushcaClient.onUploadBinaryAppealHandler = null;
+
 function allClientFieldsAreNotEmpty(obj) {
     return requiredClientFields.every(field => {
         return obj.hasOwnProperty(field) && obj[field] !== null && obj[field] !== undefined && obj[field] !== '';
@@ -403,88 +412,101 @@ PushcaClient.buildCommandMessage = function (command, args) {
     return new CommandWithId(id, message);
 }
 
-PushcaClient.openWebSocket = function (onOpenHandler, onCloseHandler, onMessageHandler,
-                                       onChannelEventHandler, onChannelMessageHandler,
-                                       onDataHandler, onUploadBinaryAppealHandler) {
-    PushcaClient.ws = new window.WebSocket(PushcaClient.wsUrl);
-    PushcaClient.ws.binaryType = 'arraybuffer';
-    if (PushcaClient.ws) {
-        PushcaClient.ws.onopen = function () {
-            //console.log('open');
-            if (typeof onOpenHandler === 'function') {
-                onOpenHandler(PushcaClient.ws);
-            }
-        };
-
-        PushcaClient.ws.onmessage = function (event) {
-            if (event.data instanceof ArrayBuffer) {
-                //console.log('binary', event.data.byteLength);
-                if (typeof onDataHandler === 'function') {
-                    onDataHandler(event.data);
-                }
-                return;
-            }
-            //console.log('message', event.data);
-            let parts = event.data.split(MessagePartsDelimiter);
-            if (parts[1] === MessageType.ACKNOWLEDGE) {
-                CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], null);
-                return;
-            }
-            if (parts[1] === MessageType.RESPONSE) {
-                let body;
-                if (parts.length > 2) {
-                    body = parts[2];
-                }
-                CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], body);
-                return;
-            }
-            if (parts[1] === MessageType.CHANNEL_EVENT) {
-                if (typeof onChannelEventHandler === 'function') {
-                    onChannelEventHandler(ChannelEvent.fromJSON(parts[2]));
-                }
-                return;
-            }
-            if (parts[1] === MessageType.CHANNEL_MESSAGE) {
-                if (typeof onChannelMessageHandler === 'function') {
-                    onChannelMessageHandler(ChannelMessage.fromJSON(parts[2]));
-                }
-                return;
-            }
-            if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
-                if (typeof onUploadBinaryAppealHandler === 'function') {
-                    onUploadBinaryAppealHandler(UploadBinaryAppeal.fromJSON(parts[2]));
-                }
-                return;
-            }
-            if (parts.length === 2) {
-                PushcaClient.sendAcknowledge(parts[0]);
-                if (typeof onMessageHandler === 'function') {
-                    onMessageHandler(PushcaClient.ws, parts[1]);
-                }
-                return;
-            }
-            if (typeof onMessageHandler === 'function') {
-                onMessageHandler(PushcaClient.ws, event.data);
-            }
-        };
-
-        PushcaClient.ws.onerror = function (error) {
-            PushcaClient.recoveryAttempt += 1;
-            console.error("There was an error with your websocket!");
-        };
-
-        PushcaClient.ws.onclose = function (event) {
-            if (event.wasClean) {
-                console.log(
-                    `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
-            } else {
-                PushcaClient.recoveryAttempt += 1;
-            }
-            if (typeof onCloseHandler === 'function') {
-                onCloseHandler(PushcaClient.ws, event)
-            }
-        };
+PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHandler) {
+    try {
+        PushcaClient.ws = new window.WebSocket(PushcaClient.wsUrl);
+    } catch (err) {
+        PushcaClient.ws = null;
+        console.error(`Impossible to create web socket: ws url = ${PushcaClient.wsUrl}`, err);
+        if (typeof onErrorHandler === 'function') {
+            onErrorHandler(err);
+        }
     }
+    if (!PushcaClient.ws) {
+        return;
+    }
+    PushcaClient.ws.binaryType = 'arraybuffer';
+    PushcaClient.ws.onopen = function () {
+        //console.log('open');
+        if (typeof onOpenHandler === 'function') {
+            onOpenHandler();
+        }
+        if (typeof PushcaClient.onOpenHandler === 'function') {
+            PushcaClient.onOpenHandler(PushcaClient.ws);
+        }
+    };
+
+    PushcaClient.ws.onmessage = function (event) {
+        if (event.data instanceof ArrayBuffer) {
+            //console.log('binary', event.data.byteLength);
+            if (typeof PushcaClient.onDataHandler === 'function') {
+                PushcaClient.onDataHandler(event.data);
+            }
+            return;
+        }
+        //console.log('message', event.data);
+        let parts = event.data.split(MessagePartsDelimiter);
+        if (parts[1] === MessageType.ACKNOWLEDGE) {
+            CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], null);
+            return;
+        }
+        if (parts[1] === MessageType.RESPONSE) {
+            let body;
+            if (parts.length > 2) {
+                body = parts[2];
+            }
+            CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], body);
+            return;
+        }
+        if (parts[1] === MessageType.CHANNEL_EVENT) {
+            if (typeof PushcaClient.onChannelEventHandler === 'function') {
+                PushcaClient.onChannelEventHandler(ChannelEvent.fromJSON(parts[2]));
+            }
+            return;
+        }
+        if (parts[1] === MessageType.CHANNEL_MESSAGE) {
+            if (typeof PushcaClient.onChannelMessageHandler === 'function') {
+                PushcaClient.onChannelMessageHandler(ChannelMessage.fromJSON(parts[2]));
+            }
+            return;
+        }
+        if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
+            if (typeof PushcaClient.onUploadBinaryAppealHandler === 'function') {
+                PushcaClient.onUploadBinaryAppealHandler(UploadBinaryAppeal.fromJSON(parts[2]));
+            }
+            return;
+        }
+        if (parts.length === 2) {
+            PushcaClient.sendAcknowledge(parts[0]);
+            if (typeof PushcaClient.onMessageHandler === 'function') {
+                PushcaClient.onMessageHandler(PushcaClient.ws, parts[1]);
+            }
+            return;
+        }
+        if (typeof PushcaClient.onMessageHandler === 'function') {
+            PushcaClient.onMessageHandler(PushcaClient.ws, event.data);
+        }
+    };
+
+    PushcaClient.ws.onerror = function (error) {
+        console.error("There was an error with your websocket!");
+        if (typeof onErrorHandler === 'function') {
+            onErrorHandler(error);
+        }
+    };
+
+    PushcaClient.ws.onclose = function (event) {
+        if (typeof onCloseHandler === 'function') {
+            onCloseHandler();
+        }
+        if (event.wasClean) {
+            console.log(
+                `[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+        }
+        if (typeof PushcaClient.onCloseHandler === 'function') {
+            PushcaClient.onCloseHandler(PushcaClient.ws, event)
+        }
+    };
 }
 
 function cleanRefreshBrokenConnectionInterval() {
@@ -502,130 +524,104 @@ PushcaClient.isOpen = function () {
 }
 
 async function getAuthorizedWsUrl(baseUrl, clientObj) {
-    let timeoutMs = 3000;
-
-    let timeout = (ms) => new Promise((resolve, reject) => {
-        setTimeout(() => reject(new Error('Timeout after ' + ms + ' ms')), ms);
-    });
-
-    const waiterId = uuid.v4();
-    let result;
-
-    //------------------------worker-----------------------------------------------------------
     const openConnectionRequest = new OpenConnectionRequest(
         clientObj, null, null);
     //console.log(`Sign-in attempt: ${JSON.stringify(openConnectionRequest)}`);
     const wsUrl = `${baseUrl}/sign-in/${encodeToBase64UrlSafe(JSON.stringify(openConnectionRequest))}`;
     console.log("Public sign-in url: " + wsUrl);
-    const tmpWs = new WebSocket(wsUrl);
-    if (tmpWs) {
-        tmpWs.onmessage = function (event) {
-            try {
-                const response = OpenConnectionResponse.fromJSON(event.data);
-                PushcaClient.pusherInstanceId = response.pusherInstanceId;
-                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, response.browserAdvertisedUrl);
-                console.log("Authorised web socket url: " + response.browserAdvertisedUrl);
-            } catch (error) {
+    return await CallableFuture.callAsynchronously(3000, null, function (waiterId) {
+        const tmpWs = new WebSocket(wsUrl);
+        if (tmpWs) {
+            tmpWs.onmessage = function (event) {
+                try {
+                    const response = OpenConnectionResponse.fromJSON(event.data);
+                    PushcaClient.pusherInstanceId = response.pusherInstanceId;
+                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, response.browserAdvertisedUrl);
+                    console.log("Authorised web socket url: " + response.browserAdvertisedUrl);
+                } catch (error) {
+                    CallableFuture.releaseWaiterIfExistsWithError(waiterId, error);
+                }
+            };
+            tmpWs.onerror = function (error) {
                 CallableFuture.releaseWaiterIfExistsWithError(waiterId, error);
-            }
-        };
-        tmpWs.onerror = function (error) {
-            CallableFuture.releaseWaiterIfExistsWithError(waiterId, error);
-        };
+            };
 
-        tmpWs.onclose = function (event) {
-            delay(1000).then(() => {
-                CallableFuture.releaseWaiterIfExistsWithError(waiterId, "Failed public sign-in attempt");
-            })
-        };
-    }
-    //-----------------------------------------------------------------------------------------
-
-    try {
-        result = await Promise.race([
-            CallableFuture.addToWaitingHall(waiterId),
-            timeout(timeoutMs)
-        ]);
-    } catch (error) {
-        CallableFuture.waitingHall.delete(waiterId);
-        result = new WaiterResponse(WaiterResponseType.ERROR, error);
-    }
-    return result;
+            tmpWs.onclose = function (event) {
+                delay(500).then(() => {
+                    CallableFuture.releaseWaiterIfExistsWithError(waiterId, "Failed public sign-in attempt");
+                })
+            };
+        } else {
+            CallableFuture.releaseWaiterIfExistsWithError(waiterId, "Impossible to create web socket");
+        }
+    });
 }
 
-PushcaClient.openWsConnection = function (baseUrl, clientObj, clientObjRefresher, onOpenHandler, onCloseHandler,
-                                          onMessageHandler, onChannelEventHandler,
-                                          onChannelMessageHandler, onDataHandler, onUploadBinaryAppealHandler,
-                                          withoutRefresh) {
+PushcaClient.openWsConnection = async function (baseUrl, clientObj,
+                                                clientObjRefresher,
+                                                withoutRefresh) {
     PushcaClient.serverBaseUrl = baseUrl;
     PushcaClient.ClientObj = clientObj;
 
-    getAuthorizedWsUrl(baseUrl, clientObj).then(result => {
-        if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
-            PushcaClient.wsUrl = result.body;
-            try {
-                PushcaClient.openWebSocket(
-                    onOpenHandler,
-                    onCloseHandler,
-                    onMessageHandler,
-                    onChannelEventHandler,
-                    onChannelMessageHandler,
-                    onDataHandler,
-                    onUploadBinaryAppealHandler
-                );
-            } catch (err) {
-                PushcaClient.recoveryAttempt += 1;
-                console.error(`cannot open authorized ws connection: url ${PushcaClient.wsUrl}, ${err}`);
-            }
-        } else if (WaiterResponseType.ERROR === result.type) {
-            console.log("Authorized Ws Url not acquired");
-            console.log(result.body);
-        }
-    })
-    if (withoutRefresh) {
+    let result = await getAuthorizedWsUrl(baseUrl, clientObj);
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error(`cannot open authorized ws connection: url ${PushcaClient.wsUrl}, caused by ${result.body}`);
         return;
     }
+    if (!result.body) {
+        console.error('Authorized ws url was not provided by Pushca server');
+        return;
+    }
+    PushcaClient.wsUrl = result.body;
+
+    result = await CallableFuture.callAsynchronously(3000, null, function (waiterId) {
+        PushcaClient.openWebSocket(
+            function () {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, window.WebSocket.OPEN);
+            },
+            function (err) {
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, err);
+            },
+            function () {
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, window.WebSocket.CLOSED);
+            }
+        );
+    });
+    if (withoutRefresh) {
+        return result;
+    }
     cleanRefreshBrokenConnectionInterval();
-    PushcaClient.recoveryAttempt = 0;
     delay(5000).then(() => {
         PushcaClient.refreshBrokenConnectionIntervalId = window.setInterval(function () {
             if ((!PushcaClient.ws) || (PushcaClient.ws.readyState !== window.WebSocket.OPEN)) {
                 if (PushcaClient.ClientObj) {
-                    if (PushcaClient.recoveryAttempt < 10) {
-                        let d = 100;
-                        if (PushcaClient.ws
-                            && (PushcaClient.ws.readyState !== window.WebSocket.CLOSING)
-                            && (PushcaClient.ws.readyState !== window.WebSocket.CLOSED)
-                        ) {
-                            PushcaClient.ws.close(3000, "Close broken connection before recovery");
-                            d = 2000;
-                        }
-                        delay(d).then(() => {
-                            let refreshedClientObj;
-                            if (typeof clientObjRefresher === 'function') {
-                                refreshedClientObj = clientObjRefresher(PushcaClient.ClientObj);
-                            } else {
-                                refreshedClientObj = refreshClientObj(PushcaClient.ClientObj);
-                            }
-                            PushcaClient.openWsConnection(
-                                baseUrl,
-                                refreshedClientObj,
-                                clientObjRefresher,
-                                onOpenHandler,
-                                onCloseHandler,
-                                onMessageHandler,
-                                onChannelEventHandler,
-                                onChannelMessageHandler,
-                                onDataHandler,
-                                onUploadBinaryAppealHandler,
-                                true
-                            );
-                        });
+                    let d = 100;
+                    if (PushcaClient.ws
+                        && (PushcaClient.ws.readyState !== window.WebSocket.CLOSING)
+                        && (PushcaClient.ws.readyState !== window.WebSocket.CLOSED)
+                    ) {
+                        PushcaClient.ws.close(3000, "Close broken connection before recovery");
+                        d = 2000;
                     }
+                    delay(d).then(() => {
+                        let refreshedClientObj;
+                        if (typeof clientObjRefresher === 'function') {
+                            refreshedClientObj = clientObjRefresher(PushcaClient.ClientObj);
+                        } else {
+                            refreshedClientObj = refreshClientObj(PushcaClient.ClientObj);
+                        }
+                        PushcaClient.openWsConnection(
+                            baseUrl,
+                            refreshedClientObj,
+                            clientObjRefresher,
+                            true
+                        );
+                    });
                 }
             }
         }, 5000);
     });
+    return result;
 }
 
 function refreshClientObj(clientObj) {
