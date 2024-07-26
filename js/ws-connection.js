@@ -62,9 +62,7 @@ function openWsConnection() {
                 //console.log(binary.length)
             },
             function (uploadBinaryAppeal) {
-                if (uploadBinaryAppeal.manifestOnly) {
-                    console.log(uploadBinaryAppeal);
-                }
+                processUploadBinaryAppeal(uploadBinaryAppeal)
             }
         );
     }
@@ -93,7 +91,7 @@ delay(3000).then(() => {
                 true,
                 null
             ).then(result => {
-                console.log(result);
+                console.log(result.type);
             });
         });
     });

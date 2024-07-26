@@ -61,13 +61,24 @@ function shortIntToBytes(int) {
     }
     const uint8Array = new Uint8Array(1);
     uint8Array[0] = int;
-    const int8Array = new Int8Array(uint8Array.buffer);
-    return Array.from(int8Array);
+    return uint8Array;
+}
+
+function bytesToShortInt(uint8Array) {
+    if (uint8Array.byteLength !== 1) {
+        throw new Error(`Invalid byte array length ${uint8Array.byteLength}. Must be 1 byte.`);
+    }
+    const view = new DataView(uint8Array.buffer);
+    return view.getInt8(0);
 }
 
 function booleanToBytes(bool) {
     const shortInt = bool ? 1 : 0;
     return shortIntToBytes(shortInt);
+}
+
+function bytesToBoolean(uint8Array) {
+    return bytesToShortInt(uint8Array) === 1;
 }
 
 function uuidToBytes(uuidStr) {
@@ -100,6 +111,25 @@ function uuidToBytes(uuidStr) {
     // Convert to signed bytes array
     const signedBytes = new Int8Array(buffer);
     return Array.from(signedBytes);
+}
+
+function bytesToUuid(bytes) {
+    // Ensure bytes is a Uint8Array
+    bytes = new Uint8Array(bytes);
+
+    // Create a DataView for efficient byte manipulation
+    const view = new DataView(bytes.buffer);
+
+    // Extract msb and lsb
+    const msb = view.getBigUint64(0, false); // false for big-endian
+    const lsb = view.getBigUint64(8, false);
+
+    // Convert to hex strings
+    const msbHex = msb.toString(16).padStart(16, '0');
+    const lsbHex = lsb.toString(16).padStart(16, '0');
+
+    // Construct the UUID string
+    return `${msbHex.substring(0, 8)}-${msbHex.substring(8, 12)}-${msbHex.substring(12, 16)}-${lsbHex.substring(0, 4)}-${lsbHex.substring(4, 16)}`;
 }
 
 function concatenateByteArrays(...arrays) {
@@ -169,6 +199,10 @@ function isEmpty(x) {
 
 function isArrayNotEmpty(arr) {
     return arr !== null && arr !== undefined && Array.isArray(arr) && arr.length > 0;
+}
+
+function isArrayEmpty(arr) {
+    return !isNotEmpty(arr);
 }
 
 function extractNumber(str) {

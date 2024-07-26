@@ -104,6 +104,39 @@ function saveBinaryManifest(binaryManifest, onSuccessHandler, onErrorHandler) {
     };
 }
 
+function getManifest(binaryId, manifestConsumer, errorConsumer) {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+        return;
+    }
+    const transaction = db.transaction([binaryManifestsStoreName], "readonly");
+    const store = transaction.objectStore(binaryManifestsStoreName);
+    const request = store.get(binaryId);
+
+    request.onsuccess = function (event) {
+        const result = event.target.result;
+        if (!result) {
+            console.warn(`No manifest were found for binary with id ${binaryId}`);
+            if (typeof manifestConsumer === 'function') {
+                manifestConsumer(null);
+            }
+            return;
+        }
+        const manifest = BinaryManifest.fromJSON(result.manifest, result.totalSize);
+        if (typeof manifestConsumer === 'function') {
+            manifestConsumer(manifest);
+        }
+    };
+
+    request.onerror = function (event) {
+        console.error(`Failed to retrieve manifest for binary with id ${binaryId}`, event.target.error);
+        if (typeof errorConsumer === 'function') {
+            errorConsumer(event);
+        }
+    };
+}
+
 function getAllManifests(manifestsConsumer) {
     const db = getActiveDb();
     if (!db) {

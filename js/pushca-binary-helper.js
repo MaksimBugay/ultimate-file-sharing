@@ -40,6 +40,10 @@ class BinaryManifest {
         this.datagrams.push(datagram);
     }
 
+    setPusherInstanceId(pusherInstanceId) {
+        this.pusherInstanceId = pusherInstanceId;
+    }
+
     toJSON() {
         return {
             id: this.id,
@@ -81,6 +85,15 @@ class BinaryManifest {
     static fromJSON(jsonString, totalSize) {
         const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
         return this.fromObject(jsonObject, totalSize);
+    }
+}
+
+class BinaryWithHeader {
+    constructor(sourceBuffer) {
+        this.binaryType = bytesToShortInt(copyBytes(sourceBuffer, 0, 1));
+        this.withAcknowledge = bytesToBoolean(copyBytes(sourceBuffer, 5, 6));
+        this.binaryId = bytesToUuid(copyBytes(sourceBuffer, 6, 22));
+        this.order = bytesToInt(copyBytes(sourceBuffer, 22, 26));
     }
 }
 
@@ -229,4 +242,36 @@ function calculateTotalSize(datagrams) {
         return 0;
     }
     return datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
+}
+
+async function processUploadBinaryAppeal(uploadBinaryAppeal) {
+    const binaryId = uploadBinaryAppeal.binaryId;
+    const waiterId = uuid.v4().toString();
+    let manifest;
+    let result = await CallableFuture.callAsynchronously(2000, waiterId, function () {
+        getManifest(
+            binaryId,
+            function (manifest) {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, manifest);
+            }, function (event) {
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, event.target.error);
+            }
+        );
+    });
+    if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+        manifest = result.body;
+    }
+    if (!manifest) {
+        return;
+    }
+    manifest.setPusherInstanceId(PushcaClient.pusherInstanceId);
+    if (uploadBinaryAppeal.manifestOnly || isArrayEmpty(uploadBinaryAppeal.requestedChunks)) {
+        console.log(`Ready to send manifest for binary with id ${binaryId}`);
+        console.log(manifest);
+        result = await PushcaClient.sendBinaryManifest(uploadBinaryAppeal.sender, manifest);
+        if (WaiterResponseType.ERROR === result.type) {
+            return;
+        }
+    }
+    console.log("All good");
 }

@@ -17,7 +17,8 @@ const Command = Object.freeze({
     GET_IMPRESSION_STAT: "GET_IMPRESSION_STAT",
     ADD_IMPRESSION: "ADD_IMPRESSION",
     REMOVE_IMPRESSION: "REMOVE_IMPRESSION",
-    SEND_UPLOAD_BINARY_APPEAL: "SEND_UPLOAD_BINARY_APPEAL"
+    SEND_UPLOAD_BINARY_APPEAL: "SEND_UPLOAD_BINARY_APPEAL",
+    SEND_BINARY_MANIFEST: "SEND_BINARY_MANIFEST"
 });
 
 const MessageType = Object.freeze({
@@ -882,6 +883,24 @@ PushcaClient.sendUploadBinaryAppeal = async function (owner, binaryId, chunkSize
     return result;
 }
 
+/**
+ * Send binary manifest object to all connected clients that met the filtering requirements
+ *
+ * @param dest     - filter of receivers
+ * @param manifest - json object with binary metadata and information about all chunks
+ */
+PushcaClient.sendBinaryManifest = async function (dest, manifest) {
+    let metaData = {};
+    metaData["dest"] = dest;
+    metaData["manifest"] = manifest.toJSON();
+
+    let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_BINARY_MANIFEST, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log(`Failed send manifest for binary with id ${manifest.id} attempt: ` + result.body);
+    }
+    return result;
+}
 
 window.addEventListener('beforeunload', function () {
     cleanRefreshBrokenConnectionInterval();
