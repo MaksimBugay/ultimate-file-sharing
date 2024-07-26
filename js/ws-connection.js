@@ -3,7 +3,11 @@ console.log('ws-connection.js running on', window.location.href);
 const wsUrl = 'wss://vasilii.prodpushca.com:30085';
 let pingIntervalId = null;
 
-openWsConnection();
+FingerprintJS.load().then(fp => {
+    fp.get().then(result => {
+        openWsConnection(result.visitorId);
+    });
+});
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.message === "send-binary-chunk") {
         sendResponse({result: 'all good', binaryId: request.binaryId, order: request.order});
@@ -20,7 +24,7 @@ PushcaClient.onOpenHandler = function () {
     pingIntervalId = window.setInterval(function () {
         PushcaClient.sendPing();
     }, 30000);
-    openDataBase();
+    openDataBase(PushcaClient.ClientObj.workSpaceId);
 };
 
 PushcaClient.onCloseHandler = function (ws, event) {
@@ -50,12 +54,12 @@ PushcaClient.onDataHandler = function (arrayBuffer) {
     PushcaClient.sendAcknowledge(ackId);
 }
 
-function openWsConnection() {
+function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
         PushcaClient.openWsConnection(
             wsUrl,
             new ClientFilter(
-                IndexDbDeviceId,
+                deviceFpId,
                 "anonymous-sharing",
                 uuid.v4().toString(),
                 "ultimate-file-sharing-listener"

@@ -2,7 +2,7 @@ const dbNamePrefix = "UfsData";
 let dbName;
 const binaryChunksStoreName = "binaryChunks";
 const binaryManifestsStoreName = "binaryManifests";
-const IndexDbDeviceId = "calculatedDeviceFingerPrint11";
+let IndexDbDeviceId;
 const dbRegistry = new Map();
 
 navigator.storage.estimate().then(estimate => {
@@ -19,7 +19,11 @@ navigator.storage.estimate().then(estimate => {
     }
 });
 
-function openDataBase(onSuccessHandler) {
+function openDataBase(deviceFpId, onSuccessHandler) {
+    IndexDbDeviceId = deviceFpId;
+    if (IndexDbDeviceId !== 'cec7abf69bab9f5aa793bd1c0c101e99') {
+        alert("Wrong device id");
+    }
     dbName = `${dbNamePrefix}_${IndexDbDeviceId}`;
     const request = indexedDB.open(dbName, 1);
 

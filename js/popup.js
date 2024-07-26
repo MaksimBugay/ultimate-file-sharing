@@ -6,7 +6,11 @@ window.addEventListener('unload', () => {
     port.disconnect();
 });
 
-openDataBase();
+FingerprintJS.load().then(fp => {
+    fp.get().then(result => {
+        openDataBase(result.visitorId);
+    });
+});
 
 document.getElementById("copy-link-btn").addEventListener('click', function () {
     chrome.runtime.sendMessage({action: 'save-file'}, (response) => {
