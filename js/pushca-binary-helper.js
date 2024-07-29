@@ -15,7 +15,6 @@ class Datagram {
         this.order = order;
         this.size = size;
         this.md5 = md5;
-        this.bytes = null;
         this.state = DatagramState.UNKNOWN;
     }
 
@@ -70,7 +69,7 @@ class BinaryManifest {
         const datagram = this.datagrams[order];
         return CallableFuture.callAsynchronously(2000, null, function (waiterId) {
             calculateSha256(bytes).then(md5 => {
-                if (datagram.md5 === md5()) {
+                if (datagram.md5 === md5) {
                     datagram.setBytes(bytes);
                     CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
                 } else {
@@ -362,7 +361,7 @@ async function sendBinary(binaryId, manifestOnly, requestedChunks, dest) {
             await retrieveAndSendBinaryChunk(binaryId, order, destHashCode);
         }
     }
-    console.log(`Upload appeal was processed for binary with id ${binaryId}`);
+    console.log(`Successfully send binary with id ${binaryId}`);
 }
 
 async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode) {
@@ -383,4 +382,8 @@ async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode) {
         destHashCode,
         chunk
     );
+}
+
+function buildDownloadWaiterId(waiterId) {
+    return `wd_${waiterId}`;
 }

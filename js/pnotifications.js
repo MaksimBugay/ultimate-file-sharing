@@ -448,7 +448,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 //console.log(`send acknowledge: ${binaryWithHeader.getId()}`);
                 PushcaClient.sendAcknowledge(binaryWithHeader.getId());
             }
-            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(binaryWithHeader.getId(), binaryWithHeader.payload)) {
+            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(buildDownloadWaiterId(binaryWithHeader.getId()), binaryWithHeader.payload)) {
                 const manifest = BinaryWaitingHall.get(binaryWithHeader.binaryId);
                 if (manifest && (BinaryType.FILE === binaryWithHeader.binaryType)) {
                     manifest.setChunkBytes(binaryWithHeader.order, binaryWithHeader.payload).then(() => {
@@ -497,6 +497,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
             return;
         }
         if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
+            processUploadBinaryAppeal(UploadBinaryAppeal.fromJSON(parts[2]));
             if (typeof PushcaClient.onUploadBinaryAppealHandler === 'function') {
                 PushcaClient.onUploadBinaryAppealHandler(UploadBinaryAppeal.fromJSON(parts[2]));
             }
@@ -505,7 +506,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
         if (parts[1] === MessageType.BINARY_MANIFEST) {
             PushcaClient.sendAcknowledge(parts[0]);
             const manifest = BinaryManifest.fromJSON(parts[2]);
-            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(manifest.id, manifest)) {
+            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(buildDownloadWaiterId(manifest.id), manifest)) {
                 if (!BinaryWaitingHall.get(manifest.id)) {
                     BinaryWaitingHall.set(manifest.id, manifest);
                 } else {

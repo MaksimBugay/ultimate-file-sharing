@@ -82,7 +82,8 @@ delay(3000).then(() => {
             //PushcaClient.broadcastMessage(id, owner, false, msg);
             if (!n) {
                 n = 1;
-                PushcaClient.sendUploadBinaryAppeal(
+                sendBinary(manifest.id, false, null, owner);
+                /*PushcaClient.sendUploadBinaryAppeal(
                     owner,
                     manifest.id,
                     MemoryBlock.MB,
@@ -101,7 +102,7 @@ delay(3000).then(() => {
                     ).then(result => {
                         console.log(result.type);
                     });
-                });
+                });*/
             }
         });
     });
