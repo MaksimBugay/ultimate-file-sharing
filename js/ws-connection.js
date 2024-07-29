@@ -19,6 +19,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     }
 });
 
+PushcaClient.verbose = true;
 PushcaClient.onOpenHandler = function () {
     console.log("Connected to Pushca!");
     pingIntervalId = window.setInterval(function () {
@@ -33,10 +34,6 @@ PushcaClient.onCloseHandler = function (ws, event) {
     if (!event.wasClean) {
         console.error("Your connection died, refresh the page please");
     }
-};
-
-PushcaClient.onMessageHandler = function (ws, messageText) {
-    console.log(messageText);
 };
 
 PushcaClient.onFinalizedBinaryHandler = function (manifest) {

@@ -367,6 +367,7 @@ class UploadBinaryAppeal {
 let PushcaClient = {};
 PushcaClient.serverBaseUrl = 'http://localhost:8080'
 PushcaClient.pusherInstanceId = null;
+PushcaClient.verbose = false;
 
 //handlers
 PushcaClient.onOpenHandler = null;
@@ -471,6 +472,12 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
             return;
         }
         //console.log('message', event.data);
+        if ("PONG" === event.data) {
+            if (PushcaClient.verbose){
+                console.log(event.data);
+            }
+            return;
+        }
         let parts = event.data.split(MessagePartsDelimiter);
         if (parts[1] === MessageType.ACKNOWLEDGE) {
             CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], null);
