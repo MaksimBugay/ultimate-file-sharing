@@ -50,19 +50,7 @@ function saveBinary(binaryId, originalFileName, arrayBuffer, mimeType) {
         console.log(JSON.stringify(binaryManifest.toJSON()));
         loadAllBinaryChunks(binaryId, binaryManifest.datagrams.length,
             function (loadedChunks) {
-                const binaryBlob = new Blob(loadedChunks, {type: mimeType});
-                const url = URL.createObjectURL(binaryBlob);
-                chrome.runtime.sendMessage({
-                    action: 'save-file',
-                    mimeType: mimeType,
-                    fileName: originalFileName,
-                    url: url
-                }, (response) => {
-                    if (response && response.downloadId) {
-                        console.log(`Download id = ${response.downloadId}`);
-                    }
-                    URL.revokeObjectURL(url);
-                });
+                downloadBinary(loadedChunks, originalFileName, mimeType);
             });
     })
 }

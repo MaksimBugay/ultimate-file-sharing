@@ -387,3 +387,19 @@ async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode) {
 function buildDownloadWaiterId(waiterId) {
     return `wd_${waiterId}`;
 }
+
+function downloadBinary(chunks, fileName, mimeType) {
+    const binaryBlob = new Blob(chunks, {type: mimeType});
+    const url = URL.createObjectURL(binaryBlob);
+    chrome.runtime.sendMessage({
+        action: 'save-file',
+        mimeType: mimeType,
+        fileName: fileName,
+        url: url
+    }, (response) => {
+        if (response && response.downloadId) {
+            console.log(`Download id = ${response.downloadId}`);
+        }
+        URL.revokeObjectURL(url);
+    });
+}

@@ -449,7 +449,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 PushcaClient.sendAcknowledge(binaryWithHeader.getId());
             }
             if (!CallableFuture.releaseWaiterIfExistsWithSuccess(buildDownloadWaiterId(binaryWithHeader.getId()), binaryWithHeader.payload)) {
-                const manifest = BinaryWaitingHall.get(binaryWithHeader.binaryId);
+                const manifest = BinaryWaitingHall.get(buildDownloadWaiterId(binaryWithHeader.binaryId));
                 if (manifest && (BinaryType.FILE === binaryWithHeader.binaryType)) {
                     manifest.setChunkBytes(binaryWithHeader.order, binaryWithHeader.payload).then(() => {
                         if (manifest.isFinalized()) {
@@ -506,9 +506,10 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
         if (parts[1] === MessageType.BINARY_MANIFEST) {
             PushcaClient.sendAcknowledge(parts[0]);
             const manifest = BinaryManifest.fromJSON(parts[2]);
-            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(buildDownloadWaiterId(manifest.id), manifest)) {
-                if (!BinaryWaitingHall.get(manifest.id)) {
-                    BinaryWaitingHall.set(manifest.id, manifest);
+            const dlWaiterId = buildDownloadWaiterId(manifest.id);
+            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(dlWaiterId, manifest)) {
+                if (!BinaryWaitingHall.get(dlWaiterId)) {
+                    BinaryWaitingHall.set(dlWaiterId, manifest);
                 } else {
                     console.warn(`Manifest of binary with id ${manifest.id} is already in processing`);
                 }

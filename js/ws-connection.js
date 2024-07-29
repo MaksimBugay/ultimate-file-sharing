@@ -39,10 +39,12 @@ PushcaClient.onMessageHandler = function (ws, messageText) {
     console.log(messageText);
 };
 
-PushcaClient.onUploadBinaryAppealHandler = processUploadBinaryAppeal;
 PushcaClient.onFinalizedBinaryHandler = function (manifest) {
     console.log(`Binary download was finalized: id = ${manifest.id}`);
     console.log(manifest);
+    if (manifest.isCompleted()) {
+        downloadBinary(manifest.datagrams.map(dtm => dtm.bytes), "dl_" + manifest.name, manifest.mimeType);
+    }
 }
 
 function openWsConnection(deviceFpId) {
