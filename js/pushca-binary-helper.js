@@ -4,11 +4,28 @@ const BinaryType = Object.freeze({
     BINARY_MESSAGE: 2
 });
 
+const DatagramState = Object.freeze({
+    UNKNOWN: 0,
+    LOADED: 1,
+    CORRUPTED: 2
+});
+
 class Datagram {
     constructor(order, size, md5) {
         this.order = order;
         this.size = size;
         this.md5 = md5;
+        this.bytes = null;
+        this.state = DatagramState.UNKNOWN;
+    }
+
+    setBytes(bytes) {
+        this.bytes = bytes;
+        this.state = DatagramState.LOADED;
+    }
+
+    setState(datagramState) {
+        this.state = datagramState;
     }
 }
 
@@ -21,6 +38,7 @@ class BinaryManifest {
         this.pusherInstanceId = pusherInstanceId;
         this.datagrams = isArrayNotEmpty(datagrams) ? datagrams : [];
         this.totalSize = totalSize;
+        this.created = new Date().getTime();
     }
 
     getTotalSize() {
@@ -46,6 +64,34 @@ class BinaryManifest {
 
     setPusherInstanceId(pusherInstanceId) {
         this.pusherInstanceId = pusherInstanceId;
+    }
+
+    async setChunkBytes(order, bytes) {
+        const datagram = this.datagrams[order];
+        return CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+            calculateSha256(bytes).then(md5 => {
+                if (datagram.md5 === md5()) {
+                    datagram.setBytes(bytes);
+                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
+                } else {
+                    console.warn(`Corrupted chunk was received: binary id = ${this.id}, order = ${order}`);
+                    datagram.setState(DatagramState.CORRUPTED);
+                    CallableFuture.releaseWaiterIfExistsWithError(waiterId, false);
+                }
+            });
+        });
+    }
+
+    isCompleted() {
+        return this.datagrams.every(datagram => datagram.state === DatagramState.LOADED);
+    }
+
+    isFinalized() {
+        return this.datagrams.every(datagram => datagram.state !== DatagramState.UNKNOWN);
+    }
+
+    isExpired() {
+        return ((new Date().getTime()) - this.created) > 30 * 60 * 1000;
     }
 
     toJSON() {
@@ -98,8 +144,15 @@ class BinaryWithHeader {
         this.withAcknowledge = bytesToBoolean(copyBytes(sourceBuffer, 5, 6));
         this.binaryId = bytesToUuid(copyBytes(sourceBuffer, 6, 22));
         this.order = bytesToInt(copyBytes(sourceBuffer, 22, 26));
+        this.payload = copyBytes(sourceBuffer, 26, sourceBuffer.byteLength);
+    }
+
+    getId() {
+        return buildSharedFileChunkId(this.binaryId, this.order);
     }
 }
+
+const BinaryWaitingHall = new Map();
 
 function buildSharedFileChunkId(binaryId, order) {
     return `${binaryId}-${order}`;
@@ -253,7 +306,20 @@ function calculateTotalSize(datagrams) {
 }
 
 async function processUploadBinaryAppeal(uploadBinaryAppeal) {
-    const binaryId = uploadBinaryAppeal.binaryId;
+    const dest = new ClientFilter(
+        uploadBinaryAppeal.sender.workSpaceId,
+        uploadBinaryAppeal.sender.accountId,
+        uploadBinaryAppeal.sender.deviceId,
+        uploadBinaryAppeal.sender.applicationId
+    );
+    await sendBinary(
+        uploadBinaryAppeal.binaryId,
+        uploadBinaryAppeal.manifestOnly,
+        uploadBinaryAppeal.requestedChunks,
+        dest);
+}
+
+async function sendBinary(binaryId, manifestOnly, requestedChunks, dest) {
     let manifest;
     let result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         getManifest(
@@ -274,21 +340,21 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
     }
     manifest.setPusherInstanceId(PushcaClient.pusherInstanceId);
     manifest.setSender(PushcaClient.ClientObj);
-    if (uploadBinaryAppeal.manifestOnly || isArrayEmpty(uploadBinaryAppeal.requestedChunks)) {
-        result = await PushcaClient.sendBinaryManifest(uploadBinaryAppeal.sender, manifest);
+    if (manifestOnly || isArrayEmpty(requestedChunks)) {
+        result = await PushcaClient.sendBinaryManifest(dest, manifest);
         if (WaiterResponseType.ERROR === result.type) {
             return;
         }
     }
     const destHashCode = calculateClientHashCode(
-        uploadBinaryAppeal.sender.workSpaceId,
-        uploadBinaryAppeal.sender.accountId,
-        uploadBinaryAppeal.sender.deviceId,
-        uploadBinaryAppeal.sender.applicationId
+        dest.workSpaceId,
+        dest.accountId,
+        dest.deviceId,
+        dest.applicationId
     );
-    if (isArrayNotEmpty(uploadBinaryAppeal.requestedChunks)) {
-        for (let i = 0; i < uploadBinaryAppeal.requestedChunks.length; i++) {
-            const order = uploadBinaryAppeal.requestedChunks[i];
+    if (isArrayNotEmpty(requestedChunks)) {
+        for (let i = 0; i < requestedChunks.length; i++) {
+            const order = requestedChunks[i];
             await retrieveAndSendBinaryChunk(binaryId, order, destHashCode);
         }
     } else {

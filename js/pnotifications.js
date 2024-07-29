@@ -377,6 +377,7 @@ PushcaClient.onChannelMessageHandler = null;
 PushcaClient.onDataHandler = null;
 PushcaClient.onUploadBinaryAppealHandler = null;
 PushcaClient.onBinaryManifestHandler = null;
+PushcaClient.onFinalizedBinaryHandler = null;
 
 function allClientFieldsAreNotEmpty(obj) {
     return requiredClientFields.every(field => {
@@ -440,7 +441,30 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
 
     PushcaClient.ws.onmessage = function (event) {
         if (event.data instanceof ArrayBuffer) {
-            //console.log('binary', event.data.byteLength);
+            const arrayBuffer = event.data;
+            console.log('binary', arrayBuffer.byteLength);
+            const binaryWithHeader = new BinaryWithHeader(arrayBuffer);
+            if (binaryWithHeader.withAcknowledge) {
+                //console.log(`send acknowledge: ${binaryWithHeader.getId()}`);
+                PushcaClient.sendAcknowledge(binaryWithHeader.getId());
+            }
+            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(binaryWithHeader.getId(), binaryWithHeader.payload)) {
+                const manifest = BinaryWaitingHall.get(binaryWithHeader.binaryId);
+                if (manifest && (BinaryType.FILE === binaryWithHeader.binaryType)) {
+                    manifest.setChunkBytes(binaryWithHeader.order, binaryWithHeader.payload).then(() => {
+                        if (manifest.isFinalized()) {
+                            if (typeof PushcaClient.onFinalizedBinaryHandler === 'function') {
+                                PushcaClient.onFinalizedBinaryHandler(manifest);
+                                delay(15 * 60 * 1000).then(() => {
+                                    BinaryWaitingHall.delete(manifest.id);
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    console.warn(`Unassigned binary chunk was received: binaryId = ${binaryWithHeader.binaryId}, order = ${binaryWithHeader.order}`);
+                }
+            }
             if (typeof PushcaClient.onDataHandler === 'function') {
                 PushcaClient.onDataHandler(event.data);
             }
@@ -480,6 +504,14 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
         }
         if (parts[1] === MessageType.BINARY_MANIFEST) {
             PushcaClient.sendAcknowledge(parts[0]);
+            const manifest = BinaryManifest.fromJSON(parts[2]);
+            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(manifest.id, manifest)) {
+                if (!BinaryWaitingHall.get(manifest.id)) {
+                    BinaryWaitingHall.set(manifest.id, manifest);
+                } else {
+                    console.warn(`Manifest of binary with id ${manifest.id} is already in processing`);
+                }
+            }
             if (typeof PushcaClient.onBinaryManifestHandler === 'function') {
                 PushcaClient.onBinaryManifestHandler(BinaryManifest.fromJSON(parts[2]));
             }

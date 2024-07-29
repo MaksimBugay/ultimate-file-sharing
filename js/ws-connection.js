@@ -40,16 +40,9 @@ PushcaClient.onMessageHandler = function (ws, messageText) {
 };
 
 PushcaClient.onUploadBinaryAppealHandler = processUploadBinaryAppeal;
-PushcaClient.onBinaryManifestHandler = function (manifest) {
-    console.log(`Binary manifest was received: id = ${manifest.id}`);
+PushcaClient.onFinalizedBinaryHandler = function (manifest) {
+    console.log(`Binary download was finalized: id = ${manifest.id}`);
     console.log(manifest);
-}
-PushcaClient.onDataHandler = function (arrayBuffer) {
-    console.log('binary', arrayBuffer.byteLength);
-    const binaryWithHeader = new BinaryWithHeader(arrayBuffer);
-    const ackId = buildSharedFileChunkId(binaryWithHeader.binaryId, binaryWithHeader.order);
-    console.log(`send acknowledge: ${ackId}`);
-    PushcaClient.sendAcknowledge(ackId);
 }
 
 function openWsConnection(deviceFpId) {

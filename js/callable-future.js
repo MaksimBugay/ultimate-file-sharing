@@ -43,6 +43,9 @@ CallableFuture.releaseWaiterIfExistsWithSuccess = function (id, response) {
     if (waiter) {
         CallableFuture.releaseWaiterWithSuccess(waiter, response)
         CallableFuture.waitingHall.delete(id);
+        return true;
+    } else {
+        return false;
     }
 }
 
