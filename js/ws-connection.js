@@ -104,7 +104,7 @@ delay(3000).then(() => {
                         manifest.id,
                         MemoryBlock.MB,
                         false,
-                        [1]
+                        null
                     ).then(result => {
                         console.log(result.type);
                     });

@@ -269,6 +269,7 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
         manifest = result.body;
     }
     if (!manifest) {
+        console.warn(`Unknown binary with id ${binaryId}`)
         return;
     }
     manifest.setPusherInstanceId(PushcaClient.pusherInstanceId);
@@ -279,33 +280,41 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
             return;
         }
     }
+    const destHashCode = calculateClientHashCode(
+        uploadBinaryAppeal.sender.workSpaceId,
+        uploadBinaryAppeal.sender.accountId,
+        uploadBinaryAppeal.sender.deviceId,
+        uploadBinaryAppeal.sender.applicationId
+    );
     if (isArrayNotEmpty(uploadBinaryAppeal.requestedChunks)) {
-        const destHashCode = calculateClientHashCode(
-            uploadBinaryAppeal.sender.workSpaceId,
-            uploadBinaryAppeal.sender.accountId,
-            uploadBinaryAppeal.sender.deviceId,
-            uploadBinaryAppeal.sender.applicationId
-        );
         for (let i = 0; i < uploadBinaryAppeal.requestedChunks.length; i++) {
             const order = uploadBinaryAppeal.requestedChunks[i];
-            const result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
-                getBinaryChunk(binaryId, order, function (arrayBuffer) {
-                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, arrayBuffer);
-                });
-            });
-            if ((WaiterResponseType.ERROR === result.type) || (!result.body)) {
-                console.warn(`Chunk ${order} of binary with id ${binaryId} not found`);
-                return;
-            }
-            const chunk = await result.body.arrayBuffer();
-
-            await PushcaClient.sendBinaryChunk(
-                binaryId,
-                order,
-                destHashCode,
-                chunk
-            );
+            await retrieveAndSendBinaryChunk(binaryId, order, destHashCode);
+        }
+    } else {
+        for (let order = 0; order < manifest.datagrams.length; order++) {
+            await retrieveAndSendBinaryChunk(binaryId, order, destHashCode);
         }
     }
-    console.log("All good");
+    console.log(`Upload appeal was processed for binary with id ${binaryId}`);
+}
+
+async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode) {
+    const result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        getBinaryChunk(binaryId, order, function (arrayBuffer) {
+            CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, arrayBuffer);
+        });
+    });
+    if ((WaiterResponseType.ERROR === result.type) || (!result.body)) {
+        console.warn(`Chunk ${order} of binary with id ${binaryId} not found`);
+        return;
+    }
+    const chunk = await result.body.arrayBuffer();
+
+    return await PushcaClient.sendBinaryChunk(
+        binaryId,
+        order,
+        destHashCode,
+        chunk
+    );
 }
