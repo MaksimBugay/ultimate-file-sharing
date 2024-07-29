@@ -44,7 +44,10 @@ PushcaClient.onFinalizedBinaryHandler = function (manifest) {
     console.log(manifest);
     if (manifest.isCompleted()) {
         downloadBinary(manifest.datagrams.map(dtm => dtm.bytes), "dl_" + manifest.name, manifest.mimeType);
+    } else {
+        console.warn(`Binary with id ${manifest.id} cannot be fully downloaded`);
     }
+    BinaryWaitingHall.delete(buildDownloadWaiterId(manifest.id));
 }
 
 function openWsConnection(deviceFpId) {
@@ -79,7 +82,14 @@ delay(3000).then(() => {
             console.log(`Binary with id ${manifest.id} was completely removed from DB`);
         }));*/
         console.log(PushcaClient.ClientObj);
-        sendBinary(manifests[1].id, false, null, PushcaClient.ClientObj);
+        const dest = PushcaClient.ClientObj;
+        /*const dest = new ClientFilter(
+            "workSpaceMain",
+            "clientJava0@test.ee",
+            "jmeter",
+            "PUSHCA_CLIENT_dfebf6fb-5182-44b8-a0a6-83c966998ed1"
+        );*/
+        sendBinary(manifests[0].id, false, null, dest);
         manifests.forEach(manifest => {
             //sendBinary(manifest.id, false, null, owner);
             /*PushcaClient.sendUploadBinaryAppeal(

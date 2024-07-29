@@ -661,6 +661,14 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
                         );
                     });
                 }
+            } else {
+                //expired binaries cleanup
+                BinaryWaitingHall.forEach((manifest, id) => {
+                    if (manifest.isExpired()) {
+                        BinaryWaitingHall.delete(id);
+                        console.log(`Expired binary with id = ${manifest.id} was removed from waiting hall`);
+                    }
+                });
             }
         }, 5000);
     });
