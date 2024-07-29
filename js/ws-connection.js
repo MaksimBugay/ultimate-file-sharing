@@ -78,34 +78,30 @@ delay(3000).then(() => {
         /*manifests.forEach(manifest => removeBinary(manifest.id, function () {
             console.log(`Binary with id ${manifest.id} was completely removed from DB`);
         }));*/
-        const owner = PushcaClient.ClientObj;
-        let n;
+        console.log(PushcaClient.ClientObj);
+        sendBinary(manifests[1].id, false, null, PushcaClient.ClientObj);
         manifests.forEach(manifest => {
-            //PushcaClient.broadcastMessage(id, owner, false, msg);
-            if (!n) {
-                n = 1;
-                sendBinary(manifest.id, false, null, owner);
-                /*PushcaClient.sendUploadBinaryAppeal(
+            //sendBinary(manifest.id, false, null, owner);
+            /*PushcaClient.sendUploadBinaryAppeal(
+                owner,
+                manifest.id,
+                MemoryBlock.MB,
+                false,
+                [0]
+            ).then(result => {
+                console.log(result.type);
+            });
+            delay(2000).then(() => {
+                PushcaClient.sendUploadBinaryAppeal(
                     owner,
                     manifest.id,
                     MemoryBlock.MB,
                     false,
-                    [0]
+                    null
                 ).then(result => {
                     console.log(result.type);
                 });
-                delay(2000).then(() => {
-                    PushcaClient.sendUploadBinaryAppeal(
-                        owner,
-                        manifest.id,
-                        MemoryBlock.MB,
-                        false,
-                        null
-                    ).then(result => {
-                        console.log(result.type);
-                    });
-                });*/
-            }
+            });*/
         });
     });
 });
