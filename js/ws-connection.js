@@ -86,7 +86,7 @@ delay(3000).then(() => {
             "jmeter",
             "PUSHCA_CLIENT_dfebf6fb-5182-44b8-a0a6-83c966998ed1"
         );*/
-        sendBinary(manifests[0].id, false, null, dest);
+        //sendBinary(manifests[0].id, false, null, dest);
         manifests.forEach(manifest => {
             //sendBinary(manifest.id, false, null, owner);
             /*PushcaClient.sendUploadBinaryAppeal(

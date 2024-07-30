@@ -345,6 +345,9 @@ async function sendBinary(binaryId, manifestOnly, requestedChunks, dest) {
             return;
         }
     }
+    if (manifestOnly) {
+        return;
+    }
     const destHashCode = calculateClientHashCode(
         dest.workSpaceId,
         dest.accountId,
@@ -353,15 +356,16 @@ async function sendBinary(binaryId, manifestOnly, requestedChunks, dest) {
     );
     if (isArrayNotEmpty(requestedChunks)) {
         for (let i = 0; i < requestedChunks.length; i++) {
-            const order = requestedChunks[i];
-            await retrieveAndSendBinaryChunk(binaryId, order, destHashCode);
+            await retrieveAndSendBinaryChunk(binaryId, requestedChunks[i], destHashCode);
         }
     } else {
         for (let order = 0; order < manifest.datagrams.length; order++) {
             await retrieveAndSendBinaryChunk(binaryId, order, destHashCode);
         }
     }
-    console.log(`Successfully send binary with id ${binaryId}`);
+    if (isArrayEmpty(requestedChunks)) {
+        console.log(`Successfully send binary with id ${binaryId}`);
+    }
 }
 
 async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode) {

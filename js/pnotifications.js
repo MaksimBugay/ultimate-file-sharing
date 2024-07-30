@@ -473,13 +473,14 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
         }
         //console.log('message', event.data);
         if ("PONG" === event.data) {
-            if (PushcaClient.verbose){
+            if (PushcaClient.verbose) {
                 console.log(event.data);
             }
             return;
         }
         let parts = event.data.split(MessagePartsDelimiter);
         if (parts[1] === MessageType.ACKNOWLEDGE) {
+            //console.log(`Acknowledge was received: ${parts[0]}`)
             CallableFuture.releaseWaiterIfExistsWithSuccess(parts[0], null);
             return;
         }
@@ -978,6 +979,7 @@ PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, ar
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
         5000, id, 3, function () {
             PushcaClient.ws.send(combinedBuffer);
+            //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
         }
     );
     if (WaiterResponseType.ERROR === result.type) {
