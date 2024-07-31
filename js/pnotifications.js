@@ -505,6 +505,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
             return;
         }
         if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
+            //console.log(parts[2]);
             processUploadBinaryAppeal(UploadBinaryAppeal.fromJSON(parts[2]));
             if (typeof PushcaClient.onUploadBinaryAppealHandler === 'function') {
                 PushcaClient.onUploadBinaryAppealHandler(UploadBinaryAppeal.fromJSON(parts[2]));
@@ -977,7 +978,7 @@ PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, ar
 
     const id = buildSharedFileChunkId(binaryId, order);
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
-        5000, id, 3, function () {
+        60_000, id, 3, function () {
             PushcaClient.ws.send(combinedBuffer);
             //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
         }
