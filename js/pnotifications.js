@@ -958,7 +958,7 @@ PushcaClient.sendBinaryManifest = async function (dest, manifest) {
     return result;
 }
 
-PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, arrayBuffer) {
+PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, withAcknowledge, arrayBuffer) {
     if (isEmpty(PushcaClient.ws)) {
         return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
     }
@@ -969,7 +969,7 @@ PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, ar
     }
 
     const customHeader = buildPushcaBinaryHeader(
-        BinaryType.FILE, destHashCode, true, binaryId, order
+        BinaryType.FILE, destHashCode, withAcknowledge, binaryId, order
     );
     const combinedBuffer = new ArrayBuffer(customHeader.length + arrayBuffer.byteLength);
     const combinedView = new Uint8Array(combinedBuffer);
@@ -977,8 +977,9 @@ PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, ar
     combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
 
     const id = buildSharedFileChunkId(binaryId, order, destHashCode);
+    const numberOfRepeat = withAcknowledge ? 1 : 3;
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
-        60_000, id, 3, function () {
+        60_000, id, numberOfRepeat, function () {
             PushcaClient.ws.send(combinedBuffer);
             //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
         }

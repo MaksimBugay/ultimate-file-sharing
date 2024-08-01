@@ -312,7 +312,7 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
         uploadBinaryAppeal.sender.deviceId,
         uploadBinaryAppeal.sender.applicationId
     );
-    await sendBinary(
+    sendBinary(
         uploadBinaryAppeal.binaryId,
         uploadBinaryAppeal.manifestOnly,
         uploadBinaryAppeal.requestedChunks,
@@ -320,6 +320,18 @@ async function processUploadBinaryAppeal(uploadBinaryAppeal) {
 }
 
 async function sendBinary(binaryId, manifestOnly, requestedChunks, dest) {
+    const destHashCode = calculateClientHashCode(
+        dest.workSpaceId,
+        dest.accountId,
+        dest.deviceId,
+        dest.applicationId
+    );
+    if (isArrayNotEmpty(requestedChunks)) {
+        for (let i = 0; i < requestedChunks.length; i++) {
+            await retrieveAndSendBinaryChunk(binaryId, requestedChunks[i], destHashCode, false);
+        }
+        return;
+    }
     let manifest;
     let result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         getManifest(
@@ -340,36 +352,17 @@ async function sendBinary(binaryId, manifestOnly, requestedChunks, dest) {
     }
     manifest.setPusherInstanceId(PushcaClient.pusherInstanceId);
     manifest.setSender(PushcaClient.ClientObj);
-    if (manifestOnly || isArrayEmpty(requestedChunks)) {
-        result = await PushcaClient.sendBinaryManifest(dest, manifest);
-        if (WaiterResponseType.ERROR === result.type) {
-            return;
-        }
-    }
     if (manifestOnly) {
+        await PushcaClient.sendBinaryManifest(dest, manifest);
         return;
     }
-    const destHashCode = calculateClientHashCode(
-        dest.workSpaceId,
-        dest.accountId,
-        dest.deviceId,
-        dest.applicationId
-    );
-    if (isArrayNotEmpty(requestedChunks)) {
-        for (let i = 0; i < requestedChunks.length; i++) {
-            await retrieveAndSendBinaryChunk(binaryId, requestedChunks[i], destHashCode);
-        }
-    } else {
-        for (let order = 0; order < manifest.datagrams.length; order++) {
-            await retrieveAndSendBinaryChunk(binaryId, order, destHashCode);
-        }
+    for (let order = 0; order < manifest.datagrams.length; order++) {
+        await retrieveAndSendBinaryChunk(binaryId, order, destHashCode, true);
     }
-    if (isArrayEmpty(requestedChunks)) {
-        console.log(`Successfully send binary with id ${binaryId}`);
-    }
+    console.log(`Successfully send binary with id ${binaryId}`);
 }
 
-async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode) {
+async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode, withAcknowledge) {
     const result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         getBinaryChunk(binaryId, order, function (arrayBuffer) {
             CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, arrayBuffer);
@@ -385,6 +378,7 @@ async function retrieveAndSendBinaryChunk(binaryId, order, destHashCode) {
         binaryId,
         order,
         destHashCode,
+        withAcknowledge,
         chunk
     );
 }
