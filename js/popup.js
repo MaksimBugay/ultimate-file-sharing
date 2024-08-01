@@ -61,12 +61,11 @@ async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer
     let order = 0;
 
     while (order < totalNumberOfChunks) {
-        const chunkId = buildSharedFileChunkId(binaryId, order);
         const result = await loadBinaryChunk(binaryId, order);
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             chunks.push(result.body);
         } else {
-            console.error(`Binary data is corrupted or cannot be loaded: chunkId = ${chunkId}`);
+            console.error(`Binary data is corrupted or cannot be loaded: binaryId = ${binaryId}, order = ${order}`);
             return;
         }
         order += 1;

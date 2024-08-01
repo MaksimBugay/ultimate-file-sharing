@@ -140,6 +140,7 @@ class BinaryManifest {
 class BinaryWithHeader {
     constructor(sourceBuffer) {
         this.binaryType = bytesToShortInt(copyBytes(sourceBuffer, 0, 1));
+        this.destClientHash = bytesToInt(copyBytes(sourceBuffer, 1, 5));
         this.withAcknowledge = bytesToBoolean(copyBytes(sourceBuffer, 5, 6));
         this.binaryId = bytesToUuid(copyBytes(sourceBuffer, 6, 22));
         this.order = bytesToInt(copyBytes(sourceBuffer, 22, 26));
@@ -147,14 +148,14 @@ class BinaryWithHeader {
     }
 
     getId() {
-        return buildSharedFileChunkId(this.binaryId, this.order);
+        return buildSharedFileChunkId(this.binaryId, this.order, this.destClientHash);
     }
 }
 
 const BinaryWaitingHall = new Map();
 
-function buildSharedFileChunkId(binaryId, order) {
-    return `${binaryId}-${order}`;
+function buildSharedFileChunkId(binaryId, order, destHashCode) {
+    return `${binaryId}-${order}-${destHashCode}`;
 }
 
 async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer) {

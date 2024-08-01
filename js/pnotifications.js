@@ -976,7 +976,7 @@ PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, ar
     combinedView.set(customHeader, 0);
     combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
 
-    const id = buildSharedFileChunkId(binaryId, order);
+    const id = buildSharedFileChunkId(binaryId, order, destHashCode);
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
         60_000, id, 3, function () {
             PushcaClient.ws.send(combinedBuffer);
