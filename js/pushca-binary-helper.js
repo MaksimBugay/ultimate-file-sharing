@@ -158,45 +158,51 @@ function buildSharedFileChunkId(binaryId, order, destHashCode) {
     return `${binaryId}-${order}-${destHashCode}`;
 }
 
-async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer) {
-    let binaryManifest;
-    let result = await createBinaryManifest(binaryId, originalFileName, mimeType);
-    if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
-        binaryManifest = result.body;
+async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer, sliceNumber, inBinaryManifest) {
+    let binaryManifest = inBinaryManifest;
+    let result;
+    if (sliceNumber === 0) {
+        result = await createBinaryManifest(binaryId, originalFileName, mimeType);
+        if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+            binaryManifest = result.body;
+        }
     }
     if (!binaryManifest) {
         console.log(`Cannot create binary manifest: ${originalFileName}`);
         return null;
     }
-    result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
-        saveBinaryManifest(
-            binaryManifest,
-            function () {
-                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
-            },
-            function (event) {
-                alert(event.target.error);
-                CallableFuture.releaseWaiterIfExistsWithError(waiterId, false);
-            }
-        );
-    });
-    if (WaiterResponseType.ERROR === result.type) {
-        return null;
+    if (sliceNumber === 0) {
+        result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+            saveBinaryManifest(
+                binaryManifest,
+                function () {
+                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
+                },
+                function (event) {
+                    alert(event.target.error);
+                    CallableFuture.releaseWaiterIfExistsWithError(waiterId, false);
+                }
+            );
+        });
+        if (WaiterResponseType.ERROR === result.type) {
+            return null;
+        }
     }
     const chunks = splitArrayBuffer(arrayBuffer, MemoryBlock.MB);
-    for (let order = 0; order < chunks.length; order++) {
-        const result = await addChunkToBinaryManifest(binaryManifest, order, chunks[order]);
+    for (let n = 0; n < chunks.length; n++) {
+        const order = sliceNumber * 100 + n;
+        const result = await addChunkToBinaryManifest(binaryManifest, order, chunks[n]);
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             binaryManifest = result.body;
         } else {
             console.log(`Cannot append binary chunk: name ${originalFileName}, order ${order}`);
             return null;
         }
-        const blob = new Blob([chunks[order]], {type: mimeType});
+        const blob = new Blob([chunks[n]], {type: mimeType});
         saveBinaryChunk(binaryId, order, blob);
     }
 
-    await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+    result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         saveBinaryManifest(
             binaryManifest,
             function () {
@@ -209,6 +215,10 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
             }
         );
     });
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log(`Failed Save manifest attempt during binary upload: file name = ${originalFileName}`);
+        return null;
+    }
     return binaryManifest;
 }
 

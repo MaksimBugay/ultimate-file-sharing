@@ -88,6 +88,7 @@ delay(3000).then(() => {
         );*/
         //sendBinary("b504a910-131d-423a-91a9-8dcff825f041", false, null, dest);
         manifests.forEach(manifest => {
+            console.log(`http://vasilii.prodpushca.com:8060/binary/${PushcaClient.ClientObj.workSpaceId}/${manifest.id}?mimeType=${manifest.mimeType}`);
             //sendBinary(manifest.id, false, null, owner);
             /*PushcaClient.sendUploadBinaryAppeal(
                 owner,

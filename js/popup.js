@@ -1,3 +1,4 @@
+const FILE_SLICE_SIZE = 100 * 1024 * 1024;
 const fileInput = document.getElementById('fileInput');
 fileInput.addEventListener('change', processSelectedFile);
 
@@ -20,39 +21,59 @@ document.getElementById("copy-link-btn").addEventListener('click', function () {
     });
 });
 
-function processSelectedFile(event) {
+async function processSelectedFile(event) {
     const file = event.target.files[0];
     if (file) {
-        const reader = new FileReader();
+        const fileSize = file.size;
+        let offset = 0;
+        let sliceNumber = 0;
+        const binaryId = uuid.v4().toString();
+        const slices = [];
 
-        reader.onload = function (e) {
-            const arrayBuffer = e.target.result;
-            saveBinary(
-                uuid.v4().toString(),
-                file.name,
-                arrayBuffer,
-                file.type
-            );
-        };
+        function readNextChunk() {
+            const reader = new FileReader();
 
-        reader.onerror = function (e) {
-            console.error("Error reading file:", e);
-        };
+            reader.onload = function (e) {
+                const arrayBuffer = e.target.result;
+                slices.push(arrayBuffer);
 
-        reader.readAsArrayBuffer(file);
+                offset += FILE_SLICE_SIZE;
+                sliceNumber++;
+
+                if (offset < fileSize) {
+                    readNextChunk();
+                } else {
+                    console.log('File read completed.');
+                }
+            };
+
+            reader.onerror = function (e) {
+                console.error("Error reading file:", e);
+            };
+
+            const blob = file.slice(offset, offset + FILE_SLICE_SIZE);
+            reader.readAsArrayBuffer(blob);
+        }
+
+        readNextChunk();
+
+        while (slices.length < Math.ceil(Math.ceil(fileSize / FILE_SLICE_SIZE))) {
+            await delay(100);
+        }
+        let tmpManifest = 0;
+        for (let i = 0; i < slices.length; i++) {
+            tmpManifest = await addBinaryToStorage(binaryId, file.name, file.type, slices[i], i, tmpManifest);
+            if (tmpManifest === null) {
+                removeBinary(binaryId, function () {
+                    console.log(`Binary with id ${binaryId} was completely removed from DB`);
+                });
+                return false;
+            }
+        }
     } else {
         console.error("No file selected");
+        return false;
     }
-}
-
-function saveBinary(binaryId, originalFileName, arrayBuffer, mimeType) {
-    addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer).then((binaryManifest) => {
-        console.log(JSON.stringify(binaryManifest.toJSON()));
-        loadAllBinaryChunks(binaryId, binaryManifest.datagrams.length,
-            function (loadedChunks) {
-                downloadBinary(loadedChunks, originalFileName, mimeType);
-            });
-    })
 }
 
 async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer) {

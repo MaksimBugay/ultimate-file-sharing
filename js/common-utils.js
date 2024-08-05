@@ -132,6 +132,30 @@ function bytesToUuid(bytes) {
     return `${msbHex.substring(0, 8)}-${msbHex.substring(8, 12)}-${msbHex.substring(12, 16)}-${lsbHex.substring(0, 4)}-${lsbHex.substring(4, 16)}`;
 }
 
+function concatArrayBuffers(buffers) {
+    // Calculate the total length of all buffers
+    const totalLength = buffers.reduce((acc, buffer) => acc + buffer.byteLength, 0);
+
+    // Create a new ArrayBuffer with the total length
+    const resultBuffer = new ArrayBuffer(totalLength);
+
+    // Create a Uint8Array view for the result buffer
+    const resultView = new Uint8Array(resultBuffer);
+
+    // Keep track of the current offset in the result buffer
+    let offset = 0;
+
+    // Copy each buffer into the result buffer
+    buffers.forEach(buffer => {
+        const bufferView = new Uint8Array(buffer);
+        resultView.set(bufferView, offset);
+        offset += buffer.byteLength;
+    });
+
+    return resultBuffer;
+}
+
+
 function concatenateByteArrays(...arrays) {
     // Calculate the total length of the concatenated array
     let totalLength = arrays.reduce((acc, array) => acc + array.length, 0);
