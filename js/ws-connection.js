@@ -87,31 +87,13 @@ delay(3000).then(() => {
             "PUSHCA_CLIENT_dfebf6fb-5182-44b8-a0a6-83c966998ed1"
         );*/
         //sendBinary("b504a910-131d-423a-91a9-8dcff825f041", false, null, dest);
+        let totalSize = 0;
         manifests.forEach(manifest => {
             console.log(`https://vasilii.prodpushca.com:30443/binary/${PushcaClient.ClientObj.workSpaceId}/${manifest.id}?mimeType=${manifest.mimeType}`);
             //console.log(`http://vasilii.prodpushca.com:8060/binary/${PushcaClient.ClientObj.workSpaceId}/${manifest.id}?mimeType=${manifest.mimeType}`);
-            //sendBinary(manifest.id, false, null, owner);
-            /*PushcaClient.sendUploadBinaryAppeal(
-                owner,
-                manifest.id,
-                MemoryBlock.MB,
-                false,
-                [0]
-            ).then(result => {
-                console.log(result.type);
-            });
-            delay(2000).then(() => {
-                PushcaClient.sendUploadBinaryAppeal(
-                    owner,
-                    manifest.id,
-                    MemoryBlock.MB,
-                    false,
-                    null
-                ).then(result => {
-                    console.log(result.type);
-                });
-            });*/
+            totalSize += manifest.getTotalSize();
         });
+        console.log(`Total size = ${Math.round(totalSize/MemoryBlock.MB)} Mb`);
     });
 });
 

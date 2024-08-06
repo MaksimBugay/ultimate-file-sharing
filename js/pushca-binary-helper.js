@@ -412,3 +412,32 @@ function downloadBinary(chunks, fileName, mimeType) {
         URL.revokeObjectURL(url);
     });
 }
+
+async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer) {
+    const chunks = [];
+
+    let order = 0;
+
+    while (order < totalNumberOfChunks) {
+        const result = await loadBinaryChunk(binaryId, order);
+        if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+            chunks.push(result.body);
+        } else {
+            console.error(`Binary data is corrupted or cannot be loaded: binaryId = ${binaryId}, order = ${order}`);
+            return;
+        }
+        order += 1;
+    }
+
+    if (typeof chunksConsumer === 'function') {
+        chunksConsumer(chunks);
+    }
+}
+
+async function loadBinaryChunk(binaryId, order) {
+    return await CallableFuture.callAsynchronously(3000, null, function (waiterId) {
+        getBinaryChunk(binaryId, order, function (chunkBlob) {
+            CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, chunkBlob);
+        });
+    });
+}
