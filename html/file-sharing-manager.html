@@ -1,12 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>New Tab</title>
+    <title>File manager</title>
+    <style>
+        .fm-grid-button {
+            display: flex;
+            align-items: center;
+            margin: 10px;
+            background-color: transparent;
+            border: 0;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+<h1>Ultimate File Sharing manager</h1>
+<div id="fileManagerGrid" class="ag-theme-quartz" style="height: 800px"></div>
 </body>
 <script src="../js/fp.min.js"></script>
 <script src="../js/uuid.min.js"></script>
+<script src="../js/ag-grid-community.min.js"></script>
 <script src="../js/common-utils.js"></script>
 <script src="../js/callable-future.js"></script>
 <script src="../js/pnotifications.js"></script>

@@ -29,7 +29,7 @@ class Datagram {
 }
 
 class BinaryManifest {
-    constructor(id, name, mimeType, sender, pusherInstanceId, datagrams, totalSize) {
+    constructor(id, name, mimeType, sender, pusherInstanceId, datagrams, totalSize, timestamp) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
@@ -37,7 +37,7 @@ class BinaryManifest {
         this.pusherInstanceId = pusherInstanceId;
         this.datagrams = isArrayNotEmpty(datagrams) ? datagrams : [];
         this.totalSize = totalSize;
-        this.created = new Date().getTime();
+        this.created = timestamp ? timestamp : new Date().getTime();
     }
 
     getTotalSize() {
@@ -63,6 +63,10 @@ class BinaryManifest {
 
     setPusherInstanceId(pusherInstanceId) {
         this.pusherInstanceId = pusherInstanceId;
+    }
+
+    getPublicUrl(workSpaceId) {
+        return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}?mimeType=${this.mimeType}`;
     }
 
     async setChunkBytes(order, bytes) {
@@ -104,7 +108,7 @@ class BinaryManifest {
         };
     }
 
-    static fromObject(jsonObject, totalSize) {
+    static fromObject(jsonObject, totalSize, timestamp) {
         const sender = new ClientFilter(
             jsonObject.sender.workSpaceId,
             jsonObject.sender.accountId,
@@ -127,13 +131,14 @@ class BinaryManifest {
             sender,
             jsonObject.pusherInstanceId,
             datagrams,
-            totalSize
+            totalSize,
+            timestamp
         );
     }
 
-    static fromJSON(jsonString, totalSize) {
+    static fromJSON(jsonString, totalSize, timestamp) {
         const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
-        return this.fromObject(jsonObject, totalSize);
+        return this.fromObject(jsonObject, totalSize, timestamp);
     }
 }
 
