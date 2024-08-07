@@ -137,16 +137,25 @@ delay(3000).then(() => {
         const gridOptions = {
             // Row Data: The data to be displayed.
             rowData: manifests,
+            pagination: true,
+            paginationPageSize: 10,
+            paginationPageSizeSelector: [10, 50, 100],
+            defaultColDef: {
+                sortable: false
+            },
             // Column Definitions: Defines the columns to be displayed.
             columnDefs: [
-                {headerName: "File name", field: "name"},
+                {headerName: "File name", field: "name", filter: true, floatingFilter: true, sortable: true},
                 {
                     headerName: "Size, MB",
+                    sortable: true,
                     valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
                 },
-                {field: "mimeType"},
+                {field: "mimeType", sortable: true},
                 {
                     headerName: "Created at",
+                    field: "createdAt",
+                    sortable: true,
                     valueGetter: params => printDateTime(params.data.created)
                 },
                 {
@@ -204,7 +213,7 @@ delay(3000).then(() => {
                                 console.log(`Binary with id ${data.id} was completely removed from DB`);
                                 const rowIndex = manifests.findIndex(manifest => manifest.id === data.id);
                                 if (rowIndex !== -1) {
-                                    gridApi.applyTransaction({
+                                    FileManager.gridApi.applyTransaction({
                                         remove: [manifests[rowIndex]] // Remove the row at the specified index
                                     });
                                 }
@@ -216,6 +225,10 @@ delay(3000).then(() => {
         };
         const fileManagerGrid = document.getElementById('fileManagerGrid');
         FileManager.gridApi = agGrid.createGrid(fileManagerGrid, gridOptions);
+        FileManager.gridApi.applyColumnState({
+            state: [{colId: "createdAt", sort: "desc"}],
+            defaultState: {sort: null},
+        });
     });
 });
 
@@ -236,9 +249,14 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             FileManager.gridApi.applyTransaction({
                 add: [newManifest]
             });
-            const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId);
+
             delay(1000).then(() => {
+                const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId);
                 copyToClipboard(publicUr);
+
+                const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
+                const rowNode = FileManager.gridApi.getRowNode(rowIndex);
+                rowNode.setSelected(true, true);
             });
         }
     }
