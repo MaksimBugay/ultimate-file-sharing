@@ -6,6 +6,10 @@ window.addEventListener('unload', () => {
     port.disconnect();
 });
 
+document.addEventListener('DOMContentLoaded', function() {
+    chrome.runtime.sendMessage({ action: 'popup-opened' });
+});
+
 FingerprintJS.load().then(fp => {
     fp.get().then(result => {
         openDataBase(result.visitorId);
@@ -65,6 +69,15 @@ async function processSelectedFile(event) {
                 return false;
             }
         }
+        tmpManifest.resetTotalSize();
+        chrome.runtime.sendMessage({
+            action: 'add-manifest-to-file-sharing-manager',
+            manifest: JSON.stringify(tmpManifest),
+            totalSize: tmpManifest.getTotalSize(),
+            created: tmpManifest.created
+        });
+        delay(500).then(() => window.close());
+        return true;
     } else {
         console.error("No file selected");
         return false;

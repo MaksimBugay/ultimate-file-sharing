@@ -61,26 +61,56 @@ function processWithFileSharingManager(tabIdConsumer) {
     });
 }
 
-function openFileSharingManagerIfNotExists() {
+function openFileSharingManagerIfNotExists(makeActive) {
     if (fileSharingManagerTabId) {
+        if (makeActive) {
+            chrome.tabs.update(fileSharingManagerTabId, {active: true});
+        }
         return;
     }
     chrome.tabs.query({}, (tabs) => {
-        let pageExists = tabs.some(tab => tab.url === fileSharingManagerUrl);
+        let existingTab = tabs.some(tab => tab.url === fileSharingManagerUrl);
 
-        if (!pageExists) {
+        if (!existingTab) {
             delay(getRandomIntInclusive(100, 1500)).then(() => {
                 if (!fileSharingManagerTabId) {
-                    chrome.tabs.create({url: fileSharingManagerUrl, active: false, index: 0}, (tab) => {
+                    chrome.tabs.create({url: fileSharingManagerUrl, active: !!makeActive, index: 0}, (tab) => {
                         fileSharingManagerTabId = tab.id;
                     });
                 }
             });
+        } else {
+            if (makeActive) {
+                chrome.tabs.update(existingTab.id, {active: true});
+            }
         }
     });
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'popup-opened') {
+        openFileSharingManagerIfNotExists(true);
+        delay(1000).then(() => {
+            chrome.action.openPopup().then(() => {
+                sendResponse({status: 'popup_opened'});
+            }).catch((error) => {
+                //console.error('Failed to open popup:', error);
+                sendResponse({status: 'popup_failed'});
+            });
+        });
+        return true;
+    }
+    if (message.action === "add-manifest-to-file-sharing-manager") {
+        processWithFileSharingManager(function (tabId) {
+            chrome.tabs.sendMessage(tabId, {
+                message: "add-manifest-to-manager-grid",
+                manifest: message.manifest,
+                totalSize: message.totalSize,
+                created: message.created
+            });
+        });
+        return true;
+    }
     if (message.action === "get-pushca-connection-attributes") {
         processWithFileSharingManager(function (tabId) {
             chrome.tabs.sendMessage(tabId, {

@@ -1,5 +1,6 @@
 console.log('ws-connection.js running on', window.location.href);
 
+let FileManager = {};
 const wsUrl = 'wss://vasilii.prodpushca.com:30085';
 let pingIntervalId = null;
 
@@ -7,16 +8,6 @@ FingerprintJS.load().then(fp => {
     fp.get().then(result => {
         openWsConnection(result.visitorId);
     });
-});
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.message === "send-binary-chunk") {
-        sendResponse({result: 'all good', binaryId: request.binaryId, order: request.order});
-        return true;
-    }
-
-    if (request.message === "get-connection-attributes") {
-        sendResponse({clientObj: PushcaClient.ClientObj, pusherInstanceId: PushcaClient.pusherInstanceId});
-    }
 });
 
 PushcaClient.verbose = true;
@@ -136,26 +127,10 @@ class GridHeaderWithImage {
 
 delay(3000).then(() => {
     getAllManifests(function (manifests) {
-        //clearAllManifests();
-        //clearAllBinaries();
-        console.log("Fetched manifests");
-        console.log(manifests);
-        /*manifests.forEach(manifest => removeBinary(manifest.id, function () {
-            console.log(`Binary with id ${manifest.id} was completely removed from DB`);
-        }));*/
-        console.log(PushcaClient.ClientObj);
-        const dest = PushcaClient.ClientObj;
-        /*const dest = new ClientFilter(
-            "workSpaceMain",
-            "clientJava0@test.ee",
-            "jmeter",
-            "PUSHCA_CLIENT_dfebf6fb-5182-44b8-a0a6-83c966998ed1"
-        );*/
-        //sendBinary("b504a910-131d-423a-91a9-8dcff825f041", false, null, dest);
+
+        FileManager.manifests = manifests;
         let totalSize = 0;
         manifests.forEach(manifest => {
-            console.log(`https://vasilii.prodpushca.com:30443/binary/${PushcaClient.ClientObj.workSpaceId}/${manifest.id}?mimeType=${manifest.mimeType}`);
-            //console.log(`http://vasilii.prodpushca.com:8060/binary/${PushcaClient.ClientObj.workSpaceId}/${manifest.id}?mimeType=${manifest.mimeType}`);
             totalSize += manifest.getTotalSize();
         });
         console.log(`Total size = ${Math.round(totalSize / MemoryBlock.MB)} Mb`);
@@ -240,8 +215,32 @@ delay(3000).then(() => {
             ]
         };
         const fileManagerGrid = document.getElementById('fileManagerGrid');
-        const gridApi = agGrid.createGrid(fileManagerGrid, gridOptions);
+        FileManager.gridApi = agGrid.createGrid(fileManagerGrid, gridOptions);
     });
 });
 
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    if (request.message === "send-binary-chunk") {
+        sendResponse({result: 'all good', binaryId: request.binaryId, order: request.order});
+        return true;
+    }
+
+    if (request.message === "get-connection-attributes") {
+        sendResponse({clientObj: PushcaClient.ClientObj, pusherInstanceId: PushcaClient.pusherInstanceId});
+    }
+
+    if (request.message === "add-manifest-to-manager-grid") {
+        if (request.manifest) {
+            const newManifest = BinaryManifest.fromJSON(request.manifest, request.totalSize, request.created);
+            FileManager.manifests.push(newManifest);
+            FileManager.gridApi.applyTransaction({
+                add: [newManifest]
+            });
+            const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId);
+            delay(1000).then(() => {
+                copyToClipboard(publicUr);
+            });
+        }
+    }
+});
 

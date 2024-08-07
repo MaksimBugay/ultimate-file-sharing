@@ -5,6 +5,7 @@
   "description": "A Chrome extension for secure file sharing from your machine.",
   "permissions": [
     "tabs",
+    "activeTab",
     "downloads"
   ],
   "background": {
