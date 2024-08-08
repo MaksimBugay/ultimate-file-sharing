@@ -15,6 +15,12 @@ PushcaClient.onOpenHandler = function () {
     console.log("Connected to Pushca!");
     pingIntervalId = window.setInterval(function () {
         PushcaClient.sendPing();
+        if (!dbConnectionHealthCheck()) {
+            closeDataBase();
+            openDataBase(PushcaClient.ClientObj.workSpaceId);
+        } else {
+            console.log("Connection to DB is healthy");
+        }
     }, 30000);
     openDataBase(PushcaClient.ClientObj.workSpaceId);
 };

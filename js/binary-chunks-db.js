@@ -57,6 +57,28 @@ function openDataBase(deviceFpId, onSuccessHandler) {
     };
 }
 
+function dbConnectionHealthCheck() {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+        return false;
+    }
+    let transaction;
+    try {
+        transaction = db.transaction([binaryChunksStoreName, binaryManifestsStoreName], "readonly");
+        transaction.objectStore(binaryChunksStoreName);
+        transaction.objectStore(binaryManifestsStoreName);
+        return true;
+    } catch (error) {
+        console.error("Health check failed: Object store not found", error);
+    } finally {
+        if (transaction) {
+            transaction.abort();
+        }
+    }
+    return false;
+}
+
 function closeDataBase() {
     try {
         const db = dbRegistry.get(IndexDbDeviceId);
