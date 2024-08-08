@@ -17,12 +17,12 @@ PushcaClient.onOpenHandler = function () {
         PushcaClient.sendPing();
         if (!dbConnectionHealthCheck()) {
             closeDataBase();
-            openDataBase(PushcaClient.ClientObj.workSpaceId);
+            openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
         } else {
             console.log("Connection to DB is healthy");
         }
     }, 30000);
-    openDataBase(PushcaClient.ClientObj.workSpaceId);
+    openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
 };
 
 PushcaClient.onCloseHandler = function (ws, event) {
@@ -131,9 +131,11 @@ class GridHeaderWithImage {
     }
 }
 
-delay(3000).then(() => {
+function initFileManager() {
+    if (FileManager.gridApi) {
+        FileManager.gridApi.clear();
+    }
     getAllManifests(function (manifests) {
-
         FileManager.manifests = manifests;
         let totalSize = 0;
         manifests.forEach(manifest => {
@@ -236,7 +238,7 @@ delay(3000).then(() => {
             defaultState: {sort: null},
         });
     });
-});
+}
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.message === "send-binary-chunk") {
