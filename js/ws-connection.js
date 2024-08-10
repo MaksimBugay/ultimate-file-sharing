@@ -79,7 +79,9 @@ class GridCellButton {
 
         this.eButton = document.createElement("button");
         this.eButton.className = "btn-simple fm-grid-button";
-        this.publicUrl = `https://vasilii.prodpushca.com:30443/binary/${PushcaClient.ClientObj.workSpaceId}/${params.data.id}?mimeType=${params.data.mimeType}`;
+        this.publicUrl = `${params.data.getPublicUrl(PushcaClient.ClientObj.workSpaceId)}`;
+        this.eButton.title = this.publicUrl;
+
 
         if (params.imgSrc) {
             const img = document.createElement("img");

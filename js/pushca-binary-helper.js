@@ -10,6 +10,11 @@ const DatagramState = Object.freeze({
     CORRUPTED: 2
 });
 
+const CanPlatTypes = [
+    "image/jpeg",
+    "video/mp4"
+];
+
 class Datagram {
     constructor(order, size, md5) {
         this.order = order;
@@ -66,7 +71,11 @@ class BinaryManifest {
     }
 
     getPublicUrl(workSpaceId) {
-        return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}?mimeType=${this.mimeType}`;
+        return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}canPlayType=${this.getCanPlayType()}`;
+    }
+
+    getCanPlayType() {
+        return CanPlatTypes.includes(this.mimeType) ? 'probably' : '';
     }
 
     async setChunkBytes(order, bytes) {
