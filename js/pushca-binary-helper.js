@@ -71,11 +71,11 @@ class BinaryManifest {
     }
 
     getPublicUrl(workSpaceId) {
-        return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}?canPlayType=${this.getCanPlayType()}`;
-    }
-
-    getCanPlayType() {
-        return CanPlatTypes.includes(this.mimeType) ? 'probably' : '';
+        if (CanPlatTypes.includes(this.mimeType)) {
+            return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}?canPlayType=probably`;
+        } else {
+            return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}`;
+        }
     }
 
     async setChunkBytes(order, bytes) {
