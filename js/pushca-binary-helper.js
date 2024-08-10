@@ -71,7 +71,7 @@ class BinaryManifest {
     }
 
     getPublicUrl(workSpaceId) {
-        return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}canPlayType=${this.getCanPlayType()}`;
+        return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}?canPlayType=${this.getCanPlayType()}`;
     }
 
     getCanPlayType() {
