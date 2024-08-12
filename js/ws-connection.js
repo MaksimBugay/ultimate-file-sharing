@@ -233,7 +233,15 @@ function initFileManager() {
                 }
             ]
         };
-        const fileManagerGrid = document.getElementById('fileManagerGrid');
+        let fileManagerGrid = document.getElementById('fileManagerGrid');
+        if (fileManagerGrid) {
+            fileManagerGrid.remove();
+        }
+        const fileManagerContainer = document.getElementById("fileManagerContainer");
+        fileManagerGrid = document.createElement('div');
+        fileManagerGrid.id = 'fileManagerGrid';
+        fileManagerGrid.className = 'ag-theme-quartz fm-grid';
+        fileManagerContainer.appendChild(fileManagerGrid);
         FileManager.gridApi = agGrid.createGrid(fileManagerGrid, gridOptions);
         FileManager.gridApi.applyColumnState({
             state: [{colId: "createdAt", sort: "desc"}],
@@ -252,7 +260,7 @@ function initFileManager() {
                     alert("!!!");
                 }
                 verifySignature(key, 'TestString', signatureParam).then(result => {
-                    alert(result);
+                    console.log(result);
                 })
             });
         });
