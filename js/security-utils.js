@@ -1,3 +1,10 @@
+class CreatePrivateUrlSuffixRequest {
+    constructor(workspaceId, binaryId) {
+        this.workspaceId = workspaceId;
+        this.binaryId = binaryId;
+    }
+}
+
 async function generateKeyFromPassword(password) {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
@@ -47,6 +54,21 @@ async function signString(key, message) {
         key,
         data
     );
+}
+
+async function createPrivateUrlSuffix(workspaceId, binaryId) {
+    const response = await fetch('https://vasilii.prodpushca.com:30443' + '/binary/private/create-url-suffix', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(new CreatePrivateUrlSuffixRequest(workspaceId, binaryId))
+    });
+    if (!response.ok) {
+        console.error('Failed create private URL suffix request ' + response.statusText);
+        return null;
+    }
+    return response.text();
 }
 
 function arrayBufferToBase64(buffer) {

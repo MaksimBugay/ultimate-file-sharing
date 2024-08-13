@@ -34,7 +34,8 @@ class Datagram {
 }
 
 class BinaryManifest {
-    constructor(id, name, mimeType, sender, pusherInstanceId, datagrams, totalSize, timestamp) {
+    constructor(id, name, mimeType, sender, pusherInstanceId, datagrams,
+                totalSize, timestamp, password, privateUrlSuffix) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
@@ -43,6 +44,8 @@ class BinaryManifest {
         this.datagrams = isArrayNotEmpty(datagrams) ? datagrams : [];
         this.totalSize = totalSize;
         this.created = timestamp ? timestamp : new Date().getTime();
+        this.password = password;
+        this.privateUrlSuffix = privateUrlSuffix;
     }
 
     getTotalSize() {
@@ -71,6 +74,9 @@ class BinaryManifest {
     }
 
     getPublicUrl(workSpaceId) {
+        if (this.password) {
+            return `https://vasilii.prodpushca.com:30443/binary-download.html?suffix=${this.privateUrlSuffix}`;
+        }
         if (CanPlatTypes.includes(this.mimeType)) {
             return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}?canPlayType=probably`;
         } else {
@@ -141,7 +147,9 @@ class BinaryManifest {
             jsonObject.pusherInstanceId,
             datagrams,
             totalSize,
-            timestamp
+            timestamp,
+            jsonObject.password,
+            jsonObject.privateUrlSuffix
         );
     }
 
@@ -172,17 +180,10 @@ function buildSharedFileChunkId(binaryId, order, destHashCode) {
     return `${binaryId}-${order}-${destHashCode}`;
 }
 
-async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer, sliceNumber, inBinaryManifest) {
-    let binaryManifest = inBinaryManifest;
+async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer, sliceNumber, binaryManifest) {
     let result;
-    if (sliceNumber === 0) {
-        result = await createBinaryManifest(binaryId, originalFileName, mimeType);
-        if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
-            binaryManifest = result.body;
-        }
-    }
     if (!binaryManifest) {
-        console.log(`Cannot create binary manifest: ${originalFileName}`);
+        console.log(`Binary manifest was not provided: ${originalFileName}`);
         return null;
     }
     if (sliceNumber === 0) {
@@ -236,7 +237,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
     return binaryManifest;
 }
 
-async function createBinaryManifest(id, name, mimeType) {
+async function createBinaryManifest(id, name, mimeType, password) {
 
     return await CallableFuture.callAsynchronously(2000, null, function (waiteId) {
         chrome.runtime.sendMessage({action: 'get-pushca-connection-attributes'}, (response) => {
@@ -248,15 +249,37 @@ async function createBinaryManifest(id, name, mimeType) {
                     null,
                     response.clientObj.applicationId
                 );
-                binaryManifest = new BinaryManifest(
-                    id,
-                    name,
-                    mimeType,
-                    sender,
-                    response.pusherInstanceId,
-                    []
-                );
-                CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
+                if (password) {
+                    createPrivateUrlSuffix(sender.workSpaceId, id).then(privateUrlSuffix => {
+                        binaryManifest = new BinaryManifest(
+                            id,
+                            name,
+                            mimeType,
+                            sender,
+                            response.pusherInstanceId,
+                            [],
+                            null,
+                            null,
+                            password,
+                            privateUrlSuffix
+                        );
+                        CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
+                    });
+                } else {
+                    binaryManifest = new BinaryManifest(
+                        id,
+                        name,
+                        mimeType,
+                        sender,
+                        response.pusherInstanceId,
+                        [],
+                        null,
+                        null,
+                        password,
+                        null
+                    );
+                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
+                }
             } else {
                 CallableFuture.releaseWaiterIfExistsWithError(waiteId, "Cannot fetch Pushca connection attributes");
             }

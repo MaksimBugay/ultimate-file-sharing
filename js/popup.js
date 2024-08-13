@@ -59,7 +59,18 @@ async function processSelectedFile(event) {
         while (slices.length < Math.ceil(Math.ceil(fileSize / MemoryBlock.MB100))) {
             await delay(100);
         }
-        let tmpManifest = 0;
+
+        let tmpManifest;
+        const result = await createBinaryManifest(binaryId, file.name, file.type, 'strongPassword');
+        if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+            tmpManifest = result.body;
+        }
+        if (!tmpManifest) {
+            console.log(`Cannot create binary manifest: ${file.name}`);
+            return false;
+        }
+        console.log('new manifest');
+        console.log(tmpManifest);
         for (let i = 0; i < slices.length; i++) {
             tmpManifest = await addBinaryToStorage(binaryId, file.name, file.type, slices[i], i, tmpManifest);
             if (tmpManifest === null) {
@@ -76,6 +87,7 @@ async function processSelectedFile(event) {
             totalSize: tmpManifest.getTotalSize(),
             created: tmpManifest.created
         });
+
         delay(500).then(() => window.close());
         return true;
     } else {

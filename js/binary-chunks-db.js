@@ -149,7 +149,7 @@ function getManifest(binaryId, manifestConsumer, errorConsumer) {
             }
             return;
         }
-        const manifest = BinaryManifest.fromJSON(result.manifest, result.totalSize);
+        const manifest = BinaryManifest.fromJSON(result.manifest, result.totalSize, result.timestamp);
         if (typeof manifestConsumer === 'function') {
             manifestConsumer(manifest);
         }
