@@ -74,13 +74,14 @@ class BinaryManifest {
     }
 
     getPublicUrl(workSpaceId) {
+        const serverUrl = 'https://vasilii.prodpushca.com:30443';
         if (this.password) {
-            return `https://vasilii.prodpushca.com:30443/binary-download.html?suffix=${this.privateUrlSuffix}`;
+            return `${serverUrl}/binary-download.html?suffix=${this.privateUrlSuffix}`;
         }
         if (CanPlatTypes.includes(this.mimeType)) {
-            return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}?canPlayType=probably`;
+            return `${serverUrl}/binary/${workSpaceId}/${this.id}?canPlayType=probably`;
         } else {
-            return `https://vasilii.prodpushca.com:30443/binary/${workSpaceId}/${this.id}`;
+            return `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
     }
 
@@ -120,6 +121,19 @@ class BinaryManifest {
             sender: this.sender,
             pusherInstanceId: this.pusherInstanceId,
             datagrams: this.datagrams
+        };
+    }
+
+    toDbJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            mimeType: this.mimeType,
+            sender: this.sender,
+            pusherInstanceId: this.pusherInstanceId,
+            datagrams: this.datagrams,
+            password: this.password,
+            privateUrlSuffix: this.privateUrlSuffix
         };
     }
 

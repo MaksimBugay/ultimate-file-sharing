@@ -109,7 +109,7 @@ function saveBinaryManifest(binaryManifest, onSuccessHandler, onErrorHandler) {
     const data = {
         binaryId: binaryManifest.id,
         fileName: binaryManifest.name,
-        manifest: JSON.stringify(binaryManifest.toJSON()),
+        manifest: JSON.stringify(binaryManifest.toDbJSON()),
         totalSize: totalSize,
         timestamp: timestamp
     };

@@ -83,7 +83,7 @@ async function processSelectedFile(event) {
         tmpManifest.resetTotalSize();
         chrome.runtime.sendMessage({
             action: 'add-manifest-to-file-sharing-manager',
-            manifest: JSON.stringify(tmpManifest),
+            manifest: JSON.stringify(tmpManifest.toDbJSON()),
             totalSize: tmpManifest.getTotalSize(),
             created: tmpManifest.created
         });
