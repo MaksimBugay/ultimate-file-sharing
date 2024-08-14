@@ -27,7 +27,8 @@ const MessageType = Object.freeze({
     CHANNEL_MESSAGE: "CHANNEL_MESSAGE",
     CHANNEL_EVENT: "CHANNEL_EVENT",
     UPLOAD_BINARY_APPEAL: "UPLOAD_BINARY_APPEAL",
-    BINARY_MANIFEST: "BINARY_MANIFEST"
+    BINARY_MANIFEST: "BINARY_MANIFEST",
+    GATEWAY_REQUEST: "GATEWAY_REQUEST"
 });
 
 const ResourceType = Object.freeze({
@@ -363,6 +364,34 @@ class UploadBinaryAppeal {
     }
 }
 
+class GatewayRequestHeader {
+    constructor(client, roles, ip) {
+        this.client = client;
+        this.roles = roles ? roles : [];
+        this.ip = ip;
+    }
+
+    static fromObject(jsonObject) {
+        const client = new ClientFilter(
+            jsonObject.client.workSpaceId,
+            jsonObject.client.accountId,
+            jsonObject.client.deviceId,
+            jsonObject.client.applicationId
+        );
+
+        return new GatewayRequestHeader(
+            client,
+            jsonObject.roles,
+            jsonObject.ip
+        );
+    }
+
+    static fromJSON(jsonString) {
+        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        return this.fromObject(jsonObject);
+    }
+}
+
 
 let PushcaClient = {};
 PushcaClient.serverBaseUrl = 'http://localhost:8080'
@@ -527,6 +556,22 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 PushcaClient.onBinaryManifestHandler(BinaryManifest.fromJSON(parts[2]));
             }
             return;
+        }
+        if (parts[1] === MessageType.GATEWAY_REQUEST) {
+            const path = parts[2];
+            const header = GatewayRequestHeader.fromJSON(parts[3]);
+            let requestPayload = new Uint8Array(0);
+            if (parts.length === 5) {
+                requestPayload = base64ToArrayBuffer(parts[4]);
+            }
+            processGateWayRequest(path, header, requestPayload, function (response) {
+                const responsePayload = new Uint8Array(0);
+                if (response) {
+                    requestPayload = response;
+                }
+                //TODO implement send gw response method
+                sendGatewayResponse(parts[0], responsePayload);
+            });
         }
         if (parts.length === 2) {
             PushcaClient.sendAcknowledge(parts[0]);
