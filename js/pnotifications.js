@@ -18,7 +18,8 @@ const Command = Object.freeze({
     ADD_IMPRESSION: "ADD_IMPRESSION",
     REMOVE_IMPRESSION: "REMOVE_IMPRESSION",
     SEND_UPLOAD_BINARY_APPEAL: "SEND_UPLOAD_BINARY_APPEAL",
-    SEND_BINARY_MANIFEST: "SEND_BINARY_MANIFEST"
+    SEND_BINARY_MANIFEST: "SEND_BINARY_MANIFEST",
+    SEND_GATEWAY_RESPONSE: "SEND_GATEWAY_RESPONSE"
 });
 
 const MessageType = Object.freeze({
@@ -569,8 +570,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 if (response) {
                     requestPayload = response;
                 }
-                //TODO implement send gw response method
-                sendGatewayResponse(parts[0], responsePayload);
+                PushcaClient.sendGatewayResponse(parts[0], responsePayload);
             });
         }
         if (parts.length === 2) {
@@ -771,6 +771,13 @@ PushcaClient.sendAcknowledge = function (id) {
     PushcaClient.ws.send(commandWithId.message);
 }
 
+PushcaClient.sendGatewayResponse = function (id, responsePayload) {
+    let metaData = {};
+    metaData["id"] = id;
+    metaData["payload"] = arrayBufferToBase64(responsePayload);
+    let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_GATEWAY_RESPONSE, metaData);
+    PushcaClient.ws.send(commandWithId.message);
+}
 /**
  * Send message to all connected clients that met the filtering requirements
  *
