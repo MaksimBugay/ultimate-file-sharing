@@ -32,25 +32,35 @@ class DownloadProtectedBinaryRequest {
 }
 
 async function verifyBinarySignature(header, requestPayload) {
-    const requestJson = byteArrayToString(requestPayload);
-    console.log(`Gateway request payload`);
-    const request = DownloadProtectedBinaryRequest.fromJsonString(requestJson);
-    const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
-    const signature = await makeSignature(
-        "strongPassword",
-        salt,
-        JSON.stringify(request.toJSON())
-    )
-    console.log(`Request signature: ${arrayBufferToBase64(signature)}`);
-    const result = await verifySignature(
-        "strongPassword", salt, JSON.stringify(request.toJSON()), request.signature
-    );
-    return new WaiterResponse(
-        WaiterResponseType.SUCCESS,
-        stringToByteArray(
-            JSON.stringify({result: result})
+    try {
+        const requestJson = byteArrayToString(requestPayload);
+        console.log(`Gateway request payload`);
+        const request = DownloadProtectedBinaryRequest.fromJsonString(requestJson);
+        const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
+        const signature = await makeSignature(
+            "strongPassword",
+            salt,
+            JSON.stringify(request.toJSON())
         )
-    )
+        console.log(`Request signature: ${arrayBufferToBase64(signature)}`);
+        const result = await verifySignature(
+            "strongPassword", salt, JSON.stringify(request.toJSON()), request.signature
+        );
+        return new WaiterResponse(
+            WaiterResponseType.SUCCESS,
+            stringToByteArray(
+                JSON.stringify({result: result})
+            )
+        )
+    } catch (error) {
+        console.warn("Failed attempt of signature verification: " + error);
+        return new WaiterResponse(
+            WaiterResponseType.SUCCESS,
+            stringToByteArray(
+                JSON.stringify({result: false})
+            )
+        )
+    }
 }
 
 routs.set(GatewayPath.VERIFY_BINARY_SIGNATURE, verifyBinarySignature);
