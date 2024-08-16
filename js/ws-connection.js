@@ -248,23 +248,6 @@ function initFileManager() {
             state: [{colId: "createdAt", sort: "desc"}],
             defaultState: {sort: null},
         });
-        generateKeyFromPassword("password").then(key => {
-            console.log("Signature key");
-            console.log(key);
-            signString(key, 'TestString').then(signature => {
-                console.log(`Test string signature`);
-                console.log(signature);
-                const signatureParam = arrayBufferToUrlSafeBase64(signature);
-                console.log(signatureParam);
-                const signatureFromParam = urlSafeBase64ToArrayBuffer(signatureParam);
-                if (!arrayBuffersAreEqual(signature, signatureFromParam)) {
-                    alert("!!!");
-                }
-                verifySignature(key, 'TestString', signatureParam).then(result => {
-                    console.log(result);
-                })
-            });
-        });
     });
 }
 

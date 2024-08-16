@@ -79,6 +79,12 @@ function stringToByteArray(str) {
     return encoder.encode(str);
 }
 
+function stringToArrayBuffer(str) {
+    const encoder = new TextEncoder();
+    const uint8Array = encoder.encode(str);
+    return uint8Array.buffer;
+}
+
 function byteArrayToString(byteArray) {
     const decoder = new TextDecoder();
     return decoder.decode(byteArray);

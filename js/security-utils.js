@@ -5,7 +5,7 @@ class CreatePrivateUrlSuffixRequest {
     }
 }
 
-async function generateKeyFromPassword(password) {
+async function generateKeyFromPassword(password, salt) {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
         "raw",
@@ -15,7 +15,6 @@ async function generateKeyFromPassword(password) {
         ["deriveKey"]
     );
 
-    const salt = crypto.getRandomValues(new Uint8Array(16)); // Use a constant salt if you need the same key every time
     return await crypto.subtle.deriveKey(
         {
             name: "PBKDF2",
@@ -30,10 +29,10 @@ async function generateKeyFromPassword(password) {
     );
 }
 
-async function verifySignature(key, data, signature) {
+async function verifySignatureWithKey(key, data, signature) {
     // Convert the data and signature to ArrayBuffer
     const dataArrayBuffer = new TextEncoder().encode(data);
-    const signatureArrayBuffer = urlSafeBase64ToArrayBuffer(signature);
+    const signatureArrayBuffer = base64ToArrayBuffer(signature);
 
     // Verify the signature
     return await crypto.subtle.verify(
@@ -44,7 +43,15 @@ async function verifySignature(key, data, signature) {
     );
 }
 
+async function makeSignature(pwd, salt, payload) {
+    const key = await generateKeyFromPassword(pwd, salt);
+    return await signString(key, payload);
+}
 
+async function verifySignature(pwd, salt, dataStr, signatureBase64) {
+    const key = await generateKeyFromPassword(pwd, salt);
+    return await verifySignatureWithKey(key, dataStr, signatureBase64);
+}
 async function signString(key, message) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
