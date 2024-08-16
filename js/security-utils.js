@@ -71,6 +71,14 @@ async function createPrivateUrlSuffix(workspaceId, binaryId) {
     return response.text();
 }
 
+function byteArrayToBase64(byteArray) {
+    let binaryString = '';
+    for (let i = 0; i < byteArray.length; i++) {
+        binaryString += String.fromCharCode(byteArray[i]);
+    }
+    return window.btoa(binaryString);
+}
+
 function arrayBufferToBase64(buffer) {
     let binary = '';
     const bytes = new Uint8Array(buffer);

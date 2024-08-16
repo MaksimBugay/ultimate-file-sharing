@@ -5,7 +5,14 @@ const GatewayPath = Object.freeze({
 });
 
 async function verifyBinarySignature(header, requestPayload) {
-    return booleanToBytes(true);
+    const requestJson = byteArrayToString(requestPayload);
+    console.log(`Gateway request payload: ${requestJson}`);
+    return new WaiterResponse(
+        WaiterResponseType.SUCCESS,
+        stringToByteArray(
+            JSON.stringify({result: "true"})
+        )
+    )
 }
 
 routs.set(GatewayPath.VERIFY_BINARY_SIGNATURE, verifyBinarySignature);
@@ -13,7 +20,7 @@ routs.set(GatewayPath.VERIFY_BINARY_SIGNATURE, verifyBinarySignature);
 function processGateWayRequest(path, header, requestPayload, responseConsumer) {
     const route = routs.get(path);
 
-    if (typeof route === 'function') {
+    if (typeof route !== 'function') {
         console.warn(`Unknown gateway path ${path}`);
         if (typeof responseConsumer === 'function') {
             responseConsumer(null);

@@ -74,6 +74,15 @@ function calculateStringHashCode(s) {
     return h;
 }
 
+function stringToByteArray(str) {
+    const encoder = new TextEncoder();
+    return encoder.encode(str);
+}
+
+function byteArrayToString(byteArray) {
+    const decoder = new TextDecoder();
+    return decoder.decode(byteArray);
+}
 function intToBytes(int) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);

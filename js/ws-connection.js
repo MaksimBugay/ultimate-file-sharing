@@ -46,19 +46,20 @@ PushcaClient.onFinalizedBinaryHandler = function (manifest) {
 
 function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
+        const pClient = new ClientFilter(
+            deviceFpId,
+            "anonymous-sharing",
+            deviceFpId,
+            "ultimate-file-sharing-listener"
+        );
         PushcaClient.openWsConnection(
             wsUrl,
-            new ClientFilter(
-                deviceFpId,
-                "anonymous-sharing",
-                uuid.v4().toString(),
-                "ultimate-file-sharing-listener"
-            ),
+            pClient,
             function (clientObj) {
                 return new ClientFilter(
                     clientObj.workSpaceId,
                     clientObj.accountId,
-                    uuid.v4().toString(),
+                    clientObj.deviceId,
                     clientObj.applicationId
                 );
             }

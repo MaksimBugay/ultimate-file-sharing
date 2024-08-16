@@ -566,12 +566,13 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 requestPayload = base64ToArrayBuffer(parts[4]);
             }
             processGateWayRequest(path, header, requestPayload, function (response) {
-                const responsePayload = new Uint8Array(0);
+                let responsePayload = new Uint8Array(0);
                 if (response) {
-                    requestPayload = response;
+                    responsePayload = response;
                 }
                 PushcaClient.sendGatewayResponse(parts[0], responsePayload);
             });
+            return;
         }
         if (parts.length === 2) {
             PushcaClient.sendAcknowledge(parts[0]);
@@ -774,7 +775,7 @@ PushcaClient.sendAcknowledge = function (id) {
 PushcaClient.sendGatewayResponse = function (id, responsePayload) {
     let metaData = {};
     metaData["id"] = id;
-    metaData["payload"] = arrayBufferToBase64(responsePayload);
+    metaData["payload"] = byteArrayToBase64(responsePayload);
     let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_GATEWAY_RESPONSE, metaData);
     PushcaClient.ws.send(commandWithId.message);
 }
