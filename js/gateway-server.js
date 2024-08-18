@@ -4,33 +4,6 @@ const GatewayPath = Object.freeze({
     VERIFY_BINARY_SIGNATURE: "verify-binary-signature"
 });
 
-class DownloadProtectedBinaryRequest {
-    constructor(suffix, exp, canPlayType, signature) {
-        this.suffix = suffix;
-        this.exp = exp;
-        this.canPlayType = canPlayType;
-        this.signature = signature;
-    }
-
-    toJSON() {
-        return {
-            suffix: this.suffix,
-            exp: this.exp,
-            canPlayType: this.canPlayType
-        };
-    }
-
-    static fromJsonString(jsonString) {
-        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
-        return new DownloadProtectedBinaryRequest(
-            jsonObject.suffix,
-            jsonObject.exp,
-            jsonObject.canPlayType,
-            jsonObject.signature
-        );
-    }
-}
-
 async function verifyBinarySignature(header, requestPayload) {
     try {
         const requestJson = byteArrayToString(requestPayload);

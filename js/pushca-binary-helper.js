@@ -75,14 +75,17 @@ class BinaryManifest {
 
     getPublicUrl(workSpaceId) {
         const serverUrl = 'https://vasilii.prodpushca.com:30443';
+        const canPlayType = CanPlatTypes.includes(this.mimeType) ? 'probably' : null;
+        let downloadUrl;
         if (this.password) {
-            return `${serverUrl}/binary-download.html?suffix=${this.privateUrlSuffix}`;
-        }
-        if (CanPlatTypes.includes(this.mimeType)) {
-            return `${serverUrl}/binary/${workSpaceId}/${this.id}?canPlayType=probably`;
+            downloadUrl = `${serverUrl}/binary-download.html?suffix=${this.privateUrlSuffix}`;
         } else {
-            return `${serverUrl}/binary/${workSpaceId}/${this.id}`;
+            downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
+        if (canPlayType) {
+            downloadUrl = `${downloadUrl}?canPlayType=${canPlayType}`;
+        }
+        return downloadUrl;
     }
 
     async setChunkBytes(order, bytes) {
