@@ -83,7 +83,7 @@ class BinaryManifest {
             downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
         if (canPlayType) {
-            downloadUrl = `${downloadUrl}?canPlayType=${canPlayType}`;
+            downloadUrl = `${downloadUrl}&canPlayType=${canPlayType}`;
         }
         return downloadUrl;
     }
