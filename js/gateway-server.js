@@ -16,7 +16,7 @@ async function verifyBinarySignature(header, requestPayload) {
             salt,
             JSON.stringify(request.toSkipSignatureJSON())
         );
-        console.log(`Request signature: ${arrayBufferToBase64(signature)}`);
+        console.log(`Request signature: ${arrayBufferToUrlSafeBase64(signature)}`);
         const result = await verifySignature(
             "strongPassword", salt, JSON.stringify(request.toSkipSignatureJSON()), request.signature
         );

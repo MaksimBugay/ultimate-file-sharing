@@ -59,7 +59,7 @@ async function generateKeyFromPassword(password, salt) {
 async function verifySignatureWithKey(key, data, signature) {
     // Convert the data and signature to ArrayBuffer
     const dataArrayBuffer = new TextEncoder().encode(data);
-    const signatureArrayBuffer = base64ToArrayBuffer(signature);
+    const signatureArrayBuffer = urlSafeBase64ToArrayBuffer(signature);
 
     // Verify the signature
     return await crypto.subtle.verify(
