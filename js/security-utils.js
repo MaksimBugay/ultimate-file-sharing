@@ -13,7 +13,7 @@ class DownloadProtectedBinaryRequest {
         this.signature = signature;
     }
 
-    toJSON() {
+    toSkipSignatureJSON() {
         return {
             suffix: this.suffix,
             exp: this.exp,

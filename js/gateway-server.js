@@ -9,15 +9,16 @@ async function verifyBinarySignature(header, requestPayload) {
         const requestJson = byteArrayToString(requestPayload);
         console.log(`Gateway request payload`);
         const request = DownloadProtectedBinaryRequest.fromJsonString(requestJson);
+        console.log(request);
         const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
         const signature = await makeSignature(
             "strongPassword",
             salt,
-            JSON.stringify(request.toJSON())
-        )
+            JSON.stringify(request.toSkipSignatureJSON())
+        );
         console.log(`Request signature: ${arrayBufferToBase64(signature)}`);
         const result = await verifySignature(
-            "strongPassword", salt, JSON.stringify(request.toJSON()), request.signature
+            "strongPassword", salt, JSON.stringify(request.toSkipSignatureJSON()), request.signature
         );
         return new WaiterResponse(
             WaiterResponseType.SUCCESS,

@@ -78,12 +78,12 @@ class BinaryManifest {
         const canPlayType = CanPlatTypes.includes(this.mimeType) ? 'probably' : null;
         let downloadUrl;
         if (this.password) {
-            downloadUrl = `${serverUrl}/binary-download.html?suffix=${this.privateUrlSuffix}`;
+            downloadUrl = `${serverUrl}/binary-download.html?suffix=${this.privateUrlSuffix}&`;
         } else {
-            downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
+            downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}?`;
         }
         if (canPlayType) {
-            downloadUrl = `${downloadUrl}&canPlayType=${canPlayType}`;
+            downloadUrl = `${downloadUrl}canPlayType=${canPlayType}`;
         }
         return downloadUrl;
     }
