@@ -20,6 +20,10 @@ downloadBtn.addEventListener('click', function () {
         console.log(request);
         const url = `${serverUrl}/binary/protected/${request.suffix}?exp=${request.exp}&canPlayType=${request.canPlayType}&sgn=${request.signature}`;
         window.open(url, '_blank');
+        const loginContainer = document.querySelector('.login-container');
+        if (loginContainer) {
+            loginContainer.remove();
+        }
         delay(1000).then(() => window.close());
     });
 });
