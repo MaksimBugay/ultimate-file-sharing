@@ -90,10 +90,11 @@ button:hover {
     width: 100%;
 }
 
-input[type="password"] {
+input[type="password"],
+input[type="text"] {
     width: 100%;
     padding-right: 50px; /* Reserve space for the toggle button */
-    box-sizing: border-box; /* Ensure padding is included in the width */
+    box-sizing: border-box;
 }
 
 .toggle-password {
@@ -102,19 +103,20 @@ input[type="password"] {
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    background-color: #f0f0f0; /* Background color */
-    border: 1px solid #ccc; /* Border color */
-    border-radius: 4px; /* Optional: rounded corners */
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
     color: #007bff;
-    padding: 5px 10px; /* Adjust padding for better appearance */
+    padding: 5px 10px;
+    box-sizing: border-box;
 }
 
 .toggle-password:hover {
     width: 50px;
-    background-color: #e0e0e0; /* Slightly darker background on hover */
-    border-color: #999; /* Darker border on hover */
+    background-color: #e0e0e0;
+    border-color: #999;
     color: #0056b3;
-    text-decoration: none; /* Remove underline on hover */
+    text-decoration: none;
 }
