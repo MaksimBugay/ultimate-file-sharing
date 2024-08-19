@@ -118,7 +118,6 @@ input[type="text"] {
     width: 50px;
     right: 10px;
     transform: translateY(-50%);
-    background-color: #f0f0f0;
     border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
@@ -128,6 +127,10 @@ input[type="text"] {
     padding-bottom: 5px;
     padding-left: 5px;
     box-sizing: border-box;
+    background-image: url('../images/show-password.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
 }
 
 .toggle-password:hover {
