@@ -6,10 +6,9 @@ class CreatePrivateUrlSuffixRequest {
 }
 
 class DownloadProtectedBinaryRequest {
-    constructor(suffix, exp, canPlayType, signature) {
+    constructor(suffix, exp, signature) {
         this.suffix = suffix;
         this.exp = exp;
-        this.canPlayType = canPlayType;
         this.signature = signature;
     }
 
@@ -17,7 +16,6 @@ class DownloadProtectedBinaryRequest {
         return {
             suffix: this.suffix,
             exp: this.exp,
-            canPlayType: this.canPlayType
         };
     }
 
@@ -26,7 +24,6 @@ class DownloadProtectedBinaryRequest {
         return new DownloadProtectedBinaryRequest(
             jsonObject.suffix,
             jsonObject.exp,
-            jsonObject.canPlayType,
             jsonObject.signature
         );
     }

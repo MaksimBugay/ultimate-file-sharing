@@ -3,7 +3,6 @@ const urlParams = new URLSearchParams(window.location.search);
 
 // Retrieve specific parameters
 const protectedUrlSuffix = urlParams.get('suffix');
-const canPlayType = urlParams.get('canPlayType');
 
 const passwordField = document.getElementById('password');
 const workspaceField = document.getElementById('workSpaceId');
@@ -16,9 +15,9 @@ workspaceField.value = "cec7abf69bab9f5aa793bd1c0c101e99";
 passwordField.value = "strongPassword";
 
 downloadBtn.addEventListener('click', function () {
-    createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix, canPlayType).then(request => {
+    createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
-        const url = `${serverUrl}/binary/protected/${request.suffix}?exp=${request.exp}&canPlayType=${request.canPlayType}&sgn=${request.signature}`;
+        const url = `${serverUrl}/binary/protected/${request.suffix}?exp=${request.exp}&sgn=${request.signature}`;
         window.open(url, '_blank');
         const loginContainer = document.querySelector('.login-container');
         if (loginContainer) {
@@ -28,11 +27,10 @@ downloadBtn.addEventListener('click', function () {
     });
 });
 
-async function createSignedDownloadRequest(pwd, workspaceId, suffix, canPlayType) {
+async function createSignedDownloadRequest(pwd, workspaceId, suffix) {
     const request = new DownloadProtectedBinaryRequest(
         suffix,
         new Date().getTime() + 30000,
-        canPlayType,
         null
     );
 
@@ -45,7 +43,6 @@ async function createSignedDownloadRequest(pwd, workspaceId, suffix, canPlayType
     return new DownloadProtectedBinaryRequest(
         request.suffix,
         request.exp,
-        request.canPlayType,
         arrayBufferToUrlSafeBase64(signature)
     )
 }

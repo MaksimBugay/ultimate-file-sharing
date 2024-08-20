@@ -10,11 +10,6 @@ const DatagramState = Object.freeze({
     CORRUPTED: 2
 });
 
-const CanPlatTypes = [
-    "image/jpeg",
-    "video/mp4"
-];
-
 class Datagram {
     constructor(order, size, md5) {
         this.order = order;
@@ -75,15 +70,11 @@ class BinaryManifest {
 
     getPublicUrl(workSpaceId) {
         const serverUrl = 'https://vasilii.prodpushca.com:30443';
-        const canPlayType = CanPlatTypes.includes(this.mimeType) ? 'probably' : null;
         let downloadUrl;
         if (this.password) {
-            downloadUrl = `${serverUrl}/binary-download.html?suffix=${this.privateUrlSuffix}&`;
+            downloadUrl = `${serverUrl}/binary-download.html?suffix=${this.privateUrlSuffix}`;
         } else {
-            downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}?`;
-        }
-        if (canPlayType) {
-            downloadUrl = `${downloadUrl}canPlayType=${canPlayType}`;
+            downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
         return downloadUrl;
     }
