@@ -72,7 +72,7 @@ class BinaryManifest {
         const serverUrl = 'https://vasilii.prodpushca.com:30443';
         let downloadUrl;
         if (this.password) {
-            downloadUrl = `${serverUrl}/protected-binary.html?suffix=${this.privateUrlSuffix}`;
+            downloadUrl = `${serverUrl}/protected-binary.html?suffix=${this.privateUrlSuffix}&name=${encodeURIComponent(this.name)}`;
         } else {
             downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
