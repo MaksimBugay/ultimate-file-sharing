@@ -3,7 +3,6 @@ const urlParams = new URLSearchParams(window.location.search);
 
 // Retrieve specific parameters
 const protectedUrlSuffix = urlParams.get('suffix');
-const binaryFileName = decodeURIComponent(urlParams.get('name'));
 
 const passwordField = document.getElementById('password');
 const workspaceField = document.getElementById('workSpaceId');
@@ -45,6 +44,17 @@ function postDownloadProcessor() {
     delay(1000).then(() => window.close());
 }
 
+function extractFileName(contentDisposition){
+    let filename = 'protected-binary.data';
+
+    if (contentDisposition && contentDisposition.includes('filename=')) {
+        filename = contentDisposition.split('filename=')[1].split(';')[0];
+        filename = filename.replace(/['"]/g, '');
+    }
+
+    return filename;
+}
+
 async function downloadProtectedBinary(downloadRequest) {
     const response = await fetch(serverUrl + '/binary/protected', {
         method: 'POST',
@@ -57,7 +67,9 @@ async function downloadProtectedBinary(downloadRequest) {
         console.error('Failed download protected binary attempt ' + response.statusText);
         return null;
     }
+    console.log(response.headers.get('Content-Disposition'));
     const contentLength = response.headers.get('content-length');
+    const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
 
     // Open the file for writing
@@ -123,6 +135,7 @@ async function downloadProtectedBinarySilently(downloadRequest) {
     }
 
     const contentLength = response.headers.get('content-length');
+    const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
     const chunks = [];
     let receivedLength = 0;
