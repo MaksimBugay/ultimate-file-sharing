@@ -154,6 +154,7 @@ input[type="text"] {
     border-radius: 50%;
     border-top-color: #333;
     animation: spin 1s linear infinite;
+    margin-right: 5px;
 }
 
 @keyframes spin {

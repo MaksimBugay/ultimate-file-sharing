@@ -67,7 +67,6 @@ async function downloadProtectedBinary(downloadRequest) {
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
     progressBarContainer.style.display = 'block';
-    showSpinnerInButton();
 
     let writtenBytes = 0;
 
@@ -101,10 +100,6 @@ async function downloadProtectedBinary(downloadRequest) {
 function showSpinnerInButton() {
     document.getElementById('download-spinner').style.display = 'flex';
     document.getElementById('download-message').textContent = 'Downloading...';
-
-    /*downloadButtonText.style.display = 'none';
-    downloadSpinner.style.display = 'block';
-    downloadBtn.disabled = true;*/
 }
 
 async function downloadProtectedBinarySilently(downloadRequest) {
@@ -126,7 +121,7 @@ async function downloadProtectedBinarySilently(downloadRequest) {
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = "reproducing.mov";
+    a.download = binaryFileName;
     document.body.appendChild(a);
     a.click();
 
