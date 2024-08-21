@@ -13,6 +13,7 @@ const progressBar = document.getElementById("downloadProgress");
 const progressPercentage = document.getElementById("progressPercentage");
 const loginContainer = document.querySelector('.login-container');
 const progressBarContainer = document.getElementById("progressBarContainer");
+const downloadButtonText = document.getElementById("buttonText");
 const downloadSpinner = document.getElementById('downloadSpinner');
 
 workspaceField.focus();
@@ -64,6 +65,7 @@ async function downloadProtectedBinary(downloadRequest) {
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
     progressBarContainer.style.display = 'block';
+    downloadSpinner.style.display = 'block';
 
     let writtenBytes = 0;
 
@@ -94,7 +96,14 @@ async function downloadProtectedBinary(downloadRequest) {
     console.log(`File downloaded to: ${fileHandle.name}`);
 }
 
+function showSpinnerInButton() {
+    downloadButtonText.style.display = 'none';
+    downloadSpinner.style.display = 'block';
+    downloadBtn.disabled = true;
+}
+
 async function downloadProtectedBinarySilently(downloadRequest) {
+    showSpinnerInButton();
     const response = await fetch(serverUrl + '/binary/protected', {
         method: 'POST',
         headers: {
@@ -106,7 +115,6 @@ async function downloadProtectedBinarySilently(downloadRequest) {
         console.error('Failed download protected binary attempt ' + response.statusText);
         return null;
     }
-    downloadSpinner.style.display = 'block';
     const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});
 
     const url = URL.createObjectURL(blob);

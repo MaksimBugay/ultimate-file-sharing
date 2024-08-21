@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Protected content</title>
     <link rel="stylesheet" href="css/protected-binary.css">
 </head>
@@ -19,18 +19,19 @@
             <label for="password" style="font-weight: bold;font-size: 20px">Password</label>
             <div class="password-container">
                 <input type="password" id="password" name="password" required>
-                <button type="button" id="togglePassword" class="toggle-password">
-                </button>
+                <button type="button" id="togglePassword" class="toggle-password"></button>
             </div>
         </div>
         <div class="input-group">
-            <button id="downloadBtn">Download</button>
+            <button id="downloadBtn">
+                <span id="buttonText">Download</span>
+                <div class="spinner" id="downloadSpinner"></div>
+            </button>
         </div>
         <div id="progressBarContainer" style="display: none">
             <progress id="downloadProgress" value="0" max="100" style="width: 100%"></progress>
             <span id="progressPercentage">0%</span>
         </div>
-        <div class="spinner" id="downloadSpinner"></div>
     </div>
 </div>
 <script src="js/common-utils.js"></script>
