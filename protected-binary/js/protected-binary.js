@@ -66,7 +66,7 @@ async function downloadProtectedBinary(downloadRequest) {
     };
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
-    progressBarContainer.style.display = 'block';
+    showDownloadProgress();
 
     let writtenBytes = 0;
 
@@ -102,8 +102,14 @@ function showSpinnerInButton() {
     document.getElementById('download-message').textContent = 'Downloading...';
 }
 
+function showDownloadProgress(){
+    progressBarContainer.style.display = 'block';
+    downloadBtn.style.display = 'none';
+}
+
 async function downloadProtectedBinarySilently(downloadRequest) {
-    showSpinnerInButton();
+    //showSpinnerInButton();
+    showDownloadProgress();
     const response = await fetch(serverUrl + '/binary/protected', {
         method: 'POST',
         headers: {
@@ -115,7 +121,32 @@ async function downloadProtectedBinarySilently(downloadRequest) {
         console.error('Failed download protected binary attempt ' + response.statusText);
         return null;
     }
-    const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});
+
+    const contentLength = response.headers.get('content-length');
+    const reader = response.body.getReader();
+    const chunks = [];
+    let receivedLength = 0;
+
+    while (true) {
+        const {done, value} = await reader.read();
+        if (done) {
+            break;
+        }
+        chunks.push(value);
+        receivedLength += value.length;
+
+        if (contentLength) {
+            const progress = Math.round((receivedLength / contentLength) * 100);
+            progressBar.value = progress;
+            progressPercentage.textContent = `${progress}%`;
+        } else {
+            // Handle case where content-length is not available
+            progressBar.value = null;
+            progressPercentage.textContent = 'Downloading...';
+        }
+    }
+    const blob = new Blob(chunks, {type: response.headers.get('content-type')});
+    //const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});
 
     const url = URL.createObjectURL(blob);
 
