@@ -57,8 +57,8 @@ async function processSelectedFile(event) {
         }
 
         let tmpManifest;
-        //const result = await createBinaryManifest(binaryId, file.name, file.type, 'strongPassword');
-        const result = await createBinaryManifest(binaryId, file.name, file.type, null);
+        const result = await createBinaryManifest(binaryId, file.name, file.type, 'strongPassword');
+        //const result = await createBinaryManifest(binaryId, file.name, file.type, null);
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             tmpManifest = result.body;
         }

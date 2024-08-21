@@ -30,7 +30,9 @@ downloadBtn.addEventListener('click', function () {
             });
         } else {
             downloadProtectedBinarySilently(request).then(() => {
-                postDownloadProcessor();
+                if (loginContainer) {
+                    loginContainer.remove();
+                }
             });
         }
     });
