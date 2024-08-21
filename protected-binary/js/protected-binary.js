@@ -12,7 +12,8 @@ const togglePasswordBtn = document.getElementById('togglePassword');
 const progressBar = document.getElementById("downloadProgress");
 const progressPercentage = document.getElementById("progressPercentage");
 const loginContainer = document.querySelector('.login-container');
-progressBarContainer = document.getElementById("progressBarContainer");
+const progressBarContainer = document.getElementById("progressBarContainer");
+const downloadSpinner = document.getElementById('downloadSpinner');
 
 workspaceField.focus();
 
@@ -22,14 +23,24 @@ passwordField.value = "strongPassword";
 downloadBtn.addEventListener('click', function () {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
-        downloadProtectedBinary(request).then(() => {
-            if (loginContainer) {
-                loginContainer.remove();
-            }
-            delay(1000).then(() => window.close());
-        });
+        if (window.showSaveFilePicker) {
+            downloadProtectedBinary(request).then(() => {
+                postDownloadProcessor();
+            });
+        } else {
+            downloadProtectedBinarySilently(request).then(() => {
+                postDownloadProcessor();
+            });
+        }
     });
 });
+
+function postDownloadProcessor() {
+    if (loginContainer) {
+        loginContainer.remove();
+    }
+    delay(1000).then(() => window.close());
+}
 
 async function downloadProtectedBinary(downloadRequest) {
     const response = await fetch(serverUrl + '/binary/protected', {
@@ -52,7 +63,7 @@ async function downloadProtectedBinary(downloadRequest) {
     };
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
-    progressBarContainer.style.visibility = 'visible';
+    progressBarContainer.style.display = 'block';
 
     let writtenBytes = 0;
 
@@ -81,7 +92,22 @@ async function downloadProtectedBinary(downloadRequest) {
     await writable.close();
 
     console.log(`File downloaded to: ${fileHandle.name}`);
-    /*const blob = new Blob([await response.arrayBuffer()], { type: response.headers.get('content-type') });
+}
+
+async function downloadProtectedBinarySilently(downloadRequest) {
+    const response = await fetch(serverUrl + '/binary/protected', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(downloadRequest)
+    });
+    if (!response.ok) {
+        console.error('Failed download protected binary attempt ' + response.statusText);
+        return null;
+    }
+    downloadSpinner.style.display = 'block';
+    const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});
 
     const url = URL.createObjectURL(blob);
 
@@ -93,7 +119,7 @@ async function downloadProtectedBinary(downloadRequest) {
 
     // Clean up
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);*/
+    URL.revokeObjectURL(url);
 }
 
 async function createSignedDownloadRequest(pwd, workspaceId, suffix) {
