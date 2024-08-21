@@ -67,7 +67,7 @@ async function downloadProtectedBinary(downloadRequest) {
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
     progressBarContainer.style.display = 'block';
-    downloadSpinner.style.display = 'block';
+    showSpinnerInButton();
 
     let writtenBytes = 0;
 
@@ -99,9 +99,12 @@ async function downloadProtectedBinary(downloadRequest) {
 }
 
 function showSpinnerInButton() {
-    downloadButtonText.style.display = 'none';
+    document.getElementById('download-spinner').style.display = 'flex';
+    document.getElementById('download-message').textContent = 'Downloading...';
+
+    /*downloadButtonText.style.display = 'none';
     downloadSpinner.style.display = 'block';
-    downloadBtn.disabled = true;
+    downloadBtn.disabled = true;*/
 }
 
 async function downloadProtectedBinarySilently(downloadRequest) {
