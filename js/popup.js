@@ -16,10 +16,6 @@ FingerprintJS.load().then(fp => {
     });
 });
 
-document.getElementById("copy-link-btn").addEventListener('click', function () {
-
-});
-
 async function processSelectedFile(event) {
     const file = event.target.files[0];
     if (file) {
