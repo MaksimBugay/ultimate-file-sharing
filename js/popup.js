@@ -1,14 +1,14 @@
 const fileInput = document.getElementById('fileInput');
 const passwordField = document.getElementById('passwordInput');
-fileInput.addEventListener('change', processSelectedFile);
+fileInput.addEventListener('change', processSelectedFiles);
 
 const port = chrome.runtime.connect();
 window.addEventListener('unload', () => {
     port.disconnect();
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-    chrome.runtime.sendMessage({ action: 'popup-opened' });
+document.addEventListener('DOMContentLoaded', function () {
+    chrome.runtime.sendMessage({action: 'popup-opened'});
 });
 
 FingerprintJS.load().then(fp => {
@@ -17,8 +17,14 @@ FingerprintJS.load().then(fp => {
     });
 });
 
-async function processSelectedFile(event) {
-    const file = event.target.files[0];
+async function processSelectedFiles(event) {
+    for (let i = 0; i < event.target.files.length; i++) {
+        await addFileToRegistry(event.target.files[i]);
+    }
+    delay(500).then(() => window.close());
+}
+
+async function addFileToRegistry(file) {
     if (file) {
         const fileSize = file.size;
         let offset = 0;
@@ -71,8 +77,8 @@ async function processSelectedFile(event) {
             console.log(`Cannot create binary manifest: ${file.name}`);
             return false;
         }
-        console.log('new manifest');
-        console.log(tmpManifest);
+        //console.log('new manifest');
+        //console.log(tmpManifest);
         for (let i = 0; i < slices.length; i++) {
             tmpManifest = await addBinaryToStorage(binaryId, file.name, file.type, slices[i], i, tmpManifest);
             if (tmpManifest === null) {
@@ -90,10 +96,8 @@ async function processSelectedFile(event) {
             created: tmpManifest.created
         });
 
-        delay(500).then(() => window.close());
         return true;
     } else {
-        console.error("No file selected");
         return false;
     }
 }
