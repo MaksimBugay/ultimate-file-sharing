@@ -63,7 +63,7 @@ async function addFileToRegistry(file) {
             await delay(100);
         }
 
-        return createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
+        return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
     } else {
         return false;
     }
