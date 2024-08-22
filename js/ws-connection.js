@@ -292,6 +292,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         sendResponse({clientObj: PushcaClient.ClientObj, pusherInstanceId: PushcaClient.pusherInstanceId});
     }
 
+    if (request.message === "increment-download-counter-on-manager-grid") {
+        incrementDownloadCounterOfManifestRecord(request.binaryId);
+    }
     if (request.message === "add-manifest-to-manager-grid") {
         if (request.manifest) {
             const newManifest = BinaryManifest.fromJSON(
@@ -317,3 +320,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     }
 });
 
+function incrementDownloadCounterOfManifestRecord(binaryId) {
+    if (binaryId) {
+        incrementDownloadCounter(binaryId);
+        const manifest = FileManager.manifests.find(manifest => manifest.id === binaryId);
+        if (manifest) {
+            manifest.downloadCounter += 1;
+            FileManager.gridApi.applyTransaction({
+                update: [manifest]
+            });
+        }
+    }
+}

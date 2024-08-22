@@ -411,7 +411,7 @@ async function sendBinary(binaryId, manifestOnly, requestedChunks, dest) {
     manifest.setSender(PushcaClient.ClientObj);
     if (manifestOnly) {
         await PushcaClient.sendBinaryManifest(dest, manifest);
-        incrementDownloadCounter(manifest.id);
+        incrementDownloadCounterOfManifestRecord(manifest.id);
         return;
     }
     for (let order = 0; order < manifest.datagrams.length; order++) {
