@@ -242,6 +242,7 @@ function initFileManager() {
                         }
                     }
                 },
+                {field: "downloadCounter", sortable: true},
                 {
                     headerName: "Remove",
                     field: "removeButton",

@@ -131,6 +131,57 @@ function saveBinaryManifest(binaryManifest, onSuccessHandler, onErrorHandler) {
     };
 }
 
+function incrementDownloadCounter(binaryId, onSuccessHandler, onErrorHandler) {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+        return;
+    }
+
+    const transaction = db.transaction([binaryManifestsStoreName], "readwrite");
+    const store = transaction.objectStore(binaryManifestsStoreName);
+
+    // Get the current record
+    const request = store.get(binaryId);
+
+    request.onsuccess = function(event) {
+        const record = event.target.result;
+        if (record) {
+            // Increment the downloadCounter
+            record.downloadCounter = (record.downloadCounter || 0) + 1;
+
+            // Put the updated record back into the store
+            const updateRequest = store.put(record);
+
+            updateRequest.onsuccess = function() {
+                console.log(`Download counter for binary with id ${binaryId} was successfully incremented.`);
+                if (typeof onSuccessHandler === 'function') {
+                    onSuccessHandler(record);
+                }
+            };
+
+            updateRequest.onerror = function(event) {
+                console.error(`Failed to increment download counter for binary with id ${binaryId}.`, event.target.error);
+                if (typeof onErrorHandler === 'function') {
+                    onErrorHandler(event);
+                }
+            };
+        } else {
+            console.error(`No record found for binary with id ${binaryId}.`);
+            if (typeof onErrorHandler === 'function') {
+                onErrorHandler(new Error(`No record found for binary with id ${binaryId}.`));
+            }
+        }
+    };
+
+    request.onerror = function(event) {
+        console.error(`Failed to retrieve record for binary with id ${binaryId}.`, event.target.error);
+        if (typeof onErrorHandler === 'function') {
+            onErrorHandler(event);
+        }
+    };
+}
+
 function getManifest(binaryId, manifestConsumer, errorConsumer) {
     const db = getActiveDb();
     if (!db) {
