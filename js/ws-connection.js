@@ -99,9 +99,12 @@ class GridCellButton {
         this.eventListener = () => {
             params.clickHandler(params.data); // Use passed click handler
         };
-
         this.eButton.addEventListener("click", this.eventListener);
         this.eGui.appendChild(this.eButton);
+
+        if (typeof params.afterCreatedHandler === 'function') {
+            params.afterCreatedHandler(this.eButton, params.data);
+        }
     }
 
     getGui() {
@@ -178,6 +181,33 @@ function initFileManager() {
                         buttonTitle: "",
                         clickHandler: (data) => {
                             copyToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId));
+                        }
+                    }
+                },
+                {
+                    headerName: "Credentials",
+                    field: "copyCredentialsButton",
+                    cellRenderer: GridCellButton,
+                    cellRendererParams: {
+                        imgSrc: "../images/secure-file-sharing.png",
+                        buttonTitle: "",
+                        clickHandler: (data) => {
+                            copyToClipboard(JSON.stringify(
+                                {
+                                    workspaceId: PushcaClient.ClientObj.workSpaceId,
+                                    password: data.password
+                                }
+                            ));
+                        },
+                        afterCreatedHandler: function (eButton, data) {
+                            const credentials = {
+                                workspaceId: PushcaClient.ClientObj.workSpaceId,
+                                password: data.password
+                            };
+                            eButton.title = JSON.stringify(credentials);
+                            if (isEmpty(credentials.password)) {
+                                eButton.style.visibility = 'hidden';
+                            }
                         }
                     }
                 },
