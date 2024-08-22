@@ -26,47 +26,54 @@ async function processSelectedFiles(event) {
 
 async function addFileToRegistry(file) {
     if (file) {
-        const fileSize = file.size;
-        let offset = 0;
-        let sliceNumber = 0;
         const binaryId = uuid.v4().toString();
-        const slices = [];
 
-        function readNextChunk() {
-            const reader = new FileReader();
-
-            reader.onload = function (e) {
-                const arrayBuffer = e.target.result;
-                slices.push(arrayBuffer);
-
-                offset += MemoryBlock.MB100;
-                sliceNumber++;
-
-                if (offset < fileSize) {
-                    readNextChunk();
-                } else {
-                    console.log('File read completed.');
-                }
-            };
-
-            reader.onerror = function (e) {
-                console.error("Error reading file:", e);
-            };
-
-            const blob = file.slice(offset, offset + MemoryBlock.MB100);
-            reader.readAsArrayBuffer(blob);
-        }
-
-        readNextChunk();
-
-        while (slices.length < Math.ceil(Math.ceil(fileSize / MemoryBlock.MB100))) {
-            await delay(100);
-        }
+        const slices = readFileToChunkArray(file);
 
         return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
     } else {
         return false;
     }
+}
+
+async function readFileToChunkArray(file) {
+    const fileSize = file.size;
+    let offset = 0;
+    let sliceNumber = 0;
+    const slices = [];
+
+    function readNextChunk() {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            const arrayBuffer = e.target.result;
+            slices.push(arrayBuffer);
+
+            offset += MemoryBlock.MB100;
+            sliceNumber++;
+
+            if (offset < fileSize) {
+                readNextChunk();
+            } else {
+                console.log('File read completed.');
+            }
+        };
+
+        reader.onerror = function (e) {
+            console.error("Error reading file:", e);
+        };
+
+        const blob = file.slice(offset, offset + MemoryBlock.MB100);
+        reader.readAsArrayBuffer(blob);
+    }
+
+    readNextChunk();
+
+    while (slices.length < Math.ceil(Math.ceil(fileSize / MemoryBlock.MB100))) {
+        await delay(100);
+    }
+
+    return slices;
 }
 
 async function createAndStoreBinaryFromSlices(slices, binaryId, binaryName, mimeType) {
