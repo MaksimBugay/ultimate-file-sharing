@@ -293,7 +293,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
     if (request.message === "add-manifest-to-manager-grid") {
         if (request.manifest) {
-            const newManifest = BinaryManifest.fromJSON(request.manifest, request.totalSize, request.created);
+            const newManifest = BinaryManifest.fromJSON(
+                request.manifest,
+                request.totalSize,
+                request.created,
+                0
+            );
             FileManager.manifests.push(newManifest);
             FileManager.gridApi.applyTransaction({
                 add: [newManifest]

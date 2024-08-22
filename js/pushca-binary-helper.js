@@ -30,7 +30,7 @@ class Datagram {
 
 class BinaryManifest {
     constructor(id, name, mimeType, sender, pusherInstanceId, datagrams,
-                totalSize, timestamp, password, privateUrlSuffix) {
+                totalSize, timestamp, password, privateUrlSuffix, downloadCounter) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
@@ -41,6 +41,7 @@ class BinaryManifest {
         this.created = timestamp ? timestamp : new Date().getTime();
         this.password = password;
         this.privateUrlSuffix = privateUrlSuffix;
+        this.downloadCounter = downloadCounter ? downloadCounter : 0;
     }
 
     getTotalSize() {
@@ -131,7 +132,7 @@ class BinaryManifest {
         };
     }
 
-    static fromObject(jsonObject, totalSize, timestamp) {
+    static fromObject(jsonObject, totalSize, timestamp, downloadCounter) {
         const sender = new ClientFilter(
             jsonObject.sender.workSpaceId,
             jsonObject.sender.accountId,
@@ -157,13 +158,14 @@ class BinaryManifest {
             totalSize,
             timestamp,
             jsonObject.password,
-            jsonObject.privateUrlSuffix
+            jsonObject.privateUrlSuffix,
+            downloadCounter
         );
     }
 
-    static fromJSON(jsonString, totalSize, timestamp) {
+    static fromJSON(jsonString, totalSize, timestamp, downloadCounter) {
         const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
-        return this.fromObject(jsonObject, totalSize, timestamp);
+        return this.fromObject(jsonObject, totalSize, timestamp, downloadCounter);
     }
 }
 

@@ -111,6 +111,7 @@ function saveBinaryManifest(binaryManifest, onSuccessHandler, onErrorHandler) {
         fileName: binaryManifest.name,
         manifest: JSON.stringify(binaryManifest.toDbJSON()),
         totalSize: totalSize,
+        downloadCounter: 0,
         timestamp: timestamp
     };
     const request = store.put(data);
@@ -149,7 +150,12 @@ function getManifest(binaryId, manifestConsumer, errorConsumer) {
             }
             return;
         }
-        const manifest = BinaryManifest.fromJSON(result.manifest, result.totalSize, result.timestamp);
+        const manifest = BinaryManifest.fromJSON(
+            result.manifest,
+            result.totalSize,
+            result.timestamp,
+            result.downloadCounter
+        );
         if (typeof manifestConsumer === 'function') {
             manifestConsumer(manifest);
         }
@@ -177,7 +183,14 @@ function getAllManifests(manifestsConsumer) {
     request.onsuccess = function (event) {
         const results = event.target.result;
         //console.log('All binary manifests retrieved successfully', results);
-        const manifests = results.map(record => BinaryManifest.fromJSON(record.manifest, record.totalSize, record.timestamp));
+        const manifests = results.map(
+            record => BinaryManifest.fromJSON(
+                record.manifest,
+                record.totalSize,
+                record.timestamp,
+                record.downloadCounter
+            )
+        );
         if (manifestsConsumer) {
             manifestsConsumer(manifests);
         }
