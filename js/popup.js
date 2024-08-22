@@ -17,7 +17,41 @@ FingerprintJS.load().then(fp => {
     });
 });
 
+async function blobToArrayBuffers(blob, chunkSize) {
+    const arrayBuffers = [];
+    const totalSize = blob.size;
+    let offset = 0;
+
+    while (offset < totalSize) {
+        const chunk = blob.slice(offset, offset + chunkSize);
+        const arrayBuffer = await chunk.arrayBuffer();
+        arrayBuffers.push(arrayBuffer);
+        offset += chunkSize;
+    }
+
+    return arrayBuffers;
+}
+
 async function processSelectedFiles(event) {
+    //create zip archive
+    if (1 === 1) {
+        if (event.target.files.length === 0) {
+            return;
+        }
+        const zip = new JSZip();
+
+        for (let i = 0; i < event.target.files.length; i++) {
+            const file = event.target.files[i];
+            await zip.file(file.name, file);
+        }
+
+        // Generate the zip file as a Blob
+        const zipBlob = await zip.generateAsync({type: "blob"});
+
+        const binaryId = uuid.v4().toString();
+        const slices = await blobToArrayBuffers(zipBlob, MemoryBlock.MB100);
+        return await createAndStoreBinaryFromSlices(slices, binaryId, "test.zip", "application/zip");
+    }
     for (let i = 0; i < event.target.files.length; i++) {
         await addFileToRegistry(event.target.files[i]);
     }
