@@ -12,7 +12,7 @@
             font-weight: bold;
             font-family: 'Roboto', sans-serif;
             font-size: 14px;
-            background-image: url('../images/file-sharing-popup1.jpg');
+            background-image: url('../images/file-sharing3.png');
             background-size: cover;
             background-position: center center;
             background-repeat: no-repeat;
@@ -21,11 +21,11 @@
         h1 {
             color: darkblue;
             text-align: center;
-            font-size: 30px;
+            font-size: 40px;
         }
 
         #popup-content {
-            background: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.8);
             padding: 20px;
             border-radius: 10px;
             display: flex;
@@ -33,6 +33,7 @@
             gap: 0;
             align-items: flex-start;
             margin-bottom: 30px;
+            margin-top: 10px;
         }
 
         label {
@@ -43,7 +44,7 @@
         input[type="text"] {
             width: 60%;
             padding: 10px;
-            margin-top: 5px;
+            margin-top: 15px;
             border: 1px solid #ccc;
             border-radius: 5px;
             background-color: rgba(255, 255, 255, 0.8);
@@ -82,14 +83,13 @@
     </style>
 </head>
 <body>
-<h1>Choose any file for sharing</h1>
-<h1>from your PC</h1>
 <div id="popup-content">
+    <h1>Choose file for sharing</h1>
     <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Set password(optional)</label>
     <input type="text" id="passwordInput" placeholder="Enter strong password to protect your file"/>
     <input type="file" id="fileInput" style="display:none">
     <label for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select file</label>
-    <label for="fileInput" style="margin-top: 5px" class="icon-button">
+    <label for="fileInput" style="margin-top: 15px" class="icon-button">
         <i class="fa fa-upload"></i>
     </label>
 </div>
