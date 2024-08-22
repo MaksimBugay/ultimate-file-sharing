@@ -63,24 +63,32 @@ async function addFileToRegistry(file) {
             await delay(100);
         }
 
+        return createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
+    } else {
+        return false;
+    }
+}
+
+async function createAndStoreBinaryFromSlices(slices, binaryId, binaryName, mimeType) {
+    try {
         let tmpManifest;
         let result;
         if (passwordField.value) {
-            result = await createBinaryManifest(binaryId, file.name, file.type, passwordField.value);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, passwordField.value);
         } else {
-            result = await createBinaryManifest(binaryId, file.name, file.type, null);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, null);
         }
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             tmpManifest = result.body;
         }
         if (!tmpManifest) {
-            console.log(`Cannot create binary manifest: ${file.name}`);
+            console.log(`Cannot create binary manifest: ${binaryName}`);
             return false;
         }
         //console.log('new manifest');
         //console.log(tmpManifest);
         for (let i = 0; i < slices.length; i++) {
-            tmpManifest = await addBinaryToStorage(binaryId, file.name, file.type, slices[i], i, tmpManifest);
+            tmpManifest = await addBinaryToStorage(binaryId, binaryName, mimeType, slices[i], i, tmpManifest);
             if (tmpManifest === null) {
                 removeBinary(binaryId, function () {
                     console.log(`Binary with id ${binaryId} was completely removed from DB`);
@@ -95,9 +103,8 @@ async function addFileToRegistry(file) {
             totalSize: tmpManifest.getTotalSize(),
             created: tmpManifest.created
         });
-
-        return true;
-    } else {
+    } catch (err) {
+        console.warn(err);
         return false;
     }
 }
