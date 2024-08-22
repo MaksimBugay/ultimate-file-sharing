@@ -28,7 +28,7 @@ async function addFileToRegistry(file) {
     if (file) {
         const binaryId = uuid.v4().toString();
 
-        const slices = readFileToChunkArray(file);
+        const slices = await readFileToChunkArray(file);
 
         return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
     } else {
