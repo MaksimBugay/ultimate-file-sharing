@@ -147,7 +147,9 @@ function initFileManager() {
         manifests.forEach(manifest => {
             totalSize += manifest.getTotalSize();
         });
-        console.log(`Total size = ${Math.round(totalSize / MemoryBlock.MB)} Mb`);
+        const totalSizeMb = `Total size = ${Math.round(totalSize / MemoryBlock.MB)} Mb`;
+        document.getElementById("totalSizeCaption").textContent = `[${totalSizeMb}]`
+        console.log(`${totalSizeMb}`);
         const gridOptions = {
             // Row Data: The data to be displayed.
             rowData: manifests,
