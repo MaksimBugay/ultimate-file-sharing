@@ -84,11 +84,30 @@
 </head>
 <body>
 <div id="popup-content">
-    <h1>Choose file for sharing</h1>
+    <h1>Choose files for sharing</h1>
     <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Set password(optional)</label>
     <input type="text" id="passwordInput" placeholder="Enter strong password to protect your file"/>
+    <div style="">
+        <label style="display: inline-block">
+            <input type="checkbox" id="createZipArchiveCheckbox"/>
+            Create ZIP archive(optional)
+            <input type="text" id="zipArchiveName" style="display: none; width: 275px"
+                   placeholder="Enter name of archive"/>
+        </label>
+    </div>
     <input type="file" id="fileInput" style="display:none" multiple>
-    <label for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select file</label>
+    <label id="selectFileLabel" for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select files</label>
+    <div id="selectFileOrDirectoryContainer" style="display: none">
+        <label for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select</label>
+        <label>
+            <input type="radio" name="choice" value="file" checked id="fileChoice">
+            Files
+        </label>
+        <label>
+            <input type="radio" name="choice" value="directory">
+            Directory
+        </label>
+    </div>
     <label for="fileInput" style="margin-top: 15px" class="icon-button">
         <i class="fa fa-upload"></i>
     </label>

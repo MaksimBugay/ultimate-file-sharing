@@ -1,5 +1,9 @@
 const fileInput = document.getElementById('fileInput');
 const passwordField = document.getElementById('passwordInput');
+const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckbox');
+const zipArchiveNameField = document.getElementById('zipArchiveName');
+const selectFileLabel = document.getElementById('selectFileLabel');
+const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
 fileInput.addEventListener('change', processSelectedFiles);
 
 const port = chrome.runtime.connect();
@@ -10,6 +14,34 @@ window.addEventListener('unload', () => {
 document.addEventListener('DOMContentLoaded', function () {
     chrome.runtime.sendMessage({action: 'popup-opened'});
 });
+
+createZipArchiveCheckbox.addEventListener('change', function () {
+    if (this.checked) {
+        zipArchiveNameField.style.display = 'block';
+        selectFileLabel.style.display = 'none';
+        selectFileOrDirectoryContainer.style.display = 'flex';
+    } else {
+        zipArchiveNameField.style.display = 'none';
+        fileInput.removeAttribute('webkitdirectory');
+        fileInput.setAttribute('multiple', '');
+        document.getElementById('fileChoice').checked = true;
+        selectFileLabel.style.display = 'block';
+        selectFileOrDirectoryContainer.style.display = 'none';
+    }
+});
+
+document.querySelectorAll('input[name="choice"]').forEach((element) => {
+    element.addEventListener('change', function () {
+        if (this.value === 'file') {
+            fileInput.removeAttribute('webkitdirectory');
+            fileInput.setAttribute('multiple', '');
+        } else if (this.value === 'directory') {
+            fileInput.removeAttribute('multiple');
+            fileInput.setAttribute('webkitdirectory', '');
+        }
+    });
+});
+
 
 FingerprintJS.load().then(fp => {
     fp.get().then(result => {
@@ -34,12 +66,16 @@ async function blobToArrayBuffers(blob, chunkSize) {
 
 async function processSelectedFiles(event) {
     //create zip archive
-    if (1 === 1) {
+    if (createZipArchiveCheckbox.checked) {
         if (event.target.files.length === 0) {
             return;
         }
+        let zipArchiveName = zipArchiveNameField.value;
+        if (!zipArchiveName) {
+            const file0 = event.target.files[0];
+            zipArchiveName = file0.webkitRelativePath ? file0.webkitRelativePath.split('/')[0] + '.zip' : `zip-with-${file0.name}`;
+        }
         const zip = new JSZip();
-
         for (let i = 0; i < event.target.files.length; i++) {
             const file = event.target.files[i];
             await zip.file(file.name, file);
@@ -50,10 +86,11 @@ async function processSelectedFiles(event) {
 
         const binaryId = uuid.v4().toString();
         const slices = await blobToArrayBuffers(zipBlob, MemoryBlock.MB100);
-        return await createAndStoreBinaryFromSlices(slices, binaryId, "test.zip", "application/zip");
-    }
-    for (let i = 0; i < event.target.files.length; i++) {
-        await addFileToRegistry(event.target.files[i]);
+        await createAndStoreBinaryFromSlices(slices, binaryId, zipArchiveName, "application/zip");
+    } else {
+        for (let i = 0; i < event.target.files.length; i++) {
+            await addFileToRegistry(event.target.files[i]);
+        }
     }
     delay(500).then(() => window.close());
 }
