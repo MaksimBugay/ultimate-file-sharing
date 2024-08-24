@@ -104,23 +104,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         openFileSharingManagerIfNotExists();
         return false;
     }
-    if (message.action === "save-file") {
-        chrome.downloads.download({
-            url: message.url,
-            filename: message.fileName,  // change the filename and extension as needed
-            conflictAction: 'overwrite',
-            saveAs: false
-        }, (downloadId) => {
-            if (chrome.runtime.lastError) {
-                console.error(chrome.runtime.lastError.message);
-                sendResponse({status: "error", message: chrome.runtime.lastError.message});
-            } else {
-                sendResponse({status: "success", downloadId: downloadId});
-            }
-        });
-
-        return true;
-    }
 });
 
 //----------------------------------FILES-----------------------------------------------

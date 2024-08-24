@@ -442,18 +442,21 @@ function buildDownloadWaiterId(waiterId) {
 
 function downloadBinary(chunks, fileName, mimeType) {
     const binaryBlob = new Blob(chunks, {type: mimeType});
-    const url = URL.createObjectURL(binaryBlob);
-    chrome.runtime.sendMessage({
-        action: 'save-file',
-        mimeType: mimeType,
-        fileName: fileName,
-        url: url
-    }, (response) => {
-        if (response && response.downloadId) {
-            console.log(`Download id = ${response.downloadId}`);
-        }
-        URL.revokeObjectURL(url);
-    });
+    downloadFile(binaryBlob, fileName);
+}
+
+function downloadFile(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+
+    // Clean up
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer) {
