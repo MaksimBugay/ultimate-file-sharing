@@ -100,35 +100,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         return true;
     }
-    if (message.action === "add-manifest-to-file-sharing-manager") {
-        processWithFileSharingManager(function (tabId) {
-            chrome.tabs.sendMessage(tabId, {
-                message: "add-manifest-to-manager-grid",
-                manifest: message.manifest,
-                totalSize: message.totalSize,
-                created: message.created
-            });
-        });
-        return true;
-    }
-    if (message.action === "get-pushca-connection-attributes") {
-        processWithFileSharingManager(function (tabId) {
-            chrome.tabs.sendMessage(tabId, {
-                message: "get-connection-attributes"
-            }, response => {
-                if (chrome.runtime.lastError) {
-                    console.log(`Cannot get Pushca connection attributes: ${chrome.runtime.lastError}`);
-                    sendResponse({clientObj: null, pusherInstanceId: null});
-                } else if (response && response.clientObj) {
-                    sendResponse({clientObj: response.clientObj, pusherInstanceId: response.pusherInstanceId})
-                } else {
-                    console.log(`Cannot get Pushca connection attributes: empty response`);
-                    sendResponse({clientObj: null, pusherInstanceId: null});
-                }
-            });
-        })
-        return true;
-    }
     if (message.action === "open-file-sharing-manager") {
         openFileSharingManagerIfNotExists();
         return false;

@@ -248,51 +248,46 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
 }
 
 async function createBinaryManifest(id, name, mimeType, password) {
+    if (!PushcaClient.ClientObj) {
+        return new WaiterResponse(WaiterResponseType.ERROR, "Owner connection is absent");
+    }
+    const sender = new ClientFilter(
+        PushcaClient.ClientObj.workSpaceId,
+        PushcaClient.ClientObj.accountId,
+        PushcaClient.ClientObj.deviceId,
+        PushcaClient.ClientObj.applicationId
+    );
+    if (!password) {
+        const binaryManifest = new BinaryManifest(
+            id,
+            name,
+            mimeType,
+            sender,
+            PushcaClient.pusherInstanceId,
+            [],
+            null,
+            null,
+            password,
+            null
+        );
+        return new WaiterResponse(WaiterResponseType.SUCCESS, binaryManifest);
+    }
 
     return await CallableFuture.callAsynchronously(2000, null, function (waiteId) {
-        chrome.runtime.sendMessage({action: 'get-pushca-connection-attributes'}, (response) => {
-            let binaryManifest = null;
-            if (response && response.clientObj) {
-                const sender = new ClientFilter(
-                    response.clientObj.workSpaceId,
-                    response.clientObj.accountId,
-                    null,
-                    response.clientObj.applicationId
-                );
-                if (password) {
-                    createPrivateUrlSuffix(sender.workSpaceId, id).then(privateUrlSuffix => {
-                        binaryManifest = new BinaryManifest(
-                            id,
-                            name,
-                            mimeType,
-                            sender,
-                            response.pusherInstanceId,
-                            [],
-                            null,
-                            null,
-                            password,
-                            privateUrlSuffix
-                        );
-                        CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
-                    });
-                } else {
-                    binaryManifest = new BinaryManifest(
-                        id,
-                        name,
-                        mimeType,
-                        sender,
-                        response.pusherInstanceId,
-                        [],
-                        null,
-                        null,
-                        password,
-                        null
-                    );
-                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
-                }
-            } else {
-                CallableFuture.releaseWaiterIfExistsWithError(waiteId, "Cannot fetch Pushca connection attributes");
-            }
+        createPrivateUrlSuffix(sender.workSpaceId, id).then(privateUrlSuffix => {
+            const binaryManifest = new BinaryManifest(
+                id,
+                name,
+                mimeType,
+                sender,
+                PushcaClient.pusherInstanceId,
+                [],
+                null,
+                null,
+                password,
+                privateUrlSuffix
+            );
+            CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
         });
     });
 }

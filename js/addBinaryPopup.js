@@ -1,3 +1,6 @@
+const addBinaryPopup = document.getElementById("addBinaryPopup");
+const closeButton = document.querySelector('.close');
+
 const fileInput = document.getElementById('fileInput');
 const passwordField = document.getElementById('passwordInput');
 const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckbox');
@@ -6,13 +9,21 @@ const selectFileLabel = document.getElementById('selectFileLabel');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
 fileInput.addEventListener('change', processSelectedFiles);
 
-const port = chrome.runtime.connect();
-window.addEventListener('unload', () => {
-    port.disconnect();
-});
+function openModal() {
+    addBinaryPopup.style.display = 'block';
+}
 
-document.addEventListener('DOMContentLoaded', function () {
-    chrome.runtime.sendMessage({action: 'popup-opened'});
+function closeModal() {
+    addBinaryPopup.style.display = 'none';
+}
+
+closeButton.addEventListener('click', closeModal);
+
+// Add event listener to the modal itself to close it when clicked outside
+window.addEventListener('click', (event) => {
+    if (event.target === addBinaryPopup) {
+        closeModal();
+    }
 });
 
 createZipArchiveCheckbox.addEventListener('change', function () {
@@ -42,12 +53,6 @@ document.querySelectorAll('input[name="choice"]').forEach((element) => {
     });
 });
 
-
-FingerprintJS.load().then(fp => {
-    fp.get().then(result => {
-        openDataBase(result.visitorId);
-    });
-});
 
 async function blobToArrayBuffers(blob, chunkSize) {
     const arrayBuffers = [];
@@ -92,7 +97,7 @@ async function processSelectedFiles(event) {
             await addFileToRegistry(event.target.files[i]);
         }
     }
-    delay(500).then(() => window.close());
+    delay(500).then(() => closeModal());
 }
 
 async function addFileToRegistry(file) {
@@ -175,12 +180,7 @@ async function createAndStoreBinaryFromSlices(slices, binaryId, binaryName, mime
             }
         }
         tmpManifest.resetTotalSize();
-        chrome.runtime.sendMessage({
-            action: 'add-manifest-to-file-sharing-manager',
-            manifest: JSON.stringify(tmpManifest.toDbJSON()),
-            totalSize: tmpManifest.getTotalSize(),
-            created: tmpManifest.created
-        });
+        addManifestToManagerGrid(tmpManifest);
     } catch (err) {
         console.warn(err);
         return false;

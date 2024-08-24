@@ -1,6 +1,10 @@
 console.log('ws-connection.js running on', window.location.href);
 
 const statusCaption = document.getElementById("statusCaption");
+const addBinaryButton = document.getElementById("addBinaryButton");
+addBinaryButton.addEventListener("click", function () {
+    openModal();
+})
 
 let FileManager = {};
 const wsUrl = 'wss://vasilii.prodpushca.com:30085';
@@ -288,43 +292,21 @@ function initFileManager() {
     });
 }
 
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.message === "send-binary-chunk") {
-        sendResponse({result: 'all good', binaryId: request.binaryId, order: request.order});
-        return true;
-    }
+function addManifestToManagerGrid(newManifest) {
+    FileManager.manifests.push(newManifest);
+    FileManager.gridApi.applyTransaction({
+        add: [newManifest]
+    });
 
-    if (request.message === "get-connection-attributes") {
-        sendResponse({clientObj: PushcaClient.ClientObj, pusherInstanceId: PushcaClient.pusherInstanceId});
-    }
+    delay(1000).then(() => {
+        const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId);
+        copyToClipboard(publicUr);
 
-    if (request.message === "increment-download-counter-on-manager-grid") {
-        incrementDownloadCounterOfManifestRecord(request.binaryId);
-    }
-    if (request.message === "add-manifest-to-manager-grid") {
-        if (request.manifest) {
-            const newManifest = BinaryManifest.fromJSON(
-                request.manifest,
-                request.totalSize,
-                request.created,
-                0
-            );
-            FileManager.manifests.push(newManifest);
-            FileManager.gridApi.applyTransaction({
-                add: [newManifest]
-            });
-
-            delay(1000).then(() => {
-                const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId);
-                copyToClipboard(publicUr);
-
-                const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
-                const rowNode = FileManager.gridApi.getRowNode(rowIndex);
-                rowNode.setSelected(true, true);
-            });
-        }
-    }
-});
+        const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
+        const rowNode = FileManager.gridApi.getRowNode(rowIndex);
+        rowNode.setSelected(true, true);
+    });
+}
 
 function incrementDownloadCounterOfManifestRecord(binaryId) {
     if (binaryId) {

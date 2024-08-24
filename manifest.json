@@ -11,9 +11,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-    "default_popup": "html/popup.html"
-  },
   "icons": {
     "16": "images/file-sharing.png",
     "48": "images/file-sharing.png",
