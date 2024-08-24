@@ -1,5 +1,7 @@
 console.log('ws-connection.js running on', window.location.href);
 
+const statusCaption = document.getElementById("statusCaption");
+
 let FileManager = {};
 const wsUrl = 'wss://vasilii.prodpushca.com:30085';
 let pingIntervalId = null;
@@ -23,11 +25,13 @@ PushcaClient.onOpenHandler = function () {
         }
     }, 30000);
     openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
+    statusCaption.textContent = "(This page should be always open to provide sharing of your files!!!)";
 };
 
 PushcaClient.onCloseHandler = function (ws, event) {
     window.clearInterval(pingIntervalId);
     closeDataBase();
+    statusCaption.textContent = "(Transfer channel is broken)";
     if (!event.wasClean) {
         console.error("Your connection died, refresh the page please");
     }
