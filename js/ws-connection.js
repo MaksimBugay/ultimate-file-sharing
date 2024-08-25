@@ -162,8 +162,8 @@ function initFileManager() {
             // Row Data: The data to be displayed.
             rowData: manifests,
             pagination: true,
-            paginationPageSize: 10,
-            paginationPageSizeSelector: [10, 50, 100],
+            paginationPageSize: 5,
+            paginationPageSizeSelector: [5, 10, 50, 100],
             defaultColDef: {
                 sortable: false
             },
