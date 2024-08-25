@@ -13,7 +13,7 @@ async function verifyBinarySignature(header, requestPayload) {
         let password;
         const getManifestResult = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
             getManifest(
-                result.binaryId,
+                request.binaryId,
                 function (manifest) {
                     CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, manifest);
                 }, function (event) {

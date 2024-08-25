@@ -25,7 +25,8 @@ class DownloadProtectedBinaryRequest {
         return new DownloadProtectedBinaryRequest(
             jsonObject.suffix,
             jsonObject.exp,
-            jsonObject.signature
+            jsonObject.signature,
+            jsonObject.binaryId
         );
     }
 }
