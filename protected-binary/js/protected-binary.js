@@ -14,11 +14,19 @@ const loginContainer = document.querySelector('.login-container');
 const progressBarContainer = document.getElementById("progressBarContainer");
 const downloadButtonText = document.getElementById("buttonText");
 const downloadSpinner = document.getElementById('downloadSpinner');
+const pastCredentialsTextarea = document.getElementById('pastCredentials');
 
 workspaceField.focus();
 
-workspaceField.value = "cec7abf69bab9f5aa793bd1c0c101e99";
-passwordField.value = "strongPassword";
+pastCredentialsTextarea.addEventListener('input', () => {
+    const memoText = pastCredentialsTextarea.value;
+    if (memoText.includes('workspaceId') && memoText.includes('password')) {
+        const object = JSON.parse(memoText);
+        workspaceField.value = object['workspaceId'];
+        passwordField.value = object['password'];
+        pastCredentialsTextarea.value = '';
+    }
+});
 
 downloadBtn.addEventListener('click', function () {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
@@ -44,7 +52,7 @@ function postDownloadProcessor() {
     delay(1000).then(() => window.close());
 }
 
-function extractFileName(contentDisposition){
+function extractFileName(contentDisposition) {
     let filename = 'protected-binary.data';
 
     if (contentDisposition && contentDisposition.includes('filename=')) {
@@ -114,7 +122,7 @@ function showSpinnerInButton() {
     document.getElementById('download-message').textContent = 'Downloading...';
 }
 
-function showDownloadProgress(){
+function showDownloadProgress() {
     progressBarContainer.style.display = 'block';
     downloadBtn.style.display = 'none';
 }
