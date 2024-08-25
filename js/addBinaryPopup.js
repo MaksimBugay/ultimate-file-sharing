@@ -179,7 +179,6 @@ async function createAndStoreBinaryFromSlices(slices, binaryId, binaryName, mime
                 return false;
             }
         }
-        tmpManifest.resetTotalSize();
         addManifestToManagerGrid(tmpManifest);
     } catch (err) {
         console.warn(err);

@@ -5,11 +5,14 @@
   "description": "A Chrome extension for secure file sharing from your machine.",
   "permissions": [
     "tabs",
-    "activeTab",
-    "downloads"
+    "activeTab"
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "html/popup.html",
+    "default_icon": "images/file-sharing.png"
   },
   "icons": {
     "16": "images/file-sharing.png",

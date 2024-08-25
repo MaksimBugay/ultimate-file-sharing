@@ -35,32 +35,6 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     openFileSharingManagerIfNotExists();
 });
 
-chrome.runtime.onConnect.addListener((port) => {
-    port.onDisconnect.addListener(() => {
-        openFileSharingManagerIfNotExists();
-    });
-});
-
-function processWithFileSharingManager(tabIdConsumer) {
-    if (fileSharingManagerTabId) {
-        if (typeof tabIdConsumer === 'function') {
-            tabIdConsumer(fileSharingManagerTabId);
-        }
-        return;
-    }
-
-    chrome.tabs.query({}, (tabs) => {
-        for (let i = 0; i < tabs.length; i++) {
-            if (tabs[i].url === fileSharingManagerUrl) {
-                if (typeof tabIdConsumer === 'function') {
-                    tabIdConsumer(tabs[i].id);
-                }
-                return;
-            }
-        }
-    });
-}
-
 function openFileSharingManagerIfNotExists(makeActive) {
     if (fileSharingManagerTabId) {
         if (makeActive) {
@@ -100,14 +74,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         return true;
     }
-    if (message.action === "open-file-sharing-manager") {
-        openFileSharingManagerIfNotExists();
-        return false;
-    }
 });
-
-//----------------------------------FILES-----------------------------------------------
-
-//--------------------------------------------------------------------------------------
-
 
