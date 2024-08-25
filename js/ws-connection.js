@@ -151,13 +151,7 @@ function initFileManager() {
     }
     getAllManifests(function (manifests) {
         FileManager.manifests = manifests;
-        let totalSize = 0;
-        manifests.forEach(manifest => {
-            totalSize += manifest.getTotalSize();
-        });
-        const totalSizeMb = `Total size = ${Math.round(totalSize / MemoryBlock.MB)} Mb`;
-        document.getElementById("totalSizeCaption").textContent = `[${totalSizeMb}]`
-        console.log(`${totalSizeMb}`);
+        updateTotalSize();
         const gridOptions = {
             // Row Data: The data to be displayed.
             rowData: manifests,
@@ -263,6 +257,7 @@ function initFileManager() {
                         clickHandler: (data) => {
                             removeBinary(data.id, function () {
                                 console.log(`Binary with id ${data.id} was completely removed from DB`);
+                                decrementTotalSize(data.getTotalSize());
                                 const rowIndex = manifests.findIndex(manifest => manifest.id === data.id);
                                 if (rowIndex !== -1) {
                                     FileManager.gridApi.applyTransaction({
@@ -292,12 +287,27 @@ function initFileManager() {
     });
 }
 
+function updateTotalSize() {
+    FileManager.totalSize = 0;
+    FileManager.manifests.forEach(manifest => {
+        FileManager.totalSize += manifest.getTotalSize();
+    });
+    const totalSizeMb = `Total size = ${Math.round(FileManager.totalSize / MemoryBlock.MB)} Mb`;
+    document.getElementById("totalSizeCaption").textContent = `[${totalSizeMb}]`;
+}
+
+function decrementTotalSize(delta) {
+    FileManager.totalSize = FileManager.totalSize - delta;
+    const totalSizeMb = `Total size = ${Math.round(FileManager.totalSize / MemoryBlock.MB)} Mb`;
+    document.getElementById("totalSizeCaption").textContent = `[${totalSizeMb}]`;
+}
+
 function addManifestToManagerGrid(newManifest) {
     FileManager.manifests.push(newManifest);
     FileManager.gridApi.applyTransaction({
         add: [newManifest]
     });
-
+    updateTotalSize()
     delay(1000).then(() => {
         const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId);
         copyToClipboard(publicUr);
