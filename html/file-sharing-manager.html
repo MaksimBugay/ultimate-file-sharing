@@ -119,7 +119,6 @@
         }
 
         .image-button {
-            width: 30px;
             margin-bottom: 5px;
             background-color: transparent; /* Transparent background to show the image */
             border: none; /* Remove default button border */
@@ -128,23 +127,20 @@
         }
 
         .image-button img {
-            width: 100px; /* Adjust image size as needed */
-            height: 100px;
+            width: 50px; /* Adjust image size as needed */
             display: block;
             margin: 0 auto; /* Center the image */
         }
     </style>
 </head>
 <body>
-<div style="display: flex">
-    <h1 style="color: darkblue">Ultimate File Sharing manager</h1>
-    <h1 id="statusCaption" style="color: crimson; margin-left: 5px; margin-right: 5px">(Transfer channel is broken)</h1>
-    <h1 id="totalSizeCaption"></h1>
-</div>
+<h1 style="color: darkblue; text-align: center;">Ultimate File Sharing manager</h1>
+<h2 id="statusCaption" style="color: crimson; text-align: center;">(Transfer channel is broken)</h2>
 <div style="display: flex">
     <button id="addBinaryButton" class="image-button">
         <img src="../images/document-add-icon-16.png" alt="Button Image">
     </button>
+    <h2 id="totalSizeCaption" style="margin-left: 50px"></h2>
 </div>
 <div id="addBinaryPopup" class="modal">
     <div class="modal-content">
