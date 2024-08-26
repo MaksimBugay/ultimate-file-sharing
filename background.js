@@ -36,6 +36,32 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     openFileSharingManagerIfNotExists();
 });
 
+chrome.tabs.onCreated.addListener((actionTab) => {
+    closeFileManagerTabIfExists(actionTab.id, actionTab.url);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, actionTab) => {
+    closeFileManagerTabIfExists(tabId, changeInfo.url);
+});
+
+function closeFileManagerTabIfExists(tabId, tabUrl) {
+    if (!tabUrl) {
+        return;
+    }
+    if (tabUrl !== fileSharingManagerUrl) {
+        return;
+    }
+    chrome.tabs.query({}, (tabs) => {
+        let existingTab = tabs.find(tab => (tab.url === fileSharingManagerUrl) && (tab.id !== tabId));
+        if (existingTab) {
+            console.log(`Existing tab id = ${existingTab.id}`);
+            chrome.tabs.remove(tabId);
+            fileSharingManagerTabId = existingTab.id;
+            chrome.tabs.update(existingTab.id, {active: true});
+        }
+    });
+}
+
 function openFileSharingManagerIfNotExists(makeActive) {
     if (fileSharingManagerTabId) {
         if (makeActive) {
