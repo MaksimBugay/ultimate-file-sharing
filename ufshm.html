@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>File manager</title>
+    <style>
+        .fm-grid-button {
+            display: flex;
+            align-items: center;
+            margin: 10px;
+            background-color: transparent;
+            border: 0;
+            cursor: pointer;
+        }
+
+        .fm-grid {
+            width: 100%;
+            height: 500px;
+        }
+
+        .modal {
+            display: none; /* Initially hidden */
+            position: fixed;
+            z-index: 1000; /* Ensure it appears on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Enable scrolling if content is larger than the modal */
+            background-color: rgba(0, 0, 0, 0.4); /* Black background with opacity */
+        }
+
+        .modal-content {
+            width: 500px;
+            min-height: 400px;
+            padding: 10px;
+            color: darkblue;
+            font-weight: bold;
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px;
+            background-image: url('../images/file-sharing3.png');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-color: #fefefe;
+            margin-left: 30%;
+            margin-top: 5%;
+            border: 1px solid #888;
+        }
+
+        .close {
+            color: white;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: goldenrod;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        #popup-content {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+
+        label {
+            display: block;
+            margin-top: 20px;
+        }
+
+        input[type="text"] {
+            width: 60%;
+            padding: 10px;
+            margin-top: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .icon-button {
+            width: 90px;
+            height: 85px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            background-image: url('images/open-file.png');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+        }
+
+        .icon-button i {
+            margin-right: 8px;
+        }
+
+        .icon-button:hover {
+            background-color: #0056b3;
+        }
+
+        .icon-button:active {
+            background-color: #003f7f;
+        }
+
+        .image-button {
+            margin-bottom: 5px;
+            background-color: transparent; /* Transparent background to show the image */
+            border: none; /* Remove default button border */
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .image-button img {
+            width: 50px; /* Adjust image size as needed */
+            display: block;
+            margin: 0 auto; /* Center the image */
+        }
+    </style>
+    <link rel="icon" href="images/file-sharing.png">
+    <link rel="manifest" href="html/file-sharing-manifest.json">
+</head>
+<body>
+<h1 style="color: darkblue; text-align: center;">Ultimate File Sharing manager</h1>
+<h2 id="statusCaption" style="color: crimson; text-align: center;">(Transfer channel is broken)</h2>
+<div style="display: flex">
+    <button id="addBinaryButton" class="image-button">
+        <img src="images/document-add-icon-16.png" alt="Button Image">
+    </button>
+    <h2 id="totalSizeCaption" style="margin-left: 50px"></h2>
+</div>
+<div id="addBinaryPopup" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="popup-content">
+            <h1>Choose files for sharing</h1>
+            <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Set password(optional)</label>
+            <input type="text" id="passwordInput" placeholder="Enter strong password to protect your file"/>
+            <div style="">
+                <label style="display: inline-block">
+                    <input type="checkbox" id="createZipArchiveCheckbox"/>
+                    Create ZIP archive(optional)
+                    <input type="text" id="zipArchiveName" style="display: none; width: 275px"
+                           placeholder="Enter name of archive"/>
+                </label>
+            </div>
+            <input type="file" id="fileInput" style="display:none" multiple>
+            <label id="selectFileLabel" for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select files</label>
+            <div id="selectFileOrDirectoryContainer" style="display: none">
+                <label for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select</label>
+                <label>
+                    <input type="radio" name="choice" value="file" checked id="fileChoice">
+                    Files
+                </label>
+                <label>
+                    <input type="radio" name="choice" value="directory">
+                    Directory
+                </label>
+            </div>
+            <label for="fileInput" style="margin-top: 15px" class="icon-button">
+                <i class="fa fa-upload"></i>
+            </label>
+        </div>
+    </div>
+</div>
+<div id="fileManagerContainer"></div>
+</body>
+<script src="js/fp.min.js"></script>
+<script src="js/uuid.min.js"></script>
+<script src="js/ag-grid-community.min.js"></script>
+<script src="js/common-utils.js"></script>
+<script src="js/callable-future.js"></script>
+<script src="js/pnotifications.js"></script>
+<script src="js/binary-chunks-db.js"></script>
+<script src="js/pushca-binary-helper.js"></script>
+<script src="js/security-utils.js"></script>
+<script src="js/gateway-server.js"></script>
+<script src="js/jszip.min.js"></script>
+<script src="js/add-binary-popup.js"></script>
+<script src="js/ws-connection.js"></script>
+</html>
