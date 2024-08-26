@@ -15,8 +15,9 @@ const progressBarContainer = document.getElementById("progressBarContainer");
 const downloadButtonText = document.getElementById("buttonText");
 const downloadSpinner = document.getElementById('downloadSpinner');
 const pastCredentialsTextarea = document.getElementById('pastCredentials');
+const errorMessage = document.getElementById('errorMessage');
 
-workspaceField.focus();
+pastCredentialsTextarea.focus();
 
 pastCredentialsTextarea.addEventListener('input', () => {
     const memoText = pastCredentialsTextarea.value;
@@ -49,7 +50,7 @@ function postDownloadProcessor() {
     if (loginContainer) {
         loginContainer.remove();
     }
-    delay(1000).then(() => window.close());
+    //delay(1000).then(() => window.close());
 }
 
 function extractFileName(contentDisposition) {
@@ -73,6 +74,8 @@ async function downloadProtectedBinary(downloadRequest) {
     });
     if (!response.ok) {
         console.error('Failed download protected binary attempt ' + response.statusText);
+        errorMessage.textContent = 'Failed download protected binary attempt ' + response.statusText;
+        errorMessage.style.display = 'block';
         return null;
     }
     console.log(response.headers.get('Content-Disposition'));
@@ -139,6 +142,8 @@ async function downloadProtectedBinarySilently(downloadRequest) {
     });
     if (!response.ok) {
         console.error('Failed download protected binary attempt ' + response.statusText);
+        errorMessage.textContent = 'Failed download protected binary attempt ' + response.statusText;
+        errorMessage.style.display = 'block';
         return null;
     }
 

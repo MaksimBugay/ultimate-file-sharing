@@ -11,7 +11,8 @@ function getRandomIntInclusive(min, max) {
 
 //--------------------------------------------------------------------------
 
-const fileSharingManagerUrl = chrome.runtime.getURL("html/file-sharing-manager.html");
+//const fileSharingManagerUrl = chrome.runtime.getURL("html/file-sharing-manager.html");
+const fileSharingManagerUrl = 'https://vasilii.prodpushca.com:30443/html/file-sharing-manager.html';
 let fileSharingManagerTabId = null;
 
 chrome.runtime.onInstalled.addListener((details) => {

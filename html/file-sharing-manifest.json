@@ -1,0 +1,12 @@
+{
+  "name": "Ultimate file sharing",
+  "short_name": "My Site",
+  "start_url": "file-sharing-manager.html",
+  "icons": [
+    {
+      "src": "../images/file-sharing.png",
+      "sizes": "630x630",
+      "type": "image/png"
+    }
+  ]
+}
