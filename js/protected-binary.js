@@ -64,7 +64,7 @@ function extractFileName(contentDisposition) {
     return filename;
 }
 
-async function downloadProtectedBinary(downloadRequest) {
+async function loadBinaryResponse(downloadRequest) {
     const response = await fetch(serverUrl + '/binary/protected', {
         method: 'POST',
         headers: {
@@ -78,7 +78,11 @@ async function downloadProtectedBinary(downloadRequest) {
         errorMessage.style.display = 'block';
         return null;
     }
-    console.log(response.headers.get('Content-Disposition'));
+    return response;
+}
+
+async function downloadProtectedBinary(downloadRequest) {
+    const response = await loadBinaryResponse(downloadRequest);
     const contentLength = response.headers.get('content-length');
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
@@ -133,20 +137,7 @@ function showDownloadProgress() {
 async function downloadProtectedBinarySilently(downloadRequest) {
     //showSpinnerInButton();
     showDownloadProgress();
-    const response = await fetch(serverUrl + '/binary/protected', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(downloadRequest)
-    });
-    if (!response.ok) {
-        console.error('Failed download protected binary attempt ' + response.statusText);
-        errorMessage.textContent = 'Failed download protected binary attempt ' + response.statusText;
-        errorMessage.style.display = 'block';
-        return null;
-    }
-
+    const response = await loadBinaryResponse(downloadRequest);
     const contentLength = response.headers.get('content-length');
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
@@ -171,20 +162,11 @@ async function downloadProtectedBinarySilently(downloadRequest) {
             progressPercentage.textContent = 'Downloading...';
         }
     }
-    const blob = new Blob(chunks, {type: response.headers.get('content-type')});
+    const blob = new Blob(chunks, {type: 'application/octet-stream'});
+    //const blob = new Blob(chunks, {type: response.headers.get('content-type')});
     //const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});
 
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = binaryFileName;
-    document.body.appendChild(a);
-    a.click();
-
-    // Clean up
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadFile(blob, binaryFileName);
 }
 
 async function createSignedDownloadRequest(pwd, workspaceId, suffix) {

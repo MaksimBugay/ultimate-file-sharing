@@ -445,20 +445,6 @@ function downloadBinary(chunks, fileName, mimeType) {
     downloadFile(binaryBlob, fileName);
 }
 
-function downloadFile(blob, fileName) {
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-
-    // Clean up
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
 async function loadAllBinaryChunks(binaryId, totalNumberOfChunks, chunksConsumer) {
     const chunks = [];
 
