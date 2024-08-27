@@ -79,6 +79,8 @@ async function processSelectedFiles(event) {
         if (!zipArchiveName) {
             const file0 = event.target.files[0];
             zipArchiveName = file0.webkitRelativePath ? file0.webkitRelativePath.split('/')[0] + '.zip' : `zip-with-${file0.name}`;
+        } else {
+            zipArchiveName = zipArchiveName + '.zip';
         }
         const zip = new JSZip();
         for (let i = 0; i < event.target.files.length; i++) {

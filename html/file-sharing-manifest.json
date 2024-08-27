@@ -1,7 +1,7 @@
 {
   "name": "Ultimate file sharing",
-  "short_name": "My Site",
-  "start_url": "file-sharing-manager.html",
+  "short_name": "File sharing",
+  "start_url": "ufshm.html",
   "icons": [
     {
       "src": "../images/file-sharing.png",
