@@ -69,7 +69,13 @@ async function blobToArrayBuffers(blob, chunkSize) {
     return arrayBuffers;
 }
 
+function showSpinnerInButton() {
+    document.getElementById('download-spinner').style.display = 'flex';
+    document.getElementById('download-message').textContent = 'Loading...';
+}
+
 async function processSelectedFiles(event) {
+    showSpinnerInButton();
     //create zip archive
     if (createZipArchiveCheckbox.checked) {
         if (event.target.files.length === 0) {

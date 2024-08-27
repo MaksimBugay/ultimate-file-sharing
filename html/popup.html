@@ -5,17 +5,30 @@
     <title>Title</title>
     <style>
         body {
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            background-image: url('../images/arrow-down-icon-png-6.png');
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
+            width: auto;
+            padding: 5px;
+        }
+
+        .doc-link {
+            display: inline-block; /* Makes the link behave like a button */
+            padding: 10px 15px; /* Adds some padding */
+            background-color: #007bff; /* Background color for the link */
+            color: white; /* Text color */
+            font-size: 16px; /* Font size */
+            text-decoration: none; /* Removes underline */
+            border-radius: 5px; /* Rounded corners */
+            transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+        }
+
+        .doc-link:hover {
+            background-color: #0056b3; /* Darker background on hover */
         }
     </style>
 </head>
 <body>
+<a href="https://vasilii.prodpushca.com:30443/ufshm-doc.html" class="doc-link" target="_blank" rel="noopener noreferrer" style="width: 200px">
+    📄 Documentation
+</a>
 </body>
 <script src="../js/common-utils.js"></script>
 <script src="../js/main-popup.js"></script>

@@ -70,7 +70,7 @@ function openFileSharingManagerIfNotExists(makeActive) {
         return;
     }
     chrome.tabs.query({}, (tabs) => {
-        let existingTab = tabs.some(tab => tab.url === fileSharingManagerUrl);
+        let existingTab = tabs.find(tab => tab.url === fileSharingManagerUrl);
 
         if (!existingTab) {
             delay(getRandomIntInclusive(100, 1500)).then(() => {

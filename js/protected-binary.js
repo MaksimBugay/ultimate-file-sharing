@@ -124,11 +124,6 @@ async function downloadProtectedBinary(downloadRequest) {
     console.log(`File downloaded to: ${fileHandle.name}`);
 }
 
-function showSpinnerInButton() {
-    document.getElementById('download-spinner').style.display = 'flex';
-    document.getElementById('download-message').textContent = 'Downloading...';
-}
-
 function showDownloadProgress() {
     progressBarContainer.style.display = 'block';
     downloadBtn.style.display = 'none';

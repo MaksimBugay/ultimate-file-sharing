@@ -131,6 +131,32 @@
             display: block;
             margin: 0 auto; /* Center the image */
         }
+
+        #download-spinner {
+            display: none;
+            padding: 5px;
+            margin-left: 45%;
+            /*height: 100vh;*/
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border: 0.25rem solid #ddd;
+            border-radius: 50%;
+            border-top-color: aquamarine;
+            animation: spin 1s linear infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
     <link rel="icon" href="images/file-sharing.png">
     <link rel="manifest" href="html/file-sharing-manifest.json">
@@ -175,6 +201,12 @@
             <label for="fileInput" style="margin-top: 15px" class="icon-button">
                 <i class="fa fa-upload"></i>
             </label>
+            <div id="download-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden"></span>
+                </div>
+                <p id="download-message">Loading...</p>
+            </div>
         </div>
     </div>
 </div>
