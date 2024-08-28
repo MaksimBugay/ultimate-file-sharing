@@ -22,9 +22,12 @@ pastCredentialsTextarea.addEventListener('blur', function() {
 });
 
 if (urlParams.get('workspace')) {
+    pastCredentialsTextarea.style.visibility = 'hidden';
     workspaceField.value = urlParams.get('workspace');
+    passwordField.focus();
+} else {
+    pastCredentialsTextarea.focus();
 }
-pastCredentialsTextarea.focus();
 
 pastCredentialsTextarea.addEventListener('input', () => {
     const memoText = pastCredentialsTextarea.value;
