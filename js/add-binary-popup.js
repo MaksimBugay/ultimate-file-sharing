@@ -14,6 +14,7 @@ function openModal() {
 }
 
 function closeModal() {
+    hideSpinnerInButton();
     addBinaryPopup.style.display = 'none';
 }
 
@@ -72,6 +73,11 @@ async function blobToArrayBuffers(blob, chunkSize) {
 function showSpinnerInButton() {
     document.getElementById('download-spinner').style.display = 'flex';
     document.getElementById('download-message').textContent = 'Loading...';
+}
+
+function hideSpinnerInButton() {
+    document.getElementById('download-spinner').style.display = 'none';
+    document.getElementById('download-message').textContent = '';
 }
 
 async function processSelectedFiles(event) {

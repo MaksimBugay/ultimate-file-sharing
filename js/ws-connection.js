@@ -145,6 +145,26 @@ class GridHeaderWithImage {
     }
 }
 
+class GridHeaderWithCheckBox {
+    init(params) {
+        this.eGui = document.createElement('div');
+        this.eGui.style.alignItems = 'center';
+        this.eGui.style.textAlign = 'center';
+        this.eGui.innerHTML = `
+            <div style="margin-bottom: 3px">${params.headerName}</div>
+            <div style="display: flex; align-items: center; text-align: inherit; height: 1px">
+                <label style="display: inline-block; text-align: inherit">
+                    <input type="checkbox" id="${params.elementId}"/>
+                    ${params.displayName}
+                </label>
+            </div>`;
+    }
+
+    getGui() {
+        return this.eGui;
+    }
+}
+
 function initFileManager() {
     if (FileManager.gridApi) {
         FileManager.gridApi.clear();
@@ -158,6 +178,7 @@ function initFileManager() {
             pagination: true,
             paginationPageSize: 5,
             paginationPageSizeSelector: [5, 10, 50, 100],
+            headerHeight: 60,
             defaultColDef: {
                 sortable: false
             },
@@ -177,7 +198,13 @@ function initFileManager() {
                     valueGetter: params => printDateTime(params.data.created)
                 },
                 {
-                    headerName: "Public URL",
+                    headerComponent: GridHeaderWithCheckBox,
+                    headerComponentParams: {
+                        elementId: 'exposeWorkspaceIdCheckBox',
+                        headerName: "Public URL",
+                        displayName: 'Expose workspace ID'
+                    },
+                    //headerName: "Public URL",
                     field: "copyLinkButton",
                     cellRenderer: GridCellButton,
                     cellRendererParams: {
