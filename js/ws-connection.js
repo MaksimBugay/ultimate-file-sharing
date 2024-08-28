@@ -53,6 +53,24 @@ PushcaClient.onFinalizedBinaryHandler = function (manifest) {
     BinaryWaitingHall.delete(buildDownloadWaiterId(manifest.id));
 }
 
+PushcaClient.onMessageHandler = function (ws, data) {
+    if (data.includes(`::${MessageType.PRIVATE_URL_SUFFIX}::`)) {
+        //console.log(`get private url suffix request: ${data}`);
+        const parts = data.split("::");
+        getPrivateUrlSuffix(parts[2]).then(suffix => {
+            if (suffix) {
+                const msg = `${parts[0]}::${MessageType.PRIVATE_URL_SUFFIX}::${suffix}`;
+                PushcaClient.broadcastMessage(
+                    null,
+                    new ClientFilter("PushcaCluster", null, null, "BINARY-PROXY-CONNECTION-TO-PUSHER"),
+                    false,
+                    msg
+                );
+            }
+        });
+    }
+}
+
 function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
         const pClient = new ClientFilter(
@@ -224,12 +242,16 @@ function initFileManager() {
                         imgSrc: "../images/secure-file-sharing.png",
                         buttonTitle: "",
                         clickHandler: (data) => {
-                            copyToClipboard(JSON.stringify(
-                                {
-                                    workspaceId: PushcaClient.ClientObj.workSpaceId,
-                                    password: data.password
-                                }
-                            ));
+                            if (isWorkspaceIdExposed()) {
+                                copyToClipboard(data.password);
+                            } else {
+                                copyToClipboard(JSON.stringify(
+                                    {
+                                        workspaceId: PushcaClient.ClientObj.workSpaceId,
+                                        password: data.password
+                                    }
+                                ));
+                            }
                         },
                         afterCreatedHandler: function (eButton, data) {
                             const credentials = {

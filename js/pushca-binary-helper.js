@@ -74,7 +74,8 @@ class BinaryManifest {
         let downloadUrl;
         if (this.password) {
             const workspaceIdSuffix = exposeWorkspaceId ? `&workspace=${workSpaceId}` : '';
-            downloadUrl = `${serverUrl}/protected-binary.html?suffix=${this.privateUrlSuffix}${workspaceIdSuffix}`;
+            //downloadUrl = `${serverUrl}/protected-binary.html?suffix=${this.privateUrlSuffix}${workspaceIdSuffix}`;
+            downloadUrl = `${serverUrl}/binary/${this.id}?exposeWorkspace=${exposeWorkspaceId ? 'yes' : 'no'}`;
         } else {
             downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
@@ -189,6 +190,24 @@ const BinaryWaitingHall = new Map();
 
 function buildSharedFileChunkId(binaryId, order, destHashCode) {
     return `${binaryId}-${order}-${destHashCode}`;
+}
+
+async function getPrivateUrlSuffix(binaryId) {
+    const getManifestResult = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        getManifest(
+            binaryId,
+            function (manifest) {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, manifest);
+            }, function (event) {
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, event.target.error);
+            }
+        );
+    });
+    if ((WaiterResponseType.SUCCESS === getManifestResult.type) && getManifestResult.body) {
+        return getManifestResult.body.privateUrlSuffix;
+    } else {
+        return null;
+    }
 }
 
 async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuffer, sliceNumber, binaryManifest) {

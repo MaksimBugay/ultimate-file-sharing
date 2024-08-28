@@ -17,7 +17,7 @@ const downloadSpinner = document.getElementById('downloadSpinner');
 const pastCredentialsTextarea = document.getElementById('pastCredentials');
 const errorMessage = document.getElementById('errorMessage');
 
-pastCredentialsTextarea.addEventListener('blur', function() {
+pastCredentialsTextarea.addEventListener('blur', function () {
     pastCredentialsTextarea.style.visibility = 'hidden';
 });
 
@@ -43,24 +43,24 @@ downloadBtn.addEventListener('click', function () {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
         if (window.showSaveFilePicker) {
-            downloadProtectedBinary(request).then(() => {
-                postDownloadProcessor();
+            downloadProtectedBinary(request).then((result) => {
+                postDownloadProcessor(result);
             });
         } else {
-            downloadProtectedBinarySilently(request).then(() => {
-                if (loginContainer) {
-                    loginContainer.remove();
-                }
+            downloadProtectedBinarySilently(request).then((result) => {
+                postDownloadProcessor(result);
             });
         }
     });
 });
 
-function postDownloadProcessor() {
+function postDownloadProcessor(result) {
     if (loginContainer) {
         loginContainer.remove();
     }
-    //delay(1000).then(() => window.close());
+    if ('RESPONSE_WITH_ERROR' !== result) {
+        delay(1000).then(() => window.close());
+    }
 }
 
 function extractFileName(contentDisposition) {
@@ -93,6 +93,9 @@ async function loadBinaryResponse(downloadRequest) {
 
 async function downloadProtectedBinary(downloadRequest) {
     const response = await loadBinaryResponse(downloadRequest);
+    if (response === null) {
+        return 'RESPONSE_WITH_ERROR';
+    }
     const contentLength = response.headers.get('content-length');
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
@@ -143,6 +146,9 @@ async function downloadProtectedBinarySilently(downloadRequest) {
     //showSpinnerInButton();
     showDownloadProgress();
     const response = await loadBinaryResponse(downloadRequest);
+    if (response === null) {
+        return 'RESPONSE_WITH_ERROR';
+    }
     const contentLength = response.headers.get('content-length');
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
