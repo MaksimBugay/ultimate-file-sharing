@@ -2,6 +2,7 @@ console.log('ws-connection.js running on', window.location.href);
 
 const statusCaption = document.getElementById("statusCaption");
 const addBinaryButton = document.getElementById("addBinaryButton");
+let exposeWorkspaceIdCheckBox;
 addBinaryButton.addEventListener("click", function () {
     openModal();
 })
@@ -88,7 +89,7 @@ class GridCellButton {
 
         this.eButton = document.createElement("button");
         this.eButton.className = "btn-simple fm-grid-button";
-        this.publicUrl = `${params.data.getPublicUrl(PushcaClient.ClientObj.workSpaceId)}`;
+        this.publicUrl = `${params.data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed())}`;
         this.eButton.title = this.publicUrl;
 
 
@@ -211,7 +212,7 @@ function initFileManager() {
                         imgSrc: "../images/copy-link-256.png",
                         buttonTitle: "",
                         clickHandler: (data) => {
-                            copyToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId));
+                            copyToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()));
                         }
                     }
                 },
@@ -243,11 +244,6 @@ function initFileManager() {
                     }
                 },
                 {
-                    /*headerComponent: GridHeaderWithImage,
-                    headerComponentParams: {
-                        imgSrc: '../images/downloads-icon.png',
-                        displayName: ''
-                    },*/
                     headerName: "Download",
                     field: "downloadButton",
                     cellRenderer: GridCellButton,
@@ -269,7 +265,7 @@ function initFileManager() {
                         imgSrc: "../images/test-public-url.png",
                         buttonTitle: "",
                         clickHandler: (data) => {
-                            window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId), '_blank');
+                            window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
                         }
                     }
                 },
@@ -336,7 +332,7 @@ function addManifestToManagerGrid(newManifest) {
     });
     updateTotalSize()
     delay(1000).then(() => {
-        const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId);
+        const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed());
         copyToClipboard(publicUr);
 
         const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
@@ -356,4 +352,21 @@ function incrementDownloadCounterOfManifestRecord(binaryId) {
             });
         }
     }
+}
+
+function isWorkspaceIdExposed() {
+    if (!exposeWorkspaceIdCheckBox) {
+        exposeWorkspaceIdCheckBox = document.getElementById("exposeWorkspaceIdCheckBox");
+        exposeWorkspaceIdCheckBox.addEventListener('change', function () {
+            document.querySelectorAll(".fm-grid-button").forEach(el0 => {
+                const url = el0.title;
+                if (exposeWorkspaceIdCheckBox.checked) {
+                    el0.title = (!url.includes('workspace')) ? url + `&workspace=${PushcaClient.ClientObj.workSpaceId}` : url;
+                } else {
+                    el0.title = url.replace(`&workspace=${PushcaClient.ClientObj.workSpaceId}`, '');
+                }
+            })
+        });
+    }
+    return exposeWorkspaceIdCheckBox.checked;
 }
