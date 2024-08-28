@@ -17,6 +17,13 @@ const downloadSpinner = document.getElementById('downloadSpinner');
 const pastCredentialsTextarea = document.getElementById('pastCredentials');
 const errorMessage = document.getElementById('errorMessage');
 
+pastCredentialsTextarea.addEventListener('blur', function() {
+    pastCredentialsTextarea.style.visibility = 'hidden';
+});
+
+if (urlParams.get('workspace')) {
+    workspaceField.value = urlParams.get('workspace');
+}
 pastCredentialsTextarea.focus();
 
 pastCredentialsTextarea.addEventListener('input', () => {
