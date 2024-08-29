@@ -36,10 +36,25 @@ pastCredentialsTextarea.addEventListener('input', () => {
         workspaceField.value = object['workspaceId'];
         passwordField.value = object['password'];
         pastCredentialsTextarea.value = '';
+        downloadSharedBinary();
+    }
+});
+
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        if ('password' === event.target.id || 'pastCredentials' === event.target.id) {
+            downloadSharedBinary();
+        }
     }
 });
 
 downloadBtn.addEventListener('click', function () {
+    downloadSharedBinary();
+});
+
+function downloadSharedBinary(){
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
         if (window.showSaveFilePicker) {
@@ -52,7 +67,7 @@ downloadBtn.addEventListener('click', function () {
             });
         }
     });
-});
+}
 
 function postDownloadProcessor(result) {
     if (loginContainer) {
