@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <title>File manager</title>
+    <meta charset="UTF-8">
     <style>
         .fm-grid-button {
             display: flex;
@@ -37,7 +38,7 @@
             font-weight: bold;
             font-family: 'Roboto', sans-serif;
             font-size: 14px;
-            background-image: url('../images/file-sharing3.png');
+            background-image: url('images/file-sharing3.png');
             background-size: cover;
             background-position: center center;
             background-repeat: no-repeat;
@@ -157,13 +158,58 @@
                 transform: rotate(360deg);
             }
         }
+
+        #expandableDiv {
+            width: 600px; /* Default width */
+            height: 40px; /* Default height */
+            overflow: hidden; /* Hide content overflow */
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            margin-right: 20px;
+            z-index: 1000;
+            background-color: transparent;
+            border: 0 solid transparent;
+            transition: width 0.3s ease, height 0.3s ease; /* Smooth transition */
+            cursor: pointer; /* Cursor changes to pointer on hover */
+            text-align: right;
+        }
+
+        /* Expanded state */
+        #expandableDiv.expand {
+            width: 600px; /* Expanded width */
+            height: 450px; /* Expanded height */
+            border: 1px solid royalblue;
+            background-color: azure;
+        }
+
+        .doc-link {
+            display: inline-block; /* Makes the link behave like a button */
+            padding: 10px 15px; /* Adds some padding */
+            background-color: #007bff; /* Background color for the link */
+            color: white; /* Text color */
+            font-size: 16px; /* Font size */
+            text-decoration: none; /* Removes underline */
+            border-radius: 5px; /* Rounded corners */
+            transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+        }
+
+        .doc-link:hover {
+            background-color: #0056b3; /* Darker background on hover */
+        }
     </style>
     <link rel="icon" href="images/file-sharing.png">
     <link rel="manifest" href="html/file-sharing-manifest.json">
 </head>
 <body>
-<h1 style="color: darkblue; text-align: center;">Ultimate File Sharing manager</h1>
+<h1 style="color: darkblue; text-align: center;">Secure FileShare</h1>
 <h2 id="statusCaption" style="color: crimson; text-align: center;">(Transfer channel is broken)</h2>
+<div id="expandableDiv">
+    <a href="https://vasilii.prodpushca.com:30443/doc/secure-file-share-doc.html" class="doc-link" target="_blank" rel="noopener noreferrer" style="width: 100px">
+        📄 How to ...
+    </a>
+    <img src="images/how-to.png" width="600px" style="border: none;" alt="manual">
+</div>
 <div style="display: flex">
     <h2 id="totalSizeCaption" style="margin-left: 20px; margin-right: 50px"></h2>
     <button id="addBinaryButton" class="image-button">

@@ -2,7 +2,17 @@ console.log('ws-connection.js running on', window.location.href);
 
 const statusCaption = document.getElementById("statusCaption");
 const addBinaryButton = document.getElementById("addBinaryButton");
+const expandableDiv = document.getElementById("expandableDiv");
 let exposeWorkspaceIdCheckBox;
+
+expandableDiv.addEventListener('mouseover', () => {
+    expandableDiv.classList.add('expand');
+});
+
+// Add mouseout event to shrink the div
+expandableDiv.addEventListener('mouseout', () => {
+    expandableDiv.classList.remove('expand');
+});
 addBinaryButton.addEventListener("click", function () {
     openModal();
 })
