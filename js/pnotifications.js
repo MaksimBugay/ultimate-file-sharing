@@ -396,6 +396,7 @@ class GatewayRequestHeader {
 
 
 let PushcaClient = {};
+PushcaClient.clusterBaseUrl = 'https://secure.fileshare.ovh:31443'
 PushcaClient.serverBaseUrl = 'http://localhost:8080'
 PushcaClient.pusherInstanceId = null;
 PushcaClient.verbose = false;

@@ -18,7 +18,7 @@ addBinaryButton.addEventListener("click", function () {
 })
 
 let FileManager = {};
-const wsUrl = 'wss://vasilii.prodpushca.com:30085';
+const wsUrl = 'wss://secure.fileshare.ovh:31085';
 let pingIntervalId = null;
 
 FingerprintJS.load().then(fp => {

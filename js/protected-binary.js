@@ -1,4 +1,4 @@
-const serverUrl = 'https://vasilii.prodpushca.com:30443';
+const serverUrl = 'https://secure.fileshare.ovh:31443';
 const urlParams = new URLSearchParams(window.location.search);
 
 // Retrieve specific parameters

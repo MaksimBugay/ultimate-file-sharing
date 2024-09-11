@@ -90,7 +90,7 @@ async function signString(key, message) {
 }
 
 async function createPrivateUrlSuffix(workspaceId, binaryId) {
-    const response = await fetch('https://vasilii.prodpushca.com:30443' + '/binary/private/create-url-suffix', {
+    const response = await fetch(PushcaClient.clusterBaseUrl + '/binary/private/create-url-suffix', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

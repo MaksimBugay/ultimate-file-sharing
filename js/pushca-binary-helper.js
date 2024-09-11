@@ -70,7 +70,7 @@ class BinaryManifest {
     }
 
     getPublicUrl(workSpaceId, exposeWorkspaceId) {
-        const serverUrl = 'https://vasilii.prodpushca.com:30443';
+        const serverUrl = PushcaClient.clusterBaseUrl;
         let downloadUrl;
         if (this.password) {
             const workspaceIdSuffix = exposeWorkspaceId ? `&workspace=${workSpaceId}` : '';
