@@ -71,7 +71,7 @@ PushcaClient.onMessageHandler = function (ws, data) {
             if (getSuffixResponse) {
                 let msg = `${parts[0]}::${MessageType.PRIVATE_URL_SUFFIX}::${getSuffixResponse.privateUrlSuffix}`;
                 if (getSuffixResponse.encryptionContract) {
-                    msg = msg + `::${getSuffixResponse.encryptionContract.toTransferableString()}`;
+                    msg = msg + `|${getSuffixResponse.encryptionContract.toTransferableString()}`;
                 }
                 PushcaClient.broadcastMessage(
                     null,
