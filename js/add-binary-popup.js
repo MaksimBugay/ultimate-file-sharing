@@ -3,11 +3,23 @@ const closeButton = document.querySelector('.close');
 
 const fileInput = document.getElementById('fileInput');
 const passwordField = document.getElementById('passwordInput');
+const encryptFileContentCheckbox = document.getElementById('encryptFileContentCheckbox');
 const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckbox');
 const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileLabel = document.getElementById('selectFileLabel');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
 fileInput.addEventListener('change', processSelectedFiles);
+
+passwordField.value = null;
+encryptFileContentCheckbox.checked = false;
+passwordField.addEventListener('input', function () {
+    if (passwordField.value.trim() !== '') {
+        encryptFileContentCheckbox.parentElement.style.display = 'block'; // Show checkbox
+    } else {
+        encryptFileContentCheckbox.checked = false;
+        encryptFileContentCheckbox.parentElement.style.display = 'none'; // Hide checkbox
+    }
+});
 
 function openModal() {
     addBinaryPopup.style.display = 'block';
@@ -117,9 +129,7 @@ async function processSelectedFiles(event) {
 async function addFileToRegistry(file) {
     if (file) {
         const binaryId = uuid.v4().toString();
-
         const slices = await readFileToChunkArray(file);
-
         return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
     } else {
         return false;
@@ -166,14 +176,24 @@ async function readFileToChunkArray(file) {
     return slices;
 }
 
-async function createAndStoreBinaryFromSlices(slices, binaryId, binaryName, mimeType) {
+async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mimeType, encryptionContract) {
     try {
+        //===============encryption=====================================================================================
+        let slices = inSlices;
+        let encryptionContract = null;
+
+        if (encryptFileContentCheckbox.checked) {
+            const encryptionData = await encryptSlicesWithAES(inSlices);
+            slices = await blobToArrayBuffers(encryptionData.data, MemoryBlock.MB100);
+            encryptionContract = encryptionData.encryptionContract;
+        }
+        //==============================================================================================================
         let tmpManifest;
         let result;
         if (passwordField.value) {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, passwordField.value);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, passwordField.value, encryptionContract);
         } else {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, null);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, null, null);
         }
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             tmpManifest = result.body;

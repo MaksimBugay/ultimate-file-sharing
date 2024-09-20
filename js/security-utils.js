@@ -31,6 +31,17 @@ class DownloadProtectedBinaryRequest {
     }
 }
 
+class EncryptionContract {
+    constructor(base64Key, base64IV) {
+        this.base64Key = base64Key;
+        this.base64IV = base64IV;
+    }
+
+    toTransferableString() {
+        return encodeToBase64UrlSafe(JSON.stringify(this));
+    }
+}
+
 async function generateKeyFromPassword(password, salt) {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
@@ -78,6 +89,7 @@ async function verifySignature(pwd, salt, dataStr, signatureBase64) {
     const key = await generateKeyFromPassword(pwd, salt);
     return await verifySignatureWithKey(key, dataStr, signatureBase64);
 }
+
 async function signString(key, message) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
@@ -149,3 +161,67 @@ function urlSafeBase64ToArrayBuffer(urlSafeBase64) {
 
     return base64ToArrayBuffer(paddedBase64);
 }
+
+//======================================Encryption/Decryption===========================================================
+async function encryptWithAES(input/*ArrayBuffer*/) {
+    const key = await crypto.subtle.generateKey(
+        {
+            name: "AES-GCM",
+            length: 256 // AES key length (256 bits)
+        },
+        true, // extractable key (you can export it)
+        ["encrypt", "decrypt"] // allowed key usages
+    ); // Generate AES-GCM key
+    const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Generate random 12-byte IV
+
+    // Encrypt the file content
+    const encryptedContent = await window.crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        input
+    );
+
+    // Convert the key to a base64 string to allow sharing/storing
+    const exportedKey = await crypto.subtle.exportKey("raw", key);
+    return {
+        encryptionContract: new EncryptionContract(arrayBufferToBase64(exportedKey), arrayBufferToBase64(iv)),
+        data: new Blob([new Uint8Array(encryptedContent)], {type: "application/octet-stream"})
+    }
+}
+
+async function encryptSlicesWithAES(slices){
+    return await encryptWithAES(concatArrayBuffers(slices));
+}
+async function decryptAES(encryptedBlob, base64Key, base64IV) {
+    const key = await crypto.subtle.importKey(
+        "raw",
+        base64ToArrayBuffer(base64Key),
+        {
+            name: "AES-GCM"
+        },
+        false, // non-extractable
+        ["decrypt"]
+    );
+
+    const iv = base64ToArrayBuffer(base64IV);
+
+    // Convert the encrypted Blob to ArrayBuffer
+    const encryptedContent = await encryptedBlob.arrayBuffer();
+
+    // Perform decryption
+    const decryptedContent = await crypto.subtle.decrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        encryptedContent
+    );
+
+    // Convert decrypted ArrayBuffer back to Blob for download or further use
+    return new Blob([new Uint8Array(decryptedContent)], {type: "application/octet-stream"});
+}
+//======================================================================================================================

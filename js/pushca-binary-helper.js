@@ -30,7 +30,7 @@ class Datagram {
 
 class BinaryManifest {
     constructor(id, name, mimeType, sender, pusherInstanceId, datagrams,
-                totalSize, timestamp, password, privateUrlSuffix, downloadCounter) {
+                totalSize, timestamp, password, privateUrlSuffix, downloadCounter, base64Key, base64IV) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
@@ -42,6 +42,8 @@ class BinaryManifest {
         this.password = password;
         this.privateUrlSuffix = privateUrlSuffix;
         this.downloadCounter = downloadCounter ? downloadCounter : 0;
+        this.base64Key = base64Key;
+        this.base64IV = base64IV;
     }
 
     getTotalSize() {
@@ -130,7 +132,9 @@ class BinaryManifest {
             pusherInstanceId: this.pusherInstanceId,
             datagrams: this.datagrams,
             password: this.password,
-            privateUrlSuffix: this.privateUrlSuffix
+            privateUrlSuffix: this.privateUrlSuffix,
+            base64Key: this.base64Key,
+            base64IV: this.base64IV
         };
     }
 
@@ -161,7 +165,9 @@ class BinaryManifest {
             timestamp,
             jsonObject.password,
             jsonObject.privateUrlSuffix,
-            downloadCounter
+            downloadCounter,
+            jsonObject.base64Key,
+            jsonObject.base64IV
         );
     }
 
@@ -267,7 +273,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
     return binaryManifest;
 }
 
-async function createBinaryManifest(id, name, mimeType, password) {
+async function createBinaryManifest(id, name, mimeType, password, encryptionContract) {
     if (!PushcaClient.ClientObj) {
         return new WaiterResponse(WaiterResponseType.ERROR, "Owner connection is absent");
     }
@@ -288,6 +294,9 @@ async function createBinaryManifest(id, name, mimeType, password) {
             null,
             null,
             password,
+            null,
+            null,
+            null,
             null
         );
         return new WaiterResponse(WaiterResponseType.SUCCESS, binaryManifest);
@@ -305,7 +314,10 @@ async function createBinaryManifest(id, name, mimeType, password) {
                 null,
                 null,
                 password,
-                privateUrlSuffix
+                privateUrlSuffix,
+                null,
+                encryptionContract.base64Key,
+                encryptionContract.base64IV
             );
             CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
         });
