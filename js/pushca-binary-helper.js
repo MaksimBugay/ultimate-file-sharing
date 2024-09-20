@@ -199,6 +199,7 @@ function buildSharedFileChunkId(binaryId, order, destHashCode) {
 }
 
 async function getPrivateUrlSuffix(binaryId) {
+    let encryptionContract;
     const getManifestResult = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         getManifest(
             binaryId,
@@ -210,7 +211,16 @@ async function getPrivateUrlSuffix(binaryId) {
         );
     });
     if ((WaiterResponseType.SUCCESS === getManifestResult.type) && getManifestResult.body) {
-        return getManifestResult.body.privateUrlSuffix;
+        if (getManifestResult.body.base64Key) {
+            encryptionContract = new EncryptionContract(
+                getManifestResult.body.base64Key,
+                getManifestResult.body.base64IV
+            );
+        }
+        return {
+            privateUrlSuffix: getManifestResult.body.privateUrlSuffix,
+            encryptionContract: encryptionContract
+        }
     } else {
         return null;
     }

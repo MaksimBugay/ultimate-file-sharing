@@ -11,7 +11,6 @@ async function verifyBinarySignature(header, requestPayload) {
         const request = DownloadProtectedBinaryRequest.fromJsonString(requestJson);
         console.log(request);
         let password;
-        let encryptionContract;
         const getManifestResult = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
             getManifest(
                 request.binaryId,
@@ -24,12 +23,6 @@ async function verifyBinarySignature(header, requestPayload) {
         });
         if ((WaiterResponseType.SUCCESS === getManifestResult.type) && getManifestResult.body) {
             password = getManifestResult.body.password;
-            if (getManifestResult.body.base64Key) {
-                encryptionContract = new EncryptionContract(
-                    getManifestResult.body.base64Key,
-                    getManifestResult.body.base64IV
-                );
-            }
         } else {
             return new WaiterResponse(
                 WaiterResponseType.SUCCESS,
@@ -52,12 +45,7 @@ async function verifyBinarySignature(header, requestPayload) {
         return new WaiterResponse(
             WaiterResponseType.SUCCESS,
             stringToByteArray(
-                JSON.stringify(
-                    {
-                        result: result,
-                        encryptionContract: encryptionContract ? encryptionContract.toTransferableString() : null
-                    }
-                )
+                JSON.stringify({result: result})
             )
         )
     } catch (error) {

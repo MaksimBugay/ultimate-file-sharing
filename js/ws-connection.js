@@ -67,9 +67,12 @@ PushcaClient.onMessageHandler = function (ws, data) {
     if (data.includes(`::${MessageType.PRIVATE_URL_SUFFIX}::`)) {
         //console.log(`get private url suffix request: ${data}`);
         const parts = data.split("::");
-        getPrivateUrlSuffix(parts[2]).then(suffix => {
-            if (suffix) {
-                const msg = `${parts[0]}::${MessageType.PRIVATE_URL_SUFFIX}::${suffix}`;
+        getPrivateUrlSuffix(parts[2]).then(getSuffixResponse => {
+            if (getSuffixResponse) {
+                let msg = `${parts[0]}::${MessageType.PRIVATE_URL_SUFFIX}::${getSuffixResponse.privateUrlSuffix}`;
+                if (getSuffixResponse.encryptionContract) {
+                    msg = msg + `::${getSuffixResponse.encryptionContract.toTransferableString()}`;
+                }
                 PushcaClient.broadcastMessage(
                     null,
                     new ClientFilter("PushcaCluster", null, null, "BINARY-PROXY-CONNECTION-TO-PUSHER"),
