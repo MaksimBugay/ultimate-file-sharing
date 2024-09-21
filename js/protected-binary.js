@@ -3,12 +3,12 @@ const urlParams = new URLSearchParams(window.location.search);
 
 // Retrieve specific parameters
 let protectedUrlSuffix = decodeURIComponent(urlParams.get('suffix'));
-let encryptionContract;
+let encryptionContractStr;
 
 const suffixParts = protectedUrlSuffix.split('|');
 if (suffixParts.length > 1) {
     protectedUrlSuffix = suffixParts[0];
-    encryptionContract = EncryptionContract.fromTransferableString(suffixParts[1]);
+    encryptionContractStr = suffixParts[1];
 }
 
 const passwordField = document.getElementById('password');
@@ -64,7 +64,7 @@ downloadBtn.addEventListener('click', function () {
 function downloadSharedBinary() {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
-        if (window.showSaveFilePicker && (!encryptionContract)) {
+        if (window.showSaveFilePicker && (!encryptionContractStr)) {
             downloadProtectedBinary(request).then((result) => {
                 postDownloadProcessor(result);
             });
@@ -196,7 +196,12 @@ async function downloadProtectedBinarySilently(downloadRequest) {
         }
     }
     let blob;
-    if (encryptionContract) {
+    if (encryptionContractStr) {
+        const encryptionContract = await EncryptionContract.fromTransferableString(
+            encryptionContractStr,
+            passwordField.value,
+            stringToByteArray(workspaceField.value)
+        );
         blob = await decryptAES(chunks, encryptionContract.base64Key, encryptionContract.base64IV);
     } else {
         blob = new Blob(chunks, {type: 'application/octet-stream'});

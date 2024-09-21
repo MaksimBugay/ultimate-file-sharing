@@ -37,15 +37,20 @@ class EncryptionContract {
         this.base64IV = base64IV;
     }
 
-    toTransferableString() {
-        return encodeToBase64UrlSafe(JSON.stringify(this));
+    async toTransferableString(pwd, salt) {
+        const encryptedKey = await encryptPrivateKey(this.base64Key, this.base64IV, pwd, salt);
+        return encodeToBase64UrlSafe(JSON.stringify({
+            base64Key: encryptedKey,
+            base64IV: this.base64IV
+        }));
     }
 
-    static fromTransferableString(transferableString) {
+    static async fromTransferableString(transferableString, password, salt) {
         const jsonString = decodeFromBase64UrlSafe(transferableString);
         const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        const decryptedKey = await decryptPrivateKey(jsonObject.base64Key, password, salt, jsonObject.base64IV);
         return new EncryptionContract(
-            jsonObject.base64Key,
+            decryptedKey,
             jsonObject.base64IV
         );
     }
@@ -72,6 +77,30 @@ async function generateKeyFromPassword(password, salt) {
         {name: "HMAC", hash: "SHA-256", length: 256},
         true,
         ["sign", "verify"]
+    );
+}
+
+async function generateAESKeyFromPassword(password, salt) {
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        {name: "PBKDF2"},
+        false,
+        ["deriveKey"]
+    );
+
+    return await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
     );
 }
 
@@ -201,9 +230,10 @@ async function encryptWithAES(input/*ArrayBuffer*/) {
     }
 }
 
-async function encryptSlicesWithAES(slices){
+async function encryptSlicesWithAES(slices) {
     return await encryptWithAES(concatArrayBuffers(slices));
 }
+
 async function decryptAES(slices, base64Key, base64IV) {
     const key = await crypto.subtle.importKey(
         "raw",
@@ -233,4 +263,39 @@ async function decryptAES(slices, base64Key, base64IV) {
     // Convert decrypted ArrayBuffer back to Blob for download or further use
     return new Blob([new Uint8Array(decryptedContent)], {type: "application/octet-stream"});
 }
+
+async function encryptPrivateKey(base64Key, base64IV, pwd, salt) {
+    const aesKey = base64ToArrayBuffer(base64Key);
+    const iv = base64ToArrayBuffer(base64IV);
+
+    const key = await generateAESKeyFromPassword(pwd, salt);
+    const encryptedKey = await window.crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        aesKey
+    );
+    return arrayBufferToBase64(encryptedKey);
+}
+
+async function decryptPrivateKey(base64EncryptedKey, pwd, salt, base64IV) {
+    const encryptedKey = base64ToArrayBuffer(base64EncryptedKey);
+    const iv = base64ToArrayBuffer(base64IV);
+    const key = await generateAESKeyFromPassword(pwd, salt);
+
+    // Decrypt the private key
+    const decryptedKey = await window.crypto.subtle.decrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        encryptedKey
+    );
+
+    return arrayBufferToBase64(decryptedKey);
+}
+
 //======================================================================================================================

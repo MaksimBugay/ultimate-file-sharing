@@ -198,7 +198,7 @@ function buildSharedFileChunkId(binaryId, order, destHashCode) {
 }
 
 async function getPrivateUrlSuffix(binaryId) {
-    let encryptionContract;
+    let encryptionContractStr = null;
     const getManifestResult = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         getManifest(
             binaryId,
@@ -210,15 +210,18 @@ async function getPrivateUrlSuffix(binaryId) {
         );
     });
     if ((WaiterResponseType.SUCCESS === getManifestResult.type) && getManifestResult.body) {
-        if (getManifestResult.body.base64Key) {
-            encryptionContract = new EncryptionContract(
-                getManifestResult.body.base64Key,
-                getManifestResult.body.base64IV
+        const manifest = getManifestResult.body;
+        if (manifest.base64Key) {
+            const encryptionContract = new EncryptionContract(
+                manifest.base64Key,
+                manifest.base64IV
             );
+            const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
+            encryptionContractStr = await encryptionContract.toTransferableString(manifest.password, salt);
         }
         return {
-            privateUrlSuffix: getManifestResult.body.privateUrlSuffix,
-            encryptionContract: encryptionContract
+            privateUrlSuffix: manifest.privateUrlSuffix,
+            encryptionContract: encryptionContractStr
         }
     } else {
         return null;
