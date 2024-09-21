@@ -75,7 +75,7 @@ class BinaryManifest {
         const serverUrl = PushcaClient.clusterBaseUrl;
         let downloadUrl;
         if (this.password) {
-            const workspaceIdSuffix = exposeWorkspaceId ? `&workspace=${workSpaceId}` : '';
+            const workspaceIdSuffix = exposeWorkspaceId ? `?workspace=${workSpaceId}` : '';
             downloadUrl = `${serverUrl}/binary/${this.id}${workspaceIdSuffix}`;
         } else {
             downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;

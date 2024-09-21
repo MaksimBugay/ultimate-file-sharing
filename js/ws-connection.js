@@ -396,9 +396,9 @@ function isWorkspaceIdExposed() {
             document.querySelectorAll(".fm-grid-button").forEach(el0 => {
                 const url = el0.title;
                 if (exposeWorkspaceIdCheckBox.checked) {
-                    el0.title = (!url.includes('workspace')) ? url + `&workspace=${PushcaClient.ClientObj.workSpaceId}` : url;
+                    el0.title = (!url.includes('workspace')) ? url + `?workspace=${PushcaClient.ClientObj.workSpaceId}` : url;
                 } else {
-                    el0.title = url.replace(`&workspace=${PushcaClient.ClientObj.workSpaceId}`, '');
+                    el0.title = url.replace(`?workspace=${PushcaClient.ClientObj.workSpaceId}`, '');
                 }
             })
         });

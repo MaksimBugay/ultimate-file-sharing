@@ -2,7 +2,15 @@ const serverUrl = 'https://secure.fileshare.ovh:31443';
 const urlParams = new URLSearchParams(window.location.search);
 
 // Retrieve specific parameters
-const protectedUrlSuffix = urlParams.get('suffix');
+let protectedUrlSuffix = urlParams.get('suffix');
+let encryptionContractStr;
+
+const suffixParts = protectedUrlSuffix.split('|');
+if (suffixParts.length > 1) {
+    protectedUrlSuffix = suffixParts[0];
+    encryptionContractStr = suffixParts[1];
+    alert(encryptionContractStr);
+}
 
 const passwordField = document.getElementById('password');
 const workspaceField = document.getElementById('workSpaceId');
@@ -54,7 +62,7 @@ downloadBtn.addEventListener('click', function () {
     downloadSharedBinary();
 });
 
-function downloadSharedBinary(){
+function downloadSharedBinary() {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
         if (window.showSaveFilePicker) {
