@@ -76,8 +76,7 @@ class BinaryManifest {
         let downloadUrl;
         if (this.password) {
             const workspaceIdSuffix = exposeWorkspaceId ? `&workspace=${workSpaceId}` : '';
-            //downloadUrl = `${serverUrl}/protected-binary.html?suffix=${this.privateUrlSuffix}${workspaceIdSuffix}`;
-            downloadUrl = `${serverUrl}/binary/${this.id}?exposeWorkspace=${exposeWorkspaceId ? 'yes' : 'no'}`;
+            downloadUrl = `${serverUrl}/binary/${this.id}${workspaceIdSuffix}`;
         } else {
             downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
