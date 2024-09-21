@@ -40,6 +40,15 @@ class EncryptionContract {
     toTransferableString() {
         return encodeToBase64UrlSafe(JSON.stringify(this));
     }
+
+    static fromTransferableString(transferableString) {
+        const jsonString = decodeFromBase64UrlSafe(transferableString);
+        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        return new EncryptionContract(
+            jsonObject.base64Key,
+            jsonObject.base64IV
+        );
+    }
 }
 
 async function generateKeyFromPassword(password, salt) {
@@ -195,7 +204,7 @@ async function encryptWithAES(input/*ArrayBuffer*/) {
 async function encryptSlicesWithAES(slices){
     return await encryptWithAES(concatArrayBuffers(slices));
 }
-async function decryptAES(encryptedBlob, base64Key, base64IV) {
+async function decryptAES(slices, base64Key, base64IV) {
     const key = await crypto.subtle.importKey(
         "raw",
         base64ToArrayBuffer(base64Key),
@@ -208,8 +217,8 @@ async function decryptAES(encryptedBlob, base64Key, base64IV) {
 
     const iv = base64ToArrayBuffer(base64IV);
 
-    // Convert the encrypted Blob to ArrayBuffer
-    const encryptedContent = await encryptedBlob.arrayBuffer();
+    // Convert slices to ArrayBuffer
+    const encryptedContent = concatArrayBuffers(slices);
 
     // Perform decryption
     const decryptedContent = await crypto.subtle.decrypt(

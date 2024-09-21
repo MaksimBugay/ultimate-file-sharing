@@ -2,14 +2,13 @@ const serverUrl = 'https://secure.fileshare.ovh:31443';
 const urlParams = new URLSearchParams(window.location.search);
 
 // Retrieve specific parameters
-let protectedUrlSuffix = urlParams.get('suffix');
-let encryptionContractStr;
+let protectedUrlSuffix = decodeURIComponent(urlParams.get('suffix'));
+let encryptionContract;
 
 const suffixParts = protectedUrlSuffix.split('|');
 if (suffixParts.length > 1) {
     protectedUrlSuffix = suffixParts[0];
-    encryptionContractStr = suffixParts[1];
-    alert(encryptionContractStr);
+    encryptionContract = EncryptionContract.fromTransferableString(suffixParts[1]);
 }
 
 const passwordField = document.getElementById('password');
@@ -65,7 +64,7 @@ downloadBtn.addEventListener('click', function () {
 function downloadSharedBinary() {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
-        if (window.showSaveFilePicker) {
+        if (window.showSaveFilePicker && (!encryptionContract)) {
             downloadProtectedBinary(request).then((result) => {
                 postDownloadProcessor(result);
             });
@@ -196,11 +195,15 @@ async function downloadProtectedBinarySilently(downloadRequest) {
             progressPercentage.textContent = 'Downloading...';
         }
     }
-    const blob = new Blob(chunks, {type: 'application/octet-stream'});
+    let blob;
+    if (encryptionContract) {
+        blob = await decryptAES(chunks, encryptionContract.base64Key, encryptionContract.base64IV);
+    } else {
+        blob = new Blob(chunks, {type: 'application/octet-stream'});
+    }
+    downloadFile(blob, binaryFileName);
     //const blob = new Blob(chunks, {type: response.headers.get('content-type')});
     //const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});
-
-    downloadFile(blob, binaryFileName);
 }
 
 async function createSignedDownloadRequest(pwd, workspaceId, suffix) {

@@ -69,10 +69,11 @@ PushcaClient.onMessageHandler = function (ws, data) {
         const parts = data.split("::");
         getPrivateUrlSuffix(parts[2]).then(getSuffixResponse => {
             if (getSuffixResponse) {
-                let msg = `${parts[0]}::${MessageType.PRIVATE_URL_SUFFIX}::${getSuffixResponse.privateUrlSuffix}`;
+                let value = getSuffixResponse.privateUrlSuffix;
                 if (getSuffixResponse.encryptionContract) {
-                    msg = msg + `|${getSuffixResponse.encryptionContract.toTransferableString()}`;
+                    value = encodeURIComponent(value + `|${getSuffixResponse.encryptionContract.toTransferableString()}`);
                 }
+                const msg = `${parts[0]}::${MessageType.PRIVATE_URL_SUFFIX}::${value}`;
                 PushcaClient.broadcastMessage(
                     null,
                     new ClientFilter("PushcaCluster", null, null, "BINARY-PROXY-CONNECTION-TO-PUSHER"),
