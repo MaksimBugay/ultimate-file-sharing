@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="css/protected-binary.css">
 </head>
 <body>
-<p id="errorMessage" style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
+<p id="errorMessage"
+   style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
 <div class="login-container">
     <div class="login-box">
         <h2>Credentials</h2>
@@ -38,9 +39,19 @@
         </div>
     </div>
 </div>
+</body>
 <script src="js/common-utils.js"></script>
 <script src="js/uuid.min.js"></script>
 <script src="js/security-utils.js"></script>
 <script src="js/protected-binary.js"></script>
-</body>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){
+        dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
+
+    gtag('config', 'G-W6XK68E4CF');
+</script>
 </html>

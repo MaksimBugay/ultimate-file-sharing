@@ -232,7 +232,7 @@
         <span class="close">&times;</span>
         <div id="popup-content">
             <h1>Choose files for sharing</h1>
-            <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Set password(optional)</label>
+            <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Protect download URL with password(optional)</label>
             <input type="text" id="passwordInput" placeholder="Enter strong password to protect your file"/>
             <div style="">
                 <label style="display: none">
@@ -288,4 +288,14 @@
 <script src="js/jszip.min.js"></script>
 <script src="js/add-binary-popup.js"></script>
 <script src="js/ws-connection.js"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){
+        dataLayer.push(arguments);
+    }
+    gtag('js', new Date());
+
+    gtag('config', 'G-W6XK68E4CF');
+</script>
 </html>
