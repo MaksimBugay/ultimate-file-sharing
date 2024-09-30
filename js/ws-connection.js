@@ -123,7 +123,16 @@ class GridCellButton {
         this.eButton.className = "btn-simple fm-grid-button";
         this.publicUrl = `${params.data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed())}`;
         this.eButton.title = this.publicUrl;
+        this.eButton.style.marginLeft = '45%';
 
+        if ("credentials" === params.columnName) {
+            if (params.data.base64Key) {
+                this.eGui.style.backgroundImage = "url('../images/encrypted-content.png')";
+                this.eGui.style.backgroundSize = 'cover';
+                this.eGui.style.backgroundRepeat = 'no-repeat';
+                this.eGui.style.backgroundPosition = 'center center';
+            }
+        }
 
         if (params.imgSrc) {
             const img = document.createElement("img");
@@ -223,7 +232,11 @@ function initFileManager() {
                     sortable: true,
                     valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
                 },
-                {field: "mimeType", sortable: true},
+                {
+                    field: "mimeType",
+                    sortable: true,
+                    valueGetter: params => params.data.base64Key ? `${params.data.mimeType}(encrypted)` : params.data.mimeType
+                },
                 {
                     headerName: "Created at",
                     field: "createdAt",
@@ -254,6 +267,7 @@ function initFileManager() {
                     cellRenderer: GridCellButton,
                     cellRendererParams: {
                         imgSrc: "../images/secure-file-sharing.png",
+                        columnName: "credentials",
                         buttonTitle: "",
                         clickHandler: (data) => {
                             if (isWorkspaceIdExposed()) {
