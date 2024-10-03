@@ -4,6 +4,33 @@
     <title>File manager</title>
     <meta charset="UTF-8">
     <style>
+        body {
+            background-image: url("images/main-background.png");
+            background-size: 190px 98px;
+            background-repeat: repeat;
+            background-position: top left;
+            margin: 0;
+            /*background-size: cover;
+            background-position: center center;
+            background-repeat: repeat;
+            background-color: azure;*/
+        }
+
+        .blue-half-transparent-div {
+            background: rgba(135, 206, 235, 0.85);
+            /*margin-left: 250px;
+            margin-right: 250px;*/
+            padding: 20px;
+            /*border-radius: 10px;*/
+        }
+        .green-half-transparent-div {
+            /*background: rgba(135, 255, 200, 0.9);*/
+            background: rgba(200, 230, 210, 0.85);
+            /*margin-left: 250px;
+            margin-right: 250px;*/
+            padding: 1px;
+            /*border-radius: 10px;*/
+        }
         .fm-grid-button {
             display: flex;
             align-items: center;
@@ -202,14 +229,16 @@
     <link rel="manifest" href="html/file-sharing-manifest.json">
 </head>
 <body>
+<div class="blue-half-transparent-div">
 <h1 style="color: darkblue; text-align: center;">Secure FileShare</h1>
 <h2 id="statusCaption" style="color: crimson; text-align: center;">(Transfer channel is broken)</h2>
-<div id="expandableDiv">
+</div>
+<div id="expandableDiv" style="width: 520px">
     <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" class="doc-link" target="_blank"
        rel="noopener noreferrer" style="width: 100px">
         📄 How to ...
     </a>
-    <img src="images/how-to.png" width="600px" style="border: none;" alt="manual">
+    <img src="images/how-to-medium-small.png" style="border: none;" alt="manual">
     <div style="width: 100%; text-align: center;display: flex">
         <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" target="_blank"
            rel="noopener noreferrer" style="width: 150px; background-color: transparent;margin-right: 50px;margin-left: 120px">
@@ -221,7 +250,7 @@
         </a>
     </div>
 </div>
-<div style="display: flex">
+<div class="green-half-transparent-div" style="display: flex">
     <h2 id="totalSizeCaption" style="margin-left: 20px; margin-right: 50px"></h2>
     <button id="addBinaryButton" class="image-button">
         <img src="images/document-add-icon-16.png" alt="Button Image">
