@@ -4,12 +4,17 @@
     <title>Secure FileShare</title>
     <meta charset="UTF-8">
     <style>
+        html {
+            height: 100%;
+            margin: 0;
+        }
         body {
             background-image: url("images/main-background.png");
             background-size: 190px 98px;
             background-repeat: repeat;
             background-position: top left;
             margin: 0;
+            height: 100%;
             /*background-size: cover;
             background-position: center center;
             background-repeat: repeat;
@@ -30,6 +35,10 @@
             margin-right: 250px;*/
             padding: 1px;
             /*border-radius: 10px;*/
+        }
+        .darkgreen-half-transparent-div {
+            background: rgba(200, 230, 210, 0.85);
+            height: 100%;
         }
         .fm-grid-button {
             display: flex;
@@ -302,7 +311,9 @@
         </div>
     </div>
 </div>
+<div class="darkgreen-half-transparent-div">
 <div id="fileManagerContainer"></div>
+</div>
 </body>
 <script src="js/fp.min.js"></script>
 <script src="js/uuid.min.js"></script>
