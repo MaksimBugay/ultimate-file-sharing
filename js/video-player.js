@@ -131,6 +131,7 @@ async function stopVideoRecording() {
 
 function playRecording() {
     fullVideoBlob = new Blob(chunks, {type: mimeType});
+    chunks.length = 0;
     videoPlayer.src = URL.createObjectURL(fullVideoBlob);
 
     videoPlayer.removeEventListener('ended', blobUrlCleanup)
