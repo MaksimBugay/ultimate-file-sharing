@@ -28,6 +28,8 @@ function openModal() {
 function closeModal() {
     hideSpinnerInButton();
     addBinaryPopup.style.display = 'none';
+    createZipArchiveCheckbox.checked = false;
+    hideZipArchiveRelatedElements();
 }
 
 closeButton.addEventListener('click', closeModal);
@@ -41,18 +43,26 @@ window.addEventListener('click', (event) => {
 
 createZipArchiveCheckbox.addEventListener('change', function () {
     if (this.checked) {
-        zipArchiveNameField.style.display = 'block';
-        selectFileLabel.style.display = 'none';
-        selectFileOrDirectoryContainer.style.display = 'flex';
+        showZipArchiveRelatedElements();
     } else {
-        zipArchiveNameField.style.display = 'none';
-        fileInput.removeAttribute('webkitdirectory');
-        fileInput.setAttribute('multiple', '');
-        document.getElementById('fileChoice').checked = true;
-        selectFileLabel.style.display = 'block';
-        selectFileOrDirectoryContainer.style.display = 'none';
+        hideZipArchiveRelatedElements();
     }
 });
+
+function showZipArchiveRelatedElements() {
+    zipArchiveNameField.style.display = 'block';
+    selectFileLabel.style.display = 'none';
+    selectFileOrDirectoryContainer.style.display = 'flex';
+}
+
+function hideZipArchiveRelatedElements() {
+    zipArchiveNameField.style.display = 'none';
+    fileInput.removeAttribute('webkitdirectory');
+    fileInput.setAttribute('multiple', '');
+    document.getElementById('fileChoice').checked = true;
+    selectFileLabel.style.display = 'block';
+    selectFileOrDirectoryContainer.style.display = 'none';
+}
 
 document.querySelectorAll('input[name="choice"]').forEach((element) => {
     element.addEventListener('change', function () {
