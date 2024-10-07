@@ -25,14 +25,14 @@ video {
     border: none;
     color: white;
     padding: 10px 20px;
-    font-size: 18px;
+    font-size: 12px;
     font-weight: bold;
     cursor: pointer;
     border-radius: 5px;
     transition: background-color 0.3s;
     position: absolute;
-    bottom: 20px;
-    left: 20px;
+    top: 10px;
+    left: 10px;
 }
 
 .record-btn:hover {
@@ -41,6 +41,14 @@ video {
 
 .stop-btn {
     background-color: #333;
+}
+
+.save-btn {
+    background-color: #007bff;
+}
+
+.save-btn:hover {
+    background-color: cornflowerblue;
 }
 
 /* REC label with pulsing red dot */
