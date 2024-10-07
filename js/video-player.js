@@ -4,6 +4,11 @@ const RecorderState = Object.freeze({
     PREVIEW: 2
 });
 
+const mimeType = 'video/webm; codecs=vp8, opus'
+let stream;
+let mediaRecorder;
+const chunks = []
+
 const videoPlayer = document.getElementById('videoPlayer');
 const recordBtn = document.getElementById('recordBtn');
 recordBtn.focus();
@@ -17,18 +22,17 @@ function setFocusToRecordBtn() {
 
 // Function to start recording
 function startRecording() {
-    recorderState = RecorderState.RECORDING;
-    recordBtn.textContent = 'Stop';  // Change the button text to 'Stop'
-    recordBtn.classList.add('stop-btn');  // Change button color/style to indicate stop
-
-    // Ensure video controls are not displayed
-    videoPlayer.removeAttribute('controls');
-
-    // Show the REC label with the pulsing dot
-    recordingIndicator.style.display = 'flex';
-
-    // Start recording logic here
-    //alert('Recording started! Implement your recording logic here.');
+    startVideoRecording().then(result => {
+        if (result.status === 0) {
+            recorderState = RecorderState.RECORDING;
+            recordBtn.textContent = 'Stop';
+            recordBtn.classList.add('stop-btn');
+            videoPlayer.removeAttribute('controls');
+            recordingIndicator.style.display = 'flex';
+        } else {
+            console.warn(result.message)
+        }
+    });
 }
 
 // Function to stop recording and show video player controls
@@ -38,14 +42,17 @@ function stopRecording() {
     recordBtn.classList.remove('stop-btn');
     recordBtn.classList.add('save-btn');
 
-    // Finalize recording logic here
-    //alert('Recording stopped! Implement your finalizing logic here.');
-
     // Hide the REC label with the pulsing dot
     recordingIndicator.style.display = 'none';
 
-    // Show video controls
-    videoPlayer.setAttribute('controls', 'controls');
+    stopVideoRecording().then(result => {
+        if (result.status === 0) {
+            videoPlayer.setAttribute('controls', 'controls');
+            playRecording();
+        } else {
+            console.warn(result.message)
+        }
+    });
 }
 
 function resetPlayer() {
@@ -56,18 +63,90 @@ function resetPlayer() {
     recordBtn.style.display = 'block';
     recordingIndicator.style.display = 'none';
     videoPlayer.removeAttribute('controls');
-    videoPlayer.src = undefined;
+    videoPlayer.src = "";
+    chunks.length = 0;
 }
 
 // Event listener for record/stop button
-recordBtn.addEventListener('click', function () {
+recordBtn.addEventListener('click', async function () {
     if (RecorderState.READY === recorderState) {
         startRecording();
-    }
-    else if (RecorderState.RECORDING === recorderState) {
+    } else if (RecorderState.RECORDING === recorderState) {
         stopRecording();
-    }
-    else if (RecorderState.PREVIEW === recorderState) {
-        alert("save video");
+    } else if (RecorderState.PREVIEW === recorderState) {
+        showSpinnerInButton();
+        const fullVideoBlob = await new Blob(chunks, {type: mimeType});
+        const binaryId = uuid.v4().toString();
+        const slices = await blobToArrayBuffers(fullVideoBlob, MemoryBlock.MB100);
+        await createAndStoreBinaryFromSlices(slices, binaryId, "My first video", mimeType);
+        delay(500).then(() => {
+            chunks.length = 0;
+            closeModal();
+        });
     }
 });
+
+//=================================row recording functions==============================================================
+async function startVideoRecording() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+        mediaRecorder = new MediaRecorder(stream, {mimeType: mimeType});
+
+        mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                const blob = event.data;
+                chunks.push(blob);
+                console.log(`${blob.size} chunks were recorded`);
+            }
+        };
+
+        mediaRecorder.start(10000);
+        return {status: 0, message: 'recording started'};
+    } catch (err) {
+        return {status: -1, message: `Cannot start, error accessing media devices: ${err}`};
+    }
+}
+
+async function stopVideoRecording() {
+    try {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            await delay(1000);
+        }
+        // Stop all media tracks to turn off the camera
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        return {status: 0, message: 'recording stopped'};
+    } catch (err) {
+        return {status: -1, message: `Cannot stop, error accessing media devices: ${err}`};
+    }
+}
+
+function playRecording() {
+    const combinedBlob = new Blob(chunks, {type: mimeType});
+    videoPlayer.src = URL.createObjectURL(combinedBlob);
+
+    videoPlayer.removeEventListener('ended', blobUrlCleanup)
+    videoPlayer.addEventListener('ended', blobUrlCleanup);
+
+    videoPlayer.removeEventListener('error', blobUrlCleanup)
+    videoPlayer.addEventListener('error', blobUrlCleanup);
+
+    videoPlayer.play();
+}
+
+function blobUrlCleanup() {
+    const error = this.error;
+    const url = this.src;
+    if (url) {
+        URL.revokeObjectURL(url);
+    }
+    if (error) {
+        console.error(`An error occurred during video playback: ${error}`);
+    } else {
+        console.log('Video ended');
+    }
+}
+
+//======================================================================================================================
