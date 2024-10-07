@@ -1,3 +1,9 @@
+const ContentType = Object.freeze({
+    FILE: 0,
+    LIVE_STREAM: 1,
+    VIDEO: 2
+});
+
 const addBinaryPopup = document.getElementById("addBinaryPopup");
 const closeButton = document.querySelector('.close');
 
@@ -8,6 +14,8 @@ const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckb
 const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileLabel = document.getElementById('selectFileLabel');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
+const videoRecorderContainer = document.getElementById('video-recorder-container');
+const fileSelectorContainer = document.getElementById('file-selector-container');
 fileInput.addEventListener('change', processSelectedFiles);
 
 passwordField.value = null;
@@ -21,8 +29,15 @@ passwordField.addEventListener('input', function () {
     }
 });
 
-function openModal() {
+function openModal(contentType) {
     addBinaryPopup.style.display = 'block';
+    if (ContentType.FILE === contentType) {
+        fileSelectorContainer.style.display = 'block';
+    }
+    if (ContentType.VIDEO === contentType) {
+        videoRecorderContainer.style.display = 'block';
+        setFocusToRecordBtn();
+    }
 }
 
 function closeModal() {
@@ -30,6 +45,8 @@ function closeModal() {
     addBinaryPopup.style.display = 'none';
     createZipArchiveCheckbox.checked = false;
     hideZipArchiveRelatedElements();
+    videoRecorderContainer.style.display = 'none';
+    fileSelectorContainer.style.display = 'none';
 }
 
 closeButton.addEventListener('click', closeModal);

@@ -1,18 +1,15 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
 
 /* Video container */
 .video-container {
     position: relative;
     max-width: 720px;
     width: 100%;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    background-color: #f4f4f4;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
 }
 
 /* Video player is always displayed */

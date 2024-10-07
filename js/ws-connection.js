@@ -2,6 +2,7 @@ console.log('ws-connection.js running on', window.location.href);
 
 const statusCaption = document.getElementById("statusCaption");
 const addBinaryButton = document.getElementById("addBinaryButton");
+const recordVideoButton = document.getElementById("recordVideoButton");
 const expandableDiv = document.getElementById("expandableDiv");
 let exposeWorkspaceIdCheckBox;
 
@@ -14,8 +15,12 @@ expandableDiv.addEventListener('mouseout', () => {
     expandableDiv.classList.remove('expand');
 });
 addBinaryButton.addEventListener("click", function () {
-    openModal();
-})
+    openModal(ContentType.FILE);
+});
+
+recordVideoButton.addEventListener("click", function () {
+    openModal(ContentType.VIDEO);
+});
 
 let FileManager = {};
 const wsUrl = 'wss://secure.fileshare.ovh:31085';

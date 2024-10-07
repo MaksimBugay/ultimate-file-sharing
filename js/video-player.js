@@ -4,6 +4,11 @@ recordBtn.focus();
 const recordingIndicator = document.getElementById('recordingIndicator');
 let isRecording = false;  // Track whether we are recording or not
 
+function setFocusToRecordBtn() {
+    resetPlayer();
+    recordBtn.focus();
+}
+
 // Function to start recording
 function startRecording() {
     isRecording = true;
@@ -33,6 +38,16 @@ function stopRecording() {
 
     // Show video controls
     videoPlayer.setAttribute('controls', 'controls');
+}
+
+function resetPlayer(){
+    isRecording = false;
+    recordBtn.textContent = 'Start recording';
+    recordBtn.classList.remove('stop-btn');
+    recordBtn.style.display = 'block';
+    recordingIndicator.style.display = 'none';
+    videoPlayer.setAttribute('controls', null);
+    //videoPlayer.src = null;
 }
 
 // Event listener for record/stop button

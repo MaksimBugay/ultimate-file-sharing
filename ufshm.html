@@ -3,6 +3,7 @@
 <head>
     <title>Secure FileShare</title>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="css/video-player.css">
     <style>
         html {
             height: 100%;
@@ -157,6 +158,7 @@
 
         .image-button {
             margin-bottom: 5px;
+            margin-left: 30px;
             background-color: transparent; /* Transparent background to show the image */
             border: none; /* Remove default button border */
             padding: 0;
@@ -264,6 +266,9 @@
     <button id="addBinaryButton" class="image-button">
         <img src="images/document-add-icon-16.png" alt="Button Image">
     </button>
+    <button id="recordVideoButton" class="image-button">
+        <img src="images/record-video.png" alt="Button Image">
+    </button>
 </div>
 <div id="addBinaryPopup" class="modal">
     <div class="modal-content">
@@ -271,37 +276,54 @@
         <div id="popup-content">
             <h1>Choose files for sharing</h1>
             <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Protect download URL with password(optional)</label>
-            <input type="text" id="passwordInput" placeholder="Enter strong password to protect your file"/>
+            <input type="text" style="width: 70%" id="passwordInput" placeholder="Enter strong password to protect your content"/>
             <div style="">
                 <label style="display: none">
                     <input type="checkbox" id="encryptFileContentCheckbox"/>
                     Encrypt file content(optional)
                 </label>
             </div>
-            <div style="">
-                <label style="display: inline-block">
-                    <input type="checkbox" id="createZipArchiveCheckbox"/>
-                    Compress the selected files into a ZIP archive(optional)
-                    <input type="text" id="zipArchiveName" style="display: none; width: 275px"
-                           placeholder="Customize the name of archive"/>
-                </label>
+            <div id="video-recorder-container" class="video-container" style="display: none">
+                <!-- Video Player (always displayed without controls initially) -->
+                <video id="videoPlayer">
+                    <!-- Video source will be set after recording -->
+                </video>
+
+                <!-- Record/Stop Button -->
+                <button class="record-btn" id="recordBtn">Start recording</button>
+
+                <!-- REC label with pulsing red dot -->
+                <div class="recording-indicator" id="recordingIndicator">[ REC
+                    <div class="red-dot"></div> ]
+                </div>
             </div>
-            <input type="file" id="fileInput" style="display:none" multiple>
-            <label id="selectFileLabel" for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select files</label>
-            <div id="selectFileOrDirectoryContainer" style="display: none">
-                <label for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select</label>
-                <label>
-                    <input type="radio" name="choice" value="file" checked id="fileChoice">
-                    Files
-                </label>
-                <label>
-                    <input type="radio" name="choice" value="directory">
-                    Directory
-                </label>
-            </div>
+            <div id="file-selector-container" style="display: none">
+                <div style="">
+                    <label style="display: inline-block">
+                        <input type="checkbox" id="createZipArchiveCheckbox"/>
+                        Compress the selected files into a ZIP archive(optional)
+                        <input type="text" id="zipArchiveName" style="display: none; width: 275px"
+                               placeholder="Customize the name of archive"/>
+                    </label>
+                </div>
+                <input type="file" id="fileInput" style="display:none" multiple>
+                <label id="selectFileLabel" for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select
+                    files</label>
+                <div id="selectFileOrDirectoryContainer" style="display: none">
+                    <label for="fileInput" style="margin-bottom: 0;padding-bottom: 0">Select</label>
+                    <label>
+                        <input type="radio" name="choice" value="file" checked id="fileChoice">
+                        Files
+                    </label>
+                    <label>
+                        <input type="radio" name="choice" value="directory">
+                        Directory
+                    </label>
+                </div>
             <label for="fileInput" style="margin-top: 15px" class="icon-button">
                 <i class="fa fa-upload"></i>
             </label>
+            </div>
             <div id="download-spinner">
                 <div class="spinner-border" role="status">
                     <span class="visually-hidden"></span>
@@ -327,6 +349,7 @@
 <script src="js/gateway-server.js"></script>
 <script src="js/jszip.min.js"></script>
 <script src="js/add-binary-popup.js"></script>
+<script src="js/video-player.js"></script>
 <script src="js/ws-connection.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
