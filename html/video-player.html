@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Video Player with Recording and Pulsing Red Circle</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        /* Video container */
+        .video-container {
+            position: relative;
+            max-width: 720px;
+            width: 100%;
+        }
+
+        /* Video player is always displayed */
+        video {
+            width: 100%;
+            height: auto;
+            background-color: #000; /* Black background to simulate video area */
+        }
+
+        /* Record/Stop button styles */
+        .record-btn {
+            background-color: red;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+        }
+
+        .record-btn:hover {
+            background-color: darkred;
+        }
+
+        .stop-btn {
+            background-color: #333;
+        }
+
+        /* Red circle for recording indicator */
+        .recording-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 15px;
+            height: 15px;
+            background-color: red;
+            border-radius: 50%;
+            display: none; /* Hidden by default */
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        /* Pulsing animation */
+        .recording-indicator.active {
+            display: block;
+            animation: pulse 1s infinite; /* Apply the pulse animation */
+        }
+
+        /* Keyframe animation for pulsing effect */
+        @keyframes pulse {
+            0% {
+                transform: scale(1); /* Normal size */
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5); /* Grow larger */
+                opacity: 0.7; /* Slightly fade */
+            }
+            100% {
+                transform: scale(1); /* Back to normal size */
+                opacity: 1; /* Fully visible */
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="video-container">
+    <!-- Video Player (always displayed without controls initially) -->
+    <video id="videoPlayer">
+        <!-- Video source will be set after recording -->
+    </video>
+
+    <!-- Record/Stop Button -->
+    <button class="record-btn" id="recordBtn">Record</button>
+
+    <!-- Red circle recording indicator -->
+    <div class="recording-indicator" id="recordingIndicator"></div>
+</div>
+
+<script>
+    const videoPlayer = document.getElementById('videoPlayer');
+    const recordBtn = document.getElementById('recordBtn');
+    const recordingIndicator = document.getElementById('recordingIndicator');
+    let isRecording = false;  // Track whether we are recording or not
+
+    // Function to start recording
+    function startRecording() {
+        isRecording = true;
+        recordBtn.textContent = 'Stop';  // Change the button text to 'Stop'
+        recordBtn.classList.add('stop-btn');  // Change button color/style to indicate stop
+
+        // Ensure video controls are not displayed
+        videoPlayer.removeAttribute('controls');
+
+        // Show the red circle indicator and make it pulse
+        recordingIndicator.classList.add('active');
+
+        // Start recording logic here
+        alert('Recording started! Implement your recording logic here.');
+    }
+
+    // Function to stop recording and show video player controls
+    function stopRecording() {
+        isRecording = false;
+        recordBtn.style.display = 'none';  // Hide the stop button after stopping
+
+        // Finalize recording logic here
+        alert('Recording stopped! Implement your finalizing logic here.');
+
+        // Hide the red circle indicator and stop pulsing
+        recordingIndicator.classList.remove('active');
+
+        // Set the recorded video as the source of the video player
+        // Example: videoPlayer.src = URL.createObjectURL(recordedVideoBlob);
+
+        // Show video controls
+        videoPlayer.setAttribute('controls', 'controls');
+    }
+
+    // Event listener for record/stop button
+    recordBtn.addEventListener('click', function () {
+        if (!isRecording) {
+            startRecording();  // Start recording if not already recording
+        } else {
+            stopRecording();  // Stop recording if it's currently recording
+        }
+    });
+</script>
+
+</body>
+</html>
