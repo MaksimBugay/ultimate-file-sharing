@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Video Player with Recording and Pulsing Red Circle</title>
+    <title>Video Player with Pulsing Spot and REC</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -52,38 +52,46 @@
             background-color: #333;
         }
 
-        /* Red circle for recording indicator */
+        /* REC label with pulsing red dot */
         .recording-indicator {
             position: absolute;
             top: 10px;
             right: 10px;
+            align-items: center;
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            display: none; /* Hidden by default */
+        }
+
+        /* Pulsing red dot */
+        .recording-indicator .red-dot {
             width: 15px;
             height: 15px;
             background-color: red;
             border-radius: 50%;
-            display: none; /* Hidden by default */
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-        }
-
-        /* Pulsing animation */
-        .recording-indicator.active {
-            display: block;
-            animation: pulse 1s infinite; /* Apply the pulse animation */
+            margin-left: 5px; /* Space between 'REC' and the dot */
+            margin-right: 5px;
+            animation: pulse 1s infinite;
         }
 
         /* Keyframe animation for pulsing effect */
         @keyframes pulse {
             0% {
-                transform: scale(1); /* Normal size */
+                transform: scale(1);
                 opacity: 1;
             }
             50% {
-                transform: scale(1.5); /* Grow larger */
-                opacity: 0.7; /* Slightly fade */
+                transform: scale(1.5);
+                opacity: 0.6;
             }
             100% {
-                transform: scale(1); /* Back to normal size */
-                opacity: 1; /* Fully visible */
+                transform: scale(1);
+                opacity: 1;
             }
         }
     </style>
@@ -97,15 +105,18 @@
     </video>
 
     <!-- Record/Stop Button -->
-    <button class="record-btn" id="recordBtn">Record</button>
+    <button class="record-btn" id="recordBtn">Start recording</button>
 
-    <!-- Red circle recording indicator -->
-    <div class="recording-indicator" id="recordingIndicator"></div>
+    <!-- REC label with pulsing red dot -->
+    <div class="recording-indicator" id="recordingIndicator">[ REC
+        <div class="red-dot"></div> ]
+    </div>
 </div>
 
 <script>
     const videoPlayer = document.getElementById('videoPlayer');
     const recordBtn = document.getElementById('recordBtn');
+    recordBtn.focus();
     const recordingIndicator = document.getElementById('recordingIndicator');
     let isRecording = false;  // Track whether we are recording or not
 
@@ -118,8 +129,8 @@
         // Ensure video controls are not displayed
         videoPlayer.removeAttribute('controls');
 
-        // Show the red circle indicator and make it pulse
-        recordingIndicator.classList.add('active');
+        // Show the REC label with the pulsing dot
+        recordingIndicator.style.display = 'flex';
 
         // Start recording logic here
         alert('Recording started! Implement your recording logic here.');
@@ -133,11 +144,8 @@
         // Finalize recording logic here
         alert('Recording stopped! Implement your finalizing logic here.');
 
-        // Hide the red circle indicator and stop pulsing
-        recordingIndicator.classList.remove('active');
-
-        // Set the recorded video as the source of the video player
-        // Example: videoPlayer.src = URL.createObjectURL(recordedVideoBlob);
+        // Hide the REC label with the pulsing dot
+        recordingIndicator.style.display = 'none';
 
         // Show video controls
         videoPlayer.setAttribute('controls', 'controls');
