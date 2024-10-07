@@ -46,8 +46,8 @@ function resetPlayer(){
     recordBtn.classList.remove('stop-btn');
     recordBtn.style.display = 'block';
     recordingIndicator.style.display = 'none';
-    videoPlayer.setAttribute('controls', null);
-    //videoPlayer.src = null;
+    videoPlayer.removeAttribute('controls');
+    videoPlayer.src = undefined;
 }
 
 // Event listener for record/stop button
