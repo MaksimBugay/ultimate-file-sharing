@@ -8,6 +8,7 @@ const mimeType = 'video/webm; codecs=vp8, opus'
 let stream;
 let mediaRecorder;
 const chunks = []
+let fullVideoBlob;
 
 const videoPlayer = document.getElementById('videoPlayer');
 const recordBtn = document.getElementById('recordBtn');
@@ -65,6 +66,7 @@ function resetPlayer() {
     videoPlayer.removeAttribute('controls');
     videoPlayer.src = "";
     chunks.length = 0;
+    fullVideoBlob = null;
 }
 
 // Event listener for record/stop button
@@ -74,13 +76,17 @@ recordBtn.addEventListener('click', async function () {
     } else if (RecorderState.RECORDING === recorderState) {
         stopRecording();
     } else if (RecorderState.PREVIEW === recorderState) {
+        if (!fullVideoBlob) {
+            return;
+        }
+        videoPlayer.pause();
         showSpinnerInButton();
-        const fullVideoBlob = await new Blob(chunks, {type: mimeType});
         const binaryId = uuid.v4().toString();
         const slices = await blobToArrayBuffers(fullVideoBlob, MemoryBlock.MB100);
         await createAndStoreBinaryFromSlices(slices, binaryId, "My first video", mimeType);
         delay(500).then(() => {
             chunks.length = 0;
+            fullVideoBlob = null;
             closeModal();
         });
     }
@@ -124,8 +130,8 @@ async function stopVideoRecording() {
 }
 
 function playRecording() {
-    const combinedBlob = new Blob(chunks, {type: mimeType});
-    videoPlayer.src = URL.createObjectURL(combinedBlob);
+    fullVideoBlob = new Blob(chunks, {type: mimeType});
+    videoPlayer.src = URL.createObjectURL(fullVideoBlob);
 
     videoPlayer.removeEventListener('ended', blobUrlCleanup)
     videoPlayer.addEventListener('ended', blobUrlCleanup);
