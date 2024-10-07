@@ -1,0 +1,90 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+/* Video container */
+.video-container {
+    position: relative;
+    max-width: 720px;
+    width: 100%;
+}
+
+/* Video player is always displayed */
+video {
+    width: 100%;
+    height: auto;
+    background-color: #000; /* Black background to simulate video area */
+}
+
+/* Record/Stop button styles */
+.record-btn {
+    background-color: red;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+}
+
+.record-btn:hover {
+    background-color: darkred;
+}
+
+.stop-btn {
+    background-color: #333;
+}
+
+/* REC label with pulsing red dot */
+.recording-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    align-items: center;
+    font-size: 14px;
+    color: white;
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    display: none; /* Hidden by default */
+}
+
+/* Pulsing red dot */
+.recording-indicator .red-dot {
+    width: 15px;
+    height: 15px;
+    background-color: red;
+    border-radius: 50%;
+    margin-left: 5px; /* Space between 'REC' and the dot */
+    margin-right: 5px;
+    animation: pulse 1s infinite;
+}
+
+/* Keyframe animation for pulsing effect */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

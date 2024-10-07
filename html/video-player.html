@@ -3,98 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Video Player with Pulsing Spot and REC</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-
-        /* Video container */
-        .video-container {
-            position: relative;
-            max-width: 720px;
-            width: 100%;
-        }
-
-        /* Video player is always displayed */
-        video {
-            width: 100%;
-            height: auto;
-            background-color: #000; /* Black background to simulate video area */
-        }
-
-        /* Record/Stop button styles */
-        .record-btn {
-            background-color: red;
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-        }
-
-        .record-btn:hover {
-            background-color: darkred;
-        }
-
-        .stop-btn {
-            background-color: #333;
-        }
-
-        /* REC label with pulsing red dot */
-        .recording-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            align-items: center;
-            font-size: 14px;
-            color: white;
-            font-weight: bold;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 5px 10px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            display: none; /* Hidden by default */
-        }
-
-        /* Pulsing red dot */
-        .recording-indicator .red-dot {
-            width: 15px;
-            height: 15px;
-            background-color: red;
-            border-radius: 50%;
-            margin-left: 5px; /* Space between 'REC' and the dot */
-            margin-right: 5px;
-            animation: pulse 1s infinite;
-        }
-
-        /* Keyframe animation for pulsing effect */
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: scale(1.5);
-                opacity: 0.6;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="../css/video-player.css">
 </head>
 <body>
 
@@ -113,53 +22,7 @@
     </div>
 </div>
 
-<script>
-    const videoPlayer = document.getElementById('videoPlayer');
-    const recordBtn = document.getElementById('recordBtn');
-    recordBtn.focus();
-    const recordingIndicator = document.getElementById('recordingIndicator');
-    let isRecording = false;  // Track whether we are recording or not
-
-    // Function to start recording
-    function startRecording() {
-        isRecording = true;
-        recordBtn.textContent = 'Stop';  // Change the button text to 'Stop'
-        recordBtn.classList.add('stop-btn');  // Change button color/style to indicate stop
-
-        // Ensure video controls are not displayed
-        videoPlayer.removeAttribute('controls');
-
-        // Show the REC label with the pulsing dot
-        recordingIndicator.style.display = 'flex';
-
-        // Start recording logic here
-        alert('Recording started! Implement your recording logic here.');
-    }
-
-    // Function to stop recording and show video player controls
-    function stopRecording() {
-        isRecording = false;
-        recordBtn.style.display = 'none';  // Hide the stop button after stopping
-
-        // Finalize recording logic here
-        alert('Recording stopped! Implement your finalizing logic here.');
-
-        // Hide the REC label with the pulsing dot
-        recordingIndicator.style.display = 'none';
-
-        // Show video controls
-        videoPlayer.setAttribute('controls', 'controls');
-    }
-
-    // Event listener for record/stop button
-    recordBtn.addEventListener('click', function () {
-        if (!isRecording) {
-            startRecording();  // Start recording if not already recording
-        } else {
-            stopRecording();  // Stop recording if it's currently recording
-        }
-    });
-</script>
+<script src="../js/video-player.js"></script>
 
 </body>
 </html>
