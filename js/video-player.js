@@ -98,9 +98,9 @@ recordBtn.addEventListener('click', async function () {
 function getVideoName() {
     const vName = recordedVideoName.value;
     if (vName) {
-        return vName;
+        return `${vName}.webm`;
     }
-    return `video-recording-${new Date().getTime()}`
+    return `video-recording-${new Date().getTime()}.webm`
 }
 
 //=================================row recording functions==============================================================
