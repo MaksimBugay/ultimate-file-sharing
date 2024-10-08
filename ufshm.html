@@ -274,7 +274,7 @@
     <div class="modal-content">
         <span class="close">&times;</span>
         <div id="popup-content">
-            <h1>Choose files for sharing</h1>
+            <h1>Prepare content for sharing</h1>
             <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Protect download URL with password(optional)</label>
             <input type="text" style="width: 70%" id="passwordInput" placeholder="Enter strong password to protect your content"/>
             <div style="">
@@ -283,18 +283,25 @@
                     Encrypt file content(optional)
                 </label>
             </div>
-            <div id="video-recorder-container" class="video-container" style="display: none">
-                <!-- Video Player (always displayed without controls initially) -->
-                <video id="videoPlayer">
-                    <!-- Video source will be set after recording -->
-                </video>
+            <div id="video-recorder-container" style="width: 100%; display: none">
+                <label for="recordedVideoName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for video
+                    recording</label>
+                <input type="text" id="recordedVideoName" style="width: 70%"
+                       placeholder="Customize the name of the recorded video"/>
+                <div id="video-recorder-sub-container" class="video-container">
+                    <!-- Video Player (always displayed without controls initially) -->
+                    <video id="videoPlayer">
+                        <!-- Video source will be set after recording -->
+                    </video>
 
-                <!-- Record/Stop Button -->
-                <button class="record-btn" id="recordBtn">Start recording</button>
+                    <!-- Record/Stop Button -->
+                    <button class="record-btn" id="recordBtn">Start recording</button>
 
-                <!-- REC label with pulsing red dot -->
-                <div class="recording-indicator" id="recordingIndicator">[ REC
-                    <div class="red-dot"></div> ]
+                    <!-- REC label with pulsing red dot -->
+                    <div class="recording-indicator" id="recordingIndicator">[ REC
+                        <div class="red-dot"></div>
+                        ]
+                    </div>
                 </div>
             </div>
             <div id="file-selector-container" style="display: none">

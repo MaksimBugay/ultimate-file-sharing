@@ -4,7 +4,8 @@ const RecorderState = Object.freeze({
     PREVIEW: 2
 });
 
-const mimeType = 'video/webm; codecs=vp8, opus'
+const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs="vp9, opus"') ?
+    'video/webm; codecs="vp9, opus"' : 'video/webm; codecs="vp8, opus"';
 let stream;
 let mediaRecorder;
 const chunks = []
@@ -12,6 +13,7 @@ let fullVideoBlob;
 
 const videoPlayer = document.getElementById('videoPlayer');
 const recordBtn = document.getElementById('recordBtn');
+const recordedVideoName = document.getElementById('recordedVideoName')
 recordBtn.focus();
 const recordingIndicator = document.getElementById('recordingIndicator');
 let recorderState = RecorderState.READY;
@@ -67,6 +69,7 @@ function resetPlayer() {
     videoPlayer.src = "";
     chunks.length = 0;
     fullVideoBlob = null;
+    recordedVideoName.value = '';
 }
 
 // Event listener for record/stop button
@@ -83,7 +86,7 @@ recordBtn.addEventListener('click', async function () {
         showSpinnerInButton();
         const binaryId = uuid.v4().toString();
         const slices = await blobToArrayBuffers(fullVideoBlob, MemoryBlock.MB100);
-        await createAndStoreBinaryFromSlices(slices, binaryId, "My first video", mimeType);
+        await createAndStoreBinaryFromSlices(slices, binaryId, getVideoName(), mimeType);
         delay(500).then(() => {
             chunks.length = 0;
             fullVideoBlob = null;
@@ -92,11 +95,37 @@ recordBtn.addEventListener('click', async function () {
     }
 });
 
+function getVideoName() {
+    const vName = recordedVideoName.value;
+    if (vName) {
+        return vName;
+    }
+    return `video-recording-${new Date().getTime()}`
+}
+
 //=================================row recording functions==============================================================
 async function startVideoRecording() {
     try {
-        stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-        mediaRecorder = new MediaRecorder(stream, {mimeType: mimeType});
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                /*width: { ideal: 1920, max: 1920 },
+                height: { ideal: 1080, max: 1080 },*/
+                frameRate: { ideal: 60, max: 60 },  // Request 60 FPS if available
+                facingMode: { ideal: "user" }
+            },
+            audio: {
+                sampleRate: 44100,  // Request high-quality audio sampling rate
+                channelCount: 2,    // Request stereo audio
+                echoCancellation: true  // Enable echo cancellation for better audio
+            }
+        });
+
+        // Create a new MediaRecorder with the desired format
+        mediaRecorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            videoBitsPerSecond: 5 * 1024 * 1024,  // 5Mbps video bitrate for high quality
+            audioBitsPerSecond: 128 * 1024  // 128kbps audio bitrate for decent audio quality
+        });
 
         mediaRecorder.ondataavailable = event => {
             if (event.data.size > 0) {
