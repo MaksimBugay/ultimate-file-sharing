@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://secure.fileshare.ovh:31443/sitemap.xml

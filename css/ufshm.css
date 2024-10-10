@@ -1,0 +1,234 @@
+html {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background-image: url("../images/main-background.png");
+    background-size: 190px 98px;
+    background-repeat: repeat;
+    background-position: top left;
+    margin: 0;
+    height: 100%;
+    /*background-size: cover;
+    background-position: center center;
+    background-repeat: repeat;
+    background-color: azure;*/
+}
+
+.blue-half-transparent-div {
+    background: rgba(135, 206, 235, 0.85);
+    /*margin-left: 250px;
+    margin-right: 250px;*/
+    padding: 20px;
+    /*border-radius: 10px;*/
+}
+
+.green-half-transparent-div {
+    /*background: rgba(135, 255, 200, 0.9);*/
+    background: rgba(200, 230, 210, 0.85);
+    /*margin-left: 250px;
+    margin-right: 250px;*/
+    padding: 1px;
+    /*border-radius: 10px;*/
+}
+
+.darkgreen-half-transparent-div {
+    background: rgba(200, 230, 210, 0.85);
+    height: 100%;
+}
+
+.fm-grid-button {
+    display: flex;
+    align-items: center;
+    margin: 10px;
+    background-color: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.fm-grid {
+    width: 100%;
+    height: 500px;
+}
+
+.modal {
+    display: none; /* Initially hidden */
+    position: fixed;
+    z-index: 1000; /* Ensure it appears on top */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Enable scrolling if content is larger than the modal */
+    background-color: rgba(0, 0, 0, 0.4); /* Black background with opacity */
+}
+
+.modal-content {
+    width: 500px;
+    min-height: 400px;
+    padding: 10px;
+    color: darkblue;
+    font-weight: bold;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    background-image: url('../images/file-sharing3.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-color: #fefefe;
+    margin-left: 30%;
+    margin-top: 5%;
+    border: 1px solid #888;
+}
+
+.close {
+    color: white;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: goldenrod;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#popup-content {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    margin-top: 10px;
+}
+
+label {
+    display: block;
+    margin-top: 20px;
+}
+
+input[type="text"] {
+    width: 60%;
+    padding: 10px;
+    margin-top: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.icon-button {
+    width: 90px;
+    height: 85px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 20px;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    background-image: url('../images/open-file.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+}
+
+.icon-button i {
+    margin-right: 8px;
+}
+
+.icon-button:hover {
+    background-color: #0056b3;
+}
+
+.icon-button:active {
+    background-color: #003f7f;
+}
+
+.image-button {
+    margin-bottom: 5px;
+    margin-left: 30px;
+    background-color: transparent; /* Transparent background to show the image */
+    border: none; /* Remove default button border */
+    padding: 0;
+    cursor: pointer;
+}
+
+.image-button img {
+    width: 50px; /* Adjust image size as needed */
+    display: block;
+    margin: 0 auto; /* Center the image */
+}
+
+#download-spinner {
+    display: none;
+    padding: 5px;
+    margin-left: 45%;
+    /*height: 100vh;*/
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border: 0.25rem solid #ddd;
+    border-radius: 50%;
+    border-top-color: aquamarine;
+    animation: spin 1s linear infinite;
+    margin-right: 5px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#expandableDiv {
+    width: 600px; /* Default width */
+    height: 40px; /* Default height */
+    overflow: hidden; /* Hide content overflow */
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    margin-right: 20px;
+    z-index: 1000;
+    background-color: transparent;
+    border: 0 solid transparent;
+    transition: width 0.3s ease, height 0.3s ease; /* Smooth transition */
+    cursor: pointer; /* Cursor changes to pointer on hover */
+    text-align: right;
+}
+
+/* Expanded state */
+#expandableDiv.expand {
+    width: 600px; /* Expanded width */
+    height: 450px; /* Expanded height */
+    border: 1px solid royalblue;
+    background-color: azure;
+}
+
+.doc-link {
+    display: inline-block; /* Makes the link behave like a button */
+    padding: 10px 15px; /* Adds some padding */
+    background-color: #007bff; /* Background color for the link */
+    color: white; /* Text color */
+    font-size: 16px; /* Font size */
+    text-decoration: none; /* Removes underline */
+    border-radius: 5px; /* Rounded corners */
+    transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+}
+
+.doc-link:hover {
+    background-color: #0056b3; /* Darker background on hover */
+}
