@@ -95,7 +95,7 @@ function openWsConnection(deviceFpId) {
         const pClient = new ClientFilter(
             deviceFpId,
             "anonymous-sharing",
-            deviceFpId,
+            `${calculateStringHashCode(deviceFpId)}`,
             "ultimate-file-sharing-listener"
         );
         PushcaClient.openWsConnection(

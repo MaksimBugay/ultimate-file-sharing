@@ -46,6 +46,18 @@ class BinaryManifest {
         this.base64IV = base64IV;
     }
 
+    getPrivateUrlShortSuffix() {
+        return this.privateUrlSuffix ? this.privateUrlSuffix.split(MessagePartsDelimiter)[0] : null;
+    }
+
+    getPrivateUrlLongSuffix() {
+        if (!this.privateUrlSuffix) {
+            return null;
+        }
+        const parts = this.privateUrlSuffix.split(MessagePartsDelimiter);
+        return (parts.length > 1) ? parts[1] : null;
+    }
+
     getTotalSize() {
         if (this.totalSize) {
             return this.totalSize;
@@ -76,7 +88,7 @@ class BinaryManifest {
         let downloadUrl;
         if (this.password) {
             const workspaceIdSuffix = exposeWorkspaceId ? `?workspace=${workSpaceId}` : '';
-            downloadUrl = `${serverUrl}/binary/${this.id}${workspaceIdSuffix}`;
+            downloadUrl = `${serverUrl}/binary/${this.getPrivateUrlShortSuffix()}${workspaceIdSuffix}`;
         } else {
             downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
         }
@@ -197,11 +209,11 @@ function buildSharedFileChunkId(binaryId, order, destHashCode) {
     return `${binaryId}-${order}-${destHashCode}`;
 }
 
-async function getPrivateUrlSuffix(binaryId) {
+async function getPrivateUrlSuffix(binaryIdHash) {
     let encryptionContractStr = null;
     const getManifestResult = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
-        getManifest(
-            binaryId,
+        getManifestByRecordId(
+            binaryIdHash,
             function (manifest) {
                 CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, manifest);
             }, function (event) {
@@ -220,7 +232,7 @@ async function getPrivateUrlSuffix(binaryId) {
             encryptionContractStr = await encryptionContract.toTransferableString(manifest.password, salt);
         }
         return {
-            privateUrlSuffix: manifest.privateUrlSuffix,
+            privateUrlSuffix: manifest.getPrivateUrlLongSuffix(),
             encryptionContract: encryptionContractStr
         }
     } else {

@@ -107,7 +107,7 @@ function saveBinaryManifest(binaryManifest, onSuccessHandler, onErrorHandler) {
     const timestamp = new Date().getTime();
     const totalSize = binaryManifest.getTotalSize();
     const data = {
-        binaryId: binaryManifest.id,
+        binaryId: `${calculateStringHashCode(binaryManifest.id)}`,
         fileName: binaryManifest.name,
         manifest: JSON.stringify(binaryManifest.toDbJSON()),
         totalSize: totalSize,
@@ -142,9 +142,9 @@ function incrementDownloadCounter(binaryId, onSuccessHandler, onErrorHandler) {
     const store = transaction.objectStore(binaryManifestsStoreName);
 
     // Get the current record
-    const request = store.get(binaryId);
+    const request = store.get(`${calculateStringHashCode(binaryId)}`);
 
-    request.onsuccess = function(event) {
+    request.onsuccess = function (event) {
         const record = event.target.result;
         if (record) {
             // Increment the downloadCounter
@@ -153,14 +153,14 @@ function incrementDownloadCounter(binaryId, onSuccessHandler, onErrorHandler) {
             // Put the updated record back into the store
             const updateRequest = store.put(record);
 
-            updateRequest.onsuccess = function() {
+            updateRequest.onsuccess = function () {
                 console.log(`Download counter for binary with id ${binaryId} was successfully incremented.`);
                 if (typeof onSuccessHandler === 'function') {
                     onSuccessHandler(record);
                 }
             };
 
-            updateRequest.onerror = function(event) {
+            updateRequest.onerror = function (event) {
                 console.error(`Failed to increment download counter for binary with id ${binaryId}.`, event.target.error);
                 if (typeof onErrorHandler === 'function') {
                     onErrorHandler(event);
@@ -174,7 +174,7 @@ function incrementDownloadCounter(binaryId, onSuccessHandler, onErrorHandler) {
         }
     };
 
-    request.onerror = function(event) {
+    request.onerror = function (event) {
         console.error(`Failed to retrieve record for binary with id ${binaryId}.`, event.target.error);
         if (typeof onErrorHandler === 'function') {
             onErrorHandler(event);
@@ -183,6 +183,10 @@ function incrementDownloadCounter(binaryId, onSuccessHandler, onErrorHandler) {
 }
 
 function getManifest(binaryId, manifestConsumer, errorConsumer) {
+    getManifestByRecordId(`${calculateStringHashCode(binaryId)}`, manifestConsumer, errorConsumer);
+}
+
+function getManifestByRecordId(recordId, manifestConsumer, errorConsumer) {
     const db = getActiveDb();
     if (!db) {
         console.error('Binary chunks DB is not open');
@@ -190,12 +194,12 @@ function getManifest(binaryId, manifestConsumer, errorConsumer) {
     }
     const transaction = db.transaction([binaryManifestsStoreName], "readonly");
     const store = transaction.objectStore(binaryManifestsStoreName);
-    const request = store.get(binaryId);
+    const request = store.get(recordId);
 
     request.onsuccess = function (event) {
         const result = event.target.result;
         if (!result) {
-            console.warn(`No manifest were found for binary with id ${binaryId}`);
+            console.warn(`No manifest were found for binary with id ${recordId}`);
             if (typeof manifestConsumer === 'function') {
                 manifestConsumer(null);
             }
@@ -213,7 +217,7 @@ function getManifest(binaryId, manifestConsumer, errorConsumer) {
     };
 
     request.onerror = function (event) {
-        console.error(`Failed to retrieve manifest for binary with id ${binaryId}`, event.target.error);
+        console.error(`Failed to retrieve manifest for binary with id ${recordId}`, event.target.error);
         if (typeof errorConsumer === 'function') {
             errorConsumer(event);
         }
