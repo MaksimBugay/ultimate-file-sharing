@@ -47,6 +47,18 @@ function closeModal() {
     hideZipArchiveRelatedElements();
     videoRecorderContainer.style.display = 'none';
     fileSelectorContainer.style.display = 'none';
+    fileInput.value = "";
+}
+
+function resetFileInputElement() {
+    const newFileInput = document.createElement("input");
+    newFileInput.type = "file";
+    newFileInput.id = "fileInput";
+    newFileInput.style.display = "none";
+    newFileInput.multiple = true;
+    newFileInput.addEventListener('change', processSelectedFiles);
+
+    fileInput.parentNode.replaceChild(newFileInput, fileInput);
 }
 
 closeButton.addEventListener('click', closeModal);
