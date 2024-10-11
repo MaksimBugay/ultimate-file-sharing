@@ -265,7 +265,7 @@ function removeBinaryManifest(binaryId, onSuccessHandler) {
 
     const transaction = db.transaction([binaryManifestsStoreName], "readwrite");
     const store = transaction.objectStore(binaryManifestsStoreName);
-    const request = store.delete(binaryId);
+    const request = store.delete(`${calculateStringHashCode(binaryId)}`);
 
     request.onsuccess = function () {
         console.log(`Manifest for binary with id ${binaryId} was successfully removed from the database`);
