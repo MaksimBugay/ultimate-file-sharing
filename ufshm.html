@@ -76,6 +76,14 @@
                     Encrypt file content(optional)
                 </label>
             </div>
+            <div id="copy-past-container" style="width: 100%; display: none">
+                <label for="copyPastName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for content</label>
+                <input type="text" id="copyPastName" style="width: 70%"
+                       placeholder="Customize the name of content"/>
+                <br>
+                <label for="pasteArea">Press Ctrl+V to past content</label>
+                <textarea id="pasteArea" style="position: absolute; left: -9999px;"></textarea>
+            </div>
             <div id="video-recorder-container" style="width: 100%; display: none">
                 <label for="recordedVideoName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for video
                     recording</label>

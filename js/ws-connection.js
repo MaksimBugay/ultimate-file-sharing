@@ -4,6 +4,7 @@ const statusCaption = document.getElementById("statusCaption");
 const addBinaryButton = document.getElementById("addBinaryButton");
 const recordVideoButton = document.getElementById("recordVideoButton");
 const expandableDiv = document.getElementById("expandableDiv");
+const pastFromBufferButton = document.getElementById("pastFromBufferButton")
 let exposeWorkspaceIdCheckBox;
 
 expandableDiv.addEventListener('mouseover', () => {
@@ -20,6 +21,10 @@ addBinaryButton.addEventListener("click", function () {
 
 recordVideoButton.addEventListener("click", function () {
     openModal(ContentType.VIDEO);
+});
+
+pastFromBufferButton.addEventListener("click", function () {
+    openModal(ContentType.COPY_PAST);
 });
 
 let FileManager = {};

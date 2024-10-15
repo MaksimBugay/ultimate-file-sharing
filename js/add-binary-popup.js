@@ -1,7 +1,8 @@
 const ContentType = Object.freeze({
     FILE: 0,
     LIVE_STREAM: 1,
-    VIDEO: 2
+    VIDEO: 2,
+    COPY_PAST: 3
 });
 
 const addBinaryPopup = document.getElementById("addBinaryPopup");
@@ -14,6 +15,8 @@ const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckb
 const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileLabel = document.getElementById('selectFileLabel');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
+const copyPastContainer = document.getElementById('copy-past-container')
+const pastArea = document.getElementById('pasteArea')
 const videoRecorderContainer = document.getElementById('video-recorder-container');
 const fileSelectorContainer = document.getElementById('file-selector-container');
 fileInput.addEventListener('change', processSelectedFiles);
@@ -38,6 +41,10 @@ function openModal(contentType) {
         videoRecorderContainer.style.display = 'block';
         setFocusToRecordBtn();
     }
+    if (ContentType.COPY_PAST === contentType) {
+        copyPastContainer.style.display = 'block';
+        pastArea.focus();
+    }
 }
 
 function closeModal() {
@@ -47,6 +54,7 @@ function closeModal() {
     hideZipArchiveRelatedElements();
     videoRecorderContainer.style.display = 'none';
     fileSelectorContainer.style.display = 'none';
+    copyPastContainer.style.display = 'none';
     fileInput.value = "";
 }
 
@@ -60,6 +68,26 @@ function resetFileInputElement() {
 
     fileInput.parentNode.replaceChild(newFileInput, fileInput);
 }
+
+// Add paste event listener to the hidden textarea
+pastArea.addEventListener('paste', function (event) {
+    const clipboardItems = event.clipboardData.items;
+
+    for (let item of clipboardItems) {
+        // Check if the clipboard item is a file (binary data)
+        if (item.kind === 'file') {
+            const blob = item.getAsFile();
+
+            // Optionally, you can do something with the blob, like creating an image URL
+            const url = URL.createObjectURL(blob);
+            const img = document.createElement('img');
+            img.src = url;
+            img.style.maxWidth = '300px';
+            pastArea.parentElement.appendChild(img); // Append the image to the output div
+        }
+    }
+    alert("Pasted content successfully!");
+});
 
 closeButton.addEventListener('click', closeModal);
 
