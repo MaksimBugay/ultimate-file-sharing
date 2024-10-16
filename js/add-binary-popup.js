@@ -51,11 +51,20 @@ function openModal(contentType) {
 pastArea.addEventListener('focus', function () {
     pastArea.style.color = 'blue';
     pastArea.value = 'Press Ctrl+V to past content'
+    pastArea.setSelectionRange(0, 0);
 });
 
 pastArea.addEventListener('blur', function() {
     pastArea.style.color = 'gray';
     pastArea.value = ''
+});
+
+pastArea.addEventListener('keydown', function (event) {
+    const isCtrlV = (event.ctrlKey || event.metaKey) && event.key === 'v';
+
+    if (!isCtrlV) {
+        event.preventDefault();
+    }
 });
 
 function closeModal() {
