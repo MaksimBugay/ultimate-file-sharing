@@ -80,9 +80,8 @@
                 <label for="copyPastName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for content</label>
                 <input type="text" id="copyPastName" style="width: 70%"
                        placeholder="Customize the name of content"/>
-                <br>
-                <label for="pasteArea">Press Ctrl+V to past content</label>
-                <textarea id="pasteArea" style="position: absolute; left: -9999px;"></textarea>
+                <textarea class="copy-past-memo" id="pasteArea" rows="1" cols="30" readonly
+                          placeholder="Press Ctrl+V to past content"></textarea>
             </div>
             <div id="video-recorder-container" style="width: 100%; display: none">
                 <label for="recordedVideoName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for video

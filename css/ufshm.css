@@ -232,3 +232,19 @@ input[type="text"] {
 .doc-link:hover {
     background-color: #0056b3; /* Darker background on hover */
 }
+
+.copy-past-memo {
+    border: none;
+    outline: none;
+    resize: none;
+    margin-top: 25pt;
+    background-color: transparent;
+    width: 100%;
+    font-size: 20pt;
+    font-weight: bold;
+    color: gray;
+}
+
+.copy-past-memo:focus {
+    color: blue;              
+}

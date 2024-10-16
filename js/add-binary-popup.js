@@ -19,6 +19,7 @@ const copyPastContainer = document.getElementById('copy-past-container')
 const pastArea = document.getElementById('pasteArea')
 const videoRecorderContainer = document.getElementById('video-recorder-container');
 const fileSelectorContainer = document.getElementById('file-selector-container');
+const copyPastName = document.getElementById('copyPastName')
 fileInput.addEventListener('change', processSelectedFiles);
 
 passwordField.value = null;
@@ -47,6 +48,16 @@ function openModal(contentType) {
     }
 }
 
+pastArea.addEventListener('focus', function () {
+    pastArea.style.color = 'blue';
+    pastArea.value = 'Press Ctrl+V to past content'
+});
+
+pastArea.addEventListener('blur', function() {
+    pastArea.style.color = 'gray';
+    pastArea.value = ''
+});
+
 function closeModal() {
     hideSpinnerInButton();
     addBinaryPopup.style.display = 'none';
@@ -70,24 +81,47 @@ function resetFileInputElement() {
 }
 
 // Add paste event listener to the hidden textarea
-pastArea.addEventListener('paste', function (event) {
+pastArea.addEventListener('paste', async function (event) {
     const clipboardItems = event.clipboardData.items;
 
     for (let item of clipboardItems) {
         // Check if the clipboard item is a file (binary data)
         if (item.kind === 'file') {
             const blob = item.getAsFile();
-
+            const mimeType = blob.type;
             // Optionally, you can do something with the blob, like creating an image URL
+            showSpinnerInButton();
+            const binaryId = uuid.v4().toString();
+            const slices = await blobToArrayBuffers(blob, MemoryBlock.MB100);
+            await createAndStoreBinaryFromSlices(slices, binaryId, getCopyPastName(mimeType), mimeType);
+            delay(500).then(() => {
+                slices.length = 0;
+                closeModal();
+            });
+            /*// Append the image to the output div
             const url = URL.createObjectURL(blob);
             const img = document.createElement('img');
             img.src = url;
             img.style.maxWidth = '300px';
-            pastArea.parentElement.appendChild(img); // Append the image to the output div
+            pastArea.parentElement.appendChild(img); */
         }
     }
-    alert("Pasted content successfully!");
 });
+
+function getCopyPastName(mimeType) {
+    let ext = "";
+    if (mimeType.includes('png')) {
+        ext = '.png';
+    }
+    if (mimeType.includes('bmp')) {
+        ext = '.bmp';
+    }
+    const vName = copyPastName.value;
+    if (vName) {
+        return `${vName}${ext}`;
+    }
+    return `binary-${new Date().getTime()}${ext}`
+}
 
 closeButton.addEventListener('click', closeModal);
 
