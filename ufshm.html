@@ -3,8 +3,10 @@
 <head>
     <title>Secure FileShare</title>
     <meta charset="UTF-8">
-    <meta name="description" content="Secure FileShare allows you to share files securely from your local machine. Protect your files with encryption and password protection.">
-    <meta name="keywords" content="Secure FileShare, fileshare, file sharing, secure file sharing, encrypted file sharing, file transfer, public access to your files">
+    <meta name="description"
+          content="Secure FileShare allows you to share files securely from your local machine. Protect your files with encryption and password protection.">
+    <meta name="keywords"
+          content="Secure FileShare, fileshare, anonymous file sharing, secure file sharing, encrypted file sharing, file transfer, share file anonymously">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/video-player.css">
     <link rel="stylesheet" href="css/ufshm.css">
@@ -30,10 +32,22 @@
     </script>
 </head>
 <body>
-<div class="blue-half-transparent-div">
-<h1 style="color: darkblue; text-align: center;">Secure FileShare</h1>
-<h2 id="statusCaption" style="color: crimson; text-align: center;">(Transfer channel is broken)</h2>
+<div class="blue-half-transparent-div" style="display: flex">
+    <div id="dropZone" class="drop-zone">
+        To share fast Drag and Drop your files here
+        <div id="download-spinner-main" style="display: none">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden"></span>
+            </div>
+            <p id="download-message-main">Loading...</p>
+        </div>
+    </div>
+    <div>
+        <h1 style="color: darkblue; text-align: center;">Secure FileShare</h1>
+        <h2 id="statusCaption" style="color: crimson; text-align: center;">(Transfer channel is broken)</h2>
+    </div>
 </div>
+
 <div id="expandableDiv" style="width: 520px">
     <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" class="doc-link" target="_blank"
        rel="noopener noreferrer" style="width: 100px">
@@ -42,7 +56,8 @@
     <img src="images/how-to-medium-small.png" style="border: none;" alt="How to use Secure FileShare - Manual">
     <div style="width: 100%; text-align: center;display: flex">
         <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" target="_blank"
-           rel="noopener noreferrer" style="width: 150px; background-color: transparent;margin-right: 50px;margin-left: 120px">
+           rel="noopener noreferrer"
+           style="width: 150px; background-color: transparent;margin-right: 50px;margin-left: 120px">
             📄 Full documentation
         </a>
         <a href="https://secure.fileshare.ovh:31443/privacy/privacy.html" target="_blank"
@@ -68,8 +83,10 @@
         <span class="close">&times;</span>
         <div id="popup-content">
             <h1>Prepare content for sharing</h1>
-            <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Protect download URL with password(optional)</label>
-            <input type="text" style="width: 70%" id="passwordInput" placeholder="Enter strong password to protect your content"/>
+            <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Protect download URL with
+                password(optional)</label>
+            <input type="text" style="width: 70%" id="passwordInput"
+                   placeholder="Enter strong password to protect your content"/>
             <div style="">
                 <label style="display: none">
                     <input type="checkbox" id="encryptFileContentCheckbox"/>
@@ -127,9 +144,9 @@
                         Directory
                     </label>
                 </div>
-            <label for="fileInput" style="margin-top: 15px" class="icon-button">
-                <i class="fa fa-upload"></i>
-            </label>
+                <label for="fileInput" style="margin-top: 15px" class="icon-button">
+                    <i class="fa fa-upload"></i>
+                </label>
             </div>
             <div id="download-spinner">
                 <div class="spinner-border" role="status">
@@ -141,7 +158,7 @@
     </div>
 </div>
 <div class="darkgreen-half-transparent-div">
-<div id="fileManagerContainer"></div>
+    <div id="fileManagerContainer"></div>
 </div>
 </body>
 <script src="js/fp.min.js"></script>
@@ -157,13 +174,16 @@
 <script src="js/jszip.min.js"></script>
 <script src="js/add-binary-popup.js"></script>
 <script src="js/video-player.js"></script>
+<script src="js/drag-and-drop-file.js"></script>
 <script src="js/ws-connection.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];
-    function gtag(){
+
+    function gtag() {
         dataLayer.push(arguments);
     }
+
     gtag('js', new Date());
 
     gtag('config', 'G-W6XK68E4CF');

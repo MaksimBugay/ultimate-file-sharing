@@ -246,5 +246,28 @@ input[type="text"] {
 }
 
 .copy-past-memo:focus {
-    color: blue;              
+    color: blue;
+}
+
+.drop-zone {
+    width: 270px;
+    height: 150px;
+    border: 2px dashed black;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;   /* Horizontally center */
+    align-items: center;       /* Vertically center */
+    text-align: center;        /* Ensure text is centered within the block */
+    color: darkblue;
+    font-weight: bold;
+    font-size: 18px;
+    transition: background-color 0.3s;
+    margin-right: 50px;
+    padding: 10px;
+    box-sizing: border-box;    /* Ensure padding doesn't exceed container size */
+}
+
+.drop-zone.dragover {
+    background-color: #e0ffe0;
+    color: #333;
 }
