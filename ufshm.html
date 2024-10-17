@@ -8,6 +8,11 @@
     <meta name="keywords"
           content="Secure FileShare, fileshare, anonymous file sharing, secure file sharing, encrypted file sharing, file transfer, share file anonymously">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="-1" />
+
     <link rel="stylesheet" href="css/video-player.css">
     <link rel="stylesheet" href="css/ufshm.css">
     <link rel="icon" href="images/file-sharing.png">
@@ -169,19 +174,20 @@
 </body>
 <script src="js/fp.min.js"></script>
 <script src="js/uuid.min.js"></script>
-<script src="js/ag-grid-community.min.js"></script>
-<script src="js/common-utils.js"></script>
-<script src="js/callable-future.js"></script>
-<script src="js/pnotifications.js"></script>
-<script src="js/binary-chunks-db.js"></script>
-<script src="js/pushca-binary-helper.js"></script>
-<script src="js/security-utils.js"></script>
-<script src="js/gateway-server.js"></script>
 <script src="js/jszip.min.js"></script>
-<script src="js/add-binary-popup.js"></script>
-<script src="js/video-player.js"></script>
-<script src="js/drag-and-drop-file.js"></script>
-<script src="js/ws-connection.js"></script>
+<script src="js/ag-grid-community.min.js"></script>
+
+<script src="js/common-utils.js?v=<?= time(); ?>"></script>
+<script src="js/callable-future.js?v=<?= time(); ?>"></script>
+<script src="js/pnotifications.js?v=<?= time(); ?>"></script>
+<script src="js/binary-chunks-db.js?v=<?= time(); ?>"></script>
+<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
+<script src="js/security-utils.js?v=<?= time(); ?>"></script>
+<script src="js/gateway-server.js?v=<?= time(); ?>"></script>
+<script src="js/add-binary-popup.js?v=<?= time(); ?>"></script>
+<script src="js/video-player.js?v=<?= time(); ?>"></script>
+<script src="js/drag-and-drop-file.js?v=<?= time(); ?>"></script>
+<script src="js/ws-connection.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];

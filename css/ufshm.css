@@ -252,7 +252,7 @@ input[type="text"] {
 .drop-zone {
     width: 270px;
     height: 150px;
-    border: 2px dashed black;
+    border: 2px dashed gray;
     border-radius: 10px;
     display: flex;
     justify-content: center;   /* Horizontally center */
@@ -275,7 +275,7 @@ input[type="text"] {
 .drop-zone-popup {
     width: 150px;
     height: 150px;
-    border: 2px dashed black;
+    border: 2px dashed gray;
     border-radius: 10px;
     display: flex;
     justify-content: center;   /* Horizontally center */

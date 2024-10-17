@@ -312,6 +312,18 @@ function printDateTime(dt) {
     return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
+function printPreciseDateTime(dt) {
+    const dateTime = new Date(dt);
+    const year = dateTime.getFullYear();
+    const month = String(dateTime.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed, add 1 to get the correct month
+    const day = String(dateTime.getDate()).padStart(2, '0');
+    const hours = String(dateTime.getHours()).padStart(2, '0');
+    const minutes = String(dateTime.getMinutes()).padStart(2, '0');
+    const seconds = String(dateTime.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 function printObject(obj) {
     return Object.values(obj)
         .filter(value => value !== undefined && value !== null)

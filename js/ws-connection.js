@@ -251,7 +251,7 @@ function initFileManager() {
                     headerName: "Created at",
                     field: "createdAt",
                     sortable: true,
-                    valueGetter: params => printDateTime(params.data.created)
+                    valueGetter: params => printPreciseDateTime(params.data.created)
                 },
                 {
                     headerComponent: GridHeaderWithCheckBox,
