@@ -203,22 +203,25 @@ function hideSpinnerInButton() {
 }
 
 async function processSelectedFiles(event) {
+    await processListOfFiles(event.target.files);
+}
+async function processListOfFiles(files) {
     showSpinnerInButton();
     //create zip archive
     if (createZipArchiveCheckbox.checked) {
-        if (event.target.files.length === 0) {
+        if (files.length === 0) {
             return;
         }
         let zipArchiveName = zipArchiveNameField.value;
         if (!zipArchiveName) {
-            const file0 = event.target.files[0];
+            const file0 = files[0];
             zipArchiveName = file0.webkitRelativePath ? file0.webkitRelativePath.split('/')[0] + '.zip' : `zip-with-${file0.name}`;
         } else {
             zipArchiveName = zipArchiveName + '.zip';
         }
         const zip = new JSZip();
-        for (let i = 0; i < event.target.files.length; i++) {
-            const file = event.target.files[i];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
             await zip.file(file.name, file);
         }
 
@@ -229,8 +232,8 @@ async function processSelectedFiles(event) {
         const slices = await blobToArrayBuffers(zipBlob, MemoryBlock.MB100);
         await createAndStoreBinaryFromSlices(slices, binaryId, zipArchiveName, "application/zip");
     } else {
-        for (let i = 0; i < event.target.files.length; i++) {
-            await addFileToRegistry(event.target.files[i]);
+        for (let i = 0; i < files.length; i++) {
+            await addFileToRegistry(files[i]);
         }
     }
     delay(500).then(() => closeModal());

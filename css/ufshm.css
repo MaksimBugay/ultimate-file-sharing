@@ -271,3 +271,40 @@ input[type="text"] {
     background-color: #e0ffe0;
     color: #333;
 }
+
+.drop-zone-popup {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed black;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;   /* Horizontally center */
+    align-items: center;       /* Vertically center */
+    text-align: center;        /* Ensure text is centered within the block */
+    color: darkblue;
+    font-weight: bold;
+    font-size: 18px;
+    transition: background-color 0.3s;
+    margin-right: 100px;
+    margin-top: -10px;
+    padding: 10px;
+    box-sizing: border-box;    /* Ensure padding doesn't exceed container size */
+    background-image: url('../images/helicopter_landing_pod_sign.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+}
+
+.drop-zone-popup.dragover {
+    background-color: #e0ffe0;
+    color: #333;
+}
+
+.or-sign {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 50px 40px;
+    color: darkblue;
+    position: relative;
+    white-space: nowrap;
+}

@@ -34,7 +34,7 @@
 <body>
 <div class="blue-half-transparent-div" style="display: flex">
     <div id="dropZone" class="drop-zone">
-        To share fast Drag and Drop your files here
+        To share fast just Drag and Drop your files here
         <div id="download-spinner-main" style="display: none">
             <div class="spinner-border" role="status">
                 <span class="visually-hidden"></span>
@@ -144,9 +144,15 @@
                         Directory
                     </label>
                 </div>
-                <label for="fileInput" style="margin-top: 15px" class="icon-button">
-                    <i class="fa fa-upload"></i>
-                </label>
+                <div style="display: flex">
+                    <label for="fileInput" style="margin-top: 15px" class="icon-button">
+                        <i class="fa fa-upload"></i>
+                    </label>
+                    <span class="or-sign">OR</span>
+                    <div id="dropZonePopup" class="drop-zone-popup">
+                        Drag and Drop your files here
+                    </div>
+                </div>
             </div>
             <div id="download-spinner">
                 <div class="spinner-border" role="status">

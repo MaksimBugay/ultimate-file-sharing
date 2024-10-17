@@ -1,24 +1,36 @@
 const dropZone = document.getElementById('dropZone');
-
-// Prevent default behavior for drag and drop events (to prevent opening the file in the browser)
-['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    dropZone.addEventListener(eventName, preventDefaults, false);
-});
+const dropZonePopup = document.getElementById('dropZonePopup');
 
 function preventDefaults(e) {
     e.preventDefault();
     e.stopPropagation();
 }
 
+function initDropZone(dzElement) {
+// Prevent default behavior for drag and drop events (to prevent opening the file in the browser)
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dzElement.addEventListener(eventName, preventDefaults, false);
+    });
+
 // Add visual feedback for when file is being dragged over the drop zone
-['dragenter', 'dragover'].forEach(eventName => {
-    dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
-});
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dzElement.addEventListener(eventName, () => dzElement.classList.add('dragover'), false);
+    });
 
-['dragleave', 'drop'].forEach(eventName => {
-    dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-});
+    ['dragleave', 'drop'].forEach(eventName => {
+        dzElement.addEventListener(eventName, () => dzElement.classList.remove('dragover'), false);
+    });
+}
 
+initDropZone(dropZone)
+initDropZone(dropZonePopup)
+
+dropZonePopup.addEventListener('drop', async function (event) {
+    await processListOfFiles(event.dataTransfer.files);
+    delay(500).then(() => {
+        event.dataTransfer.clearData();
+    });
+});
 // Handle the dropped files
 dropZone.addEventListener('drop', async function (event) {
     const files = event.dataTransfer.files;
@@ -28,16 +40,13 @@ dropZone.addEventListener('drop', async function (event) {
         // File is now a Blob object
         const blob = new Blob([file], {type: file.type});
 
-        console.log('File name:', file.name);
-        console.log('File type:', file.type);
-        console.log('Blob:', blob);
-
         showMainSpinnerInButton();
         const binaryId = uuid.v4().toString();
         const slices = await blobToArrayBuffers(blob, MemoryBlock.MB100);
         await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
         delay(500).then(() => {
             slices.length = 0;
+            event.dataTransfer.clearData();
             hideMainSpinnerInButton();
         });
     }
