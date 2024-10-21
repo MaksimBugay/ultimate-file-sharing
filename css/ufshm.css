@@ -196,8 +196,8 @@ input[type="text"] {
 }
 
 #expandableDiv {
-    width: 600px; /* Default width */
-    height: 40px; /* Default height */
+    width: 520px;
+    height: 40px;
     overflow: hidden; /* Hide content overflow */
     position: absolute;
     top: 20px;
@@ -213,8 +213,8 @@ input[type="text"] {
 
 /* Expanded state */
 #expandableDiv.expand {
-    width: 600px; /* Expanded width */
-    height: 450px; /* Expanded height */
+    width: 520px; /* Expanded width */
+    height: 500px;
     border: 1px solid royalblue;
     background-color: azure;
 }
