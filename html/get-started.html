@@ -93,7 +93,21 @@
             border-left: 5px solid #4CAF50; /* A subtle green border to draw attention */
             border-radius: 5px; /* Rounded corners for a softer look */
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow to give it depth */
+            text-align: left;
         }
+
+        .warning-text {
+            font-size: 20px; /* Increase the font size */
+            color: #2c3e50;  /* Use a slightly darker blue for better readability */
+            line-height: 1.6; /* Improve line spacing for better readability */
+            background-color: #f9f9f9; /* Light background to make it stand out */
+            padding: 15px; /* Add padding around the text */
+            border-left: 5px solid crimson; /* A subtle green border to draw attention */
+            border-radius: 5px; /* Rounded corners for a softer look */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Soft shadow to give it depth */
+            text-align: left;
+        }
+
 
         /* Media queries for responsiveness */
         @media (max-width: 600px) {
@@ -120,6 +134,8 @@
 <div class="container">
     <h1>Thank You for Installing Our Extension!</h1>
     <p class="highlight-text">We're thrilled to have you on board. To get started with using the extension, follow the simple steps below to pin it to your Chrome toolbar and start using it right away.</p>
+    <p class="warning-text">Important!!! This extension is just a wrapper that provides a guarantee that exactly one instance of https://secure.fileshare.ovh:31443/ufshm.html is always open in your browser. The whole file sharing support is implemented inside that page and, technically you can use it without Chrome extension in any browser but extension makes sharing more robust and reliable. For instance if you occasionally close secure.fileshare.ovh:31443/ufshm.html tab the extension re-open it.
+    </p>
 
     <div class="steps">
         <div class="step">

@@ -45,9 +45,9 @@ dropZone.addEventListener('drop', async function (event) {
         const slices = await blobToArrayBuffers(blob, MemoryBlock.MB100);
         await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
         delay(500).then(() => {
+            hideMainSpinnerInButton();
             slices.length = 0;
             event.dataTransfer.clearData();
-            hideMainSpinnerInButton();
         });
     }
 });

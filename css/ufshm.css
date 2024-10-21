@@ -4,10 +4,11 @@ html {
 }
 
 body {
-    background-image: url("../images/main-background.png");
+    /*background-image: url("../images/main-background.png");
     background-size: 190px 98px;
     background-repeat: repeat;
-    background-position: top left;
+    background-position: top left;*/
+    background-color: lightcyan;
     margin: 0;
     height: 100%;
     /*background-size: cover;
