@@ -1,0 +1,20 @@
+{
+  "name": "Secure FileShare",
+  "short_name": "sFileShare",
+  "start_url": "/ufshm.html",
+  "display": "browser",
+  "background_color": "#ffffff",
+  "theme_color": "#317EFB",
+  "icons": [
+    {
+      "src": "/images/file-sharing32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/file-sharing16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    }
+  ]
+}
