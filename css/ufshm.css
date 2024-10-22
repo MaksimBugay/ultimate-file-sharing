@@ -1,5 +1,5 @@
 html {
-    height: 100%;
+    /*height: 100%;*/
     margin: 0;
 }
 
@@ -8,9 +8,9 @@ body {
     background-size: 190px 98px;
     background-repeat: repeat;
     background-position: top left;*/
-    background-color: lightcyan;
+    background-color: #006BFD;
     margin: 0;
-    height: 100%;
+    /*height: 100%;*/
     /*background-size: cover;
     background-position: center center;
     background-repeat: repeat;
@@ -21,7 +21,7 @@ body {
     background: rgba(135, 206, 235, 0.85);
     /*margin-left: 250px;
     margin-right: 250px;*/
-    padding: 20px;
+    padding: 5px;
     /*border-radius: 10px;*/
 }
 
@@ -36,7 +36,6 @@ body {
 
 .darkgreen-half-transparent-div {
     background: rgba(200, 230, 210, 0.85);
-    height: 100%;
 }
 
 .fm-grid-button {
@@ -222,7 +221,7 @@ input[type="text"] {
 .doc-link {
     display: inline-block; /* Makes the link behave like a button */
     padding: 10px 15px; /* Adds some padding */
-    background-color: #007bff; /* Background color for the link */
+    background-color: cornflowerblue; /* Background color for the link */
     color: white; /* Text color */
     font-size: 16px; /* Font size */
     text-decoration: none; /* Removes underline */
@@ -251,8 +250,9 @@ input[type="text"] {
 }
 
 .drop-zone {
-    width: 270px;
-    height: 150px;
+    width: 60%;
+    min-width: 150px;
+    height: 75px;
     border: 2px dashed gray;
     border-radius: 10px;
     display: flex;
@@ -263,7 +263,7 @@ input[type="text"] {
     font-weight: bold;
     font-size: 18px;
     transition: background-color 0.3s;
-    margin-right: 100px;
+    margin-left: 35px;
     padding: 10px;
     box-sizing: border-box;    /* Ensure padding doesn't exceed container size */
 }

@@ -50,7 +50,7 @@ PushcaClient.onOpenHandler = function () {
         }
     }, 30000);
     openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
-    statusCaption.textContent = "(Exactly one instance of this page should be always open to provide sharing of your files!!!)";
+    statusCaption.textContent = "(Exactly one instance of that page should be always open to provide sharing of your files!!!)";
 };
 
 PushcaClient.onCloseHandler = function (ws, event) {

@@ -1106,10 +1106,10 @@ h2 {
 
 h3 {
     padding-top: 16pt;
-    color: #434343;
+    color: white;
     font-size: 14pt;
     padding-bottom: 4pt;
-    font-family: "Arial";
+    font-family: "Arial", serif;
     line-height: 1.15;
     page-break-after: avoid;
     orphans: 2;
