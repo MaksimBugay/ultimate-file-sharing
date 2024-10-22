@@ -18,10 +18,15 @@ body {
 }
 
 .blue-half-transparent-div {
+    width: 100%;
     background: rgba(135, 206, 235, 0.85);
     /*margin-left: 250px;
     margin-right: 250px;*/
-    padding: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     /*border-radius: 10px;*/
 }
 
@@ -264,6 +269,8 @@ input[type="text"] {
     font-size: 18px;
     transition: background-color 0.3s;
     margin-left: 35px;
+    margin-top: 5px;
+    margin-bottom: 5px;
     padding: 10px;
     box-sizing: border-box;    /* Ensure padding doesn't exceed container size */
 }
@@ -308,4 +315,18 @@ input[type="text"] {
     color: darkblue;
     position: relative;
     white-space: nowrap;
+}
+
+ .remove-btn {
+     background-color: transparent;
+     border: none;
+     color: red;
+     font-size: 16px;
+     font-weight: bold;
+     cursor: pointer;
+     margin-left: 100px;
+ }
+
+.remove-btn:hover {
+    color: darkred;
 }

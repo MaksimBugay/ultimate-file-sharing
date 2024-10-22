@@ -217,6 +217,31 @@ class GridHeaderWithCheckBox {
     }
 }
 
+function removeGridColumn(field) {
+    FileManager.gridApi.applyColumnState({
+        state: [{colId: field, sort: null, hide: true}]
+    });
+}
+
+class GridHeaderWithRemoveColumnButton {
+    init(params) {
+        this.eGui = document.createElement('div');
+        this.eGui.style.alignItems = 'center';
+        this.eGui.style.textAlign = 'center';
+        this.eGui.innerHTML = `
+            <div style="display: flex; align-items: center; text-align: inherit; justify-content: center;  height: 1px; margin-top: 0">
+                <label style="display: inline-block; text-align: inherit;margin-bottom: 15px">
+                    ${params.headerName}
+                    <button class="remove-btn" style="margin-left: 20px" title="remove column" onclick="removeGridColumn('${params.field}')">&#10006;</button>
+                </label>
+            </div>`;
+    }
+
+    getGui() {
+        return this.eGui;
+    }
+}
+
 function initFileManager() {
     if (FileManager.gridApi) {
         FileManager.gridApi.clear();
@@ -224,6 +249,151 @@ function initFileManager() {
     getAllManifests(function (manifests) {
         FileManager.manifests = manifests;
         updateTotalSize();
+        const columnDefs = [
+            {headerName: "File name", field: "name", filter: true, floatingFilter: true, sortable: true},
+            {
+                headerName: "Size, MB",
+                sortable: true,
+                valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
+            },
+            {
+                field: "mimeType",
+                sortable: true,
+                valueGetter: params => params.data.base64Key ? `${params.data.mimeType}(encrypted)` : params.data.mimeType
+            },
+            {
+                headerName: "Created at",
+                /*headerComponent: GridHeaderWithRemoveColumnButton,
+                headerComponentParams: {
+                    field: "createdAt",
+                    headerName: "Created at"
+                },*/
+                field: "createdAt",
+                sortable: true,
+                valueGetter: params => printPreciseDateTime(params.data.created)
+            },
+            {
+                headerComponent: GridHeaderWithCheckBox,
+                headerComponentParams: {
+                    elementId: 'exposeWorkspaceIdCheckBox',
+                    headerName: "Public URL",
+                    displayName: 'Expose workspace ID'
+                },
+                field: "copyLinkButton",
+                cellRenderer: GridCellButton,
+                cellRendererParams: {
+                    imgSrc: "../images/copy-link-256.png",
+                    buttonTitle: "",
+                    clickHandler: (data) => {
+                        copyToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()));
+                    }
+                }
+            },
+            {
+                //headerName: "Credentials",
+                headerComponent: GridHeaderWithRemoveColumnButton,
+                headerComponentParams: {
+                    field: "copyCredentialsButton",
+                    headerName: "Credentials"
+                },
+                field: "copyCredentialsButton",
+                cellRenderer: GridCellButton,
+                cellRendererParams: {
+                    imgSrc: "../images/secure-file-sharing.png",
+                    columnName: "credentials",
+                    buttonTitle: "",
+                    clickHandler: (data) => {
+                        if (isWorkspaceIdExposed()) {
+                            copyToClipboard(data.password);
+                        } else {
+                            copyToClipboard(JSON.stringify(
+                                {
+                                    workspaceId: PushcaClient.ClientObj.workSpaceId,
+                                    password: data.password
+                                }
+                            ));
+                        }
+                    },
+                    afterCreatedHandler: function (eButton, data) {
+                        const credentials = {
+                            workspaceId: PushcaClient.ClientObj.workSpaceId,
+                            password: data.password
+                        };
+                        eButton.title = JSON.stringify(credentials);
+                        if (isEmpty(credentials.password)) {
+                            eButton.style.visibility = 'hidden';
+                        }
+                    }
+                }
+            },
+            {
+                //headerName: "Download",
+                headerComponent: GridHeaderWithRemoveColumnButton,
+                headerComponentParams: {
+                    field: "downloadButton",
+                    headerName: "Download"
+                },
+                field: "downloadButton",
+                cellRenderer: GridCellButton,
+                cellRendererParams: {
+                    imgSrc: "../images/downloads-icon.png",
+                    buttonTitle: "",
+                    clickHandler: (data) => {
+                        loadAllBinaryChunks(data.id, data.datagrams.length, (loadedChunks) => {
+                            downloadBinary(loadedChunks, data.name, data.mimeType);
+                        });
+                    }
+                }
+            },
+            {
+                //headerName: "Test",
+                headerComponent: GridHeaderWithRemoveColumnButton,
+                headerComponentParams: {
+                    field: "testButton",
+                    headerName: "Test"
+                },
+                field: "testButton",
+                cellRenderer: GridCellButton,
+                cellRendererParams: {
+                    imgSrc: "../images/test-public-url.png",
+                    buttonTitle: "",
+                    clickHandler: (data) => {
+                        window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
+                    }
+                }
+            },
+            {
+                headerName: "Download counter",
+                /*headerComponent: GridHeaderWithRemoveColumnButton,
+                headerComponentParams: {
+                    field: "downloadCounter",
+                    headerName: "Download counter"
+                },*/
+                field: "downloadCounter",
+                sortable: true
+            },
+            {
+                headerName: "Remove",
+                field: "removeButton",
+                cellRenderer: GridCellButton,
+                cellRendererParams: {
+                    imgSrc: "../images/delete-file.png",
+                    buttonTitle: "",
+                    clickHandler: (data) => {
+                        removeBinary(data.id, function () {
+                            console.log(`Binary with id ${data.id} was completely removed from DB`);
+                            decrementTotalSize(data.getTotalSize());
+                            const rowIndex = manifests.findIndex(manifest => manifest.id === data.id);
+                            if (rowIndex !== -1) {
+                                FileManager.gridApi.applyTransaction({
+                                    remove: [manifests[rowIndex]] // Remove the row at the specified index
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+        ]
         const gridOptions = {
             // Row Data: The data to be displayed.
             rowData: manifests,
@@ -235,129 +405,15 @@ function initFileManager() {
                 sortable: false
             },
             // Column Definitions: Defines the columns to be displayed.
-            columnDefs: [
-                {headerName: "File name", field: "name", filter: true, floatingFilter: true, sortable: true},
-                {
-                    headerName: "Size, MB",
-                    sortable: true,
-                    valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
-                },
-                {
-                    field: "mimeType",
-                    sortable: true,
-                    valueGetter: params => params.data.base64Key ? `${params.data.mimeType}(encrypted)` : params.data.mimeType
-                },
-                {
-                    headerName: "Created at",
-                    field: "createdAt",
-                    sortable: true,
-                    valueGetter: params => printPreciseDateTime(params.data.created)
-                },
-                {
-                    headerComponent: GridHeaderWithCheckBox,
-                    headerComponentParams: {
-                        elementId: 'exposeWorkspaceIdCheckBox',
-                        headerName: "Public URL",
-                        displayName: 'Expose workspace ID'
-                    },
-                    //headerName: "Public URL",
-                    field: "copyLinkButton",
-                    cellRenderer: GridCellButton,
-                    cellRendererParams: {
-                        imgSrc: "../images/copy-link-256.png",
-                        buttonTitle: "",
-                        clickHandler: (data) => {
-                            copyToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()));
-                        }
-                    }
-                },
-                {
-                    headerName: "Credentials",
-                    field: "copyCredentialsButton",
-                    cellRenderer: GridCellButton,
-                    cellRendererParams: {
-                        imgSrc: "../images/secure-file-sharing.png",
-                        columnName: "credentials",
-                        buttonTitle: "",
-                        clickHandler: (data) => {
-                            if (isWorkspaceIdExposed()) {
-                                copyToClipboard(data.password);
-                            } else {
-                                copyToClipboard(JSON.stringify(
-                                    {
-                                        workspaceId: PushcaClient.ClientObj.workSpaceId,
-                                        password: data.password
-                                    }
-                                ));
-                            }
-                        },
-                        afterCreatedHandler: function (eButton, data) {
-                            const credentials = {
-                                workspaceId: PushcaClient.ClientObj.workSpaceId,
-                                password: data.password
-                            };
-                            eButton.title = JSON.stringify(credentials);
-                            if (isEmpty(credentials.password)) {
-                                eButton.style.visibility = 'hidden';
-                            }
-                        }
-                    }
-                },
-                {
-                    headerName: "Download",
-                    field: "downloadButton",
-                    cellRenderer: GridCellButton,
-                    cellRendererParams: {
-                        imgSrc: "../images/downloads-icon.png",
-                        buttonTitle: "",
-                        clickHandler: (data) => {
-                            loadAllBinaryChunks(data.id, data.datagrams.length, (loadedChunks) => {
-                                downloadBinary(loadedChunks, data.name, data.mimeType);
-                            });
-                        }
-                    }
-                },
-                {
-                    headerName: "Test",
-                    field: "testButton",
-                    cellRenderer: GridCellButton,
-                    cellRendererParams: {
-                        imgSrc: "../images/test-public-url.png",
-                        buttonTitle: "",
-                        clickHandler: (data) => {
-                            window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
-                        }
-                    }
-                },
-                {field: "downloadCounter", sortable: true},
-                {
-                    headerName: "Remove",
-                    field: "removeButton",
-                    cellRenderer: GridCellButton,
-                    cellRendererParams: {
-                        imgSrc: "../images/delete-file.png",
-                        buttonTitle: "",
-                        clickHandler: (data) => {
-                            removeBinary(data.id, function () {
-                                console.log(`Binary with id ${data.id} was completely removed from DB`);
-                                decrementTotalSize(data.getTotalSize());
-                                const rowIndex = manifests.findIndex(manifest => manifest.id === data.id);
-                                if (rowIndex !== -1) {
-                                    FileManager.gridApi.applyTransaction({
-                                        remove: [manifests[rowIndex]] // Remove the row at the specified index
-                                    });
-                                }
-                            });
-                        }
-                    }
-                }
-            ]
+            columnDefs: columnDefs
         };
         let fileManagerGrid = document.getElementById('fileManagerGrid');
         if (fileManagerGrid) {
             fileManagerGrid.remove();
         }
         const fileManagerContainer = document.getElementById("fileManagerContainer");
+        fileManagerContainer.style.width='100%'
+        fileManagerContainer.style.margin='0'
         fileManagerGrid = document.createElement('div');
         fileManagerGrid.id = 'fileManagerGrid';
         fileManagerGrid.className = 'ag-theme-quartz fm-grid';
@@ -365,8 +421,9 @@ function initFileManager() {
         FileManager.gridApi = agGrid.createGrid(fileManagerGrid, gridOptions);
         FileManager.gridApi.applyColumnState({
             state: [{colId: "createdAt", sort: "desc"}],
-            defaultState: {sort: null},
+            defaultState: {sort: null}
         });
+        FileManager.columnDefs = columnDefs;
     });
 }
 
@@ -429,4 +486,9 @@ function isWorkspaceIdExposed() {
         });
     }
     return exposeWorkspaceIdCheckBox.checked;
+}
+
+function removeParentDiv(button) {
+    const parentDiv = button.parentElement;
+    parentDiv.remove();
 }
