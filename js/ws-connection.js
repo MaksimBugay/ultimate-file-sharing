@@ -276,15 +276,13 @@ function initFileManager() {
         columnDefs.push(
             {headerName: "File name", field: "name", filter: true, floatingFilter: true, sortable: true}
         );
-        if (isNotMobile) {
-            columnDefs.push(
-                {
-                    headerName: "Size, MB",
-                    sortable: true,
-                    valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
-                }
-            );
-        }
+        columnDefs.push(
+            {
+                headerName: "Size, MB",
+                sortable: true,
+                valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
+            }
+        );
         columnDefs.push(
             {
                 field: "mimeType",
