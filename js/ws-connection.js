@@ -7,6 +7,19 @@ const expandableDiv = document.getElementById("expandableDiv");
 const pastFromBufferButton = document.getElementById("pastFromBufferButton")
 let exposeWorkspaceIdCheckBox;
 
+document.addEventListener("DOMContentLoaded", function () {
+    if (isMobile()) {
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            dropZone.remove();
+        }
+        const expandableDiv = document.getElementById("expandableDiv");
+        if (expandableDiv) {
+            expandableDiv.remove();
+        }
+    }
+});
+
 expandableDiv.addEventListener('mouseover', () => {
     expandableDiv.classList.add('expand');
 });
@@ -223,6 +236,10 @@ function removeGridColumn(field) {
     });
 }
 
+function removeGridColumns(fields) {
+    fields.forEach(field => removeGridColumn(field));
+}
+
 class GridHeaderWithRemoveColumnButton {
     init(params) {
         this.eGui = document.createElement('div');
@@ -246,21 +263,31 @@ function initFileManager() {
     if (FileManager.gridApi) {
         FileManager.gridApi.clear();
     }
+    const isNotMobile = !isMobile();
     getAllManifests(function (manifests) {
         FileManager.manifests = manifests;
         updateTotalSize();
-        const columnDefs = [
-            {headerName: "File name", field: "name", filter: true, floatingFilter: true, sortable: true},
-            {
-                headerName: "Size, MB",
-                sortable: true,
-                valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
-            },
+        const columnDefs = [];
+        columnDefs.push(
+            {headerName: "File name", field: "name", filter: true, floatingFilter: true, sortable: true}
+        );
+        if (isNotMobile) {
+            columnDefs.push(
+                {
+                    headerName: "Size, MB",
+                    sortable: true,
+                    valueGetter: params => Math.round((params.data.totalSize * 100) / MemoryBlock.MB) / 100
+                }
+            );
+        }
+        columnDefs.push(
             {
                 field: "mimeType",
                 sortable: true,
                 valueGetter: params => params.data.base64Key ? `${params.data.mimeType}(encrypted)` : params.data.mimeType
-            },
+            }
+        );
+        columnDefs.push(
             {
                 headerName: "Created at",
                 /*headerComponent: GridHeaderWithRemoveColumnButton,
@@ -271,7 +298,9 @@ function initFileManager() {
                 field: "createdAt",
                 sortable: true,
                 valueGetter: params => printPreciseDateTime(params.data.created)
-            },
+            }
+        );
+        columnDefs.push(
             {
                 headerComponent: GridHeaderWithCheckBox,
                 headerComponentParams: {
@@ -288,7 +317,9 @@ function initFileManager() {
                         copyToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()));
                     }
                 }
-            },
+            }
+        );
+        columnDefs.push(
             {
                 //headerName: "Credentials",
                 headerComponent: GridHeaderWithRemoveColumnButton,
@@ -326,52 +357,67 @@ function initFileManager() {
                     }
                 }
             },
-            {
-                //headerName: "Download",
-                headerComponent: GridHeaderWithRemoveColumnButton,
-                headerComponentParams: {
+        );
+        if (isNotMobile) {
+            columnDefs.push(
+                {
+                    //headerName: "Download",
+                    headerComponent: GridHeaderWithRemoveColumnButton,
+                    headerComponentParams: {
+                        field: "downloadButton",
+                        headerName: "Download"
+                    },
                     field: "downloadButton",
-                    headerName: "Download"
-                },
-                field: "downloadButton",
-                cellRenderer: GridCellButton,
-                cellRendererParams: {
-                    imgSrc: "../images/downloads-icon.png",
-                    buttonTitle: "",
-                    clickHandler: (data) => {
-                        loadAllBinaryChunks(data.id, data.datagrams.length, (loadedChunks) => {
-                            downloadBinary(loadedChunks, data.name, data.mimeType);
-                        });
+                    cellRenderer: GridCellButton,
+                    cellRendererParams: {
+                        imgSrc: "../images/downloads-icon.png",
+                        buttonTitle: "",
+                        clickHandler: (data) => {
+                            loadAllBinaryChunks(data.id, data.datagrams.length, (loadedChunks) => {
+                                downloadBinary(loadedChunks, data.name, data.mimeType);
+                            });
+                        }
                     }
                 }
-            },
-            {
-                //headerName: "Test",
-                headerComponent: GridHeaderWithRemoveColumnButton,
-                headerComponentParams: {
+            );
+        }
+
+        if (isNotMobile) {
+            columnDefs.push(
+                {
+                    //headerName: "Test",
+                    headerComponent: GridHeaderWithRemoveColumnButton,
+                    headerComponentParams: {
+                        field: "testButton",
+                        headerName: "Test"
+                    },
                     field: "testButton",
-                    headerName: "Test"
-                },
-                field: "testButton",
-                cellRenderer: GridCellButton,
-                cellRendererParams: {
-                    imgSrc: "../images/test-public-url.png",
-                    buttonTitle: "",
-                    clickHandler: (data) => {
-                        window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
+                    cellRenderer: GridCellButton,
+                    cellRendererParams: {
+                        imgSrc: "../images/test-public-url.png",
+                        buttonTitle: "",
+                        clickHandler: (data) => {
+                            window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
+                        }
                     }
                 }
-            },
-            {
-                headerName: "Download counter",
-                /*headerComponent: GridHeaderWithRemoveColumnButton,
-                headerComponentParams: {
+            );
+        }
+        if (isNotMobile) {
+            columnDefs.push(
+                {
+                    headerName: "Download counter",
+                    /*headerComponent: GridHeaderWithRemoveColumnButton,
+                    headerComponentParams: {
+                        field: "downloadCounter",
+                        headerName: "Download counter"
+                    },*/
                     field: "downloadCounter",
-                    headerName: "Download counter"
-                },*/
-                field: "downloadCounter",
-                sortable: true
-            },
+                    sortable: true
+                }
+            );
+        }
+        columnDefs.push(
             {
                 headerName: "Remove",
                 field: "removeButton",
@@ -393,7 +439,7 @@ function initFileManager() {
                     }
                 }
             }
-        ]
+        );
         const gridOptions = {
             // Row Data: The data to be displayed.
             rowData: manifests,
@@ -412,8 +458,8 @@ function initFileManager() {
             fileManagerGrid.remove();
         }
         const fileManagerContainer = document.getElementById("fileManagerContainer");
-        fileManagerContainer.style.width='100%'
-        fileManagerContainer.style.margin='0'
+        fileManagerContainer.style.width = '100%'
+        fileManagerContainer.style.margin = '0'
         fileManagerGrid = document.createElement('div');
         fileManagerGrid.id = 'fileManagerGrid';
         fileManagerGrid.className = 'ag-theme-quartz fm-grid';

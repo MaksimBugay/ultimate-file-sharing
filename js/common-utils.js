@@ -8,6 +8,15 @@ function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
+function isMobile() {
+    const userAgent = /Mobi|Android/i.test(navigator.userAgent);
+    const smallScreen = window.innerWidth <= 800 && window.innerHeight <= 1280;
+    const touchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    return userAgent && smallScreen && touchDevice;
+}
+
+
 function copyToClipboard(text) {
     // Check if the Clipboard API is supported
     if (navigator.clipboard && window.isSecureContext) {
