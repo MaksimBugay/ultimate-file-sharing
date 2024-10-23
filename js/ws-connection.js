@@ -17,6 +17,11 @@ document.addEventListener("DOMContentLoaded", function () {
         if (expandableDiv) {
             expandableDiv.remove();
         }
+    } else {
+        const gridToolBar = document.getElementById("gridToolBar");
+        if (gridToolBar) {
+            gridToolBar.style.display = 'flex';
+        }
     }
 });
 
@@ -443,7 +448,7 @@ function initFileManager() {
         const gridOptions = {
             // Row Data: The data to be displayed.
             rowData: manifests,
-            pagination: true,
+            pagination: isNotMobile,
             paginationPageSize: 5,
             paginationPageSizeSelector: [5, 10, 50, 100],
             headerHeight: 60,

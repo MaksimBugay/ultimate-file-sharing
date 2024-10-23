@@ -9,9 +9,9 @@
           content="Secure FileShare, fileshare, anonymous file sharing, secure file sharing, encrypted file sharing, file transfer, share file anonymously">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="-1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="-1"/>
 
     <link rel="stylesheet" href="css/video-player.css">
     <link rel="stylesheet" href="css/ufshm.css">
@@ -67,24 +67,26 @@
         </a>
     </div>
 </div>
-<div class="green-half-transparent-div" style="display: flex">
+<div id="gridToolBar" class="green-half-transparent-div" style="display: block">
     <h2 id="totalSizeCaption" style="margin-left: 20px; margin-right: 50px"></h2>
-    <button id="addBinaryButton" class="image-button" title="Add files">
-        <img src="images/document-add-icon-16.png" alt="Add files button">
-    </button>
-    <button id="recordVideoButton" class="image-button" title="Record video">
-        <img src="images/record-video.png" alt="Record video button">
-    </button>
-    <button id="pastFromBufferButton" class="image-button" title="Past content from keyboard buffer">
-        <img src="images/past.png" alt="Make a screenshot">
-    </button>
-    <div id="dropZone" class="drop-zone">
-        To share fast just Drag and Drop your files here
-        <div id="download-spinner-main" style="display: none">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden"></span>
+    <div style="display: flex">
+        <button id="addBinaryButton" class="image-button" title="Add files">
+            <img src="images/document-add-icon-16.png" alt="Add files button">
+        </button>
+        <button id="recordVideoButton" class="image-button" title="Record video">
+            <img src="images/record-video.png" alt="Record video button">
+        </button>
+        <button id="pastFromBufferButton" class="image-button" title="Past content from keyboard buffer">
+            <img src="images/past.png" alt="Make a screenshot">
+        </button>
+        <div id="dropZone" class="drop-zone">
+            To share fast just Drag and Drop your files here
+            <div id="download-spinner-main" style="display: none">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden"></span>
+                </div>
+                <p id="download-message-main">Loading...</p>
             </div>
-            <p id="download-message-main">Loading...</p>
         </div>
     </div>
 </div>
