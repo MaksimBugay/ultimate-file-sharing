@@ -4,8 +4,15 @@ const RecorderState = Object.freeze({
     PREVIEW: 2
 });
 
-const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs="vp9, opus"') ?
+const VideoPlayer ={}
+VideoPlayer.contentType = ContentType.VIDEO
+
+const videoMimeType = MediaRecorder.isTypeSupported('video/webm; codecs="vp9, opus"') ?
     'video/webm; codecs="vp9, opus"' : 'video/webm; codecs="vp8, opus"';
+const audioMimeType = 'audio/webm';
+
+let mimeType;
+
 let stream;
 let mediaRecorder;
 const chunks = []
@@ -25,7 +32,7 @@ function setFocusToRecordBtn() {
 
 // Function to start recording
 function startRecording() {
-    startVideoRecording().then(result => {
+    startMediaRecording().then(result => {
         if (result.status === 0) {
             recorderState = RecorderState.RECORDING;
             recordBtn.textContent = 'Stop';
@@ -100,10 +107,55 @@ function getVideoName() {
     if (vName) {
         return `${vName}.webm`;
     }
-    return `video-recording-${new Date().getTime()}.webm`
+    if (ContentType.VIDEO === VideoPlayer.contentType) {
+        return `video-recording-${new Date().getTime()}.webm`
+    } else {
+        return `audio-recording-${new Date().getTime()}.webm`
+    }
 }
 
 //=================================row recording functions==============================================================
+async function startAudioRecording() {
+    try {
+        // Request audio stream only
+        stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                sampleRate: 44100,  // Request high-quality audio sampling rate
+                channelCount: 2,    // Request stereo audio
+                echoCancellation: true  // Enable echo cancellation for better audio
+            }
+        });
+
+        // Create a new MediaRecorder with audio format only
+        mediaRecorder = new MediaRecorder(stream, {
+            mimeType: mimeType,
+            audioBitsPerSecond: 128 * 1024
+        });
+
+        mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                const blob = event.data;
+                chunks.push(blob);
+                console.log(`${blob.size} chunks were recorded`);
+            }
+        };
+
+        mediaRecorder.start(10000);
+        return { status: 0, message: 'recording started' };
+    } catch (err) {
+        return { status: -1, message: `Cannot start, error accessing media devices: ${err}` };
+    }
+}
+
+async function startMediaRecording(){
+    if (ContentType.VIDEO === VideoPlayer.contentType){
+        mimeType = videoMimeType;
+        return await startVideoRecording();
+    } else {
+        mimeType = audioMimeType;
+        return await startAudioRecording();
+    }
+}
 async function startVideoRecording() {
     try {
         stream = await navigator.mediaDevices.getUserMedia({

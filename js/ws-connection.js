@@ -3,6 +3,7 @@ console.log('ws-connection.js running on', window.location.href);
 const statusCaption = document.getElementById("statusCaption");
 const addBinaryButton = document.getElementById("addBinaryButton");
 const recordVideoButton = document.getElementById("recordVideoButton");
+const recordAudioButton = document.getElementById("recordAudioButton");
 const expandableDiv = document.getElementById("expandableDiv");
 const pastFromBufferButton = document.getElementById("pastFromBufferButton")
 let exposeWorkspaceIdCheckBox;
@@ -39,6 +40,10 @@ addBinaryButton.addEventListener("click", function () {
 
 recordVideoButton.addEventListener("click", function () {
     openModal(ContentType.VIDEO);
+});
+
+recordAudioButton.addEventListener("click", function () {
+    openModal(ContentType.AUDIO);
 });
 
 pastFromBufferButton.addEventListener("click", function () {

@@ -2,7 +2,8 @@ const ContentType = Object.freeze({
     FILE: 0,
     LIVE_STREAM: 1,
     VIDEO: 2,
-    COPY_PAST: 3
+    COPY_PAST: 3,
+    AUDIO:4
 });
 
 const addBinaryPopup = document.getElementById("addBinaryPopup");
@@ -40,6 +41,14 @@ function openModal(contentType) {
     }
     if (ContentType.VIDEO === contentType) {
         videoRecorderContainer.style.display = 'block';
+        VideoPlayer.contentType = ContentType.VIDEO
+        setFocusToRecordBtn();
+    }
+    if (ContentType.AUDIO === contentType) {
+        const videoPlayer = document.getElementById('videoPlayer');
+        videoPlayer.style.height = '120px';
+        videoRecorderContainer.style.display = 'block';
+        VideoPlayer.contentType = ContentType.AUDIO
         setFocusToRecordBtn();
     }
     if (ContentType.COPY_PAST === contentType) {
