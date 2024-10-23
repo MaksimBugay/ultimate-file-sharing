@@ -54,7 +54,7 @@ pastArea.addEventListener('focus', function () {
     pastArea.setSelectionRange(0, 0);
 });
 
-pastArea.addEventListener('blur', function() {
+pastArea.addEventListener('blur', function () {
     pastArea.style.color = 'gray';
     pastArea.value = ''
 });
@@ -205,6 +205,7 @@ function hideSpinnerInButton() {
 async function processSelectedFiles(event) {
     await processListOfFiles(event.target.files);
 }
+
 async function processListOfFiles(files) {
     showSpinnerInButton();
     //create zip archive

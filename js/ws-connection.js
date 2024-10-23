@@ -496,12 +496,31 @@ function addManifestToManagerGrid(newManifest) {
     updateTotalSize()
     delay(1000).then(() => {
         const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed());
+        if (isMobile()) {
+            showNativeShareDialog(newManifest.name, publicUr);
+        }
         copyToClipboard(publicUr);
 
         const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
         const rowNode = FileManager.gridApi.getRowNode(rowIndex);
         rowNode.setSelected(true, true);
     });
+}
+
+async function showNativeShareDialog(vText, vUrl) {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: vText,
+                text: 'Public download link',
+                url: vUrl
+            });
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    } else {
+        console.log('Web Share API not supported on this browser.');
+    }
 }
 
 function incrementDownloadCounterOfManifestRecord(binaryId) {
