@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         const modalContent = document.querySelector('.modal-content');
         if (modalContent) {
-            modalContent.style.width = "98%";
+            modalContent.style.width = "96%";
             modalContent.style.marginTop = "0";
             modalContent.style.marginLeft = '0';
             modalContent.style.left = "0";
