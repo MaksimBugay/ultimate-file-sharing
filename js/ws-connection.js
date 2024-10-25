@@ -1,6 +1,7 @@
 console.log('ws-connection.js running on', window.location.href);
 
 const statusCaption = document.getElementById("statusCaption");
+const channelIndicator = document.getElementById("channelIndicator");
 const addBinaryButton = document.getElementById("addBinaryButton");
 const recordVideoButton = document.getElementById("recordVideoButton");
 const recordAudioButton = document.getElementById("recordAudioButton");
@@ -17,6 +18,17 @@ document.addEventListener("DOMContentLoaded", function () {
         const expandableDiv = document.getElementById("expandableDiv");
         if (expandableDiv) {
             expandableDiv.remove();
+        }
+        const usageWarning = document.getElementById("usageWarning");
+        if (usageWarning) {
+            usageWarning.remove();
+        }
+        const modalContent = document.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.width = "98%";
+            modalContent.style.marginTop = "1%";
+            modalContent.style.left = "3px";
+            modalContent.style.top = "3px";
         }
     } else {
         const gridToolBar = document.getElementById("gridToolBar");
@@ -73,6 +85,7 @@ PushcaClient.onOpenHandler = function () {
         }
     }, 30000);
     openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
+    channelIndicator.style.backgroundColor = 'limegreen';
     statusCaption.textContent = "(Exactly one instance of that page should be always open to provide sharing of your files!!!)";
 };
 
@@ -80,6 +93,7 @@ PushcaClient.onCloseHandler = function (ws, event) {
     window.clearInterval(pingIntervalId);
     closeDataBase();
     statusCaption.textContent = "(Transfer channel is broken)";
+    channelIndicator.style.backgroundColor = 'red';
     if (!event.wasClean) {
         console.error("Your connection died, refresh the page please");
     }

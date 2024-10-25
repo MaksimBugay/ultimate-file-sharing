@@ -15,6 +15,7 @@
 
     <link rel="stylesheet" href="css/video-player.css">
     <link rel="stylesheet" href="css/ufshm.css">
+    <link rel="stylesheet" href="css/bauble.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -40,8 +41,9 @@
     </script>
 </head>
 <body>
+<span id="channelIndicator" class="bauble"></span>
 <iframe src="html/header.html" width="95%" height="90px" style="border: none; pointer-events: none;"></iframe>
-<div class="blue-half-transparent-div">
+<div id="usageWarning" class="blue-half-transparent-div">
     <h2 id="statusCaption" style="color: crimson; text-align: center; margin: 0">(Transfer channel is broken)</h2>
     <button class="remove-btn" title="hide warning" onclick="removeParentDiv(this)">&#10006;</button>
 </div>

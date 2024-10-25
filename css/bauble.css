@@ -1,0 +1,35 @@
+
+/* Styling the green glowing bauble */
+.bauble {
+    position: absolute;
+    top: 20px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    background-color: limegreen;
+    border-radius: 50%;
+    box-shadow: 0 0 10px limegreen, 0 0 20px limegreen, 0 0 30px limegreen;
+    animation: pulse 5.5s infinite;
+    transform: translate(-50%, -50%);
+}
+
+/* Pulsing animation */
+@keyframes pulse {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0.7;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Button hover effect */
+.glowing-button:hover {
+    background-color: #45a049;
+}
