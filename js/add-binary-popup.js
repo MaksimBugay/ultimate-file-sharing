@@ -14,7 +14,6 @@ const passwordField = document.getElementById('passwordInput');
 const encryptFileContentCheckbox = document.getElementById('encryptFileContentCheckbox');
 const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckbox');
 const zipArchiveNameField = document.getElementById('zipArchiveName');
-const selectFileLabel = document.getElementById('selectFileLabel');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
 const copyPastContainer = document.getElementById('copy-past-container')
 const pastArea = document.getElementById('pasteArea')
@@ -85,6 +84,7 @@ function closeModal() {
     fileSelectorContainer.style.display = 'none';
     copyPastContainer.style.display = 'none';
     fileInput.value = "";
+    videoPlayer.style.height = '200px';
 }
 
 function resetFileInputElement() {
@@ -160,7 +160,6 @@ createZipArchiveCheckbox.addEventListener('change', function () {
 
 function showZipArchiveRelatedElements() {
     zipArchiveNameField.style.display = 'block';
-    selectFileLabel.style.display = 'none';
     selectFileOrDirectoryContainer.style.display = 'flex';
 }
 
@@ -169,7 +168,6 @@ function hideZipArchiveRelatedElements() {
     fileInput.removeAttribute('webkitdirectory');
     fileInput.setAttribute('multiple', '');
     document.getElementById('fileChoice').checked = true;
-    selectFileLabel.style.display = 'block';
     selectFileOrDirectoryContainer.style.display = 'none';
 }
 

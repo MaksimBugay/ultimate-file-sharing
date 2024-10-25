@@ -70,7 +70,8 @@ body {
 }
 
 .modal-content {
-    width: 500px;
+    width: 430px;
+    /*width: 40%;*/
     min-height: 400px;
     padding: 10px;
     color: darkblue;
@@ -293,7 +294,6 @@ input[type="text"] {
     font-weight: bold;
     font-size: 18px;
     transition: background-color 0.3s;
-    margin-right: 100px;
     margin-top: -10px;
     padding: 10px;
     box-sizing: border-box;    /* Ensure padding doesn't exceed container size */
@@ -311,7 +311,9 @@ input[type="text"] {
 .or-sign {
     font-size: 24px;
     font-weight: bold;
-    margin: 50px 40px;
+    margin-top: 50px;
+    margin-left: 30px;
+    margin-right: 30px;
     color: darkblue;
     position: relative;
     white-space: nowrap;
@@ -330,3 +332,54 @@ input[type="text"] {
 .remove-btn:hover {
     color: darkred;
 }
+
+.action-btn {
+    background-color: #0056b3;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+    margin: 10px;
+}
+
+.action-btn:hover {
+    background-color: cornflowerblue;
+}
+
+fieldset {
+    /*padding: 20px;*/
+    padding-bottom: 20px;
+    border: 1px solid darkblue; /* Noticeable blue border */
+    border-radius: 8px; /* Rounded corners */
+    /*background-color: #f9f9f9;*/
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Light shadow for depth */
+}
+legend {
+    font-size: 16px;
+    color: darkblue; /* Matching color with border */
+    padding: 0 10px;
+    background-color: #f9f9f9; /* Match the background */
+    border: 1px solid darkblue;
+    border-radius: 3px;
+}
+
+/*nice 3D container*/
+/*fieldset {
+    width: 320px;
+    padding: 20px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: #f0f0f0;
+    box-shadow: inset 3px 3px 8px #ccc, inset -3px -3px 8px #fff, 5px 5px 10px rgba(0, 0, 0, 0.1);
+}
+legend {
+    font-size: 18px;
+    padding: 0 10px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    box-shadow: inset 1px 1px 3px #ccc, inset -1px -1px 3px #fff;
+}*/
