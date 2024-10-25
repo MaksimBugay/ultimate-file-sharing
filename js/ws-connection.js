@@ -26,9 +26,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const modalContent = document.querySelector('.modal-content');
         if (modalContent) {
             modalContent.style.width = "98%";
-            modalContent.style.marginTop = "1%";
-            modalContent.style.left = "3px";
-            modalContent.style.top = "3px";
+            modalContent.style.marginTop = "0";
+            modalContent.style.marginLeft = '0';
+            modalContent.style.left = "0";
+            modalContent.style.top = "0";
         }
     } else {
         const gridToolBar = document.getElementById("gridToolBar");
