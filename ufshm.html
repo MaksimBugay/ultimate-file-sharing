@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="css/video-player.css">
     <link rel="stylesheet" href="css/ufshm.css">
     <link rel="stylesheet" href="css/bauble.css">
+    <link rel="stylesheet" href="css/consent-dialog.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -41,6 +42,15 @@
     </script>
 </head>
 <body>
+<div id="consentDialog" class="consent-dialog">
+    <div class="dialog-box">
+        <h2>Clipboard Access Request</h2>
+        <p>This website requires access to your clipboard to perform certain actions. Do you want to allow clipboard access?</p>
+        <button id="allowClipboard">Allow</button>
+        <button id="denyClipboard">Deny</button>
+    </div>
+</div>
+
 <span id="channelIndicator" class="bauble"></span>
 <iframe src="html/header.html" width="95%" height="90px" style="border: none; pointer-events: none;"></iframe>
 <div id="usageWarning" class="blue-half-transparent-div">
@@ -48,7 +58,7 @@
     <button class="remove-btn" title="hide warning" onclick="removeParentDiv(this)">&#10006;</button>
 </div>
 
-<div id="expandableDiv">
+<div id="expandableDiv" style="display: none">
     <div>
         <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" class="doc-link"
            target="_blank"
@@ -216,6 +226,7 @@
 <script src="js/jszip.min.js"></script>
 <script src="js/ag-grid-community.min.js"></script>
 
+<script src="js/consent-dialog.js?v=<?= time(); ?>"></script>
 <script src="js/common-utils.js?v=<?= time(); ?>"></script>
 <script src="js/callable-future.js?v=<?= time(); ?>"></script>
 <script src="js/pnotifications.js?v=<?= time(); ?>"></script>

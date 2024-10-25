@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (gridToolBar) {
             gridToolBar.style.display = 'flex';
         }
+        expandableDiv.style.display = "block";
     }
 });
 
