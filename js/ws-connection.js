@@ -338,7 +338,7 @@ function initFileManager() {
                     imgSrc: "../images/copy-link-256.png",
                     buttonTitle: "",
                     clickHandler: (data) => {
-                        copyToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()));
+                        copyTextToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()));
                     }
                 }
             }
@@ -359,9 +359,9 @@ function initFileManager() {
                     buttonTitle: "",
                     clickHandler: (data) => {
                         if (isWorkspaceIdExposed()) {
-                            copyToClipboard(data.password);
+                            copyTextToClipboard(data.password);
                         } else {
-                            copyToClipboard(JSON.stringify(
+                            copyTextToClipboard(JSON.stringify(
                                 {
                                     workspaceId: PushcaClient.ClientObj.workSpaceId,
                                     password: data.password
@@ -523,7 +523,7 @@ function addManifestToManagerGrid(newManifest) {
         const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
         const rowNode = FileManager.gridApi.getRowNode(rowIndex);
         rowNode.setSelected(true, true);
-        copyToClipboard(publicUr);
+        copyTextToClipboard(publicUr);
         if (isMobile()) {
             showNativeShareDialog(newManifest.name, publicUr);
         }
