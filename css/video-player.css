@@ -73,8 +73,9 @@ video {
     height: 15px;
     background-color: red;
     border-radius: 50%;
-    margin-left: 5px; /* Space between 'REC' and the dot */
+    margin-left: 18px; /* Space between 'REC' and the dot */
     margin-right: 5px;
+    margin-top: 15px;
     animation: pulse 1s infinite;
 }
 
