@@ -44,6 +44,3 @@ allowClipboard.addEventListener('click', async function () {
 denyClipboard.addEventListener('click', function () {
     consentDialog.classList.remove('visible');
 });
-
-// Show consent dialog when the page loads if permissions are not granted
-window.onload = checkClipboardAccess;
