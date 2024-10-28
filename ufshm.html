@@ -22,6 +22,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
 
     <link rel="manifest" href="file-sharing-manifest.json">
+    <link rel="canonical" href="https://secure.fileshare.ovh:31443/ufshm.html">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -94,6 +95,9 @@
         <button id="pastFromBufferButton" class="image-button" title="Past content from keyboard buffer">
             <img src="images/past.png" alt="Make a screenshot">
         </button>
+        <button id="transferFileButton" class="image-button" title="Share with transfer group members">
+            <img src="images/file-sharing2.png" alt="Transfer file">
+        </button>
         <div id="dropZone" class="drop-zone">
             To share fast just Drag and Drop your files here
             <div id="download-spinner-main" style="display: none">
@@ -128,11 +132,11 @@
                 <fieldset>
                     <legend>Transfer Group ID</legend>
                     <div class="input-box" style="width: 90%">
-                        <input type="text" placeholder="158-234" style="width: 100%; margin-bottom: 15px"/>
+                        <input type="text" id="transferGroupName" placeholder="158-234" style="width: 100%; margin-bottom: 15px"/>
                     </div>
                     <div class="button-container">
-                        <button type="button" class="action-btn">Join</button>
-                        <button type="button" class="action-btn">Save</button>
+                        <button id="joinTransferGroupBtn" type="button" class="action-btn">Join</button>
+                        <button id="saveTransferGroupBtn" type="button" class="action-btn">Save</button>
                     </div>
                 </fieldset>
             </div>

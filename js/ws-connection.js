@@ -1,5 +1,34 @@
 console.log('ws-connection.js running on', window.location.href);
 
+class FileshareProperties {
+    constructor(transferGroup) {
+        this.transferGroup = transferGroup;
+    }
+
+    getTransferGroupId() {
+        return calculateStringHashCode(this.transferGroup);
+    }
+
+    toJSON() {
+        return {
+            transferGroup: this.transferGroup
+        };
+    }
+
+    static fromObject(jsonObject) {
+        return new FileshareProperties(
+            jsonObject.transferGroup
+        );
+    }
+
+    static fromJSON(jsonString) {
+        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        return this.fromObject(jsonObject);
+    }
+}
+
+const Fileshare = {}
+
 const statusCaption = document.getElementById("statusCaption");
 const channelIndicator = document.getElementById("channelIndicator");
 const addBinaryButton = document.getElementById("addBinaryButton");
@@ -7,6 +36,9 @@ const recordVideoButton = document.getElementById("recordVideoButton");
 const recordAudioButton = document.getElementById("recordAudioButton");
 const expandableDiv = document.getElementById("expandableDiv");
 const pastFromBufferButton = document.getElementById("pastFromBufferButton")
+const transferFileButton = document.getElementById("transferFileButton");
+const saveTransferGroupBtn = document.getElementById("saveTransferGroupBtn");
+const transferGroupName = document.getElementById("transferGroupName");
 let exposeWorkspaceIdCheckBox;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -48,6 +80,11 @@ expandableDiv.addEventListener('mouseover', () => {
 expandableDiv.addEventListener('mouseout', () => {
     expandableDiv.classList.remove('expand');
 });
+
+saveTransferGroupBtn.addEventListener("click", function () {
+    Fileshare.properties = new FileshareProperties(transferGroupName.value);
+    saveFileshareProperties(Fileshare.properties);
+});
 addBinaryButton.addEventListener("click", function () {
     openModal(ContentType.FILE);
 });
@@ -64,13 +101,25 @@ pastFromBufferButton.addEventListener("click", function () {
     openModal(ContentType.COPY_PAST);
 });
 
+transferFileButton.addEventListener("click", function () {
+    openModal(ContentType.FILE_TRANSFER);
+});
+
 let FileManager = {};
 const wsUrl = 'wss://secure.fileshare.ovh:31085';
 let pingIntervalId = null;
 
 FingerprintJS.load().then(fp => {
     fp.get().then(result => {
-        openWsConnection(result.visitorId);
+        openDataBase(result.visitorId, function () {
+            getFileshareProperties(function (fsProperties) {
+                Fileshare.properties = fsProperties;
+                const transferGroup = (fsProperties && fsProperties.transferGroup) ? fsProperties.transferGroup : null;
+                openWsConnection(result.visitorId, fsProperties.getTransferGroupId());
+            }, function (error) {
+                openWsConnection(result.visitorId, null);
+            });
+        });
     });
 });
 
@@ -86,7 +135,7 @@ PushcaClient.onOpenHandler = function () {
             console.log("Connection to DB is healthy");
         }
     }, 30000);
-    openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
+    initFileManager();
     channelIndicator.style.backgroundColor = 'limegreen';
     statusCaption.textContent = "(Exactly one instance of that page should be always open to provide sharing of your files!!!)";
 };
@@ -134,13 +183,13 @@ PushcaClient.onMessageHandler = function (ws, data) {
     }
 }
 
-function openWsConnection(deviceFpId) {
+function openWsConnection(deviceFpId, fileTransferGroupId) {
     if (!PushcaClient.isOpen()) {
         const pClient = new ClientFilter(
             deviceFpId,
             "anonymous-sharing",
             `${calculateStringHashCode(deviceFpId)}`,
-            "ultimate-file-sharing-listener"
+            fileTransferGroupId ? `TRANSFER_GROUP_${fileTransferGroupId}` : "ultimate-file-sharing-listener"
         );
         PushcaClient.openWsConnection(
             wsUrl,

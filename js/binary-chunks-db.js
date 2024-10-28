@@ -2,6 +2,7 @@ const dbNamePrefix = "UfsData";
 let dbName;
 const binaryChunksStoreName = "binaryChunks";
 const binaryManifestsStoreName = "binaryManifests";
+const filesharePropertiesStoreName = "fileshareProperties"
 let IndexDbDeviceId;
 const dbRegistry = new Map();
 
@@ -25,7 +26,7 @@ function openDataBase(deviceFpId, onSuccessHandler) {
         alert("Wrong device id");
     }*/
     dbName = `${dbNamePrefix}_${IndexDbDeviceId}`;
-    const request = indexedDB.open(dbName, 1);
+    const request = indexedDB.open(dbName, 2);
 
     request.onerror = function (event) {
         console.error("Database error: ", event.target.error);
@@ -44,6 +45,10 @@ function openDataBase(deviceFpId, onSuccessHandler) {
             objectStore.createIndex("fileName", "fileName", {unique: true});
             objectStore.createIndex("timestampIdx", "timestamp", {unique: false});
             //console.log(`Store ${binaryManifestsStoreName} was created`);
+        }
+        if (!db.objectStoreNames.contains(filesharePropertiesStoreName)) {
+            const objectStore = db.createObjectStore(filesharePropertiesStoreName, {keyPath: "id"});
+            //console.log(`Store ${filesharePropertiesStoreName} was created`);
         }
     };
 
@@ -65,9 +70,10 @@ function dbConnectionHealthCheck() {
     }
     let transaction;
     try {
-        transaction = db.transaction([binaryChunksStoreName, binaryManifestsStoreName], "readonly");
+        transaction = db.transaction([binaryChunksStoreName, binaryManifestsStoreName, filesharePropertiesStoreName], "readonly");
         transaction.objectStore(binaryChunksStoreName);
         transaction.objectStore(binaryManifestsStoreName);
+        transaction.objectStore(filesharePropertiesStoreName);
         return true;
     } catch (error) {
         console.error("Health check failed: Object store not found", error);
@@ -94,6 +100,105 @@ function getActiveDb() {
         return null;
     }
     return dbRegistry.get(IndexDbDeviceId);
+}
+
+//==============================Fileshare properties queries=========================
+function saveFileshareProperties(fsProperties, onSuccessHandler, onErrorHandler) {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+        if (typeof onErrorHandler === 'function') {
+            onErrorHandler(new Error('Database is not open'));
+        }
+        return;
+    }
+
+    const transaction = db.transaction([filesharePropertiesStoreName], "readwrite");
+    const store = transaction.objectStore(filesharePropertiesStoreName);
+    const timestamp = new Date().getTime();
+    const data = {
+        id: IndexDbDeviceId,
+        properties: JSON.stringify(fsProperties.toJSON()),
+        timestamp: timestamp
+    };
+
+    // First, check if the record already exists
+    const getRequest = store.get(IndexDbDeviceId);
+    getRequest.onsuccess = function (event) {
+        if (event.target.result) {
+            // If record exists, update it
+            const updateRequest = store.put(data);
+            updateRequest.onsuccess = function () {
+                console.log(`Fileshare properties were successfully updated in the database`);
+                if (typeof onSuccessHandler === 'function') {
+                    onSuccessHandler();
+                }
+            };
+            updateRequest.onerror = function (event) {
+                console.error(`Failed to update Fileshare properties in the database`, event.target.error);
+                if (typeof onErrorHandler === 'function') {
+                    onErrorHandler(event);
+                }
+            };
+        } else {
+            // If record does not exist, add it
+            const addRequest = store.add(data);
+            addRequest.onsuccess = function () {
+                console.log(`Fileshare properties were successfully added to the database`);
+                if (typeof onSuccessHandler === 'function') {
+                    onSuccessHandler();
+                }
+            };
+            addRequest.onerror = function (event) {
+                console.error(`Failed to add Fileshare properties to the database`, event.target.error);
+                if (typeof onErrorHandler === 'function') {
+                    onErrorHandler(event);
+                }
+            };
+        }
+    };
+
+    getRequest.onerror = function (event) {
+        console.error(`Failed to retrieve existing Fileshare properties from the database`, event.target.error);
+        if (typeof onErrorHandler === 'function') {
+            onErrorHandler(event);
+        }
+    };
+}
+
+function getFileshareProperties(propertiesConsumer, errorConsumer) {
+    const db = getActiveDb();
+    if (!db) {
+        console.error('Binary chunks DB is not open');
+        return;
+    }
+    const transaction = db.transaction([filesharePropertiesStoreName], "readonly");
+    const store = transaction.objectStore(filesharePropertiesStoreName);
+    const request = store.get(IndexDbDeviceId);
+
+    request.onsuccess = function (event) {
+        const result = event.target.result;
+        if (!result) {
+            console.warn(`No properties were found for Fileshare`);
+            if (typeof propertiesConsumer === 'function') {
+                propertiesConsumer(null);
+            }
+            return;
+        }
+        const fsProperties = FileshareProperties.fromJSON(
+            result.properties
+        );
+        if (typeof propertiesConsumer === 'function') {
+            propertiesConsumer(fsProperties);
+        }
+    };
+
+    request.onerror = function (event) {
+        console.error(`Failed to retrieve Fileshare properties`, event.target.error);
+        if (typeof errorConsumer === 'function') {
+            errorConsumer(event);
+        }
+    };
 }
 
 //==============================Binary Manifests queries=============================

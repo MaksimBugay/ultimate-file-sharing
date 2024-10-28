@@ -3,7 +3,8 @@ const ContentType = Object.freeze({
     LIVE_STREAM: 1,
     VIDEO: 2,
     COPY_PAST: 3,
-    AUDIO:4
+    AUDIO: 4,
+    FILE_TRANSFER: 5
 });
 
 const addBinaryPopup = document.getElementById("addBinaryPopup");
@@ -15,6 +16,8 @@ const encryptFileContentCheckbox = document.getElementById('encryptFileContentCh
 const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckbox');
 const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
+const protectWithPasswordContainer = document.getElementById("protectWithPasswordContainer");
+const transferGroupContainer = document.getElementById("transferGroupContainer");
 const copyPastContainer = document.getElementById('copy-past-container')
 const pastArea = document.getElementById('pasteArea')
 const videoRecorderContainer = document.getElementById('video-recorder-container');
@@ -37,6 +40,7 @@ function openModal(contentType) {
     addBinaryPopup.style.display = 'block';
     if (ContentType.FILE === contentType) {
         fileSelectorContainer.style.display = 'block';
+        document.addEventListener("keydown", selectFileIfEnterWasPressed);
     }
     if (ContentType.VIDEO === contentType) {
         videoRecorderContainer.style.display = 'block';
@@ -53,6 +57,18 @@ function openModal(contentType) {
     if (ContentType.COPY_PAST === contentType) {
         copyPastContainer.style.display = 'block';
         pastArea.focus();
+    }
+    if (ContentType.FILE_TRANSFER === contentType) {
+        protectWithPasswordContainer.style.display = 'none';
+        transferGroupContainer.style.display = 'block';
+        fileSelectorContainer.style.display = 'block';
+        document.addEventListener("keydown", selectFileIfEnterWasPressed);
+    }
+}
+
+function selectFileIfEnterWasPressed(event) {
+    if (event.key === "Enter") {
+        fileInput.click();
     }
 }
 
@@ -83,8 +99,10 @@ function closeModal() {
     videoRecorderContainer.style.display = 'none';
     fileSelectorContainer.style.display = 'none';
     copyPastContainer.style.display = 'none';
+    transferGroupContainer.style.display = 'none';
     fileInput.value = "";
     videoPlayer.style.height = '200px';
+    document.removeEventListener("keydown", selectFileIfEnterWasPressed);
 }
 
 function resetFileInputElement() {
