@@ -104,23 +104,16 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         });
 
         TransferFileHelper.saveTransfer = async function () {
-            await downloadBinaryStream(response, manifest.name, manifest.size);
+            if (window.showSaveFilePicker) {
+                await downloadBinaryStream(response, manifest.name, manifest.size);
+            } else {
+                await downloadBinaryStreamSilently(response, manifest.name, manifest.size, manifest.type);
+            }
         }
         TransferFileHelper.cleanTransfer = function () {
             TransferFileHelper.registry.delete(manifest.id);
         }
         showAcceptFileTransferDialog();
-
-        /*const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        // Create a downloadable link
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = manifest.name;
-        link.click();
-        // Revoke the object URL after the download
-        URL.revokeObjectURL(url);*/
     } else {
         const receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
         if (receiveQueue) {
@@ -193,6 +186,7 @@ async function downloadBinaryStream(response, binaryFileName, contentLength) {
         } else {
             // If content-length is not available, we can't calculate progress
             ftDownloadProgress.removeAttribute('value');
+            ftDownloadProgress.textContent = 'Downloading...';
         }
     }
 
@@ -202,6 +196,32 @@ async function downloadBinaryStream(response, binaryFileName, contentLength) {
     console.log(`File downloaded to: ${fileHandle.name}`);
 }
 
+async function downloadBinaryStreamSilently(response, binaryFileName, contentLength, contentType) {
+    const reader = response.body.getReader();
+    const chunks = [];
+    let receivedLength = 0;
+
+    while (true) {
+        const {done, value} = await reader.read();
+        if (done) {
+            break;
+        }
+        chunks.push(value);
+        receivedLength += value.length;
+
+        if (contentLength) {
+            const progress = Math.round((receivedLength / contentLength) * 100);
+            ftDownloadProgress.value = progress;
+            ftProgressPercentage.textContent = `${progress}%`;
+        } else {
+            // Handle case where content-length is not available
+            ftDownloadProgress.removeAttribute('value');
+            ftDownloadProgress.textContent = 'Downloading...';
+        }
+    }
+    const blob = new Blob(chunks, {type: `${contentType}`});
+    downloadFile(blob, binaryFileName);
+}
 
 TransferFileHelper.transferFile = async function transferFile(file, transferGroupId) {
     const ftManifest = new FileTransferManifest(null, file.name, file.type, file.size);
