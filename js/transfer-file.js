@@ -68,7 +68,20 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
                 'Content-Length': `${manifest.size.toString()}`
             }
         });
-        const blob = await response.blob();
+
+        consentDialog.classList.add('visible');
+        allowClipboard.addEventListener('click', async function () {
+            // Requesting clipboard access on user interaction
+            try {
+                downloadBinaryStream(response, manifest.name, manifest.size);
+                consentDialog.classList.remove('visible');
+            } catch (err) {
+                console.error("Failed receive transferred file operation: ", err);
+                consentDialog.classList.remove('visible');
+            }
+        });
+
+        /*const blob = await response.blob();
         const url = URL.createObjectURL(blob);
 
         // Create a downloadable link
@@ -77,7 +90,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         link.download = manifest.name;
         link.click();
         // Revoke the object URL after the download
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(url);*/
     } else {
         const receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
         if (receiveQueue) {
@@ -98,6 +111,48 @@ async function getChunk(binaryId, order) {
     }
     return receiveQueue[order];
 }
+
+async function downloadBinaryStream(response, binaryFileName, contentLength) {
+    const reader = response.body.getReader();
+
+    // Open the file for writing
+    const options = {
+        suggestedName: binaryFileName
+    };
+    const fileHandle = await window.showSaveFilePicker(options);
+    const writable = await fileHandle.createWritable();
+    //showDownloadProgress();
+
+    let writtenBytes = 0;
+
+    while (true) {
+        const {value, done} = await reader.read();
+
+        if (done) {
+            break;
+        }
+
+        await writable.write({type: 'write', data: value});
+        writtenBytes += value.byteLength;
+
+        // Optional progress update
+        if (contentLength) {
+            const percentComplete = Math.round((writtenBytes / contentLength) * 100);
+            console.log(`Download progress: ${percentComplete}`);
+            //progressBar.value = percentComplete;
+            //progressPercentage.textContent = `${percentComplete}%`;
+        } else {
+            // If content-length is not available, we can't calculate progress
+            //progressBar.removeAttribute('value');
+        }
+    }
+
+    // Close the writable stream
+    await writable.close();
+
+    console.log(`File downloaded to: ${fileHandle.name}`);
+}
+
 
 TransferFileHelper.transferFile = async function transferFile(file, transferGroupId) {
     const ftManifest = new FileTransferManifest(null, file.name, file.type, file.size);
