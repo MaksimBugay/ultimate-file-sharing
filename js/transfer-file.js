@@ -60,6 +60,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
                 controller.close();
             }
         });
+
         // Create a Blob URL from the stream
         const response = new Response(stream, {
             headers: {

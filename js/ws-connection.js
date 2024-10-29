@@ -144,7 +144,8 @@ FingerprintJS.load().then(fp => {
         openDataBase(result.visitorId, function () {
             getFileshareProperties(function (fsProperties) {
                 Fileshare.properties = fsProperties;
-                openWsConnection(result.visitorId, fsProperties.getTransferGroupId());
+                const transferGroupId = fsProperties ? fsProperties.getTransferGroupId() : null;
+                openWsConnection(result.visitorId, transferGroupId);
             }, function (error) {
                 openWsConnection(result.visitorId, null);
             });
