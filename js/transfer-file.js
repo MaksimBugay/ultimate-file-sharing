@@ -41,6 +41,37 @@ class FileTransferManifest {
 const TransferFileHelper = {}
 TransferFileHelper.registry = new Map();
 
+const ftDownloadProgress = document.getElementById("ftDownloadProgress");
+const ftProgressPercentage = document.getElementById("ftProgressPercentage");
+const ftProgressBarContainer = document.getElementById("ftProgressBarContainer");
+const acceptFileTransferDialog = document.getElementById("acceptFileTransferDialog");
+const acceptFileTransferBtn = document.getElementById("acceptFileTransferBtn");
+const denyFileTransferBtn = document.getElementById("denyFileTransferBtn");
+
+acceptFileTransferDialog.addEventListener("click", (event) => {
+    if (event.target === acceptFileTransferDialog) {
+        event.stopPropagation(); // Prevent click from propagating if outside dialog
+    }
+});
+
+acceptFileTransferBtn.addEventListener('click', async function () {
+    try {
+        showDownloadProgress();
+        await TransferFileHelper.saveTransfer().then(() => {
+            hideAcceptFileTransferDialog();
+        });
+    } catch (err) {
+        console.error("Failed receive transferred file operation: ", err);
+        TransferFileHelper.cleanTransfer();
+        hideAcceptFileTransferDialog();
+    }
+});
+
+denyFileTransferBtn.addEventListener('click', function () {
+    TransferFileHelper.cleanTransfer();
+    hideAcceptFileTransferDialog();
+});
+
 TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
     if (binaryWithHeader.order === 0) {
         const manifest = FileTransferManifest.fromBinary(binaryWithHeader.payload);
@@ -54,6 +85,9 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
                 let index = 0;
                 while (index < totalNumberOfChunks) {
                     const chunk = await getChunk(manifest.id, index);
+                    if (!chunk) {
+                        break;
+                    }
                     controller.enqueue(new Uint8Array(chunk));
                     index++;
                 }
@@ -69,17 +103,13 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
             }
         });
 
-        consentDialog.classList.add('visible');
-        allowClipboard.addEventListener('click', async function () {
-            // Requesting clipboard access on user interaction
-            try {
-                downloadBinaryStream(response, manifest.name, manifest.size);
-                consentDialog.classList.remove('visible');
-            } catch (err) {
-                console.error("Failed receive transferred file operation: ", err);
-                consentDialog.classList.remove('visible');
-            }
-        });
+        TransferFileHelper.saveTransfer = async function () {
+            await downloadBinaryStream(response, manifest.name, manifest.size);
+        }
+        TransferFileHelper.cleanTransfer = function () {
+            TransferFileHelper.registry.delete(manifest.id);
+        }
+        showAcceptFileTransferDialog();
 
         /*const blob = await response.blob();
         const url = URL.createObjectURL(blob);
@@ -103,6 +133,9 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
 
 async function getChunk(binaryId, order) {
     const receiveQueue = TransferFileHelper.registry.get(binaryId);
+    if (!receiveQueue) {
+        return null;
+    }
     while (!receiveQueue[order]) {
         await delay(100);
     }
@@ -110,6 +143,25 @@ async function getChunk(binaryId, order) {
         receiveQueue[order - 1] = null;
     }
     return receiveQueue[order];
+}
+
+function showAcceptFileTransferDialog() {
+    acceptFileTransferDialog.classList.add('visible');
+}
+
+function hideAcceptFileTransferDialog() {
+    hideDownloadProgress();
+    acceptFileTransferDialog.classList.remove('visible');
+}
+
+function showDownloadProgress() {
+    ftProgressBarContainer.style.display = 'block';
+    //TODO disable buttons here
+}
+
+function hideDownloadProgress() {
+    ftProgressBarContainer.style.display = 'none';
+    //TODO enable buttons here
 }
 
 async function downloadBinaryStream(response, binaryFileName, contentLength) {
@@ -121,7 +173,6 @@ async function downloadBinaryStream(response, binaryFileName, contentLength) {
     };
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
-    //showDownloadProgress();
 
     let writtenBytes = 0;
 
@@ -135,15 +186,13 @@ async function downloadBinaryStream(response, binaryFileName, contentLength) {
         await writable.write({type: 'write', data: value});
         writtenBytes += value.byteLength;
 
-        // Optional progress update
         if (contentLength) {
             const percentComplete = Math.round((writtenBytes / contentLength) * 100);
-            console.log(`Download progress: ${percentComplete}`);
-            //progressBar.value = percentComplete;
-            //progressPercentage.textContent = `${percentComplete}%`;
+            ftDownloadProgress.value = percentComplete;
+            ftProgressPercentage.textContent = `${percentComplete}%`;
         } else {
             // If content-length is not available, we can't calculate progress
-            //progressBar.removeAttribute('value');
+            ftDownloadProgress.removeAttribute('value');
         }
     }
 

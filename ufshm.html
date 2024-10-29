@@ -52,6 +52,19 @@
     </div>
 </div>
 
+<div id="acceptFileTransferDialog" class="consent-dialog">
+    <div class="dialog-box">
+        <h2>File transfer request</h2>
+        <p>Do you want to save file?</p>
+        <button id="acceptFileTransferBtn">Accept</button>
+        <button id="denyFileTransferBtn">Deny</button>
+        <div id="ftProgressBarContainer" style="display: none">
+            <progress id="ftDownloadProgress" value="0" max="100" style="width: 100%"></progress>
+            <span id="ftProgressPercentage">0%</span>
+        </div>
+    </div>
+</div>
+
 <span id="channelIndicator" class="bauble"></span>
 <iframe src="html/header.html" width="95%" height="90px" style="border: none; pointer-events: none;"></iframe>
 <div id="usageWarning" class="blue-half-transparent-div">
