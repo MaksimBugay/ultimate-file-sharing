@@ -7,6 +7,8 @@ const ContentType = Object.freeze({
     FILE_TRANSFER: 5
 });
 
+const AddBinaryWidget = {}
+
 const addBinaryPopup = document.getElementById("addBinaryPopup");
 const closeButton = document.querySelector('.close');
 
@@ -37,6 +39,8 @@ passwordField.addEventListener('input', function () {
 });
 
 function openModal(contentType) {
+    AddBinaryWidget.contentType = contentType;
+
     addBinaryPopup.style.display = 'block';
     if (ContentType.FILE === contentType) {
         fileSelectorContainer.style.display = 'block';
@@ -63,6 +67,10 @@ function openModal(contentType) {
         transferGroupContainer.style.display = 'block';
         fileSelectorContainer.style.display = 'block';
         document.addEventListener("keydown", selectFileIfEnterWasPressed);
+        if (Fileshare.properties && Fileshare.properties.transferGroup) {
+            transferGroupName.value = Fileshare.properties.transferGroup;
+            postJoinActions();
+        }
     }
 }
 
@@ -266,6 +274,9 @@ async function processListOfFiles(files) {
 }
 
 async function addFileToRegistry(file) {
+    if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
+        return TransferFileHelper.transferFile(file, calculateStringHashCode(transferGroupName.value));
+    }
     if (file) {
         const binaryId = uuid.v4().toString();
         const slices = await readFileToChunkArray(file);

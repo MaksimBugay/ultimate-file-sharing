@@ -6,6 +6,9 @@ class FileshareProperties {
     }
 
     getTransferGroupId() {
+        if (!this.transferGroup) {
+            return null;
+        }
         return calculateStringHashCode(this.transferGroup);
     }
 
@@ -38,6 +41,8 @@ const expandableDiv = document.getElementById("expandableDiv");
 const pastFromBufferButton = document.getElementById("pastFromBufferButton")
 const transferFileButton = document.getElementById("transferFileButton");
 const saveTransferGroupBtn = document.getElementById("saveTransferGroupBtn");
+const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
+const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const transferGroupName = document.getElementById("transferGroupName");
 let exposeWorkspaceIdCheckBox;
 
@@ -85,6 +90,31 @@ saveTransferGroupBtn.addEventListener("click", function () {
     Fileshare.properties = new FileshareProperties(transferGroupName.value);
     saveFileshareProperties(Fileshare.properties);
 });
+
+joinTransferGroupBtn.addEventListener("click", function () {
+    alert('join');
+    //TODO place re-connect logic here
+    postJoinActions();
+});
+
+leaveTransferGroupBtn.addEventListener("click", function () {
+    alert('leave');
+    //TODO place re-connect logic here
+    postLeaveActions();
+});
+
+function postJoinActions() {
+    joinTransferGroupBtn.disabled = true;
+    leaveTransferGroupBtn.disabled = false;
+    transferGroupName.readOnly = true;
+}
+
+function postLeaveActions() {
+    joinTransferGroupBtn.disabled = false;
+    leaveTransferGroupBtn.disabled = true;
+    transferGroupName.readOnly = false;
+}
+
 addBinaryButton.addEventListener("click", function () {
     openModal(ContentType.FILE);
 });
@@ -114,7 +144,6 @@ FingerprintJS.load().then(fp => {
         openDataBase(result.visitorId, function () {
             getFileshareProperties(function (fsProperties) {
                 Fileshare.properties = fsProperties;
-                const transferGroup = (fsProperties && fsProperties.transferGroup) ? fsProperties.transferGroup : null;
                 openWsConnection(result.visitorId, fsProperties.getTransferGroupId());
             }, function (error) {
                 openWsConnection(result.visitorId, null);
@@ -189,7 +218,7 @@ function openWsConnection(deviceFpId, fileTransferGroupId) {
             deviceFpId,
             "anonymous-sharing",
             `${calculateStringHashCode(deviceFpId)}`,
-            fileTransferGroupId ? `TRANSFER_GROUP_${fileTransferGroupId}` : "ultimate-file-sharing-listener"
+            fileTransferGroupId ? `TRANSFER_GROUP_${fileTransferGroupId}` : "ultimate-file-sharing"
         );
         PushcaClient.openWsConnection(
             wsUrl,

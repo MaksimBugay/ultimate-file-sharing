@@ -350,6 +350,12 @@ input[type="text"] {
     background-color: cornflowerblue;
 }
 
+.action-btn:disabled {
+    background-color: gray;
+    cursor: not-allowed;
+    color: #d3d3d3;
+}
+
 fieldset {
     /*padding: 20px;*/
     padding-bottom: 20px;

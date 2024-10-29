@@ -1,7 +1,8 @@
 const BinaryType = Object.freeze({
     FILE: 0,
     MEDIA_STREAM: 1,
-    BINARY_MESSAGE: 2
+    BINARY_MESSAGE: 2,
+    FILE_TRANSFER: 3
 });
 
 const DatagramState = Object.freeze({

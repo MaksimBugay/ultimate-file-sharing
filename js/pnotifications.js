@@ -1045,6 +1045,38 @@ PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, wi
     return result;
 }
 
+PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode, arrayBuffer) {
+    if (isEmpty(PushcaClient.ws)) {
+        return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
+    }
+    if (PushcaClient.ws.readyState !== window.WebSocket.OPEN) {
+        const errorMsg = `WebSocket is not open. State: ${PushcaClient.ws.readyState}`;
+        console.error(errorMsg);
+        return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
+    }
+
+    const customHeader = buildPushcaBinaryHeader(
+        BinaryType.FILE_TRANSFER, destHashCode, false, binaryId, order
+    );
+    const combinedBuffer = new ArrayBuffer(customHeader.length + arrayBuffer.byteLength);
+    const combinedView = new Uint8Array(combinedBuffer);
+    combinedView.set(customHeader, 0);
+    combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
+
+    const id = buildSharedFileChunkId(binaryId, order, destHashCode);
+    const numberOfRepeat = 3;
+    const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
+        60_000, id, numberOfRepeat, function () {
+            PushcaClient.ws.send(combinedBuffer);
+            //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
+        }
+    );
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log(`Failed send chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);
+    }
+    return result;
+}
+
 window.addEventListener('beforeunload', function () {
     cleanRefreshBrokenConnectionInterval();
     if (isNotEmpty(PushcaClient.ws)) {
