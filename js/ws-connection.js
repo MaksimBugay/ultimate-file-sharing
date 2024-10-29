@@ -212,6 +212,8 @@ PushcaClient.onMessageHandler = function (ws, data) {
     }
 }
 
+PushcaClient.onFileTransferChunkHandler = TransferFileHelper.processedReceivedChunk;
+
 function openWsConnection(deviceFpId, fileTransferGroupId) {
     if (!PushcaClient.isOpen()) {
         const pClient = new ClientFilter(

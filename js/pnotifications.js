@@ -408,6 +408,7 @@ PushcaClient.onMessageHandler = null;
 PushcaClient.onChannelEventHandler = null;
 PushcaClient.onChannelMessageHandler = null;
 PushcaClient.onDataHandler = null;
+PushcaClient.onFileTransferChunkHandler = null;
 PushcaClient.onUploadBinaryAppealHandler = null;
 PushcaClient.onBinaryManifestHandler = null;
 PushcaClient.onFinalizedBinaryHandler = null;
@@ -494,6 +495,10 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                             }
                         }
                     });
+                } else if (BinaryType.FILE_TRANSFER === binaryWithHeader.binaryType) {
+                    if (typeof PushcaClient.onFileTransferChunkHandler === 'function') {
+                        PushcaClient.onFileTransferChunkHandler(binaryWithHeader);
+                    }
                 } else {
                     console.warn(`Unassigned binary chunk was received: binaryId = ${binaryWithHeader.binaryId}, order = ${binaryWithHeader.order}`);
                 }

@@ -58,6 +58,11 @@ function stringToArrayBuffer(str) {
     return uint8Array.buffer;
 }
 
+function arrayBufferToString(buffer) {
+    const decoder = new TextDecoder();
+    return decoder.decode(buffer);
+}
+
 function byteArrayToString(byteArray) {
     const decoder = new TextDecoder();
     return decoder.decode(byteArray);

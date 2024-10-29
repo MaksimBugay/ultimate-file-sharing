@@ -1,6 +1,6 @@
 class FileTransferManifest {
-    constructor(name, type, size) {
-        this.id = uuid.v4().toString();
+    constructor(id, name, type, size) {
+        this.id = id ? id : uuid.v4().toString();
         this.name = name;
         this.type = type;
         this.size = size;
@@ -18,12 +18,88 @@ class FileTransferManifest {
     toBinaryChunk() {
         return stringToArrayBuffer(JSON.stringify(this.toJSON()));
     }
+
+    static fromObject(jsonObject) {
+        return new FileTransferManifest(
+            jsonObject.id,
+            jsonObject.name,
+            jsonObject.type,
+            jsonObject.size
+        );
+    }
+
+    static fromJSON(jsonString) {
+        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        return this.fromObject(jsonObject);
+    }
+
+    static fromBinary(arrayBuffer) {
+        return FileTransferManifest.fromJSON(arrayBufferToString(arrayBuffer));
+    }
 }
 
 const TransferFileHelper = {}
+TransferFileHelper.registry = new Map();
+
+TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
+    if (binaryWithHeader.order === 0) {
+        const manifest = FileTransferManifest.fromBinary(binaryWithHeader.payload);
+        console.log(JSON.stringify(manifest.toJSON()));
+
+        const totalNumberOfChunks = Math.ceil(Math.ceil(manifest.size / MemoryBlock.MB));
+        TransferFileHelper.registry.set(binaryWithHeader.binaryId, new Array(totalNumberOfChunks).fill(null));
+        // Define a stream to manage chunked downloads
+        const stream = new ReadableStream({
+            async start(controller) {
+                let index = 0;
+                while (index < totalNumberOfChunks) {
+                    const chunk = await getChunk(manifest.id, index);
+                    controller.enqueue(new Uint8Array(chunk));
+                    index++;
+                }
+                controller.close();
+            }
+        });
+        // Create a Blob URL from the stream
+        const response = new Response(stream, {
+            headers: {
+                'Content-Type': `${manifest.type}`,
+                'Content-Length': `${manifest.size.toString()}`
+            }
+        });
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        // Create a downloadable link
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = manifest.name;
+        link.click();
+        // Revoke the object URL after the download
+        URL.revokeObjectURL(url);
+    } else {
+        const receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
+        if (receiveQueue) {
+            receiveQueue[binaryWithHeader.order - 1] = binaryWithHeader.payload;
+        } else {
+            console.warn(`Unassigned transferred chunk was received: binaryId = ${binaryWithHeader.binaryId}, order = ${binaryWithHeader.order}`);
+        }
+    }
+}
+
+async function getChunk(binaryId, order) {
+    const receiveQueue = TransferFileHelper.registry.get(binaryId);
+    while (!receiveQueue[order]) {
+        await delay(100);
+    }
+    if (order > 0) {
+        receiveQueue[order - 1] = null;
+    }
+    return receiveQueue[order];
+}
 
 TransferFileHelper.transferFile = async function transferFile(file, transferGroupId) {
-    const ftManifest = new FileTransferManifest(file.name, file.type, file.size);
+    const ftManifest = new FileTransferManifest(null, file.name, file.type, file.size);
 
     const result = await PushcaClient.transferBinaryChunk(
         ftManifest.id,
@@ -37,6 +113,7 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
     }
 
     await readFileSequentially(file, async function (order, arrayBuffer) {
+        //console.log(`Send chunk ${order}`);
         const result = await PushcaClient.transferBinaryChunk(
             ftManifest.id,
             order,
@@ -44,7 +121,6 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
             arrayBuffer
         );
     });
-    //alert(JSON.stringify(ftManifest.toJSON()));
 }
 
 async function readFileSequentially(file, chunkHandler) {
@@ -62,7 +138,7 @@ async function readFileSequentially(file, chunkHandler) {
             sliceNumber++;
 
             if (typeof chunkHandler === 'function') {
-               await chunkHandler(sliceNumber, arrayBuffer);
+                await chunkHandler(sliceNumber, arrayBuffer);
             }
 
             if (offset < fileSize) {
