@@ -52,21 +52,21 @@ async function readFileSequentially(file, chunkHandler) {
     let offset = 0;
     let sliceNumber = 0;
 
-    function readNextChunk() {
+    async function readNextChunk() {
         const reader = new FileReader();
 
-        reader.onload = function (e) {
+        reader.onload = async function (e) {
             const arrayBuffer = e.target.result;
 
             offset += MemoryBlock.MB;
             sliceNumber++;
 
             if (typeof chunkHandler === 'function') {
-                chunkHandler(sliceNumber, arrayBuffer);
+               await chunkHandler(sliceNumber, arrayBuffer);
             }
 
             if (offset < fileSize) {
-                readNextChunk();
+                await readNextChunk();
             } else {
                 console.log('File read completed.');
             }
