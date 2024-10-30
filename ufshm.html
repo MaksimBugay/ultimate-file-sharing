@@ -46,7 +46,8 @@
 <div id="consentDialog" class="consent-dialog">
     <div class="dialog-box">
         <h2>Clipboard Access Request</h2>
-        <p>This website requires access to your clipboard to perform certain actions. Do you want to allow clipboard access?</p>
+        <p>This website requires access to your clipboard to perform certain actions. Do you want to allow clipboard
+            access?</p>
         <button id="allowClipboard">Allow</button>
         <button id="denyClipboard">Deny</button>
     </div>
@@ -67,9 +68,23 @@
 
 <span id="channelIndicator" class="bauble"></span>
 <iframe src="html/header.html" width="95%" height="90px" style="border: none; pointer-events: none;"></iframe>
-<div id="usageWarning" class="blue-half-transparent-div">
+<div id="usageWarning" class="blue-right-half-transparent-div">
     <h2 id="statusCaption" style="color: crimson; text-align: center; margin: 0">(Transfer channel is broken)</h2>
-    <button class="remove-btn" title="hide warning" onclick="removeParentDiv(this)">&#10006;</button>
+    <button class="remove-btn" title="hide warning" style="margin-left: 150px" onclick="removeParentDiv(this)">
+        &#10006;
+    </button>
+</div>
+<div id="connectionInfo" class="blue-left-half-transparent-div">
+    <div style="width: 100%; justify-content: right; align-items: flex-end; display: flex">
+        <div style="width: 98%; display: flex; justify-content: left; align-items: flex-start">
+            <h2 id="deviceIdCaption" style="color: darkslategray; text-align: left; margin: 0">Device ID: (some id)</h2>
+            <h2 id="transferGroupCaption" style="color: darkslategray; text-align: left; margin: 0 0 0 25px">
+                Transfer Group: (some id)</h2>
+        </div>
+        <button class="remove-btn" title="hide info" onclick="removeParentDiv(this)">
+            &#10006;
+        </button>
+    </div>
 </div>
 
 <div id="expandableDiv" style="display: none">
@@ -145,7 +160,8 @@
                 <fieldset>
                     <legend>Transfer Group ID</legend>
                     <div class="input-box" style="width: 90%">
-                        <input type="text" id="transferGroupName" placeholder="158-234" style="width: 100%; margin-bottom: 15px"/>
+                        <input type="text" id="transferGroupName" placeholder="158-234"
+                               style="width: 100%; margin-bottom: 15px"/>
                     </div>
                     <div class="button-container">
                         <button id="joinTransferGroupBtn" type="button" class="action-btn">Join</button>

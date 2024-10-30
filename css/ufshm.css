@@ -17,7 +17,7 @@ body {
     background-color: azure;*/
 }
 
-.blue-half-transparent-div {
+.blue-right-half-transparent-div {
     width: 100%;
     background: rgba(135, 206, 235, 0.85);
     /*margin-left: 250px;
@@ -25,9 +25,21 @@ body {
     padding-top: 5px;
     padding-bottom: 5px;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    justify-content: right;
+    align-items: flex-end;
     /*border-radius: 10px;*/
+}
+
+.blue-left-half-transparent-div {
+    /*width: 100%;*/
+    background: rgba(135, 206, 235, 0.85);
+    padding-left: 20px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    font-size: 12px;
+    display: flex;
+    justify-content: left;
+    align-items: flex-start;
 }
 
 .green-half-transparent-div {
@@ -326,7 +338,7 @@ input[type="text"] {
      font-size: 16px;
      font-weight: bold;
      cursor: pointer;
-     margin-left: 100px;
+     margin-right: 50px;
  }
 
 .remove-btn:hover {

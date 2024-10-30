@@ -46,6 +46,23 @@ const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const transferGroupName = document.getElementById("transferGroupName");
 let exposeWorkspaceIdCheckBox;
 
+function updateDeviceIdCaption(id) {
+    const deviceIdCaption = document.getElementById("deviceIdCaption");
+    if (deviceIdCaption) {
+        deviceIdCaption.textContent = `Device ID: ${id}`;
+    }
+}
+
+function updateTransferGroupCaption(group) {
+    const transferGroupCaption = document.getElementById("transferGroupCaption");
+    if (transferGroupCaption) {
+        transferGroupCaption.style.display = 'block';
+        transferGroupCaption.textContent = `Transfer Group: ${group}`;
+    } else {
+        transferGroupCaption.style.display = 'none';
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     if (isMobile()) {
         const dropZone = document.getElementById('dropZone');
@@ -142,12 +159,15 @@ let pingIntervalId = null;
 FingerprintJS.load().then(fp => {
     fp.get().then(result => {
         openDataBase(result.visitorId, function () {
+            updateDeviceIdCaption(result.visitorId);
             getFileshareProperties(function (fsProperties) {
                 Fileshare.properties = fsProperties;
                 const transferGroupId = fsProperties ? fsProperties.getTransferGroupId() : null;
                 openWsConnection(result.visitorId, transferGroupId);
+                updateTransferGroupCaption(Fileshare.properties.transferGroup);
             }, function (error) {
                 openWsConnection(result.visitorId, null);
+                updateTransferGroupCaption(null);
             });
         });
     });
