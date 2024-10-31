@@ -1,5 +1,6 @@
 const MemoryBlock = Object.freeze({
     MB: 1024 * 1024,
+    MB10: 10 * 1024 * 1024,
     MB100: 100 * 1024 * 1024,
     GB: 1024 * 1024 * 1024
 });

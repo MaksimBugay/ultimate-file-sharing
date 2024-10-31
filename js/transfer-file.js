@@ -40,6 +40,7 @@ class FileTransferManifest {
 
 const TransferFileHelper = {}
 TransferFileHelper.registry = new Map();
+TransferFileHelper.blockSize = MemoryBlock.MB;
 
 const ftDownloadProgress = document.getElementById("ftDownloadProgress");
 const ftProgressPercentage = document.getElementById("ftProgressPercentage");
@@ -58,6 +59,7 @@ acceptFileTransferBtn.addEventListener('click', async function () {
     try {
         showDownloadProgress();
         await TransferFileHelper.saveTransfer().then(() => {
+            TransferFileHelper.cleanTransfer();
             hideAcceptFileTransferDialog();
         });
     } catch (err) {
@@ -77,7 +79,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         const manifest = FileTransferManifest.fromBinary(binaryWithHeader.payload);
         console.log(JSON.stringify(manifest.toJSON()));
 
-        const totalNumberOfChunks = Math.ceil(Math.ceil(manifest.size / MemoryBlock.MB));
+        const totalNumberOfChunks = Math.ceil(Math.ceil(manifest.size / TransferFileHelper.blockSize));
         TransferFileHelper.registry.set(binaryWithHeader.binaryId, new Array(totalNumberOfChunks).fill(null));
         // Define a stream to manage chunked downloads
         const stream = new ReadableStream({
@@ -259,7 +261,7 @@ async function readFileSequentially(file, chunkHandler) {
         reader.onload = async function (e) {
             const arrayBuffer = e.target.result;
 
-            offset += MemoryBlock.MB;
+            offset += TransferFileHelper.blockSize;
             sliceNumber++;
 
             if (typeof chunkHandler === 'function') {
@@ -277,13 +279,13 @@ async function readFileSequentially(file, chunkHandler) {
             console.error("Error reading file:", e);
         };
 
-        const blob = file.slice(offset, offset + MemoryBlock.MB);
+        const blob = file.slice(offset, offset + TransferFileHelper.blockSize);
         reader.readAsArrayBuffer(blob);
     }
 
-    readNextChunk();
+    await readNextChunk();
 
-    while (sliceNumber < Math.ceil(Math.ceil(fileSize / MemoryBlock.MB))) {
+    while (sliceNumber < Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))) {
         await delay(100);
     }
 }

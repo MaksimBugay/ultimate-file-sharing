@@ -12,6 +12,10 @@ class FileshareProperties {
         return calculateStringHashCode(this.transferGroup);
     }
 
+    setTransferGroup(group) {
+        this.transferGroup = group;
+    }
+
     toJSON() {
         return {
             transferGroup: this.transferGroup
@@ -30,7 +34,8 @@ class FileshareProperties {
     }
 }
 
-const Fileshare = {}
+const Fileshare = {};
+Fileshare.noTransferGroupApplicationId = "ultimate-file-sharing";
 
 const statusCaption = document.getElementById("statusCaption");
 const channelIndicator = document.getElementById("channelIndicator");
@@ -40,7 +45,6 @@ const recordAudioButton = document.getElementById("recordAudioButton");
 const expandableDiv = document.getElementById("expandableDiv");
 const pastFromBufferButton = document.getElementById("pastFromBufferButton")
 const transferFileButton = document.getElementById("transferFileButton");
-const saveTransferGroupBtn = document.getElementById("saveTransferGroupBtn");
 const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const transferGroupName = document.getElementById("transferGroupName");
@@ -53,9 +57,16 @@ function updateDeviceIdCaption(id) {
     }
 }
 
-function updateTransferGroupCaption(group) {
+function updateTransferGroupCaption() {
     const transferGroupCaption = document.getElementById("transferGroupCaption");
-    if (transferGroupCaption) {
+    if (!transferGroupCaption) {
+        return;
+    }
+    let group = null;
+    if (Fileshare.properties && Fileshare.properties.transferGroup) {
+        group = Fileshare.properties.transferGroup;
+    }
+    if (group) {
         transferGroupCaption.style.display = 'block';
         transferGroupCaption.textContent = `Transfer Group: ${group}`;
     } else {
@@ -103,33 +114,52 @@ expandableDiv.addEventListener('mouseout', () => {
     expandableDiv.classList.remove('expand');
 });
 
-saveTransferGroupBtn.addEventListener("click", function () {
-    Fileshare.properties = new FileshareProperties(transferGroupName.value);
-    saveFileshareProperties(Fileshare.properties);
-});
-
 joinTransferGroupBtn.addEventListener("click", function () {
-    alert('join');
-    //TODO place re-connect logic here
-    postJoinActions();
+    if (!transferGroupName.value) {
+        alert('Transfer group is not defined');
+        transferGroupName.focus();
+        return;
+    }
+    Fileshare.properties.setTransferGroup(transferGroupName.value);
+    saveFileshareProperties(Fileshare.properties);
+    PushcaClient.changeClientObject(
+        new ClientFilter(
+            PushcaClient.ClientObj.workSpaceId,
+            PushcaClient.ClientObj.accountId,
+            PushcaClient.ClientObj.deviceId,
+            Fileshare.properties.getTransferGroupId()
+        )
+    );
+    postJoinTransferGroupActions();
 });
 
 leaveTransferGroupBtn.addEventListener("click", function () {
-    alert('leave');
-    //TODO place re-connect logic here
-    postLeaveActions();
+    Fileshare.properties.setTransferGroup(null);
+    saveFileshareProperties(Fileshare.properties);
+    PushcaClient.changeClientObject(
+        new ClientFilter(
+            PushcaClient.ClientObj.workSpaceId,
+            PushcaClient.ClientObj.accountId,
+            PushcaClient.ClientObj.deviceId,
+            Fileshare.noTransferGroupApplicationId
+        )
+    );
+    postLeaveTransferGroupActions();
 });
 
-function postJoinActions() {
+function postJoinTransferGroupActions() {
     joinTransferGroupBtn.disabled = true;
     leaveTransferGroupBtn.disabled = false;
     transferGroupName.readOnly = true;
+    transferGroupName.value = Fileshare.properties.transferGroup;
 }
 
-function postLeaveActions() {
+function postLeaveTransferGroupActions() {
     joinTransferGroupBtn.disabled = false;
     leaveTransferGroupBtn.disabled = true;
     transferGroupName.readOnly = false;
+    transferGroupName.value = '';
+    transferGroupName.focus();
 }
 
 addBinaryButton.addEventListener("click", function () {
@@ -154,7 +184,19 @@ transferFileButton.addEventListener("click", function () {
 
 let FileManager = {};
 const wsUrl = 'wss://secure.fileshare.ovh:31085';
-let pingIntervalId = null;
+let pingIntervalId = window.setInterval(function () {
+    PushcaClient.sendPing();
+    if (!dbConnectionHealthCheck()) {
+        closeDataBase();
+        openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
+    } else {
+        console.log("Connection to DB is healthy");
+    }
+}, 30000);
+
+window.addEventListener("beforeunload", function () {
+    clearInterval(pingIntervalId);
+});
 
 FingerprintJS.load().then(fp => {
     fp.get().then(result => {
@@ -164,10 +206,9 @@ FingerprintJS.load().then(fp => {
                 Fileshare.properties = fsProperties;
                 const transferGroupId = fsProperties ? fsProperties.getTransferGroupId() : null;
                 openWsConnection(result.visitorId, transferGroupId);
-                updateTransferGroupCaption(Fileshare.properties.transferGroup);
             }, function (error) {
+                Fileshare.properties = null;
                 openWsConnection(result.visitorId, null);
-                updateTransferGroupCaption(null);
             });
         });
     });
@@ -176,23 +217,13 @@ FingerprintJS.load().then(fp => {
 PushcaClient.verbose = true;
 PushcaClient.onOpenHandler = function () {
     console.log("Connected to Pushca!");
-    pingIntervalId = window.setInterval(function () {
-        PushcaClient.sendPing();
-        if (!dbConnectionHealthCheck()) {
-            closeDataBase();
-            openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
-        } else {
-            console.log("Connection to DB is healthy");
-        }
-    }, 30000);
+    updateTransferGroupCaption();
     initFileManager();
     channelIndicator.style.backgroundColor = 'limegreen';
     statusCaption.textContent = "(Exactly one instance of that page should be always open to provide sharing of your files!!!)";
 };
 
 PushcaClient.onCloseHandler = function (ws, event) {
-    window.clearInterval(pingIntervalId);
-    closeDataBase();
     statusCaption.textContent = "(Transfer channel is broken)";
     channelIndicator.style.backgroundColor = 'red';
     if (!event.wasClean) {
@@ -241,7 +272,7 @@ function openWsConnection(deviceFpId, fileTransferGroupId) {
             deviceFpId,
             "anonymous-sharing",
             `${calculateStringHashCode(deviceFpId)}`,
-            fileTransferGroupId ? `TRANSFER_GROUP_${fileTransferGroupId}` : "ultimate-file-sharing"
+            fileTransferGroupId ? `TRANSFER_GROUP_${fileTransferGroupId}` : Fileshare.noTransferGroupApplicationId
         );
         PushcaClient.openWsConnection(
             wsUrl,

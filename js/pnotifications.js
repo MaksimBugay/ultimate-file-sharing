@@ -65,6 +65,17 @@ class ClientFilter {
         this.applicationId = applicationId;
     }
 
+    hashCode() {
+        const formattedString = formatString("{0}@@{1}@@{2}@@{3}",
+            this.workSpaceId, this.accountId, this.deviceId, this.applicationId);
+        return calculateStringHashCode(formattedString);
+    }
+
+
+    equals(otherClientFilter) {
+        return this.hashCode() === otherClientFilter.hashCode();
+    }
+
     cloneWithoutDeviceId() {
         return new ClientFilter(
             this.workSpaceId,
@@ -756,7 +767,8 @@ function refreshClientObj(clientObj) {
 PushcaClient.changeClientObject = function (clientObj) {
     if (PushcaClient.ws
         && (PushcaClient.ws.readyState === window.WebSocket.OPEN)
-        && (clientObj.accountId === PushcaClient.ClientObj.accountId)) {
+        && (PushcaClient.ClientObj)
+        && (PushcaClient.ClientObj.equals(clientObj))) {
         return null;
     }
     const old = PushcaClient.ClientObj;

@@ -67,9 +67,12 @@ function openModal(contentType) {
         transferGroupContainer.style.display = 'block';
         fileSelectorContainer.style.display = 'block';
         document.addEventListener("keydown", selectFileIfEnterWasPressed);
-        if (Fileshare.properties && Fileshare.properties.transferGroup) {
-            transferGroupName.value = Fileshare.properties.transferGroup;
-            postJoinActions();
+        if (Fileshare.properties) {
+            if (Fileshare.properties.transferGroup) {
+                postJoinTransferGroupActions();
+            } else {
+                postLeaveTransferGroupActions();
+            }
         }
     }
 }
