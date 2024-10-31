@@ -55,8 +55,28 @@
 
 <div id="acceptFileTransferDialog" class="consent-dialog">
     <div class="dialog-box">
-        <h2>File transfer request</h2>
-        <p>Do you want to save file?</p>
+        <h2>Transfer request</h2>
+        <div style="justify-content: left; align-items: flex-start; text-align: left; margin-bottom: 15px; font-size: 16px;">
+            <fieldset>
+                <legend style="font-size: 20px">File</legend>
+                <div style="display: flex">
+                    <p class="ftrCaption">Name: </p>
+                    <p id="ftrName"></p>
+                </div>
+                <div style="display: flex">
+                    <p class="ftrCaption">Content type: </p>
+                    <p id="ftrType"></p>
+                </div>
+                <div style="display: flex">
+                    <p class="ftrCaption">Size: </p>
+                    <p id="ftrSize"></p>
+                </div>
+                <div style="display: flex">
+                    <p class="ftrCaption">Originator: </p>
+                    <p id="ftrOriginatorDeviceId"></p>
+                </div>
+            </fieldset>
+        </div>
         <button id="acceptFileTransferBtn">Accept</button>
         <button id="denyFileTransferBtn">Deny</button>
         <div id="ftProgressBarContainer" style="display: none">
@@ -145,7 +165,7 @@
             <div id="protectWithPasswordContainer" style="width: 99%">
                 <fieldset>
                     <legend>Protect with</legend>
-                    <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">password (optional)</label>
+                    <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password (optional)</label>
                     <input type="text" style="width: 90%" id="passwordInput"
                            placeholder="Enter strong password to protect your content"/>
                     <div style="">

@@ -1,9 +1,10 @@
 class FileTransferManifest {
-    constructor(id, name, type, size) {
+    constructor(id, name, type, size, originatorDeviceId) {
         this.id = id ? id : uuid.v4().toString();
         this.name = name;
         this.type = type;
         this.size = size;
+        this.originatorDeviceId = originatorDeviceId;
     }
 
     toJSON() {
@@ -11,7 +12,8 @@ class FileTransferManifest {
             id: this.id,
             name: this.name,
             type: this.type,
-            size: this.size
+            size: this.size,
+            originatorDeviceId: this.originatorDeviceId
         };
     }
 
@@ -24,7 +26,8 @@ class FileTransferManifest {
             jsonObject.id,
             jsonObject.name,
             jsonObject.type,
-            jsonObject.size
+            jsonObject.size,
+            jsonObject.originatorDeviceId
         );
     }
 
@@ -48,6 +51,10 @@ const ftProgressBarContainer = document.getElementById("ftProgressBarContainer")
 const acceptFileTransferDialog = document.getElementById("acceptFileTransferDialog");
 const acceptFileTransferBtn = document.getElementById("acceptFileTransferBtn");
 const denyFileTransferBtn = document.getElementById("denyFileTransferBtn");
+const ftrName = document.getElementById("ftrName");
+const ftrType = document.getElementById("ftrType");
+const ftrSize = document.getElementById("ftrSize");
+const ftrOriginatorDeviceId = document.getElementById("ftrOriginatorDeviceId");
 
 acceptFileTransferDialog.addEventListener("click", (event) => {
     if (event.target === acceptFileTransferDialog) {
@@ -115,6 +122,11 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         TransferFileHelper.cleanTransfer = function () {
             TransferFileHelper.registry.delete(manifest.id);
         }
+
+        ftrName.textContent = manifest.name;
+        ftrType.textContent = manifest.type;
+        ftrSize.textContent = manifest.size;
+        ftrOriginatorDeviceId.textContent = manifest.originatorDeviceId;
         showAcceptFileTransferDialog();
     } else {
         const receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
@@ -226,7 +238,9 @@ async function downloadBinaryStreamSilently(response, binaryFileName, contentLen
 }
 
 TransferFileHelper.transferFile = async function transferFile(file, transferGroupId) {
-    const ftManifest = new FileTransferManifest(null, file.name, file.type, file.size);
+    const ftManifest = new FileTransferManifest(
+        null, file.name, file.type, file.size, IndexDbDeviceId
+    );
 
     const result = await PushcaClient.transferBinaryChunk(
         ftManifest.id,
@@ -283,7 +297,7 @@ async function readFileSequentially(file, chunkHandler) {
         reader.readAsArrayBuffer(blob);
     }
 
-    await readNextChunk();
+    readNextChunk();
 
     while (sliceNumber < Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))) {
         await delay(100);
