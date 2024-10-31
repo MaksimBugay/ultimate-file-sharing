@@ -48,7 +48,8 @@ const transferFileButton = document.getElementById("transferFileButton");
 const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const transferGroupName = document.getElementById("transferGroupName");
-let exposeWorkspaceIdCheckBox;
+
+const exposeWorkspaceIdCheckBoxId = "exposeWorkspaceIdCheckBox";
 
 function updateDeviceIdCaption(id) {
     const deviceIdCaption = document.getElementById("deviceIdCaption");
@@ -460,7 +461,7 @@ function initFileManager() {
             {
                 headerComponent: GridHeaderWithCheckBox,
                 headerComponentParams: {
-                    elementId: 'exposeWorkspaceIdCheckBox',
+                    elementId: exposeWorkspaceIdCheckBoxId,
                     headerName: "Public URL",
                     displayName: 'Expose workspace ID'
                 },
@@ -626,6 +627,21 @@ function initFileManager() {
             defaultState: {sort: null}
         });
         FileManager.columnDefs = columnDefs;
+        delay(500).then(() => {
+            const exposeWorkspaceIdCheckBox = document.getElementById(exposeWorkspaceIdCheckBoxId);
+            if (exposeWorkspaceIdCheckBox) {
+                exposeWorkspaceIdCheckBox.addEventListener('change', function () {
+                    document.querySelectorAll(".fm-grid-button").forEach(el0 => {
+                        const url = el0.title;
+                        if (exposeWorkspaceIdCheckBox.checked) {
+                            el0.title = (!url.includes('workspace')) ? url + `?workspace=${PushcaClient.ClientObj.workSpaceId}` : url;
+                        } else {
+                            el0.title = url.replace(`?workspace=${PushcaClient.ClientObj.workSpaceId}`, '');
+                        }
+                    });
+                });
+            }
+        });
     });
 }
 
@@ -692,20 +708,12 @@ function incrementDownloadCounterOfManifestRecord(binaryId) {
 }
 
 function isWorkspaceIdExposed() {
-    if (!exposeWorkspaceIdCheckBox) {
-        exposeWorkspaceIdCheckBox = document.getElementById("exposeWorkspaceIdCheckBox");
-        exposeWorkspaceIdCheckBox.addEventListener('change', function () {
-            document.querySelectorAll(".fm-grid-button").forEach(el0 => {
-                const url = el0.title;
-                if (exposeWorkspaceIdCheckBox.checked) {
-                    el0.title = (!url.includes('workspace')) ? url + `?workspace=${PushcaClient.ClientObj.workSpaceId}` : url;
-                } else {
-                    el0.title = url.replace(`?workspace=${PushcaClient.ClientObj.workSpaceId}`, '');
-                }
-            })
-        });
+    const exposeWorkspaceIdCheckBox = document.getElementById(exposeWorkspaceIdCheckBoxId);
+    if (exposeWorkspaceIdCheckBox) {
+        return exposeWorkspaceIdCheckBox.checked;
+    } else {
+        return false;
     }
-    return exposeWorkspaceIdCheckBox.checked;
 }
 
 function removeParentDiv(button) {
