@@ -125,7 +125,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
 
         ftrName.textContent = manifest.name;
         ftrType.textContent = manifest.type;
-        ftrSize.textContent = manifest.size;
+        ftrSize.textContent = `${Math.round((manifest.size * 100) / MemoryBlock.MB) / 100}`;
         ftrOriginatorDeviceId.textContent = manifest.originatorDeviceId;
         showAcceptFileTransferDialog();
     } else {
@@ -284,26 +284,24 @@ TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, 
         return false;
     }
 
-    mmProgressBarContainer.style.display = 'block';
-    const slices = await blobToArrayBuffers(blob, TransferFileHelper.blockSize);
-    for (let i = 0; i < slices.length; i++) {
-        const result = await PushcaClient.transferBinaryChunk(
-            ftManifest.id,
-            i + 1,
-            transferGroupId,
-            slices[i]
-        );
-        if (WaiterResponseType.ERROR === result.type) {
-            console.error(`Failed file transfer attempt: ${name}`);
-            return false;
+    await executeWithShowProgressBar(async function () {
+        const slices = await blobToArrayBuffers(blob, TransferFileHelper.blockSize);
+        for (let i = 0; i < slices.length; i++) {
+            const result = await PushcaClient.transferBinaryChunk(
+                ftManifest.id,
+                i + 1,
+                transferGroupId,
+                slices[i]
+            );
+            if (WaiterResponseType.ERROR === result.type) {
+                console.error(`Failed file transfer attempt: ${name}`);
+                return false;
+            }
+            const progress = Math.round(((i + 1) / slices.length) * 100);
+            mmDownloadProgress.value = progress;
+            mmProgressPercentage.textContent = `${progress}%`;
         }
-        const progress = Math.round(((i+1) / slices.length) * 100);
-        mmDownloadProgress.value = progress;
-        mmProgressPercentage.textContent = `${progress}%`;
-    }
-    mmDownloadProgress.value = 0;
-    mmProgressPercentage.textContent = `0%`;
-    mmProgressBarContainer.style.display = 'none';
+    });
 }
 
 async function readFileSequentially(file, chunkHandler) {
@@ -345,17 +343,24 @@ async function readFileSequentially(file, chunkHandler) {
         reader.readAsArrayBuffer(blob);
     }
 
+    await executeWithShowProgressBar(async function () {
+        readNextChunk();
+
+        const totalNumberOfSlices = Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))
+        while (sliceNumber < totalNumberOfSlices) {
+            const progress = Math.round((sliceNumber / totalNumberOfSlices) * 100);
+            mmDownloadProgress.value = progress;
+            mmProgressPercentage.textContent = `${progress}%`;
+            await delay(100);
+        }
+    });
+}
+
+async function executeWithShowProgressBar(operation) {
     mmProgressBarContainer.style.display = 'block';
-    readNextChunk();
-
-    const totalNumberOfSlices = Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))
-    while (sliceNumber < totalNumberOfSlices) {
-        const progress = Math.round((sliceNumber / totalNumberOfSlices) * 100);
-        mmDownloadProgress.value = progress;
-        mmProgressPercentage.textContent = `${progress}%`;
-        await delay(100);
+    if (typeof operation === 'function') {
+        await operation();
     }
-
     mmDownloadProgress.value = 0;
     mmProgressPercentage.textContent = `0%`;
     mmProgressBarContainer.style.display = 'none';

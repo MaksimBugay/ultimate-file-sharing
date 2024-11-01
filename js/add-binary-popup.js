@@ -265,6 +265,9 @@ async function processListOfFiles(files) {
         if (files.length === 0) {
             return;
         }
+        if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
+            showSpinnerInButton();
+        }
         let zipArchiveName = zipArchiveNameField.value;
         if (!zipArchiveName) {
             const file0 = files[0];
@@ -282,6 +285,7 @@ async function processListOfFiles(files) {
         // Generate the zip file as a Blob
         const zipBlob = await zip.generateAsync({type: "blob"});
         if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
+            hideSpinnerInButton();
             await TransferFileHelper.transferBlob(
                 zipBlob, zipArchiveName, "application/zip", calculateStringHashCode(transferGroupName.value)
             )
