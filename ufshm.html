@@ -161,7 +161,11 @@
     <div class="modal-content">
         <span class="close">&times;</span>
         <div id="popup-content">
-            <h1>Prepare content for sharing</h1>
+            <h1 id="mainModalHeader">Prepare content for sharing</h1>
+            <div id="mmProgressBarContainer" style="display: none; width: 100%">
+                <progress id="mmDownloadProgress" value="0" max="100" style="width: 100%"></progress>
+                <span id="mmProgressPercentage">0%</span>
+            </div>
             <div id="protectWithPasswordContainer" style="width: 99%">
                 <fieldset>
                     <legend>Protect with</legend>

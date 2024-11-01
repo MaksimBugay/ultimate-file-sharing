@@ -12,6 +12,7 @@ const AddBinaryWidget = {}
 const addBinaryPopup = document.getElementById("addBinaryPopup");
 const closeButton = document.querySelector('.close');
 
+const mainModalHeader = document.getElementById("mainModalHeader");
 const fileInput = document.getElementById('fileInput');
 const passwordField = document.getElementById('passwordInput');
 const encryptFileContentCheckbox = document.getElementById('encryptFileContentCheckbox');
@@ -20,6 +21,9 @@ const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
 const protectWithPasswordContainer = document.getElementById("protectWithPasswordContainer");
 const transferGroupContainer = document.getElementById("transferGroupContainer");
+const mmProgressBarContainer = document.getElementById("mmProgressBarContainer");
+const mmDownloadProgress = document.getElementById("mmDownloadProgress");
+const mmProgressPercentage = document.getElementById("mmProgressPercentage");
 const copyPastContainer = document.getElementById('copy-past-container')
 const pastArea = document.getElementById('pasteArea')
 const videoRecorderContainer = document.getElementById('video-recorder-container');
@@ -40,6 +44,10 @@ passwordField.addEventListener('input', function () {
 
 function openModal(contentType) {
     AddBinaryWidget.contentType = contentType;
+
+    mainModalHeader.textContent = 'Prepare content for sharing';
+    createZipArchiveCheckbox.checked = false;
+    protectWithPasswordContainer.style.display = 'block';
 
     addBinaryPopup.style.display = 'block';
     if (ContentType.FILE === contentType) {
@@ -63,6 +71,7 @@ function openModal(contentType) {
         pastArea.focus();
     }
     if (ContentType.FILE_TRANSFER === contentType) {
+        mainModalHeader.textContent = 'Prepare content for transfer';
         protectWithPasswordContainer.style.display = 'none';
         transferGroupContainer.style.display = 'block';
         fileSelectorContainer.style.display = 'block';
@@ -114,6 +123,7 @@ function closeModal() {
     fileInput.value = "";
     videoPlayer.style.height = '200px';
     document.removeEventListener("keydown", selectFileIfEnterWasPressed);
+    mmProgressBarContainer.style.display = 'none';
 }
 
 function resetFileInputElement() {
@@ -242,8 +252,14 @@ async function processSelectedFiles(event) {
     await processListOfFiles(event.target.files);
 }
 
+function replaceExtensionWithZip(filename) {
+    return filename.replace(/\.[^/.]+$/, ".zip");
+}
+
 async function processListOfFiles(files) {
-    showSpinnerInButton();
+    if (ContentType.FILE_TRANSFER !== AddBinaryWidget.contentType) {
+        showSpinnerInButton();
+    }
     //create zip archive
     if (createZipArchiveCheckbox.checked) {
         if (files.length === 0) {
@@ -252,7 +268,8 @@ async function processListOfFiles(files) {
         let zipArchiveName = zipArchiveNameField.value;
         if (!zipArchiveName) {
             const file0 = files[0];
-            zipArchiveName = file0.webkitRelativePath ? file0.webkitRelativePath.split('/')[0] + '.zip' : `zip-with-${file0.name}`;
+            zipArchiveName = file0.webkitRelativePath ? file0.webkitRelativePath.split('/')[0] : `zip-with-${file0.name}`;
+            zipArchiveName = replaceExtensionWithZip(zipArchiveName);
         } else {
             zipArchiveName = zipArchiveName + '.zip';
         }
@@ -264,16 +281,23 @@ async function processListOfFiles(files) {
 
         // Generate the zip file as a Blob
         const zipBlob = await zip.generateAsync({type: "blob"});
-
-        const binaryId = uuid.v4().toString();
-        const slices = await blobToArrayBuffers(zipBlob, MemoryBlock.MB100);
-        await createAndStoreBinaryFromSlices(slices, binaryId, zipArchiveName, "application/zip");
+        if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
+            await TransferFileHelper.transferBlob(
+                zipBlob, zipArchiveName, "application/zip", calculateStringHashCode(transferGroupName.value)
+            )
+        } else {
+            const binaryId = uuid.v4().toString();
+            const slices = await blobToArrayBuffers(zipBlob, MemoryBlock.MB100);
+            await createAndStoreBinaryFromSlices(slices, binaryId, zipArchiveName, "application/zip");
+        }
     } else {
         for (let i = 0; i < files.length; i++) {
             await addFileToRegistry(files[i]);
         }
     }
-    delay(500).then(() => closeModal());
+    if (ContentType.FILE_TRANSFER !== AddBinaryWidget.contentType) {
+        delay(500).then(() => closeModal());
+    }
 }
 
 async function addFileToRegistry(file) {

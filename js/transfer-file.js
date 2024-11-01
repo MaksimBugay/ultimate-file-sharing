@@ -163,12 +163,16 @@ function hideAcceptFileTransferDialog() {
 
 function showDownloadProgress() {
     ftProgressBarContainer.style.display = 'block';
-    //TODO disable buttons here
+    acceptFileTransferBtn.style.display = 'none';
+    denyFileTransferBtn.style.display = 'none';
 }
 
 function hideDownloadProgress() {
     ftProgressBarContainer.style.display = 'none';
-    //TODO enable buttons here
+    acceptFileTransferBtn.style.display = '';
+    denyFileTransferBtn.style.display = '';
+    ftDownloadProgress.value = 0;
+    ftProgressPercentage.textContent = `0%`;
 }
 
 async function downloadBinaryStream(response, binaryFileName, contentLength) {
@@ -261,7 +265,45 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
             transferGroupId,
             arrayBuffer
         );
+        return WaiterResponseType.SUCCESS === result.type
     });
+}
+
+TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroupId) {
+    const ftManifest = new FileTransferManifest(
+        null, name, type, blob.size, IndexDbDeviceId
+    );
+    const result = await PushcaClient.transferBinaryChunk(
+        ftManifest.id,
+        0,
+        transferGroupId,
+        ftManifest.toBinaryChunk()
+    );
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error(`Failed file transfer attempt: ${name}`);
+        return false;
+    }
+
+    mmProgressBarContainer.style.display = 'block';
+    const slices = await blobToArrayBuffers(blob, TransferFileHelper.blockSize);
+    for (let i = 0; i < slices.length; i++) {
+        const result = await PushcaClient.transferBinaryChunk(
+            ftManifest.id,
+            i + 1,
+            transferGroupId,
+            slices[i]
+        );
+        if (WaiterResponseType.ERROR === result.type) {
+            console.error(`Failed file transfer attempt: ${name}`);
+            return false;
+        }
+        const progress = Math.round(((i+1) / slices.length) * 100);
+        mmDownloadProgress.value = progress;
+        mmProgressPercentage.textContent = `${progress}%`;
+    }
+    mmDownloadProgress.value = 0;
+    mmProgressPercentage.textContent = `0%`;
+    mmProgressBarContainer.style.display = 'none';
 }
 
 async function readFileSequentially(file, chunkHandler) {
@@ -278,14 +320,20 @@ async function readFileSequentially(file, chunkHandler) {
             offset += TransferFileHelper.blockSize;
             sliceNumber++;
 
+            let chunkHandlerResult = true;
             if (typeof chunkHandler === 'function') {
-                await chunkHandler(sliceNumber, arrayBuffer);
+                chunkHandlerResult = await chunkHandler(sliceNumber, arrayBuffer);
             }
 
-            if (offset < fileSize) {
-                await readNextChunk();
+            if (chunkHandlerResult) {
+                if (offset < fileSize) {
+                    await readNextChunk();
+                } else {
+                    console.log('File read completed.');
+                }
             } else {
-                console.log('File read completed.');
+                console.log('Failed file chunk transfer attempt.');
+                //TODO proper message for user is required here
             }
         };
 
@@ -297,9 +345,18 @@ async function readFileSequentially(file, chunkHandler) {
         reader.readAsArrayBuffer(blob);
     }
 
+    mmProgressBarContainer.style.display = 'block';
     readNextChunk();
 
-    while (sliceNumber < Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))) {
+    const totalNumberOfSlices = Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))
+    while (sliceNumber < totalNumberOfSlices) {
+        const progress = Math.round((sliceNumber / totalNumberOfSlices) * 100);
+        mmDownloadProgress.value = progress;
+        mmProgressPercentage.textContent = `${progress}%`;
         await delay(100);
     }
+
+    mmDownloadProgress.value = 0;
+    mmProgressPercentage.textContent = `0%`;
+    mmProgressBarContainer.style.display = 'none';
 }
