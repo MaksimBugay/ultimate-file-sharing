@@ -329,7 +329,7 @@ TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, 
         transferGroupId
     );
     if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
-        console.error(`Failed file transfer attempt: ${file.name}`);
+        console.error(`Failed file transfer attempt: ${name}`);
         return false;
     }
 
@@ -341,7 +341,7 @@ TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, 
                 i + 1,
                 transferGroupId,
                 slices[i],
-                encAndSendResult.result.encryptionContract
+                encAndSendResult.encryptionContract
             );
             if (WaiterResponseType.ERROR === result.type) {
                 console.error(`Failed file transfer attempt: ${name}`);
