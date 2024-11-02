@@ -263,7 +263,7 @@ async function encryptSlicesWithAES(slices) {
     return await encryptWithAES(concatArrayBuffers(slices));
 }
 
-async function decryptAES(slices, base64Key, base64IV) {
+async function decryptAESToArrayBuffer(arrayBuffer, base64Key, base64IV) {
     const key = await crypto.subtle.importKey(
         "raw",
         base64ToArrayBuffer(base64Key),
@@ -276,18 +276,23 @@ async function decryptAES(slices, base64Key, base64IV) {
 
     const iv = base64ToArrayBuffer(base64IV);
 
-    // Convert slices to ArrayBuffer
-    const encryptedContent = concatArrayBuffers(slices);
-
     // Perform decryption
-    const decryptedContent = await crypto.subtle.decrypt(
+    return await crypto.subtle.decrypt(
         {
             name: "AES-GCM",
             iv: iv
         },
         key,
-        encryptedContent
+        arrayBuffer
     );
+}
+
+async function decryptAES(slices, base64Key, base64IV) {
+    // Convert slices to ArrayBuffer
+    const encryptedContent = concatArrayBuffers(slices);
+
+    // Perform decryption
+    const decryptedContent = await decryptAESToArrayBuffer(encryptedContent, base64Key, base64IV)
 
     // Convert decrypted ArrayBuffer back to Blob for download or further use
     return new Blob([new Uint8Array(decryptedContent)], {type: "application/octet-stream"});

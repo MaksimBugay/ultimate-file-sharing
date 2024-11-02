@@ -83,11 +83,34 @@ denyFileTransferBtn.addEventListener('click', function () {
 
 TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
     if (binaryWithHeader.order === 0) {
-        const manifest = FileTransferManifest.fromBinary(binaryWithHeader.payload);
+        if (!(Fileshare.properties && Fileshare.properties.transferGroup)) {
+            console.warn("Transfer group is not defined but transfer request was received");
+            return;
+        }
+        const transferGroup = Fileshare.properties.transferGroup;
+        const tRequestStr = byteArrayToString(binaryWithHeader.payload);
+        const parts = tRequestStr.split("|");
+        const encryptionContract = await EncryptionContract.fromTransferableString(
+            parts[1],
+            transferGroup,
+            stringToByteArray("test")
+        );
+        const payload = await decryptAESToArrayBuffer(
+            base64ToArrayBuffer(parts[0]),
+            encryptionContract.base64Key,
+            encryptionContract.base64IV
+        );
+        const manifest = FileTransferManifest.fromBinary(payload);
         console.log(JSON.stringify(manifest.toJSON()));
 
         const totalNumberOfChunks = Math.ceil(Math.ceil(manifest.size / TransferFileHelper.blockSize));
-        TransferFileHelper.registry.set(binaryWithHeader.binaryId, new Array(totalNumberOfChunks).fill(null));
+        TransferFileHelper.registry.set(
+            binaryWithHeader.binaryId,
+            {
+                encryptionContract: encryptionContract,
+                data: new Array(totalNumberOfChunks).fill(null)
+            }
+        );
         // Define a stream to manage chunked downloads
         const stream = new ReadableStream({
             async start(controller) {
@@ -131,7 +154,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
     } else {
         const receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
         if (receiveQueue) {
-            receiveQueue[binaryWithHeader.order - 1] = binaryWithHeader.payload;
+            receiveQueue.data[binaryWithHeader.order - 1] = binaryWithHeader.payload;
         } else {
             console.warn(`Unassigned transferred chunk was received: binaryId = ${binaryWithHeader.binaryId}, order = ${binaryWithHeader.order}`);
         }
@@ -143,13 +166,19 @@ async function getChunk(binaryId, order) {
     if (!receiveQueue) {
         return null;
     }
-    while (!receiveQueue[order]) {
+    while (!receiveQueue.data[order]) {
         await delay(100);
     }
     if (order > 0) {
-        receiveQueue[order - 1] = null;
+        receiveQueue.data[order - 1] = null;
     }
-    return receiveQueue[order];
+    const encChunk = receiveQueue.data[order];
+
+    return decryptAESToArrayBuffer(
+        encChunk,
+        receiveQueue.encryptionContract.base64Key,
+        receiveQueue.encryptionContract.base64IV
+    );
 }
 
 function showAcceptFileTransferDialog() {
