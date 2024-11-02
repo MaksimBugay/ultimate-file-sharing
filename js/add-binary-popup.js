@@ -48,6 +48,7 @@ function openModal(contentType) {
     mainModalHeader.textContent = 'Prepare content for sharing';
     createZipArchiveCheckbox.checked = false;
     protectWithPasswordContainer.style.display = 'block';
+    document.getElementById('fileChoice').checked = true;
 
     addBinaryPopup.style.display = 'block';
     if (ContentType.FILE === contentType) {
@@ -273,7 +274,8 @@ async function processListOfFiles(files) {
             const file0 = files[0];
             zipArchiveName = file0.webkitRelativePath ? file0.webkitRelativePath.split('/')[0] : `zip-with-${file0.name}`;
             zipArchiveName = replaceExtensionWithZip(zipArchiveName);
-        } else {
+        }
+        if (!zipArchiveName.includes('.zip')) {
             zipArchiveName = zipArchiveName + '.zip';
         }
         const zip = new JSZip();
