@@ -182,10 +182,14 @@
             </div>
             <div id="transferGroupContainer" style="width: 99%; margin-top: 15px; display: none">
                 <fieldset>
-                    <legend>Transfer Group ID</legend>
+                    <legend>Transfer Group</legend>
                     <div class="input-box" style="width: 90%">
-                        <input type="text" id="transferGroupName" placeholder="158-234"
-                               style="width: 100%; margin-bottom: 15px"/>
+                        <label for="transferGroupName" style="margin-bottom: 0;padding-bottom: 0">Name</label>
+                        <input type="text" id="transferGroupName" placeholder="Provide a name of your transfer group"
+                               style="width: 100%"/>
+                        <label for="transferGroupPasswordInput" style="margin-bottom: 0;padding-bottom: 0">Password (optional)</label>
+                        <input type="text" style="width: 100%; margin-bottom: 15px" id="transferGroupPasswordInput"
+                               placeholder="Choose a strong password to protect your transfer"/>
                     </div>
                     <div class="button-container">
                         <button id="joinTransferGroupBtn" type="button" class="action-btn">Join</button>

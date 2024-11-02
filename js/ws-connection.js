@@ -1,8 +1,9 @@
 console.log('ws-connection.js running on', window.location.href);
 
 class FileshareProperties {
-    constructor(transferGroup) {
+    constructor(transferGroup, transferGroupPassword) {
         this.transferGroup = transferGroup;
+        this.transferGroupPassword = transferGroupPassword;
     }
 
     getTransferGroupId() {
@@ -16,15 +17,22 @@ class FileshareProperties {
         this.transferGroup = group;
     }
 
+    setTransferGroupPassword(transferGroupPassword) {
+        this.transferGroupPassword = transferGroupPassword;
+    }
+
     toJSON() {
         return {
-            transferGroup: this.transferGroup
+            transferGroup: this.transferGroup,
+            transferGroupPassword: this.transferGroupPassword
         };
     }
 
     static fromObject(jsonObject) {
         return new FileshareProperties(
-            jsonObject.transferGroup
+            jsonObject.transferGroup,
+            jsonObject.transferGroupPassword
+
         );
     }
 
@@ -48,6 +56,7 @@ const transferFileButton = document.getElementById("transferFileButton");
 const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const transferGroupName = document.getElementById("transferGroupName");
+const transferGroupPasswordInput = document.getElementById("transferGroupPasswordInput");
 
 const exposeWorkspaceIdCheckBoxId = "exposeWorkspaceIdCheckBox";
 
@@ -122,6 +131,7 @@ joinTransferGroupBtn.addEventListener("click", function () {
         return;
     }
     Fileshare.properties.setTransferGroup(transferGroupName.value);
+    Fileshare.properties.setTransferGroupPassword(transferGroupPasswordInput.value);
     saveFileshareProperties(Fileshare.properties);
     PushcaClient.changeClientObject(
         new ClientFilter(
@@ -153,6 +163,7 @@ function postJoinTransferGroupActions() {
     leaveTransferGroupBtn.disabled = false;
     transferGroupName.readOnly = true;
     transferGroupName.value = Fileshare.properties.transferGroup;
+    transferGroupPasswordInput.value = Fileshare.properties.transferGroupPassword;
 }
 
 function postLeaveTransferGroupActions() {
@@ -160,6 +171,7 @@ function postLeaveTransferGroupActions() {
     leaveTransferGroupBtn.disabled = true;
     transferGroupName.readOnly = false;
     transferGroupName.value = '';
+    transferGroupPasswordInput.value = '';
     transferGroupName.focus();
 }
 

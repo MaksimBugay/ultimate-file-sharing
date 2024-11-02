@@ -287,7 +287,8 @@ async function processListOfFiles(files) {
         if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
             hideSpinnerInButton();
             await TransferFileHelper.transferBlob(
-                zipBlob, zipArchiveName, "application/zip", transferGroupName.value
+                zipBlob, zipArchiveName, "application/zip",
+                transferGroupName.value, transferGroupPasswordInput.value
             )
         } else {
             const binaryId = uuid.v4().toString();
@@ -306,7 +307,7 @@ async function processListOfFiles(files) {
 
 async function addFileToRegistry(file) {
     if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
-        return TransferFileHelper.transferFile(file, transferGroupName.value);
+        return TransferFileHelper.transferFile(file, transferGroupName.value, transferGroupPasswordInput.value);
     }
     if (file) {
         const binaryId = uuid.v4().toString();

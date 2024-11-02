@@ -87,13 +87,14 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
             console.warn("Transfer group is not defined but transfer request was received");
             return;
         }
+        const transferGroupPassword = Fileshare.properties.transferGroupPassword;
         const transferGroup = Fileshare.properties.transferGroup;
         const tRequestStr = byteArrayToString(binaryWithHeader.payload);
         const parts = tRequestStr.split("|");
         const encryptionContract = await EncryptionContract.fromTransferableString(
             parts[1],
-            transferGroup,
-            stringToByteArray("test")
+            transferGroupPassword ? transferGroupPassword : `TRANSFER_GROUP_${transferGroup}`,
+            stringToByteArray(transferGroup)
         );
         const payload = await decryptAESToArrayBuffer(
             base64ToArrayBuffer(parts[0]),
@@ -270,11 +271,12 @@ async function downloadBinaryStreamSilently(response, binaryFileName, contentLen
     downloadFile(blob, binaryFileName);
 }
 
-async function sendTransferManifest(ftManifest, transferGroup, transferGroupId) {
+async function sendTransferManifest(ftManifest, transferGroup, transferGroupPassword) {
+    const transferGroupId = calculateStringHashCode(transferGroup);
     const encryptionData = await encryptWithAES(ftManifest.toBinaryChunk());
     const transferableEncryptionContract = await encryptionData.encryptionContract.toTransferableString(
-        transferGroup,
-        stringToByteArray("test")
+        transferGroupPassword ? transferGroupPassword : `TRANSFER_GROUP_${transferGroup}`,
+        stringToByteArray(transferGroup)
     );
 
     const result = await PushcaClient.transferBinaryChunk(
@@ -286,19 +288,19 @@ async function sendTransferManifest(ftManifest, transferGroup, transferGroupId) 
 
     return {
         result: result,
-        encryptionContract: encryptionData.encryptionContract
+        encryptionContract: encryptionData.encryptionContract,
+        transferGroupId: transferGroupId
     }
 }
 
-TransferFileHelper.transferFile = async function transferFile(file, transferGroup) {
-    const transferGroupId = calculateStringHashCode(transferGroup);
+TransferFileHelper.transferFile = async function transferFile(file, transferGroup, transferGroupPassword) {
     const ftManifest = new FileTransferManifest(
         null, file.name, file.type, file.size, IndexDbDeviceId
     );
     const encAndSendResult = await sendTransferManifest(
         ftManifest,
         transferGroup,
-        transferGroupId
+        transferGroupPassword
     );
     if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
         console.error(`Failed file transfer attempt: ${file.name}`);
@@ -310,7 +312,7 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
         const result = await encryptAndTransferBinaryChunk(
             ftManifest.id,
             order,
-            transferGroupId,
+            encAndSendResult.transferGroupId,
             arrayBuffer,
             encAndSendResult.encryptionContract
         );
@@ -318,15 +320,14 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
     });
 }
 
-TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroup) {
-    const transferGroupId = calculateStringHashCode(transferGroup);
+TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroup, transferGroupPassword) {
     const ftManifest = new FileTransferManifest(
         null, name, type, blob.size, IndexDbDeviceId
     );
     const encAndSendResult = await sendTransferManifest(
         ftManifest,
         transferGroup,
-        transferGroupId
+        transferGroupPassword
     );
     if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
         console.error(`Failed file transfer attempt: ${name}`);
@@ -339,7 +340,7 @@ TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, 
             const result = await encryptAndTransferBinaryChunk(
                 ftManifest.id,
                 i + 1,
-                transferGroupId,
+                encAndSendResult.transferGroupId,
                 slices[i],
                 encAndSendResult.encryptionContract
             );
