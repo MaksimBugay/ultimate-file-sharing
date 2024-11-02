@@ -241,57 +241,78 @@ async function downloadBinaryStreamSilently(response, binaryFileName, contentLen
     downloadFile(blob, binaryFileName);
 }
 
-TransferFileHelper.transferFile = async function transferFile(file, transferGroupId) {
-    const ftManifest = new FileTransferManifest(
-        null, file.name, file.type, file.size, IndexDbDeviceId
+async function sendTransferManifest(ftManifest, transferGroup, transferGroupId) {
+    const encryptionData = await encryptWithAES(ftManifest.toBinaryChunk());
+    const transferableEncryptionContract = await encryptionData.encryptionContract.toTransferableString(
+        transferGroup,
+        stringToByteArray("test")
     );
 
     const result = await PushcaClient.transferBinaryChunk(
         ftManifest.id,
         0,
         transferGroupId,
-        ftManifest.toBinaryChunk()
+        stringToArrayBuffer(`${encryptionData.dataBase64}|${transferableEncryptionContract}`)
     );
-    if (WaiterResponseType.ERROR === result.type) {
+
+    return {
+        result: result,
+        encryptionContract: encryptionData.encryptionContract
+    }
+}
+
+TransferFileHelper.transferFile = async function transferFile(file, transferGroup) {
+    const transferGroupId = calculateStringHashCode(transferGroup);
+    const ftManifest = new FileTransferManifest(
+        null, file.name, file.type, file.size, IndexDbDeviceId
+    );
+    const encAndSendResult = await sendTransferManifest(
+        ftManifest,
+        transferGroup,
+        transferGroupId
+    );
+    if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
         console.error(`Failed file transfer attempt: ${file.name}`);
         return false;
     }
 
     await readFileSequentially(file, async function (order, arrayBuffer) {
         //console.log(`Send chunk ${order}`);
-        const result = await PushcaClient.transferBinaryChunk(
+        const result = await encryptAndTransferBinaryChunk(
             ftManifest.id,
             order,
             transferGroupId,
-            arrayBuffer
+            arrayBuffer,
+            encAndSendResult.encryptionContract
         );
         return WaiterResponseType.SUCCESS === result.type
     });
 }
 
-TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroupId) {
+TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroup) {
+    const transferGroupId = calculateStringHashCode(transferGroup);
     const ftManifest = new FileTransferManifest(
         null, name, type, blob.size, IndexDbDeviceId
     );
-    const result = await PushcaClient.transferBinaryChunk(
-        ftManifest.id,
-        0,
-        transferGroupId,
-        ftManifest.toBinaryChunk()
+    const encAndSendResult = await sendTransferManifest(
+        ftManifest,
+        transferGroup,
+        transferGroupId
     );
-    if (WaiterResponseType.ERROR === result.type) {
-        console.error(`Failed file transfer attempt: ${name}`);
+    if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
+        console.error(`Failed file transfer attempt: ${file.name}`);
         return false;
     }
 
     await executeWithShowProgressBar(async function () {
         const slices = await blobToArrayBuffers(blob, TransferFileHelper.blockSize);
         for (let i = 0; i < slices.length; i++) {
-            const result = await PushcaClient.transferBinaryChunk(
+            const result = await encryptAndTransferBinaryChunk(
                 ftManifest.id,
                 i + 1,
                 transferGroupId,
-                slices[i]
+                slices[i],
+                encAndSendResult.result.encryptionContract
             );
             if (WaiterResponseType.ERROR === result.type) {
                 console.error(`Failed file transfer attempt: ${name}`);
@@ -364,4 +385,15 @@ async function executeWithShowProgressBar(operation) {
     mmDownloadProgress.value = 0;
     mmProgressPercentage.textContent = `0%`;
     mmProgressBarContainer.style.display = 'none';
+}
+
+async function encryptAndTransferBinaryChunk(binaryId, order, destHashCode, arrayBuffer, encryptionContract) {
+    const encArrayBuffer = await encryptWithAESUsingContract(arrayBuffer, encryptionContract);
+
+    return await PushcaClient.transferBinaryChunk(
+        binaryId,
+        order,
+        destHashCode,
+        encArrayBuffer
+    );
 }

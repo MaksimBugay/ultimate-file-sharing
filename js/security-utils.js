@@ -98,7 +98,7 @@ async function generateAESKeyFromPassword(password, salt) {
             hash: "SHA-256"
         },
         keyMaterial,
-        { name: "AES-GCM", length: 256 },
+        {name: "AES-GCM", length: 256},
         true,
         ["encrypt", "decrypt"]
     );
@@ -226,8 +226,37 @@ async function encryptWithAES(input/*ArrayBuffer*/) {
     const exportedKey = await crypto.subtle.exportKey("raw", key);
     return {
         encryptionContract: new EncryptionContract(arrayBufferToBase64(exportedKey), arrayBufferToBase64(iv)),
-        data: new Blob([new Uint8Array(encryptedContent)], {type: "application/octet-stream"})
+        data: new Blob([new Uint8Array(encryptedContent)], {type: "application/octet-stream"}),
+        dataBase64: arrayBufferToBase64(encryptedContent)
     }
+}
+
+async function encryptWithAESUsingContract(input /* ArrayBuffer */, encryptionContract) {
+    // Convert base64-encoded key and IV back to ArrayBuffer
+    const keyBuffer = base64ToArrayBuffer(encryptionContract.base64Key);
+    const iv = base64ToArrayBuffer(encryptionContract.base64IV);
+
+    // Import the AES key from the ArrayBuffer
+    const key = await crypto.subtle.importKey(
+        "raw",
+        keyBuffer,
+        {
+            name: "AES-GCM",
+            length: 256
+        },
+        false, // non-extractable (you don't need to export it again)
+        ["encrypt", "decrypt"]
+    );
+
+    // Encrypt the input data
+    return await window.crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: iv
+        },
+        key,
+        input
+    );
 }
 
 async function encryptSlicesWithAES(slices) {
