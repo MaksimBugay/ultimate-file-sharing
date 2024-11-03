@@ -1083,7 +1083,7 @@ PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode
     const id = buildSharedFileChunkId(binaryId, order, destHashCode);
     const numberOfRepeat = 3;
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
-        60_000, id, numberOfRepeat, function () {
+        20_000, id, numberOfRepeat, function () {
             PushcaClient.ws.send(combinedBuffer);
             //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
         }

@@ -89,20 +89,27 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         }
         const transferGroupPassword = Fileshare.properties.transferGroupPassword;
         const transferGroup = Fileshare.properties.transferGroup;
-        const tRequestStr = byteArrayToString(binaryWithHeader.payload);
-        const parts = tRequestStr.split("|");
-        const encryptionContract = await EncryptionContract.fromTransferableString(
-            parts[1],
-            transferGroupPassword ? transferGroupPassword : `TRANSFER_GROUP_${transferGroup}`,
-            stringToByteArray(transferGroup)
-        );
-        const payload = await decryptAESToArrayBuffer(
-            base64ToArrayBuffer(parts[0]),
-            encryptionContract.base64Key,
-            encryptionContract.base64IV
-        );
-        const manifest = FileTransferManifest.fromBinary(payload);
-        console.log(JSON.stringify(manifest.toJSON()));
+        let encryptionContract;
+        let manifest;
+        try {
+            const tRequestStr = byteArrayToString(binaryWithHeader.payload);
+            const parts = tRequestStr.split("|");
+            encryptionContract = await EncryptionContract.fromTransferableString(
+                parts[1],
+                transferGroupPassword ? transferGroupPassword : `TRANSFER_GROUP_${transferGroup}`,
+                stringToByteArray(transferGroup)
+            );
+            const payload = await decryptAESToArrayBuffer(
+                base64ToArrayBuffer(parts[0]),
+                encryptionContract.base64Key,
+                encryptionContract.base64IV
+            );
+            manifest = FileTransferManifest.fromBinary(payload);
+            console.log(JSON.stringify(manifest.toJSON()));
+        } catch (err) {
+            showErrorMsg("Unrecognized file transfer request was received");
+            console.error("Broken file transfer request", err);
+        }
 
         const totalNumberOfChunks = Math.ceil(Math.ceil(manifest.size / TransferFileHelper.blockSize));
         TransferFileHelper.registry.set(
@@ -119,6 +126,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
                 while (index < totalNumberOfChunks) {
                     const chunk = await getChunk(manifest.id, index);
                     if (!chunk) {
+                        controller.signal.aborted;
                         break;
                     }
                     controller.enqueue(new Uint8Array(chunk));
@@ -136,7 +144,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
             }
         });
 
-        while (isAcceptFileTransferDialogVisible()){
+        while (isAcceptFileTransferDialogVisible()) {
             await delay(500);
         }
 
@@ -166,12 +174,19 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
     }
 }
 
-async function getChunk(binaryId, order) {
+async function getChunk(binaryId, order, maxWaitTime = 60000) {
     const receiveQueue = TransferFileHelper.registry.get(binaryId);
     if (!receiveQueue) {
         return null;
     }
+    const startTime = Date.now();
     while (!receiveQueue.data[order]) {
+        if (Date.now() - startTime >= maxWaitTime) {
+            showErrorMsg("Transferred data is unavailable", function () {
+                TransferFileHelper.registry.delete(binaryId);
+            });
+            return null;
+        }
         await delay(100);
     }
     if (order > 0) {
@@ -311,7 +326,7 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
         transferGroupPassword
     );
     if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
-        console.error(`Failed file transfer attempt: ${file.name}`);
+        showErrorMsg("Failed file transfer attempt: all group members are unavailable", null);
         return false;
     }
 
@@ -390,7 +405,14 @@ async function readFileSequentially(file, chunkHandler) {
                 }
             } else {
                 console.log('Failed file chunk transfer attempt.');
-                //TODO proper message for user is required here
+                showErrorMsg(
+                    "Failed file transfer attempt: all group members are unavailable",
+                    function () {
+                        mmDownloadProgress.value = 0;
+                        mmProgressPercentage.textContent = `0%`;
+                        mmProgressBarContainer.style.display = 'none';
+                    }
+                );
             }
         };
 
