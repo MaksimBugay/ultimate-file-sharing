@@ -32,7 +32,6 @@ class FileshareProperties {
         return new FileshareProperties(
             jsonObject.transferGroup,
             jsonObject.transferGroupPassword
-
         );
     }
 
@@ -57,6 +56,24 @@ const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const transferGroupName = document.getElementById("transferGroupName");
 const transferGroupPasswordInput = document.getElementById("transferGroupPasswordInput");
+const errorDialog = document.getElementById("errorDialog");
+const errorMsg = document.getElementById("errorMsg");
+const closeErrorBtn = document.getElementById("closeErrorBtn");
+Fileshare.afterErrorMsgClosedHandler = function () {
+}
+
+closeErrorBtn.addEventListener('click', function () {
+    errorDialog.classList.remove('visible');
+    if (typeof Fileshare.afterErrorMsgClosedHandler === 'function') {
+        Fileshare.afterErrorMsgClosedHandler();
+    }
+});
+
+function showErrorMsg(msg, afterCloseHandler) {
+    errorMsg.textContent = msg;
+    Fileshare.afterErrorMsgClosedHandler = afterCloseHandler;
+    errorDialog.classList.add('visible');
+}
 
 const exposeWorkspaceIdCheckBoxId = "exposeWorkspaceIdCheckBox";
 
@@ -126,8 +143,9 @@ expandableDiv.addEventListener('mouseout', () => {
 
 joinTransferGroupBtn.addEventListener("click", function () {
     if (!transferGroupName.value) {
-        alert('Transfer group is not defined');
-        transferGroupName.focus();
+        showErrorMsg('Transfer group is not defined', function () {
+            transferGroupName.focus();
+        });
         return;
     }
     Fileshare.properties.setTransferGroup(transferGroupName.value);

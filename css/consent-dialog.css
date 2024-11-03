@@ -9,7 +9,7 @@
     justify-content: center;
     align-items: center;
     visibility: hidden;
-    z-index: 1000;
+    z-index: 10000;
 }
 
 .dialog-box {
@@ -33,4 +33,65 @@
 
 .visible {
     visibility: visible;
+}
+
+.error-content {
+    background: white;
+    color: #721c24; /* Dark red text color */
+    /*padding: 20px;*/
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 80%;
+    text-align: center;
+    animation: fadeIn 0.3s ease-in-out; /* Fade-in animation */
+    justify-content: space-between;
+}
+
+.error-caption {
+    padding: 10px;
+    background: #f8d7da;
+    display: flex;
+    margin: 0;
+    border-radius: 8px 8px 0 0;
+}
+
+.close-btn-container {
+    justify-content: right;
+    align-items: flex-end;
+    width: 10%;
+    text-align: right;
+}
+
+/* Title */
+.error-content h2 {
+    margin: 0;
+    color: #721c24;
+    width: 90%;
+}
+
+/* Message */
+.error-content p {
+    font-size: 18px;
+}
+
+.close-btn {
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #721c24;
+    cursor: pointer;
+    margin-left: auto;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
