@@ -70,7 +70,11 @@ closeErrorBtn.addEventListener('click', function () {
 });
 
 function showErrorMsg(msg, afterCloseHandler) {
-    errorMsg.textContent = msg;
+    if (msg.includes("A mutation operation in the transaction failed because a constraint was not satisfied")) {
+        errorMsg.textContent = 'Content is already added into browser database';
+    } else {
+        errorMsg.textContent = msg;
+    }
     Fileshare.afterErrorMsgClosedHandler = afterCloseHandler;
     errorDialog.classList.add('visible');
 }

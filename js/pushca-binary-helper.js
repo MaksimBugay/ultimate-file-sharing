@@ -255,7 +255,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
                     CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
                 },
                 function (event) {
-                    alert(event.target.error);
+                    showErrorMsg(event.target.error.message, null);
                     CallableFuture.releaseWaiterIfExistsWithError(waiterId, false);
                 }
             );
@@ -285,7 +285,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
                 CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
             },
             function (event) {
-                alert(event.target.error);
+                showErrorMsg(`Failed attempt to store manifest of binary with name ${binaryManifest.name}: ${event.target.error.message}`, null);
                 removeAllRecordsWithBinaryId(binaryManifest.id);
                 CallableFuture.releaseWaiterIfExistsWithError(waiterId, false);
             }
