@@ -136,6 +136,10 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
             }
         });
 
+        while (isAcceptFileTransferDialogVisible()){
+            await delay(500);
+        }
+
         TransferFileHelper.saveTransfer = async function () {
             if (window.showSaveFilePicker) {
                 await downloadBinaryStream(response, manifest.name, manifest.size);
@@ -184,6 +188,10 @@ async function getChunk(binaryId, order) {
 
 function showAcceptFileTransferDialog() {
     acceptFileTransferDialog.classList.add('visible');
+}
+
+function isAcceptFileTransferDialogVisible() {
+    return acceptFileTransferDialog.classList.contains('visible');
 }
 
 function hideAcceptFileTransferDialog() {
