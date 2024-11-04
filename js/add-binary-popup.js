@@ -162,6 +162,9 @@ pastArea.addEventListener('paste', async function (event) {
             img.src = url;
             img.style.maxWidth = '300px';
             pastArea.parentElement.appendChild(img); */
+        } else {
+            event.stopPropagation();
+            event.preventDefault();
         }
     }
 });
