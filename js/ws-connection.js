@@ -250,12 +250,22 @@ FingerprintJS.load().then(fp => {
 });
 
 PushcaClient.verbose = true;
-PushcaClient.onOpenHandler = function () {
+PushcaClient.onOpenHandler = async function () {
     console.log("Connected to Pushca!");
     updateTransferGroupCaption();
     initFileManager();
     channelIndicator.style.backgroundColor = 'limegreen';
     statusCaption.textContent = "(Exactly one instance of that page should be always open to provide sharing of your files!!!)";
+    if (TransferFileHelper.preparedFile.length > 0) {
+        for (const file of TransferFileHelper.preparedFile) {
+            await TransferFileHelper.transferFile(
+                file,
+                Fileshare.properties.transferGroup,
+                Fileshare.properties.transferGroupPassword
+            );
+        }
+        TransferFileHelper.preparedFile.length = 0;
+    }
 };
 
 PushcaClient.onCloseHandler = function (ws, event) {

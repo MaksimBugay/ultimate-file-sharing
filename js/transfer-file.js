@@ -44,6 +44,7 @@ class FileTransferManifest {
 const TransferFileHelper = {}
 TransferFileHelper.registry = new Map();
 TransferFileHelper.blockSize = MemoryBlock.MB;
+TransferFileHelper.preparedFile = [];
 
 const ftDownloadProgress = document.getElementById("ftDownloadProgress");
 const ftProgressPercentage = document.getElementById("ftProgressPercentage");

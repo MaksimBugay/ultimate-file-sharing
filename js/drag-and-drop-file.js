@@ -34,7 +34,26 @@ dropZonePopup.addEventListener('drop', async function (event) {
 // Handle the dropped files
 dropZone.addEventListener('drop', async function (event) {
     const files = event.dataTransfer.files;
-
+    if ('transfer-choice' === shareOrTransfer()) {
+        if (!(Fileshare.properties && Fileshare.properties.transferGroup)) {
+            openModal(ContentType.FILE_TRANSFER);
+            transferGroupName.focus();
+            for (const file of files) {
+                TransferFileHelper.preparedFile.push(file);
+            }
+        } else {
+            openModal(ContentType.FILE_TRANSFER);
+            for (const file of files) {
+                await TransferFileHelper.transferFile(
+                    file,
+                    Fileshare.properties.transferGroup,
+                    Fileshare.properties.transferGroupPassword
+                );
+            }
+            closeModal();
+        }
+        return;
+    }
     // Process each dropped file (you can handle multiple files if needed)
     for (const file of files) {
         // File is now a Blob object
@@ -51,6 +70,11 @@ dropZone.addEventListener('drop', async function (event) {
         });
     }
 });
+
+function shareOrTransfer() {
+    const selectedOption = document.querySelector('input[name="share-or-transfer"]:checked');
+    return selectedOption ? selectedOption.value : 'share-choice';
+}
 
 function showMainSpinnerInButton() {
     document.getElementById('download-spinner-main').style.display = 'flex';
