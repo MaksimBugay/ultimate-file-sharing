@@ -159,7 +159,18 @@
             <img src="images/past.png" alt="Make a screenshot">
         </button>
         <div id="dropZone" class="drop-zone">
-            To share fast just Drag and Drop your files here
+            To
+            <div id="selectShareOrTransferContainer" style="">
+                <label class="share-or-transfer-label">
+                    <input type="radio" name="share-or-transfer" value="share-choice" checked id="shareActionChoice">
+                    share
+                </label>
+                <label class="share-or-transfer-label">
+                    <input type="radio" name="share-or-transfer" value="transfer-choice">
+                    transfer
+                </label>
+            </div>
+            fast just Drag and Drop your files here
             <div id="download-spinner-main" style="display: none">
                 <div class="spinner-border" role="status">
                     <span class="visually-hidden"></span>

@@ -274,6 +274,27 @@ input[type="text"] {
     color: blue;
 }
 
+#selectShareOrTransferContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.share-or-transfer-label {
+    width: 100px;
+    display: flex;
+    align-items: center;
+    margin-left: 5px;
+    margin-bottom: 0;
+    margin-top: 5px;
+}
+
+.share-or-transfer-label input[type="radio"] {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+
 .drop-zone {
     width: 60%;
     min-width: 150px;
