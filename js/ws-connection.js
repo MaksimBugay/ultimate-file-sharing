@@ -6,11 +6,11 @@ class FileshareProperties {
         this.transferGroupPassword = transferGroupPassword;
     }
 
-    getTransferGroupId() {
+    getTransferApplicationId() {
         if (!this.transferGroup) {
-            return null;
+            return Fileshare.noTransferGroupApplicationId;
         }
-        return calculateStringHashCode(this.transferGroup);
+        return `TRANSFER_GROUP_${calculateStringHashCode(this.transferGroup)}`
     }
 
     setTransferGroup(group) {
@@ -164,7 +164,7 @@ joinTransferGroupBtn.addEventListener("click", function () {
             PushcaClient.ClientObj.workSpaceId,
             PushcaClient.ClientObj.accountId,
             PushcaClient.ClientObj.deviceId,
-            Fileshare.properties.getTransferGroupId()
+            Fileshare.properties.getTransferApplicationId()
         )
     );
     postJoinTransferGroupActions();
@@ -255,7 +255,7 @@ FingerprintJS.load().then(fp => {
 
 PushcaClient.verbose = true;
 PushcaClient.onOpenHandler = async function () {
-    console.log("Connected to Pushca!");
+    console.log(`Connected to Pushca: application id ${PushcaClient.ClientObj.applicationId}`);
     updateTransferGroupCaption();
     initFileManager();
     channelIndicator.style.backgroundColor = 'limegreen';
@@ -318,8 +318,8 @@ PushcaClient.onFileTransferChunkHandler = TransferFileHelper.processedReceivedCh
 function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
         let applicationId = Fileshare.noTransferGroupApplicationId;
-        if (Fileshare.properties && Fileshare.properties.transferGroup) {
-            applicationId = `TRANSFER_GROUP_${calculateStringHashCode(Fileshare.properties.transferGroup)}`
+        if (Fileshare.properties) {
+            applicationId = Fileshare.properties.getTransferApplicationId()
         }
         const pClient = new ClientFilter(
             deviceFpId,
