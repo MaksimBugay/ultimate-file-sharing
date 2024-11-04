@@ -152,8 +152,12 @@ joinTransferGroupBtn.addEventListener("click", function () {
         });
         return;
     }
-    Fileshare.properties.setTransferGroup(transferGroupName.value);
-    Fileshare.properties.setTransferGroupPassword(transferGroupPasswordInput.value);
+    if (!Fileshare.properties) {
+        Fileshare.properties = new FileshareProperties(transferGroupName.value, transferGroupPasswordInput.value);
+    } else {
+        Fileshare.properties.setTransferGroup(transferGroupName.value);
+        Fileshare.properties.setTransferGroupPassword(transferGroupPasswordInput.value);
+    }
     saveFileshareProperties(Fileshare.properties);
     PushcaClient.changeClientObject(
         new ClientFilter(
@@ -239,11 +243,11 @@ FingerprintJS.load().then(fp => {
             updateDeviceIdCaption(result.visitorId);
             getFileshareProperties(function (fsProperties) {
                 Fileshare.properties = fsProperties;
-                const transferGroupId = fsProperties ? fsProperties.getTransferGroupId() : null;
-                openWsConnection(result.visitorId, transferGroupId);
+                openWsConnection(result.visitorId);
             }, function (error) {
                 Fileshare.properties = null;
-                openWsConnection(result.visitorId, null);
+                updateTransferGroupCaption();
+                openWsConnection(result.visitorId);
             });
         });
     });
@@ -311,13 +315,17 @@ PushcaClient.onMessageHandler = function (ws, data) {
 
 PushcaClient.onFileTransferChunkHandler = TransferFileHelper.processedReceivedChunk;
 
-function openWsConnection(deviceFpId, fileTransferGroupId) {
+function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
+        let applicationId = Fileshare.noTransferGroupApplicationId;
+        if (Fileshare.properties && Fileshare.properties.transferGroup) {
+            applicationId = `TRANSFER_GROUP_${calculateStringHashCode(Fileshare.properties.transferGroup)}`
+        }
         const pClient = new ClientFilter(
             deviceFpId,
             "anonymous-sharing",
             `${calculateStringHashCode(deviceFpId)}`,
-            fileTransferGroupId ? `TRANSFER_GROUP_${fileTransferGroupId}` : Fileshare.noTransferGroupApplicationId
+            applicationId
         );
         PushcaClient.openWsConnection(
             wsUrl,
