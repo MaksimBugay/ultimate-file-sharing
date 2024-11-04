@@ -411,7 +411,7 @@ async function readFileSequentially(file, chunkHandler) {
                     function () {
                         mmDownloadProgress.value = 0;
                         mmProgressPercentage.textContent = `0%`;
-                        mmProgressBarContainer.style.display = 'none';
+                        afterTransferDoneHandler();
                     }
                 );
             }

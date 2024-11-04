@@ -112,6 +112,13 @@ pastArea.addEventListener('keydown', function (event) {
     }
 });
 
+function afterTransferDoneHandler() {
+    createZipArchiveCheckbox.checked = false;
+    hideZipArchiveRelatedElements();
+    fileInput.value = "";
+    mmProgressBarContainer.style.display = 'none';
+}
+
 function closeModal() {
     hideSpinnerInButton();
     addBinaryPopup.style.display = 'none';
@@ -305,7 +312,9 @@ async function processListOfFiles(files) {
             await addFileToRegistry(files[i]);
         }
     }
-    if (ContentType.FILE_TRANSFER !== AddBinaryWidget.contentType) {
+    if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
+        afterTransferDoneHandler();
+    } else {
         delay(500).then(() => closeModal());
     }
 }
