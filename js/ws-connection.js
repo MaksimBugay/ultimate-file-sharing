@@ -86,22 +86,39 @@ function updateDeviceIdCaption(id) {
     if (deviceIdCaption) {
         deviceIdCaption.textContent = `Device ID: ${id}`;
     }
+    const deviceIdCaptionMobile = document.getElementById("deviceIdCaptionMobile");
+    if (deviceIdCaptionMobile) {
+        deviceIdCaptionMobile.textContent = `${id}`;
+    }
 }
 
 function updateTransferGroupCaption() {
-    const transferGroupCaption = document.getElementById("transferGroupCaption");
-    if (!transferGroupCaption) {
-        return;
-    }
     let group = null;
     if (Fileshare.properties && Fileshare.properties.transferGroup) {
         group = Fileshare.properties.transferGroup;
     }
-    if (group) {
-        transferGroupCaption.style.display = 'block';
-        transferGroupCaption.textContent = `Transfer Group: ${group}`;
-    } else {
-        transferGroupCaption.style.display = 'none';
+
+    const transferGroupCaption = document.getElementById("transferGroupCaption");
+    if (transferGroupCaption) {
+        if (group) {
+            transferGroupCaption.style.display = 'block';
+            transferGroupCaption.textContent = `Transfer Group: ${group}`;
+        } else {
+            transferGroupCaption.style.display = 'none';
+        }
+    }
+
+    const transferGroupCaptionMobileHeader = document.getElementById('transferGroupCaptionMobileHeader');
+    const transferGroupCaptionMobile = document.getElementById("transferGroupCaptionMobile");
+    if (transferGroupCaptionMobile) {
+        if (group) {
+            transferGroupCaptionMobileHeader.style.display = 'block';
+            transferGroupCaptionMobile.style.display = 'block';
+            transferGroupCaptionMobile.textContent = `${group}`;
+        } else {
+            transferGroupCaptionMobile.style.display = 'none';
+            transferGroupCaptionMobileHeader.style.display = 'none';
+        }
     }
 }
 
@@ -127,12 +144,36 @@ document.addEventListener("DOMContentLoaded", function () {
             modalContent.style.left = "0";
             modalContent.style.top = "0";
         }
+        const pastFromBufferButton = document.getElementById('pastFromBufferButton');
+        if (pastFromBufferButton) {
+            pastFromBufferButton.style.display = 'none';
+        }
+        const toolBarWithMainActions = document.getElementById("toolBarWithMainActions");
+        if (toolBarWithMainActions) {
+            toolBarWithMainActions.style.width = '100%';
+        }
+        const connectionInfo = document.getElementById('connectionInfo');
+        if (connectionInfo) {
+            connectionInfo.style.display = 'none';
+        }
+        const connectionInfoMobile = document.getElementById('connectionInfoMobile');
+        if (connectionInfoMobile) {
+            connectionInfoMobile.style.display = 'flex';
+        }
     } else {
         const gridToolBar = document.getElementById("gridToolBar");
         if (gridToolBar) {
             gridToolBar.style.display = 'flex';
         }
         expandableDiv.style.display = "block";
+        const connectionInfo = document.getElementById('connectionInfo');
+        if (connectionInfo) {
+            connectionInfo.style.display = 'flex';
+        }
+        const connectionInfoMobile = document.getElementById('connectionInfoMobile');
+        if (connectionInfoMobile) {
+            connectionInfoMobile.style.display = 'none';
+        }
     }
 });
 
