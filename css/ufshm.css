@@ -101,10 +101,11 @@ body {
 }
 
 .close {
-    color: white;
+    color: darkblue;
     float: right;
     font-size: 28px;
     font-weight: bold;
+    margin-left: 98%;
 }
 
 .close:hover,
@@ -412,6 +413,14 @@ legend {
     background-color: #f9f9f9; /* Match the background */
     border: 1px solid darkblue;
     border-radius: 3px;
+}
+
+#transferGroupContainer {
+    width: 99%;
+    margin-top: 15px;
+    overflow: auto; /* Add scrollbars if content overflows */
+    resize: vertical; /* Allow the container to be resized vertically */
+    /*border: 1px solid #ccc; */
 }
 
 /*nice 3D container*/

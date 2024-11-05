@@ -439,6 +439,7 @@ async function readFileSequentially(file, chunkHandler) {
 }
 
 async function executeWithShowProgressBar(operation) {
+    requestWakeLock();
     mmProgressBarContainer.style.display = 'block';
     if (typeof operation === 'function') {
         await operation();
@@ -446,6 +447,7 @@ async function executeWithShowProgressBar(operation) {
     mmDownloadProgress.value = 0;
     mmProgressPercentage.textContent = `0%`;
     mmProgressBarContainer.style.display = 'none';
+    releaseWakeLock();
 }
 
 async function encryptAndTransferBinaryChunk(binaryId, order, destHashCode, arrayBuffer, encryptionContract) {
