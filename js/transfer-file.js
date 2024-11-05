@@ -150,11 +150,13 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         }
 
         TransferFileHelper.saveTransfer = async function () {
+            requestWakeLock();
             if (window.showSaveFilePicker) {
                 await downloadBinaryStream(response, manifest.name, manifest.size);
             } else {
                 await downloadBinaryStreamSilently(response, manifest.name, manifest.size, manifest.type);
             }
+            releaseWakeLock();
         }
         TransferFileHelper.cleanTransfer = function () {
             TransferFileHelper.registry.delete(manifest.id);
