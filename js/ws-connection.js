@@ -145,6 +145,13 @@ document.addEventListener("DOMContentLoaded", function () {
             modalContent.style.left = "0";
             modalContent.style.top = "0";
         }
+        const dialogBox = document.querySelector('.dialog-box');
+        if (dialogBox) {
+            dialogBox.style.width = "96%";
+            dialogBox.style.top = "20%";
+            dialogBox.style.paddingLeft = "10px";
+            dialogBox.style.paddingRight = "10px";
+        }
         const pastFromBufferButton = document.getElementById('pastFromBufferButton');
         if (pastFromBufferButton) {
             pastFromBufferButton.style.display = 'none';
