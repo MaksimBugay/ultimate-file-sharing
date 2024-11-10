@@ -861,7 +861,9 @@ async function chunkEncryptionTest() {
 
     const decChunk = await decryptBinaryChunk(encChunk, encryptionContract);
     const resStr = arrayBufferToString(decChunk);
-    alert(resStr);
+    if (str !== resStr) {
+        alert("Failed binary chunk decryption!");
+    }
 }
 
 chunkEncryptionTest();
