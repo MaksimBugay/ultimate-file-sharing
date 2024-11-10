@@ -1094,6 +1094,38 @@ PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode
     return result;
 }
 
+PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuffer) {
+    if (isEmpty(PushcaClient.ws)) {
+        return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
+    }
+    if (PushcaClient.ws.readyState !== window.WebSocket.OPEN) {
+        const errorMsg = `WebSocket is not open. State: ${PushcaClient.ws.readyState}`;
+        console.error(errorMsg);
+        return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
+    }
+    const destHashCode = PushcaClient.ClientObj.hashCode();
+    const customHeader = buildPushcaBinaryHeader(
+        BinaryType.CACHE_BINARY, destHashCode, false, binaryId, order
+    );
+    const combinedBuffer = new ArrayBuffer(customHeader.length + arrayBuffer.byteLength);
+    const combinedView = new Uint8Array(combinedBuffer);
+    combinedView.set(customHeader, 0);
+    combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
+
+    const id = buildSharedFileChunkId(binaryId, order, destHashCode);
+    const numberOfRepeat = 3;
+    const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
+        20_000, id, numberOfRepeat, function () {
+            PushcaClient.ws.send(combinedBuffer);
+            //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
+        }
+    );
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log(`Failed cache in cloud  chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);
+    }
+    return result;
+}
+
 window.addEventListener('beforeunload', function () {
     cleanRefreshBrokenConnectionInterval();
     if (isNotEmpty(PushcaClient.ws)) {

@@ -49,6 +49,7 @@ function openModal(contentType) {
     createZipArchiveCheckbox.checked = false;
     protectWithPasswordContainer.style.display = 'block';
     document.getElementById('fileChoice').checked = true;
+    transferGroupContainer.style.display = 'none';
 
     addBinaryPopup.style.display = 'block';
     if (ContentType.FILE === contentType) {
@@ -409,6 +410,15 @@ async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mi
                 return false;
             }
         }
+        await PushcaClient.cacheBinaryChunkInCloud(
+            binaryId,
+            1_000_000,
+            stringToArrayBuffer(
+                arrayBufferToBase64(
+                    stringToArrayBuffer(JSON.stringify(tmpManifest.toJSON()))
+                )
+            )
+        );
         addManifestToManagerGrid(tmpManifest);
     } catch (err) {
         console.warn(err);

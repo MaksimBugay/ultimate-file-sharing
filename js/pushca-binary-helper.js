@@ -2,7 +2,8 @@ const BinaryType = Object.freeze({
     FILE: 0,
     MEDIA_STREAM: 1,
     BINARY_MESSAGE: 2,
-    FILE_TRANSFER: 3
+    FILE_TRANSFER: 3,
+    CACHE_BINARY: 4
 });
 
 const DatagramState = Object.freeze({
@@ -276,6 +277,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
         }
         const blob = new Blob([chunks[n]], {type: mimeType});
         saveBinaryChunk(binaryId, order, blob);
+        await PushcaClient.cacheBinaryChunkInCloud(binaryId, order, chunks[n]);
     }
 
     result = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
