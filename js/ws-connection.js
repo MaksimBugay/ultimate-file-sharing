@@ -851,3 +851,17 @@ function releaseWakeLock() {
         });
     }
 }
+
+async function chunkEncryptionTest() {
+    const str = "Hello world!";
+    const testData = stringToArrayBuffer(str);
+
+    const encryptionContract = await generateEncryptionContract();
+    const encChunk = await encryptBinaryChunk(testData, encryptionContract);
+
+    const decChunk = await decryptBinaryChunk(encChunk, encryptionContract);
+    const resStr = arrayBufferToString(decChunk);
+    alert(resStr);
+}
+
+chunkEncryptionTest();

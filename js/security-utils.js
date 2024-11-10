@@ -201,6 +201,23 @@ function urlSafeBase64ToArrayBuffer(urlSafeBase64) {
 }
 
 //======================================Encryption/Decryption===========================================================
+
+async function generateEncryptionContract() {
+    const key = await crypto.subtle.generateKey(
+        {
+            name: "AES-GCM",
+            length: 256 // AES key length (256 bits)
+        },
+        true, // extractable key (you can export it)
+        ["encrypt", "decrypt"] // allowed key usages
+    ); // Generate AES-GCM key
+    const iv = window.crypto.getRandomValues(new Uint8Array(12)); // Generate random 12-byte IV
+
+    // Convert the key to a base64 string to allow sharing/storing
+    const exportedKey = await crypto.subtle.exportKey("raw", key);
+    return new EncryptionContract(arrayBufferToBase64(exportedKey), arrayBufferToBase64(iv));
+}
+
 async function encryptWithAES(input/*ArrayBuffer*/) {
     const key = await crypto.subtle.generateKey(
         {
@@ -259,8 +276,61 @@ async function encryptWithAESUsingContract(input /* ArrayBuffer */, encryptionCo
     );
 }
 
+async function encryptBinaryChunk(input /* ArrayBuffer */, encryptionContract,
+                                  requiredSize = MemoryBlock.MB_ENC, emptyByte = 0) {
+    const encData = await encryptWithAESUsingContract(input, encryptionContract);
+    const sizePrefix = bytesToArrayBuffer(intToBytes(encData.byteLength));
+    const encDataWithSizePrefix = concatArrayBuffers([sizePrefix, encData]);
+
+    if (encDataWithSizePrefix.byteLength > requiredSize) {
+        alert("Encrypted block is too big!!!");
+        return encDataWithSizePrefix;
+    }
+
+    if (encDataWithSizePrefix.byteLength === requiredSize) {
+        return encDataWithSizePrefix;
+    }
+
+    const newBuffer = new ArrayBuffer(requiredSize);
+    const newView = new Uint8Array(newBuffer);
+
+    // Copy the original buffer's data into the new buffer
+    const originalView = new Uint8Array(encDataWithSizePrefix);
+    newView.set(originalView);
+
+    // Fill the additional space with the empty byte
+    newView.fill(emptyByte, encDataWithSizePrefix.byteLength);
+
+    return newBuffer;
+}
+
 async function encryptSlicesWithAES(slices) {
     return await encryptWithAES(concatArrayBuffers(slices));
+}
+
+async function decryptBinaryChunk(arrayBuffer, encryptionContract, intSize = 4) {
+    if (arrayBuffer.byteLength < intSize) {
+        alert("Buffer is too small to contain the length integer!!!")
+        throw new Error("Buffer is too small to contain the length integer.");
+    }
+    // Extract the first 'intSize' bytes as an ArrayBuffer for the length
+    const lengthBuffer = arrayBuffer.slice(0, intSize);
+    const length = bytesToInt(lengthBuffer);
+
+    // Ensure the length is valid
+    if (length > arrayBuffer.byteLength - intSize) {
+        alert("Invalid length or buffer is too small for the given length!!!");
+        throw new Error("Invalid length or buffer is too small for the given length.");
+    }
+
+    // Copy the next 'length' bytes from the buffer to a new ArrayBuffer
+    const encDataBuffer = new ArrayBuffer(length);
+    const newBufferView = new Uint8Array(encDataBuffer);
+    const originalView = new Uint8Array(arrayBuffer);
+
+    newBufferView.set(originalView.slice(intSize, intSize + length));
+
+    return await decryptAESToArrayBuffer(encDataBuffer, encryptionContract.base64Key, encryptionContract.base64IV);
 }
 
 async function decryptAESToArrayBuffer(arrayBuffer, base64Key, base64IV) {

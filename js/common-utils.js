@@ -1,5 +1,6 @@
 const MemoryBlock = Object.freeze({
     MB: 1024 * 1024,
+    MB_ENC: 1075 * 1075,
     MB10: 10 * 1024 * 1024,
     MB100: 100 * 1024 * 1024,
     GB: 1024 * 1024 * 1024
@@ -159,6 +160,19 @@ function bytesToUuid(bytes) {
 
     // Construct the UUID string
     return `${msbHex.substring(0, 8)}-${msbHex.substring(8, 12)}-${msbHex.substring(12, 16)}-${lsbHex.substring(0, 4)}-${lsbHex.substring(4, 16)}`;
+}
+
+function bytesToArrayBuffer(byteArray) {
+    // Create a new ArrayBuffer with the size of the byte array
+    const buffer = new ArrayBuffer(byteArray.length);
+
+    // Create a Uint8Array view on the ArrayBuffer
+    const uint8Array = new Uint8Array(buffer);
+
+    // Set the byte array values to the Uint8Array
+    uint8Array.set(byteArray);
+
+    return buffer;
 }
 
 function concatArrayBuffers(buffers) {
