@@ -325,9 +325,10 @@ async function addFileToRegistry(file) {
         return TransferFileHelper.transferFile(file, transferGroupName.value, transferGroupPasswordInput.value);
     }
     if (file) {
-        const binaryId = uuid.v4().toString();
+        /*const binaryId = uuid.v4().toString();
         const slices = await readFileToChunkArray(file);
-        return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
+        return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);*/
+        await SaveInCloudHelper.cacheFileInCloud(file);
     } else {
         return false;
     }
@@ -373,7 +374,7 @@ async function readFileToChunkArray(file) {
     return slices;
 }
 
-async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mimeType, encryptionContract) {
+async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mimeType) {
     try {
         //===============encryption=====================================================================================
         let slices = inSlices;

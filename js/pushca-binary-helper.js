@@ -75,6 +75,7 @@ class BinaryManifest {
     appendDatagram(datagram) {
         this.resetTotalSize();
         this.datagrams.push(datagram);
+        this.totalSize = calculateTotalSize(this.datagrams);
     }
 
     setSender(sender) {
@@ -366,6 +367,19 @@ async function addChunkToBinaryManifest(binaryManifest, order, arrayBuffer) {
     });
 }
 
+async function chunkToDatagram(order, arrayBuffer) {
+
+    return await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        chunk2Datagram(order, arrayBuffer, function (datagram) {
+            if (datagram) {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, datagram);
+            } else {
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, "Cannot convert bytes to datagram");
+            }
+        });
+    });
+}
+
 function chunk2Datagram(order, arrayBuffer, consumer) {
     if ((!arrayBuffer) || (arrayBuffer.byteLength === 0)) {
         if (typeof consumer === 'function') {
@@ -414,6 +428,20 @@ function calculateTotalSize(datagrams) {
         return 0;
     }
     return datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
+}
+
+async function saveBinaryManifestToDatabase(manifest){
+    return await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        saveBinaryManifest(
+            manifest,
+            function () {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
+            },
+            function (event) {
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, event.target.error.message);
+            }
+        );
+    });
 }
 
 async function processUploadBinaryAppeal(uploadBinaryAppeal) {
