@@ -35,7 +35,7 @@ SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
         saveBinaryChunk(manifest.id, order, blob);
         result = await PushcaClient.cacheBinaryChunkInCloud(manifest.id, order, arrayBuffer);
         return WaiterResponseType.SUCCESS === result.type
-    });
+    }, `Failed share file attempt: ${file.name}`);
 
     await cacheBinaryManifestInCloud(manifest);
     const result = saveBinaryManifestToDatabase(manifest);

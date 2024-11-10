@@ -343,7 +343,7 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
             encAndSendResult.encryptionContract
         );
         return WaiterResponseType.SUCCESS === result.type
-    });
+    }, "Failed file transfer attempt: all group members are unavailable");
 }
 
 TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroup, transferGroupPassword) {
@@ -381,10 +381,11 @@ TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, 
     });
 }
 
-async function readFileSequentially(file, chunkHandler) {
+async function readFileSequentially(file, chunkHandler, errorMsg) {
     const fileSize = file.size;
     let offset = 0;
     let sliceNumber = 0;
+    let pipeWasBroken = false;
 
     async function readNextChunk() {
         const reader = new FileReader();
@@ -407,9 +408,10 @@ async function readFileSequentially(file, chunkHandler) {
                     console.log('File read completed.');
                 }
             } else {
+                pipeWasBroken = true;
                 console.log('Failed file chunk transfer attempt.');
                 showErrorMsg(
-                    "Failed file transfer attempt: all group members are unavailable",
+                    errorMsg,
                     function () {
                         mmDownloadProgress.value = 0;
                         mmProgressPercentage.textContent = `0%`;
@@ -431,7 +433,7 @@ async function readFileSequentially(file, chunkHandler) {
         readNextChunk();
 
         const totalNumberOfSlices = Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))
-        while (sliceNumber < totalNumberOfSlices) {
+        while ((!pipeWasBroken) && (sliceNumber < totalNumberOfSlices)) {
             const progress = Math.round((sliceNumber / totalNumberOfSlices) * 100);
             mmDownloadProgress.value = progress;
             mmProgressPercentage.textContent = `${progress}%`;
