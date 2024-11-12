@@ -18,20 +18,20 @@ SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
     const createManifestResult = await createBinaryManifest(binaryId, file.name, file.type, null, null);
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${file.name}`, null);
-        return;
+        return false;
     }
     const manifest = createManifestResult.body;
     const saveResult = await saveBinaryManifestToDatabase(manifest);
     if (WaiterResponseType.ERROR === saveResult.type) {
         showErrorMsg(saveResult.body.body, null);
-        return;
+        return false;
     }
     const processFileResult = await readFileSequentially(file, async function (inOrder, arrayBuffer) {
         return await processBinaryChunk(manifest, inOrder, arrayBuffer);
     }, `Failed share file attempt: ${file.name}`);
 
     if (!processFileResult) {
-        return;
+        return false;
     }
 
     await cacheBinaryManifestInCloud(manifest);
@@ -42,9 +42,10 @@ SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
                 console.log(`Binary with id ${binaryId} was completely removed from DB`);
             });
         });
-        return;
+        return false;
     }
     addManifestToManagerGrid(manifest);
+    return true;
 }
 
 async function processBinaryChunk(manifest, inOrder, arrayBuffer) {

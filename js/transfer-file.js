@@ -333,7 +333,7 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
         return false;
     }
 
-    await readFileSequentially(file, async function (order, arrayBuffer) {
+    return await readFileSequentially(file, async function (order, arrayBuffer) {
         //console.log(`Send chunk ${order}`);
         const result = await encryptAndTransferBinaryChunk(
             ftManifest.id,

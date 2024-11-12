@@ -321,16 +321,19 @@ async function processListOfFiles(files) {
 }
 
 async function addFileToRegistry(file) {
+    if (!file) {
+        return false;
+    }
     if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
         return TransferFileHelper.transferFile(file, transferGroupName.value, transferGroupPasswordInput.value);
     }
-    if (file) {
-        /*const binaryId = uuid.v4().toString();
+    if (encryptFileContentCheckbox.checked || passwordField.value) {
+        const binaryId = uuid.v4().toString();
         const slices = await readFileToChunkArray(file);
-        return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);*/
-        await SaveInCloudHelper.cacheFileInCloud(file);
+        return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
     } else {
-        return false;
+        hideSpinnerInButton();
+        return await SaveInCloudHelper.cacheFileInCloud(file);
     }
 }
 
