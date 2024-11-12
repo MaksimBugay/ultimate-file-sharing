@@ -71,7 +71,9 @@ closeErrorBtn.addEventListener('click', function () {
 });
 
 function showErrorMsg(msg, afterCloseHandler) {
-    if (msg.includes("A mutation operation in the transaction failed because a constraint was not satisfied")) {
+    if (msg.includes("at least one key does not satisfy the uniqueness requirements")) {
+        errorMsg.textContent = 'Content is already added into browser database';
+    } else if (msg.includes("A mutation operation in the transaction failed because a constraint was not satisfied")) {
         errorMsg.textContent = 'Content is already added into browser database';
     } else {
         errorMsg.textContent = msg;

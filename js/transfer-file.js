@@ -440,6 +440,8 @@ async function readFileSequentially(file, chunkHandler, errorMsg) {
             await delay(100);
         }
     });
+
+    return !pipeWasBroken;
 }
 
 async function executeWithShowProgressBar(operation) {

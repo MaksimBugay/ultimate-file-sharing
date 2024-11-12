@@ -430,7 +430,7 @@ function calculateTotalSize(datagrams) {
     return datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
 }
 
-async function saveBinaryManifestToDatabase(manifest){
+async function saveBinaryManifestToDatabase(manifest) {
     return await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
         saveBinaryManifest(
             manifest,
@@ -438,7 +438,25 @@ async function saveBinaryManifestToDatabase(manifest){
                 CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
             },
             function (event) {
-                CallableFuture.releaseWaiterIfExistsWithError(waiterId, event.target.error.message);
+                const errorMessage = event.target.error ? event.target.error.message : 'Unknown error';
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, errorMessage);
+            }
+        );
+    });
+}
+
+async function saveBinaryChunkToDatabase(binaryId, order, chunkBlob) {
+    return await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
+        saveBinaryChunk(
+            binaryId,
+            order,
+            chunkBlob,
+            function () {
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
+            },
+            function (event) {
+                const errorMessage = event.target.error ? event.target.error.message : 'Unknown error';
+                CallableFuture.releaseWaiterIfExistsWithError(waiterId, errorMessage);
             }
         );
     });

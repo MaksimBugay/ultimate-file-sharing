@@ -409,7 +409,7 @@ function clearAllManifests() {
 
 //===================================================================================
 //==============================Binary Chunks queries================================
-function saveBinaryChunk(binaryId, order, chunkBlob) {
+function saveBinaryChunk(binaryId, order, chunkBlob, onSuccessHandler, onErrorHandler) {
     const db = getActiveDb();
     if (!db) {
         console.error('Binary chunks DB is not open');
@@ -427,10 +427,16 @@ function saveBinaryChunk(binaryId, order, chunkBlob) {
 
     request.onsuccess = function () {
         console.log(`Binary chunk was successfully added to DB: binaryId = ${binaryId}, order = ${order}`);
+        if (typeof onSuccessHandler === 'function') {
+            onSuccessHandler();
+        }
     };
 
     request.onerror = function (event) {
         console.error("Error adding binary chunk to the database", event.target.error);
+        if (typeof onErrorHandler === 'function') {
+            onErrorHandler();
+        }
     };
 }
 
