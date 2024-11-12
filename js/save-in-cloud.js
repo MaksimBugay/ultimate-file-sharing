@@ -6,7 +6,7 @@ function eligibleForCachingInCloud(contentSize) {
 }
 
 async function cacheBinaryManifestInCloud(binaryManifest) {
-    await PushcaClient.cacheBinaryChunkInCloud(
+    return await PushcaClient.cacheBinaryChunkInCloud(
         binaryManifest.id,
         1_000_000,
         stringToArrayBuffer(
@@ -17,12 +17,22 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
     );
 }
 
-SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
-    const forCloud = eligibleForCachingInCloud(file.size);
+SaveInCloudHelper.cacheFileInCloud = async function (file) {
+    return await SaveInCloudHelper.cacheContentInCloud(
+        file.name, file.type, file.size,
+        async function(manifest, forCloud){
+            return await readFileSequentially(file, async function (inOrder, arrayBuffer) {
+                return await processBinaryChunk(manifest, inOrder, arrayBuffer, forCloud);
+            }, `Failed share file attempt: ${file.name}`);
+        }
+    );
+}
+SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitAndStoreProcessor) {
+    const forCloud = eligibleForCachingInCloud(size);
     const binaryId = uuid.v4().toString();
-    const createManifestResult = await createBinaryManifest(binaryId, file.name, file.type, null, null);
+    const createManifestResult = await createBinaryManifest(binaryId, name, type, null, null);
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
-        showErrorMsg(`Cannot create manifest for file ${file.name}`, null);
+        showErrorMsg(`Cannot create manifest for file ${name}`, null);
         return false;
     }
     const manifest = createManifestResult.body;
@@ -31,9 +41,7 @@ SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
         showErrorMsg(saveResult.body.body, null);
         return false;
     }
-    const processFileResult = await readFileSequentially(file, async function (inOrder, arrayBuffer) {
-        return await processBinaryChunk(manifest, inOrder, arrayBuffer, forCloud);
-    }, `Failed share file attempt: ${file.name}`);
+    const processFileResult = await splitAndStoreProcessor(manifest, forCloud);
 
     if (!processFileResult) {
         return false;
