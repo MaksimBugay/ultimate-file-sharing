@@ -1,6 +1,10 @@
 SaveInCloudHelper = {}
 SaveInCloudHelper.blockSize = MemoryBlock.MB;
 
+function eligibleForCachingInCloud(contentSize) {
+    return contentSize < MemoryBlock.MB100;
+}
+
 async function cacheBinaryManifestInCloud(binaryManifest) {
     await PushcaClient.cacheBinaryChunkInCloud(
         binaryManifest.id,
@@ -14,6 +18,7 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
 }
 
 SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
+    const forCloud = eligibleForCachingInCloud(file.size);
     const binaryId = uuid.v4().toString();
     const createManifestResult = await createBinaryManifest(binaryId, file.name, file.type, null, null);
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
@@ -27,14 +32,18 @@ SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
         return false;
     }
     const processFileResult = await readFileSequentially(file, async function (inOrder, arrayBuffer) {
-        return await processBinaryChunk(manifest, inOrder, arrayBuffer);
+        return await processBinaryChunk(manifest, inOrder, arrayBuffer, forCloud);
     }, `Failed share file attempt: ${file.name}`);
 
     if (!processFileResult) {
         return false;
     }
-
-    await cacheBinaryManifestInCloud(manifest);
+    if (forCloud) {
+        const cacheInCloudResult = await cacheBinaryManifestInCloud(manifest);
+        if (WaiterResponseType.ERROR === cacheInCloudResult.type) {
+            return false;
+        }
+    }
     const result = await saveBinaryManifestToDatabase(manifest);
     if (WaiterResponseType.ERROR === result.type) {
         showErrorMsg(result.body.body, function () {
@@ -48,7 +57,7 @@ SaveInCloudHelper.cacheFileInCloud = async function cacheFileInCloud(file) {
     return true;
 }
 
-async function processBinaryChunk(manifest, inOrder, arrayBuffer) {
+async function processBinaryChunk(manifest, inOrder, arrayBuffer, forCloud) {
     const order = inOrder - 1;
     let result = await chunkToDatagram(order, arrayBuffer);
     if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
@@ -58,9 +67,11 @@ async function processBinaryChunk(manifest, inOrder, arrayBuffer) {
         console.log(`Cannot append binary chunk: name ${manifest.name}, order ${order}`);
         return false;
     }
-    result = await PushcaClient.cacheBinaryChunkInCloud(manifest.id, order, arrayBuffer);
-    if (WaiterResponseType.ERROR === result.type) {
-        return false;
+    if (forCloud) {
+        result = await PushcaClient.cacheBinaryChunkInCloud(manifest.id, order, arrayBuffer);
+        if (WaiterResponseType.ERROR === result.type) {
+            return false;
+        }
     }
     const blob = new Blob([arrayBuffer], {type: manifest.type});
     result = await saveBinaryChunkToDatabase(manifest.id, order, blob);
