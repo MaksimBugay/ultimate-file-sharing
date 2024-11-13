@@ -65,6 +65,18 @@
     </div>
 </div>
 
+<div id="infoDialog" class="consent-dialog">
+    <div class="info-content">
+        <div class="info-caption">
+            <h2>Info</h2>
+            <div class="close-btn-container">
+                <span id="closeInfoBtn" class="close-btn" style="color: darkblue">&times;</span>
+            </div>
+        </div>
+        <p id="infoMsg"></p>
+    </div>
+</div>
+
 <div id="acceptFileTransferDialog" class="consent-dialog">
     <div class="dialog-box">
         <h2>Transfer request</h2>
@@ -127,7 +139,8 @@
             <h2 id="transferGroupCaptionMobile" style="color: darkslategray; text-align: left; margin-left: 15px">
                 (some id)</h2>
         </div>
-        <button class="remove-btn" style="margin-bottom: 20px; margin-right: 10px" title="hide info" onclick="removeParentDiv(this)">
+        <button class="remove-btn" style="margin-bottom: 20px; margin-right: 10px" title="hide info"
+                onclick="removeParentDiv(this)">
             &#10006;
         </button>
     </div>

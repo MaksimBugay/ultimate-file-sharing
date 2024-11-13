@@ -60,15 +60,36 @@ const transferGroupPasswordInput = document.getElementById("transferGroupPasswor
 const errorDialog = document.getElementById("errorDialog");
 const errorMsg = document.getElementById("errorMsg");
 const closeErrorBtn = document.getElementById("closeErrorBtn");
+const infoDialog = document.getElementById("infoDialog");
+const infoMsg = document.getElementById("infoMsg");
+const closeInfoBtn = document.getElementById("closeInfoBtn");
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+        if (infoDialog.classList.contains('visible')) {
+            infoDialog.classList.remove('visible');
+        } else if (errorDialog.classList.contains('visible')) {
+            errorDialog.classList.remove('visible');
+        }
+    }
+});
 closeErrorBtn.addEventListener('click', function () {
     errorDialog.classList.remove('visible');
     if (typeof Fileshare.afterErrorMsgClosedHandler === 'function') {
         Fileshare.afterErrorMsgClosedHandler();
     }
 });
+
+closeInfoBtn.addEventListener('click', function () {
+    infoDialog.classList.remove('visible');
+});
+
+function showInfoMsg(msg) {
+    infoMsg.textContent = msg;
+    infoDialog.classList.add('visible');
+}
 
 function showErrorMsg(msg, afterCloseHandler) {
     if (msg.includes("at least one key does not satisfy the uniqueness requirements")) {
@@ -804,6 +825,8 @@ function addManifestToManagerGrid(newManifest) {
         copyTextToClipboard(publicUr);
         if (isMobile()) {
             showNativeShareDialog(newManifest.name, publicUr);
+        } else {
+            showInfoMsg(`Public url ${publicUr} was copied to clipboard`);
         }
     });
 }
