@@ -343,6 +343,13 @@ PushcaClient.onFinalizedBinaryHandler = function (manifest) {
 }
 
 PushcaClient.onMessageHandler = function (ws, data) {
+    if (data.includes("PUSHCA_LIMITS_VIOLATION::")) {
+        showErrorMsg(
+            data.replace("PUSHCA_LIMITS_VIOLATION::", "") + ", use 'Share from device option' or wait for several hours",
+            null
+        );
+        return;
+    }
     if (data.includes(`::${MessageType.PRIVATE_URL_SUFFIX}::`)) {
         //console.log(`get private url suffix request: ${data}`);
         const parts = data.split("::");
