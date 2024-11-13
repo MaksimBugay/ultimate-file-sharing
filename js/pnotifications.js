@@ -411,6 +411,7 @@ PushcaClient.clusterBaseUrl = 'https://secure.fileshare.ovh:31443'
 PushcaClient.serverBaseUrl = 'http://localhost:8080'
 PushcaClient.pusherInstanceId = null;
 PushcaClient.verbose = false;
+PushcaClient.uploadBinaryLimitWasReached = false;
 
 //handlers
 PushcaClient.onOpenHandler = null;
@@ -1098,7 +1099,7 @@ PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuf
     if (isEmpty(PushcaClient.ws)) {
         return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
     }
-    if (PushcaClient.ws.readyState !== window.WebSocket.OPEN) {
+    if ((PushcaClient.ws.readyState !== window.WebSocket.OPEN) || PushcaClient.uploadBinaryLimitWasReached) {
         const errorMsg = `WebSocket is not open. State: ${PushcaClient.ws.readyState}`;
         console.error(errorMsg);
         return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
@@ -1117,8 +1118,7 @@ PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuf
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
         20_000, id, numberOfRepeat, function () {
             PushcaClient.ws.send(combinedBuffer);
-            //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
-        }
+        }, true
     );
     if (WaiterResponseType.ERROR === result.type) {
         console.log(`Failed cache in cloud  chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);

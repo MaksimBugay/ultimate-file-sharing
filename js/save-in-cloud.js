@@ -92,7 +92,8 @@ SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitA
         });
         return false;
     }
-    addManifestToManagerGrid(manifest);
+    initFileManager();
+    //addManifestToManagerGrid(manifest);
     return true;
 }
 

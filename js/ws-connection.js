@@ -344,6 +344,10 @@ PushcaClient.onFinalizedBinaryHandler = function (manifest) {
 
 PushcaClient.onMessageHandler = function (ws, data) {
     if (data.includes("PUSHCA_LIMITS_VIOLATION::")) {
+        PushcaClient.uploadBinaryLimitWasReached = true;
+        delay(120_000).then(() => {
+            PushcaClient.uploadBinaryLimitWasReached = false;
+        });
         showErrorMsg(
             data.replace("PUSHCA_LIMITS_VIOLATION::", "") + ", use 'Share from device option' or wait for several hours",
             null
