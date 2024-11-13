@@ -35,7 +35,9 @@ fileInput.addEventListener('change', processSelectedFiles);
 
 passwordField.value = null;
 encryptFileContentCheckbox.checked = false;
-passwordField.addEventListener('input', function () {
+passwordField.addEventListener('input', passwordFieldWasChangedHandler);
+
+function passwordFieldWasChangedHandler() {
     if (passwordField.value.trim() !== '') {
         encryptFileContentCheckbox.parentElement.style.display = 'block'; // Show checkbox
         shareFromDeviceCheckbox.checked = true;
@@ -48,7 +50,7 @@ passwordField.addEventListener('input', function () {
         shareFromDeviceStateWasChanged();
         encryptFileContentCheckbox.parentElement.style.display = 'none'; // Hide checkbox
     }
-});
+}
 
 function openModal(contentType) {
     AddBinaryWidget.contentType = contentType;
@@ -60,6 +62,7 @@ function openModal(contentType) {
     protectWithPasswordContainer.style.display = 'block';
     document.getElementById('fileChoice').checked = true;
     transferGroupContainer.style.display = 'none';
+    passwordFieldWasChangedHandler();
 
     addBinaryPopup.style.display = 'block';
     if (ContentType.FILE === contentType) {
