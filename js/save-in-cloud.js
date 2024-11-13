@@ -39,6 +39,7 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, blob, storeInCl
                     }
                 }
             });
+            chunks.length = 0;
             return !pipeWasBroken;
         },
         storeInCloud
