@@ -656,9 +656,7 @@ function initFileManager() {
                         imgSrc: "../images/downloads-icon.png",
                         buttonTitle: "",
                         clickHandler: (data) => {
-                            loadAllBinaryChunks(data.id, data.datagrams.length, (loadedChunks) => {
-                                downloadBinary(loadedChunks, data.name, data.mimeType);
-                            });
+                            window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
                         }
                     }
                 }
@@ -668,19 +666,22 @@ function initFileManager() {
         if (isNotMobile) {
             columnDefs.push(
                 {
-                    //headerName: "Test",
                     headerComponent: GridHeaderWithRemoveColumnButton,
                     headerComponentParams: {
                         field: "testButton",
-                        headerName: "Test"
+                        headerName: "Cached in Cloud"
                     },
                     field: "testButton",
                     cellRenderer: GridCellButton,
                     cellRendererParams: {
-                        imgSrc: "../images/test-public-url.png",
+                        imgSrc: "../images/file-transfer1.png",
                         buttonTitle: "",
-                        clickHandler: (data) => {
-                            window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
+                        clickHandler: () => {
+                        },
+                        afterCreatedHandler: function (eButton, data) {
+                            if (!data.cachedInCloud) {
+                                eButton.style.visibility = 'hidden';
+                            }
                         }
                     }
                 }
@@ -753,6 +754,9 @@ function initFileManager() {
             defaultState: {sort: null}
         });
         FileManager.columnDefs = columnDefs;
+        FileManager.gridApi.applyColumnState({
+            state: [{colId: "downloadCounter", sort: null, hide: true}]
+        });
         delay(500).then(() => {
             const exposeWorkspaceIdCheckBox = document.getElementById(exposeWorkspaceIdCheckBoxId);
             if (exposeWorkspaceIdCheckBox) {

@@ -32,7 +32,7 @@ class Datagram {
 
 class BinaryManifest {
     constructor(id, name, mimeType, sender, pusherInstanceId, datagrams,
-                totalSize, timestamp, password, privateUrlSuffix, downloadCounter, base64Key, base64IV) {
+                totalSize, timestamp, password, privateUrlSuffix, downloadCounter, base64Key, base64IV, cachedInCloud = false) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
@@ -46,6 +46,7 @@ class BinaryManifest {
         this.downloadCounter = downloadCounter ? downloadCounter : 0;
         this.base64Key = base64Key;
         this.base64IV = base64IV;
+        this.cachedInCloud = cachedInCloud;
     }
 
     getPrivateUrlShortSuffix() {
@@ -148,7 +149,8 @@ class BinaryManifest {
             password: this.password,
             privateUrlSuffix: this.privateUrlSuffix,
             base64Key: this.base64Key,
-            base64IV: this.base64IV
+            base64IV: this.base64IV,
+            cachedInCloud: this.cachedInCloud
         };
     }
 
@@ -181,7 +183,8 @@ class BinaryManifest {
             jsonObject.privateUrlSuffix,
             downloadCounter,
             jsonObject.base64Key,
-            jsonObject.base64IV
+            jsonObject.base64IV,
+            jsonObject.cachedInCloud
         );
     }
 
@@ -301,7 +304,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
     return binaryManifest;
 }
 
-async function createBinaryManifest(id, name, mimeType, password, encryptionContract) {
+async function createBinaryManifest(id, name, mimeType, password, encryptionContract, cachedInCloud = false) {
     if (!PushcaClient.ClientObj) {
         return new WaiterResponse(WaiterResponseType.ERROR, "Owner connection is absent");
     }
@@ -325,7 +328,8 @@ async function createBinaryManifest(id, name, mimeType, password, encryptionCont
             null,
             null,
             null,
-            null
+            null,
+            cachedInCloud
         );
         return new WaiterResponse(WaiterResponseType.SUCCESS, binaryManifest);
     }

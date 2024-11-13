@@ -58,7 +58,7 @@ SaveInCloudHelper.cacheFileInCloud = async function (file, storeInCloud) {
 }
 SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitAndStoreProcessor, storeInCloud) {
     const binaryId = uuid.v4().toString();
-    const createManifestResult = await createBinaryManifest(binaryId, name, type, null, null);
+    const createManifestResult = await createBinaryManifest(binaryId, name, type, null, null, storeInCloud);
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${name}`, null);
         return false;
