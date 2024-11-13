@@ -38,8 +38,14 @@ encryptFileContentCheckbox.checked = false;
 passwordField.addEventListener('input', function () {
     if (passwordField.value.trim() !== '') {
         encryptFileContentCheckbox.parentElement.style.display = 'block'; // Show checkbox
+        shareFromDeviceCheckbox.checked = true;
+        shareFromDeviceCheckbox.disabled = true;
+        shareFromDeviceStateWasChanged();
     } else {
         encryptFileContentCheckbox.checked = false;
+        shareFromDeviceCheckbox.checked = false;
+        shareFromDeviceCheckbox.disabled = false;
+        shareFromDeviceStateWasChanged();
         encryptFileContentCheckbox.parentElement.style.display = 'none'; // Hide checkbox
     }
 });
@@ -205,13 +211,16 @@ window.addEventListener('click', (event) => {
     }
 });
 
-shareFromDeviceCheckbox.addEventListener('change', function () {
-    if (this.checked) {
+shareFromDeviceCheckbox.addEventListener('change', shareFromDeviceStateWasChanged);
+
+function shareFromDeviceStateWasChanged() {
+    if (shareFromDeviceCheckbox.checked) {
         shareFromDeviceWarning.style.display = 'block';
     } else {
         shareFromDeviceWarning.style.display = 'none';
     }
-});
+}
+
 createZipArchiveCheckbox.addEventListener('change', function () {
     if (this.checked) {
         showZipArchiveRelatedElements();

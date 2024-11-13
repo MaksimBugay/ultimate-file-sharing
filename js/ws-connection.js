@@ -184,6 +184,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (connectionInfoMobile) {
             connectionInfoMobile.style.display = 'none';
         }
+        const usageWarning = document.getElementById("usageWarning");
+        if (usageWarning) {
+            usageWarning.style.display = 'none';
+        }
     }
 });
 
@@ -307,10 +311,14 @@ FingerprintJS.load().then(fp => {
 PushcaClient.verbose = true;
 PushcaClient.onOpenHandler = async function () {
     console.log(`Connected to Pushca: application id ${PushcaClient.ClientObj.applicationId}`);
+    const usageWarning = document.getElementById("usageWarning");
+    if (usageWarning) {
+        usageWarning.style.display = 'none';
+        statusCaption.textContent = "(Exactly one instance of that page should be always open to provide sharing of your files!!!)";
+    }
     updateTransferGroupCaption();
     initFileManager();
     channelIndicator.style.backgroundColor = 'limegreen';
-    statusCaption.textContent = "(Exactly one instance of that page should be always open to provide sharing of your files!!!)";
     if (TransferFileHelper.preparedFile.length > 0) {
         for (const file of TransferFileHelper.preparedFile) {
             await TransferFileHelper.transferFile(
@@ -324,11 +332,15 @@ PushcaClient.onOpenHandler = async function () {
 };
 
 PushcaClient.onCloseHandler = function (ws, event) {
-    statusCaption.textContent = "(Transfer channel is broken)";
-    channelIndicator.style.backgroundColor = 'red';
     if (!event.wasClean) {
         console.error("Your connection died, refresh the page please");
     }
+    const usageWarning = document.getElementById("usageWarning");
+    if (usageWarning) {
+        usageWarning.style.display = 'flex';
+        statusCaption.textContent = "(Transfer channel is broken)";
+    }
+    channelIndicator.style.backgroundColor = 'red';
 };
 
 PushcaClient.onFinalizedBinaryHandler = function (manifest) {
