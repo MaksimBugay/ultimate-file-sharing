@@ -138,25 +138,6 @@ class BinaryManifest {
         };
     }
 
-    async toJSONWithProtectedAttributes() {
-        let encryptionContractStr = null;
-        if (this.base64Key) {
-            const ec = new EncryptionContract(this.base64Key, this.base64IV);
-            const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
-            encryptionContractStr = await ec.toTransferableString(this.password, salt);
-        }
-        return {
-            id: this.id,
-            name: this.name,
-            mimeType: this.mimeType,
-            sender: this.sender,
-            pusherInstanceId: this.pusherInstanceId,
-            datagrams: this.datagrams,
-            privateUrlSuffix: this.privateUrlSuffix,
-            encryptionContract: encryptionContractStr
-        };
-    }
-
     toDbJSON() {
         return {
             id: this.id,
@@ -234,6 +215,27 @@ function buildSharedFileChunkId(binaryId, order, destHashCode) {
     return `${binaryId}-${order}-${destHashCode}`;
 }
 
+async function manifestToJsonObjectWithProtectedAttributes(manifest) {
+    let encryptionContractStr = null;
+    if (manifest.base64Key) {
+        const ec = new EncryptionContract(manifest.base64Key, manifest.base64IV);
+        const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
+        encryptionContractStr = await ec.toTransferableString(manifest.password, salt);
+    }
+    const passwordHash = manifest.password ? await calculateSha256(manifest.password) : null;
+    return {
+        id: manifest.id,
+        name: manifest.name,
+        mimeType: manifest.mimeType,
+        sender: manifest.sender,
+        pusherInstanceId: manifest.pusherInstanceId,
+        datagrams: manifest.datagrams,
+        privateUrlSuffix: manifest.privateUrlSuffix,
+        encryptionContract: encryptionContractStr,
+        passwordHash: passwordHash
+    };
+}
+
 async function getPrivateUrlSuffix(binaryIdHash) {
     let encryptionContractStr = null;
     const getManifestResult = await CallableFuture.callAsynchronously(2000, null, function (waiterId) {
@@ -249,7 +251,7 @@ async function getPrivateUrlSuffix(binaryIdHash) {
     if ((WaiterResponseType.SUCCESS === getManifestResult.type) && getManifestResult.body) {
         const manifest = getManifestResult.body;
         if (manifest.base64Key) {
-            const transferableManifest = await manifest.toJSONWithProtectedAttributes();
+            const transferableManifest = await manifestToJsonObjectWithProtectedAttributes(manifest);
             encryptionContractStr = transferableManifest.encryptionContract;
         }
         return {
