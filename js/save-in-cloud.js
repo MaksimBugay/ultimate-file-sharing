@@ -2,12 +2,13 @@ SaveInCloudHelper = {}
 SaveInCloudHelper.blockSize = MemoryBlock.MB;
 
 async function cacheBinaryManifestInCloud(binaryManifest) {
+    const manifestObject = await binaryManifest.toJSONWithProtectedAttributes();
     return await PushcaClient.cacheBinaryChunkInCloud(
         binaryManifest.id,
         1_000_000,
         stringToArrayBuffer(
             arrayBufferToBase64(
-                stringToArrayBuffer(JSON.stringify(binaryManifest.toJSON()))
+                stringToArrayBuffer(JSON.stringify(manifestObject))
             )
         )
     );

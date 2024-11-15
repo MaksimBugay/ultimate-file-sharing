@@ -138,6 +138,25 @@ class BinaryManifest {
         };
     }
 
+    async toJSONWithProtectedAttributes() {
+        let encryptionContractStr = null;
+        if (this.base64Key) {
+            const ec = new EncryptionContract(this.base64Key, this.base64IV);
+            const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
+            encryptionContractStr = await ec.toTransferableString(this.password, salt);
+        }
+        return {
+            id: this.id,
+            name: this.name,
+            mimeType: this.mimeType,
+            sender: this.sender,
+            pusherInstanceId: this.pusherInstanceId,
+            datagrams: this.datagrams,
+            privateUrlSuffix: this.privateUrlSuffix,
+            encryptionContract: encryptionContractStr
+        };
+    }
+
     toDbJSON() {
         return {
             id: this.id,
@@ -230,12 +249,8 @@ async function getPrivateUrlSuffix(binaryIdHash) {
     if ((WaiterResponseType.SUCCESS === getManifestResult.type) && getManifestResult.body) {
         const manifest = getManifestResult.body;
         if (manifest.base64Key) {
-            const encryptionContract = new EncryptionContract(
-                manifest.base64Key,
-                manifest.base64IV
-            );
-            const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
-            encryptionContractStr = await encryptionContract.toTransferableString(manifest.password, salt);
+            const transferableManifest = await manifest.toJSONWithProtectedAttributes();
+            encryptionContractStr = transferableManifest.encryptionContract;
         }
         return {
             privateUrlSuffix: manifest.getPrivateUrlLongSuffix(),
