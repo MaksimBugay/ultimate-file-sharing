@@ -366,7 +366,8 @@ async function createBinaryManifest(id, name, mimeType, password, encryptionCont
                 privateUrlSuffix,
                 null,
                 encryptionContract ? encryptionContract.base64Key : null,
-                encryptionContract ? encryptionContract.base64IV : null
+                encryptionContract ? encryptionContract.base64IV : null,
+                cachedInCloud
             );
             CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
         });
