@@ -202,10 +202,21 @@ async function downloadProtectedBinarySilently(downloadRequest) {
             passwordField.value,
             stringToByteArray(workspaceField.value)
         );
-        blob = await decryptAES(chunks, encryptionContract.base64Key, encryptionContract.base64IV);
+
+        let success = true;
+        try {
+            blob = await decryptChunkByChunk(chunks, encryptionContract);
+        } catch (err) {
+            success = false;
+            console.error(err);
+        }
+        if (!success) {
+            blob = await decryptAES(chunks, encryptionContract.base64Key, encryptionContract.base64IV);
+        }
     } else {
         blob = new Blob(chunks, {type: 'application/octet-stream'});
     }
+    chunks.length = 0;
     downloadFile(blob, binaryFileName);
     //const blob = new Blob(chunks, {type: response.headers.get('content-type')});
     //const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});

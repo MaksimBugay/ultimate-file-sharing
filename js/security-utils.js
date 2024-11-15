@@ -310,7 +310,6 @@ async function encryptSlicesWithAES(slices) {
 
 async function decryptBinaryChunk(arrayBuffer, encryptionContract, intSize = 4) {
     if (arrayBuffer.byteLength < intSize) {
-        alert("Buffer is too small to contain the length integer!!!")
         throw new Error("Buffer is too small to contain the length integer.");
     }
     // Extract the first 'intSize' bytes as an ArrayBuffer for the length
@@ -319,8 +318,7 @@ async function decryptBinaryChunk(arrayBuffer, encryptionContract, intSize = 4) 
 
     // Ensure the length is valid
     if (length > arrayBuffer.byteLength - intSize) {
-        alert("Invalid length or buffer is too small for the given length!!!");
-        throw new Error("Invalid length or buffer is too small for the given length.");
+        throw new Error("Invalid length or buffer, it is too small for the given length.");
     }
 
     // Copy the next 'length' bytes from the buffer to a new ArrayBuffer
@@ -355,6 +353,22 @@ async function decryptAESToArrayBuffer(arrayBuffer, base64Key, base64IV) {
         key,
         arrayBuffer
     );
+}
+
+async function decryptChunkByChunk(slices, encryptionContract) {
+    const decChunks = [];
+
+    const encryptedContent = concatArrayBuffers(slices);
+    if (encryptedContent.byteLength < MemoryBlock.MB_ENC) {
+        throw new Error("Buffer is too small to contain encrypted block.");
+    }
+    const encChunks = splitArrayBuffer(encryptedContent, MemoryBlock.MB_ENC);
+
+    for (let i = 0; i < encChunks.length; i++) {
+        const decChunk = await decryptBinaryChunk(encChunks[i], encryptionContract);
+        decChunks.push(decChunk);
+    }
+    return new Blob(decChunks, {type: 'application/octet-stream'});
 }
 
 async function decryptAES(slices, base64Key, base64IV) {
