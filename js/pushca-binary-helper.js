@@ -223,6 +223,7 @@ async function manifestToJsonObjectWithProtectedAttributes(manifest) {
         encryptionContractStr = await ec.toTransferableString(manifest.password, salt);
     }
     const passwordHash = manifest.password ? await calculateSha256(stringToArrayBuffer(manifest.password)) : null;
+    //console.log(`Password hash = ${passwordHash}`);
     return {
         id: manifest.id,
         name: manifest.name,

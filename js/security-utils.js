@@ -6,11 +6,12 @@ class CreatePrivateUrlSuffixRequest {
 }
 
 class DownloadProtectedBinaryRequest {
-    constructor(suffix, exp, signature, binaryId) {
+    constructor(suffix, exp, signature, binaryId, passwordHash) {
         this.suffix = suffix;
         this.exp = exp;
         this.signature = signature;
         this.binaryId = binaryId;
+        this.passwordHash = passwordHash;
     }
 
     toSkipSignatureJSON() {
