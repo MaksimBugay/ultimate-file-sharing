@@ -59,21 +59,12 @@ dropZone.addEventListener('drop', async function (event) {
         // File is now a Blob object
         const blob = new Blob([file], {type: file.type});
 
-        showMainSpinnerInButton();
-        if (encryptFileContentCheckbox.checked || passwordField.value) {
-            const binaryId = uuid.v4().toString();
-            const slices = await blobToArrayBuffers(blob, MemoryBlock.MB100);
-            await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
-            slices.length = 0;
-        } else {
-            await SaveInCloudHelper.cacheBlobInCloud(
-                file.name,
-                file.type,
-                blob,
-                true);
-        }
+        await SaveInCloudHelper.cacheBlobInCloud(
+            file.name,
+            file.type,
+            blob,
+            true);
         delay(500).then(() => {
-            hideMainSpinnerInButton();
             event.dataTransfer.clearData();
         });
     }

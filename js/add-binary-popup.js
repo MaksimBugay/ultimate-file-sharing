@@ -167,7 +167,12 @@ pastArea.addEventListener('paste', async function (event) {
             showSpinnerInButton();
             const binaryId = uuid.v4().toString();
             const slices = await blobToArrayBuffers(blob, MemoryBlock.MB100);
-            await createAndStoreBinaryFromSlices(slices, binaryId, getCopyPastName(mimeType), mimeType);
+            await SaveInCloudHelper.cacheBlobInCloud(
+                getCopyPastName(mimeType),
+                mimeType,
+                blob,
+                !shareFromDeviceCheckbox.checked,
+                passwordField.value.trim());
             delay(500).then(() => {
                 slices.length = 0;
                 closeModal();

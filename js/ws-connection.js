@@ -826,7 +826,7 @@ function addManifestToManagerGrid(newManifest) {
         if (isMobile()) {
             showNativeShareDialog(newManifest.name, publicUr);
         } else {
-            showInfoMsg(`Public url ${publicUr} was copied to clipboard`);
+            showInfoMsg(`Public url was copied to clipboard`);
         }
     });
 }

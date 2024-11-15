@@ -130,8 +130,12 @@ async function processBinaryChunk(manifest, inOrder, inArrayBuffer, storeInCloud
         if (WaiterResponseType.ERROR === result.type) {
             return false;
         }
+    } else {
+        const blob = new Blob([arrayBuffer], {type: manifest.type});
+        result = await saveBinaryChunkToDatabase(manifest.id, order, blob);
+        if (WaiterResponseType.ERROR === result.type) {
+            return false;
+        }
     }
-    const blob = new Blob([arrayBuffer], {type: manifest.type});
-    result = await saveBinaryChunkToDatabase(manifest.id, order, blob);
-    return WaiterResponseType.SUCCESS === result.type
+    return true;
 }
