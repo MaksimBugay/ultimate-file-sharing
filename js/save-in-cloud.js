@@ -14,10 +14,10 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
     );
 }
 
-SaveInCloudHelper.cacheBlobInCloud = async function (name, type, blob, storeInCloud) {
+SaveInCloudHelper.cacheBlobInCloud = async function (name, type, blob, storeInCloud, password = null) {
     return await SaveInCloudHelper.cacheContentInCloud(
         name, type, blob.size,
-        async function (manifest, storeInCloud) {
+        async function (manifest, storeInCloud, encryptionContract) {
             const chunks = await blobToArrayBuffers(blob, MemoryBlock.MB);
             let pipeWasBroken = false;
             await executeWithShowProgressBar(async function () {
@@ -25,7 +25,13 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, blob, storeInCl
                     const progress = Math.round(((i + 1) / chunks.length) * 100);
                     mmDownloadProgress.value = progress;
                     mmProgressPercentage.textContent = `${progress}%`;
-                    const processChunkResult = await processBinaryChunk(manifest, i + 1, chunks[i], storeInCloud);
+                    const processChunkResult = await processBinaryChunk(
+                        manifest,
+                        i + 1,
+                        chunks[i],
+                        storeInCloud,
+                        encryptionContract
+                    );
                     if (!processChunkResult) {
                         showErrorMsg(
                             `Failed share file attempt: ${name}`,
@@ -43,24 +49,34 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, blob, storeInCl
             chunks.length = 0;
             return !pipeWasBroken;
         },
-        storeInCloud
+        storeInCloud,
+        password
     );
 }
 
-SaveInCloudHelper.cacheFileInCloud = async function (file, storeInCloud) {
+SaveInCloudHelper.cacheFileInCloud = async function (file, storeInCloud, password = null) {
     return await SaveInCloudHelper.cacheContentInCloud(
         file.name, file.type, file.size,
-        async function (manifest, storeInCloud) {
+        async function (manifest, storeInCloud, encryptionContract) {
             return await readFileSequentially(file, async function (inOrder, arrayBuffer) {
-                return await processBinaryChunk(manifest, inOrder, arrayBuffer, storeInCloud);
+                return await processBinaryChunk(manifest, inOrder, arrayBuffer, storeInCloud, encryptionContract);
             }, `Failed share file attempt: ${file.name}`);
         },
-        storeInCloud
+        storeInCloud,
+        password
     );
 }
-SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitAndStoreProcessor, storeInCloud) {
+SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitAndStoreProcessor, storeInCloud, password) {
     const binaryId = uuid.v4().toString();
-    const createManifestResult = await createBinaryManifest(binaryId, name, type, null, null, storeInCloud);
+    const encryptionContract = password ? await generateEncryptionContract() : null;
+    const createManifestResult = await createBinaryManifest(
+        binaryId,
+        name,
+        type,
+        password,
+        encryptionContract,
+        storeInCloud
+    );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${name}`, null);
         return false;
@@ -71,7 +87,7 @@ SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitA
         showErrorMsg(saveResult.body.body, null);
         return false;
     }
-    const processFileResult = await splitAndStoreProcessor(manifest, storeInCloud);
+    const processFileResult = await splitAndStoreProcessor(manifest, storeInCloud, encryptionContract);
 
     if (!processFileResult) {
         removeBinary(binaryId, function () {
@@ -98,7 +114,8 @@ SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitA
     return true;
 }
 
-async function processBinaryChunk(manifest, inOrder, arrayBuffer, storeInCloud) {
+async function processBinaryChunk(manifest, inOrder, inArrayBuffer, storeInCloud, encryptionContract) {
+    const arrayBuffer = encryptionContract ? await encryptBinaryChunk(inArrayBuffer, encryptionContract) : inArrayBuffer
     const order = inOrder - 1;
     let result = await chunkToDatagram(order, arrayBuffer);
     if ((WaiterResponseType.SUCCESS === result.type) && result.body) {

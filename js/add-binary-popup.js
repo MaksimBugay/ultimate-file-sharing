@@ -39,15 +39,10 @@ passwordField.addEventListener('input', passwordFieldWasChangedHandler);
 
 function passwordFieldWasChangedHandler() {
     if (passwordField.value.trim() !== '') {
-        encryptFileContentCheckbox.parentElement.style.display = 'block'; // Show checkbox
-        shareFromDeviceCheckbox.checked = true;
-        shareFromDeviceCheckbox.disabled = true;
-        shareFromDeviceStateWasChanged();
+        encryptFileContentCheckbox.checked = false;
+        encryptFileContentCheckbox.parentElement.style.display = 'none'; // Show checkbox
     } else {
         encryptFileContentCheckbox.checked = false;
-        shareFromDeviceCheckbox.checked = false;
-        shareFromDeviceCheckbox.disabled = false;
-        shareFromDeviceStateWasChanged();
         encryptFileContentCheckbox.parentElement.style.display = 'none'; // Hide checkbox
     }
 }
@@ -327,18 +322,13 @@ async function processListOfFiles(files) {
                 transferGroupName.value, transferGroupPasswordInput.value
             )
         } else {
-            if (encryptFileContentCheckbox.checked || passwordField.value) {
-                const binaryId = uuid.v4().toString();
-                const slices = await blobToArrayBuffers(zipBlob, MemoryBlock.MB100);
-                await createAndStoreBinaryFromSlices(slices, binaryId, zipArchiveName, "application/zip");
-            } else {
-                hideSpinnerInButton();
-                await SaveInCloudHelper.cacheBlobInCloud(
-                    zipArchiveName,
-                    "application/zip",
-                    zipBlob,
-                    !shareFromDeviceCheckbox.checked);
-            }
+            hideSpinnerInButton();
+            await SaveInCloudHelper.cacheBlobInCloud(
+                zipArchiveName,
+                "application/zip",
+                zipBlob,
+                !shareFromDeviceCheckbox.checked,
+                passwordField.value.trim());
         }
     } else {
         for (let i = 0; i < files.length; i++) {
@@ -359,14 +349,9 @@ async function addFileToRegistry(file) {
     if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
         return TransferFileHelper.transferFile(file, transferGroupName.value, transferGroupPasswordInput.value);
     }
-    if (encryptFileContentCheckbox.checked || passwordField.value) {
-        const binaryId = uuid.v4().toString();
-        const slices = await readFileToChunkArray(file);
-        return await createAndStoreBinaryFromSlices(slices, binaryId, file.name, file.type);
-    } else {
-        hideSpinnerInButton();
-        return await SaveInCloudHelper.cacheFileInCloud(file, !shareFromDeviceCheckbox.checked);
-    }
+
+    hideSpinnerInButton();
+    return await SaveInCloudHelper.cacheFileInCloud(file, !shareFromDeviceCheckbox.checked, passwordField.value.trim());
 }
 
 async function readFileToChunkArray(file) {
