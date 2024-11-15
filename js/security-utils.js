@@ -56,6 +56,12 @@ class EncryptionContract {
     }
 }
 
+async function calculateSha256(content) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', content);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return btoa(String.fromCharCode.apply(null, hashArray));
+}
+
 async function generateKeyFromPassword(password, salt) {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(

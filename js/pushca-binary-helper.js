@@ -222,7 +222,7 @@ async function manifestToJsonObjectWithProtectedAttributes(manifest) {
         const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
         encryptionContractStr = await ec.toTransferableString(manifest.password, salt);
     }
-    const passwordHash = manifest.password ? await calculateSha256(manifest.password) : null;
+    const passwordHash = manifest.password ? await calculateSha256(stringToArrayBuffer(manifest.password)) : null;
     return {
         id: manifest.id,
         name: manifest.name,
@@ -436,12 +436,6 @@ function buildPushcaBinaryHeader(binaryType, destHashCode, withAcknowledge, bina
 function extractOrderFromBinaryWithHeader(sourceBuffer) {
     const orderBytes = copyBytes(sourceBuffer, 22, 26);
     return bytesToInt(orderBytes);
-}
-
-async function calculateSha256(content) {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', content);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return btoa(String.fromCharCode.apply(null, hashArray));
 }
 
 function calculateTotalSize(datagrams) {
