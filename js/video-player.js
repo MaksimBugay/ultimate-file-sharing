@@ -4,7 +4,7 @@ const RecorderState = Object.freeze({
     PREVIEW: 2
 });
 
-const VideoPlayer ={}
+const VideoPlayer = {}
 VideoPlayer.contentType = ContentType.VIDEO
 
 const videoMimeType = MediaRecorder.isTypeSupported('video/webm; codecs="vp9, opus"') ?
@@ -90,10 +90,12 @@ recordBtn.addEventListener('click', async function () {
             return;
         }
         videoPlayer.pause();
-        showSpinnerInButton();
-        const binaryId = uuid.v4().toString();
-        const slices = await blobToArrayBuffers(fullVideoBlob, MemoryBlock.MB100);
-        await createAndStoreBinaryFromSlices(slices, binaryId, getVideoName(), mimeType);
+        await SaveInCloudHelper.cacheBlobInCloud(
+            getVideoName(),
+            mimeType,
+            fullVideoBlob,
+            !shareFromDeviceCheckbox.checked,
+            passwordField.value.trim());
         delay(500).then(() => {
             chunks.length = 0;
             fullVideoBlob = null;
@@ -141,14 +143,14 @@ async function startAudioRecording() {
         };
 
         mediaRecorder.start(10000);
-        return { status: 0, message: 'recording started' };
+        return {status: 0, message: 'recording started'};
     } catch (err) {
-        return { status: -1, message: `Cannot start, error accessing media devices: ${err}` };
+        return {status: -1, message: `Cannot start, error accessing media devices: ${err}`};
     }
 }
 
-async function startMediaRecording(){
-    if (ContentType.VIDEO === VideoPlayer.contentType){
+async function startMediaRecording() {
+    if (ContentType.VIDEO === VideoPlayer.contentType) {
         mimeType = videoMimeType;
         return await startVideoRecording();
     } else {
@@ -156,14 +158,15 @@ async function startMediaRecording(){
         return await startAudioRecording();
     }
 }
+
 async function startVideoRecording() {
     try {
         stream = await navigator.mediaDevices.getUserMedia({
             video: {
                 /*width: { ideal: 1920, max: 1920 },
                 height: { ideal: 1080, max: 1080 },*/
-                frameRate: { ideal: 60, max: 60 },  // Request 60 FPS if available
-                facingMode: { ideal: "user" }
+                frameRate: {ideal: 60, max: 60},  // Request 60 FPS if available
+                facingMode: {ideal: "user"}
             },
             audio: {
                 sampleRate: 44100,  // Request high-quality audio sampling rate
