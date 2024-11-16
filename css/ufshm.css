@@ -81,7 +81,7 @@ body {
     background-color: rgba(0, 0, 0, 0.4); /* Black background with opacity */
 }
 
-.modal-content {
+.file-share-modal-content {
     width: 430px;
     /*width: 40%;*/
     min-height: 400px;
@@ -98,6 +98,7 @@ body {
     margin-left: 30%;
     margin-top: 0;
     border: 1px solid #888;
+    overflow-y: auto;
 }
 
 .close {
@@ -397,13 +398,33 @@ input[type="text"] {
     color: #d3d3d3;
 }
 
-fieldset {
+.file-share-fieldset {
     /*padding: 20px;*/
+    padding-left: 10px;
+    padding-right: 10px;
     padding-bottom: 20px;
     border: 1px solid darkblue; /* Noticeable blue border */
     border-radius: 8px; /* Rounded corners */
     /*background-color: #f9f9f9;*/
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Light shadow for depth */
+}
+
+.file-share-header {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.file-share-fieldset input[type="text"] {
+    width: 100%;
+}
+
+.file-share-fieldset input[type="checkbox"] {
+    margin-top: 10px;
+}
+
+.file-share-fieldset label {
+    margin-top: 5px;
 }
 
 .option-container {
@@ -415,13 +436,14 @@ fieldset {
     margin-bottom: 15px;
 }
 
-legend {
+.file-share-legend {
     font-size: 16px;
     color: darkblue; /* Matching color with border */
     padding: 0 10px;
     background-color: #f9f9f9; /* Match the background */
     border: 1px solid darkblue;
     border-radius: 3px;
+    width: 50%;
 }
 
 #transferGroupContainer {

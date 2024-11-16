@@ -50,7 +50,6 @@ function passwordFieldWasChangedHandler() {
 function openModal(contentType) {
     AddBinaryWidget.contentType = contentType;
 
-    mainModalHeader.textContent = 'Prepare content for sharing';
     shareFromDeviceCheckbox.checked = false;
     shareFromDeviceWarning.style.display = 'none';
     createZipArchiveCheckbox.checked = false;
@@ -81,7 +80,6 @@ function openModal(contentType) {
         pastArea.focus();
     }
     if (ContentType.FILE_TRANSFER === contentType) {
-        mainModalHeader.textContent = 'Prepare content for transfer';
         protectWithPasswordContainer.style.display = 'none';
         transferGroupContainer.style.display = 'block';
         fileSelectorContainer.style.display = 'block';

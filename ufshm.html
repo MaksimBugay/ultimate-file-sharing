@@ -18,6 +18,16 @@
     <link rel="stylesheet" href="css/bauble.css">
     <link rel="stylesheet" href="css/consent-dialog.css">
 
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Optional Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
 
@@ -42,7 +52,8 @@
         }
     </script>
 </head>
-<body>
+<body style="background-color: #006BFD">
+
 <div id="consentDialog" class="consent-dialog">
     <div class="dialog-box">
         <h2>Clipboard Access Request</h2>
@@ -81,8 +92,8 @@
     <div class="dialog-box">
         <h2>Transfer request</h2>
         <div style="justify-content: left; align-items: flex-start; text-align: left; margin-bottom: 15px; font-size: 16px;">
-            <fieldset>
-                <legend style="font-size: 20px">File</legend>
+            <fieldset class="file-share-fieldset">
+                <legend style="font-size: 20px" class="file-share-legend">File</legend>
                 <div style="display: flex">
                     <p class="ftrCaption">Name: </p>
                     <p id="ftrName"></p>
@@ -111,40 +122,43 @@
 </div>
 
 <span id="channelIndicator" class="bauble"></span>
-<iframe src="html/header.html" width="95%" height="90px" style="border: none; pointer-events: none;"></iframe>
+<iframe src="html/header.html" width="100%" height="93px"
+        style="border: none; pointer-events: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
 <div id="usageWarning" class="blue-right-half-transparent-div">
     <h2 id="statusCaption" style="color: crimson; text-align: center; margin: 0">(Transfer channel is broken)</h2>
     <button class="remove-btn" title="hide warning" style="margin-left: 150px" onclick="removeParentDiv(this)">
         &#10006;
     </button>
 </div>
-<div id="connectionInfo" class="blue-left-half-transparent-div">
-    <div style="width: 100%; justify-content: right; align-items: flex-end; display: flex">
-        <div style="width: 98%; display: flex; justify-content: left; align-items: flex-start">
-            <h2 id="deviceIdCaption" style="color: darkslategray; text-align: left; margin: 0">Device ID: (some id)</h2>
-            <h2 id="transferGroupCaption" style="color: darkslategray; text-align: left; margin: 0 0 0 25px">
-                Transfer Group: (some id)</h2>
-        </div>
-        <button class="remove-btn" title="hide info" onclick="removeParentDiv(this)">
-            &#10006;
-        </button>
+
+<nav id="connectionInfo" class="navbar navbar-expand-lg navbar-light bg-light"
+     style="padding: 0 0 0 0; margin: 0 0 0 0">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#toolbarConnectionInfo"
+            aria-controls="toolbarConnectionInfo" aria-expanded="false" aria-label="Toggle connection info">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="toolbarConnectionInfo"
+         style="background-color: rgba(135, 206, 235, 0.85)">
+        <ul class="navbar-nav">
+            <li class="nav-item-group-info">
+                <a class="navbar-group-info" href="#">
+                    Device ID:
+                </a>
+            </li>
+            <li class="nav-item">
+                <div class="navbar-text" id="deviceIdCaption"></div>
+            </li>
+            <li class="nav-item-group-info">
+                <a class="navbar-group-info" href="#">
+                    Transfer Group:
+                </a>
+            </li>
+            <li class="nav-item">
+                <div class="navbar-text" id="transferGroupCaption"></div>
+            </li>
+        </ul>
     </div>
-</div>
-<div id="connectionInfoMobile" class="blue-left-half-transparent-div">
-    <div style="width: 100%; justify-content: right; align-items: flex-end; display: flex">
-        <div style="width: 98%; height: 100%; display: block; justify-content: left; text-align: left">
-            <h2 style="margin-left: 10px">Device ID:</h2>
-            <h2 id="deviceIdCaptionMobile" style="color: darkslategray; margin-left: 15px">(some id)</h2>
-            <h2 id="transferGroupCaptionMobileHeader" style="margin-left: 10px">Transfer Group:</h2>
-            <h2 id="transferGroupCaptionMobile" style="color: darkslategray; text-align: left; margin-left: 15px">
-                (some id)</h2>
-        </div>
-        <button class="remove-btn" style="margin-bottom: 20px; margin-right: 10px" title="hide info"
-                onclick="removeParentDiv(this)">
-            &#10006;
-        </button>
-    </div>
-</div>
+</nav>
 
 <div id="expandableDiv" style="display: none">
     <div>
@@ -177,24 +191,62 @@
         </a>
     </div>
 </div>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light" style="padding: 0 0 0 0">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#toolbarNav"
+            aria-controls="toolbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="toolbarNav" style="background-color: rgba(200, 230, 210, 0.85)">
+        <ul class="navbar-nav">
+            <li class="nav-item-group-caption">
+                <a class="navbar-group-caption" href="#">
+                    Share:
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <img id="addBinaryButton" src="images/document-add-icon-16.png" alt="Share files"
+                         class="custom-button-img"> File
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <img id="recordVideoButton" src="images/record-video.png" alt="Share video recording"
+                         class="custom-button-img"> Video recording
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <img id="recordAudioButton" src="images/record-audio.png" alt="Share audio recording"
+                         class="custom-button-img"> Audio recording
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <img id="pastFromBufferButton" src="images/past.png" alt="Share keyboard buffer"
+                         class="custom-button-img"> Keyboard buffer
+                </a>
+            </li>
+            <li class="nav-item-group-caption">
+                <a class="navbar-group-caption" href="#">
+                    Transfer:
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">
+                    <img id="transferFileButton" src="images/file-transfer.png" alt="Search" class="custom-button-img">
+                    File
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+
 <div id="gridToolBar" class="green-half-transparent-div" style="display: block">
     <h2 id="totalSizeCaption" style="margin-left: 20px; margin-right: 50px"></h2>
     <div style="display: flex" id="toolBarWithMainActions">
-        <button id="addBinaryButton" class="image-button" title="Share files">
-            <img src="images/document-add-icon-16.png" alt="Add files button">
-        </button>
-        <button id="transferFileButton" class="image-button" title="Transfer files">
-            <img src="images/file-transfer.png" alt="Transfer file">
-        </button>
-        <button id="recordVideoButton" class="image-button" title="Record and share video">
-            <img src="images/record-video.png" alt="Record video button">
-        </button>
-        <button id="recordAudioButton" class="image-button" title="Record and share audio">
-            <img src="images/record-audio.png" alt="Record audio button">
-        </button>
-        <button id="pastFromBufferButton" class="image-button" title="Past and share content from keyboard buffer">
-            <img src="images/past.png" alt="Make a screenshot">
-        </button>
         <div id="dropZone" class="drop-zone">
             To
             <div id="selectShareOrTransferContainer" style="">
@@ -218,16 +270,16 @@
     </div>
 </div>
 <div id="addBinaryPopup" class="modal">
-    <div class="modal-content">
-        <div id="popup-content">
+    <div class="file-share-modal-content">
+        <div id="popup-content" style="align-items: center;">
             <span class="close">&times;</span>
-            <h1 id="mainModalHeader">Prepare content for sharing</h1>
+            <div id="mainModalHeader" class="file-share-header">Prepare content</div>
             <div id="mmProgressBarContainer" style="display: none; width: 100%">
                 <progress id="mmDownloadProgress" value="0" max="100" style="width: 100%"></progress>
                 <span id="mmProgressPercentage">0%</span>
             </div>
             <div id="protectWithPasswordContainer" style="width: 99%">
-                <div id="shareFromDeviceWarning" style="color: red; margin-bottom: 10px; display: none">
+                <div id="shareFromDeviceWarning" style="color: red; margin-bottom: 10px; margin-left: 5px; display: none">
                     Our website should be always open to support sharing!!!
                 </div>
                 <div class="option-container">
@@ -236,10 +288,10 @@
                         Share from device, without upload to cloud
                     </label>
                 </div>
-                <fieldset>
-                    <legend>Protect with</legend>
+                <fieldset class="file-share-fieldset">
+                    <legend class="file-share-legend">Protect with</legend>
                     <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password (optional)</label>
-                    <input type="text" style="width: 90%" id="passwordInput"
+                    <input type="text" id="passwordInput"
                            placeholder="Enter strong password to protect your content"/>
                     <div style="">
                         <label style="display: none">
@@ -250,17 +302,14 @@
                 </fieldset>
             </div>
             <div id="transferGroupContainer">
-                <fieldset>
-                    <legend>Transfer Group</legend>
-                    <div class="input-box" style="width: 90%">
-                        <label for="transferGroupName" style="margin-bottom: 0;padding-bottom: 0">Name</label>
-                        <input type="text" id="transferGroupName" placeholder="Provide a name of your transfer group"
-                               style="width: 100%"/>
-                        <label for="transferGroupPasswordInput" style="margin-bottom: 0;padding-bottom: 0">Password
-                            (optional)</label>
-                        <input type="text" style="width: 100%; margin-bottom: 15px" id="transferGroupPasswordInput"
-                               placeholder="Choose a strong password to protect your transfer"/>
-                    </div>
+                <fieldset class="file-share-fieldset">
+                    <legend class="file-share-legend">Transfer Group</legend>
+                    <label for="transferGroupName" style="margin-bottom: 0;padding-bottom: 0">Name</label>
+                    <input type="text" id="transferGroupName" placeholder="Provide a name of your transfer group"/>
+                    <label for="transferGroupPasswordInput" style="margin-bottom: 0;padding-bottom: 0">Password
+                        (optional)</label>
+                    <input type="text" style="margin-bottom: 15px" id="transferGroupPasswordInput"
+                           placeholder="Choose a strong password to protect your transfer"/>
                     <div class="button-container">
                         <button id="joinTransferGroupBtn" type="button" class="action-btn">Join</button>
                         <button id="leaveTransferGroupBtn" type="button" class="action-btn">Leave</button>
@@ -268,23 +317,21 @@
                 </fieldset>
             </div>
             <div id="copy-past-container" style="width: 100%; display: none; margin-top: 15px">
-                <fieldset>
-                    <legend>Past</legend>
+                <fieldset class="file-share-fieldset">
+                    <legend class="file-share-legend">Past</legend>
                     <label for="copyPastName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for
                         content</label>
-                    <input type="text" id="copyPastName" style="width: 70%"
-                           placeholder="Customize the name of content"/>
+                    <input type="text" id="copyPastName" placeholder="Customize the name of content"/>
                     <textarea class="copy-past-memo" id="pasteArea" rows="3" cols="30" spellcheck="false"
                               placeholder="Press Ctrl+V to past content"></textarea>
                 </fieldset>
             </div>
             <div id="video-recorder-container" style="width: 100%; display: none; margin-top: 15px">
-                <fieldset>
-                    <legend>Record</legend>
+                <fieldset class="file-share-fieldset">
+                    <legend class="file-share-legend">Record</legend>
                     <label for="recordedVideoName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for
                         recording</label>
-                    <input type="text" id="recordedVideoName" style="width: 70%"
-                           placeholder="Customize the name of the recorded video"/>
+                    <input type="text" id="recordedVideoName" placeholder="Customize the name of the recorded video"/>
                     <div id="video-recorder-sub-container" class="video-container">
                         <!-- Video Player (always displayed without controls initially) -->
                         <video id="videoPlayer" style="height: 200px">
@@ -304,20 +351,18 @@
             </div>
             <div id="file-selector-container" style="display: none; width: 100%">
                 <div id="zipContainer" style="width: 99%; margin-top: 15px; margin-bottom: 20px">
-                    <fieldset>
-                        <legend>Archiving</legend>
-                        <label style="display: inline-block; width: 90%">
-                            <input type="checkbox" id="createZipArchiveCheckbox"/>
-                            Compress into ZIP archive(optional)
-                            <input type="text" id="zipArchiveName" style="display: none; width: 100%"
-                                   placeholder="Customize the name of archive"/>
-                        </label>
-                        <div id="selectFileOrDirectoryContainer" style="display: none">
+                    <fieldset class="file-share-fieldset">
+                        <legend class="file-share-legend">Archiving</legend>
+                        <input type="checkbox" id="createZipArchiveCheckbox"/>
+                        Compress into ZIP archive(optional)
+                        <input type="text" id="zipArchiveName" style="display: none"
+                               placeholder="Customize the name of archive"/>
+                        <div id="selectFileOrDirectoryContainer" style="display: none; margin-top: 10px">
                             <label>
                                 <input type="radio" name="choice" value="file" checked id="fileChoice">
                                 Files
                             </label>
-                            <label>
+                            <label style="margin-left: 10px">
                                 <input type="radio" name="choice" value="directory">
                                 Directory
                             </label>
@@ -325,15 +370,17 @@
                     </fieldset>
                 </div>
                 <input type="file" id="fileInput" style="display:none" multiple>
-                <label id="selectFileLabel" for="fileInput"
-                       style="margin-bottom: 0;padding-bottom: 0;font-weight: bold; font-size: 18px;">Select</label>
-                <div style="display: flex">
-                    <label for="fileInput" style="margin-top: 15px" class="icon-button">
-                        <i class="fa fa-upload"></i>
-                    </label>
-                    <span class="or-sign">OR</span>
-                    <div id="dropZonePopup" class="drop-zone-popup">
-                        Drag and Drop your files here
+                <div style="margin-left: 15px">
+                    <label id="selectFileLabel" for="fileInput"
+                           style="margin-bottom: 0;padding-bottom: 0;font-weight: bold; font-size: 18px;">Select</label>
+                    <div style="display: flex">
+                        <label for="fileInput" style="margin-top: 15px" class="icon-button">
+                            <i class="fa fa-upload"></i>
+                        </label>
+                        <span class="or-sign">OR</span>
+                        <div id="dropZonePopup" class="drop-zone-popup">
+                            Drag and Drop your files here
+                        </div>
                     </div>
                 </div>
             </div>

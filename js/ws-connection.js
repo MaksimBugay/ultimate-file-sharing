@@ -108,7 +108,7 @@ const exposeWorkspaceIdCheckBoxId = "exposeWorkspaceIdCheckBox";
 function updateDeviceIdCaption(id) {
     const deviceIdCaption = document.getElementById("deviceIdCaption");
     if (deviceIdCaption) {
-        deviceIdCaption.textContent = `Device ID: ${id}`;
+        deviceIdCaption.textContent = `${id}`;
     }
     const deviceIdCaptionMobile = document.getElementById("deviceIdCaptionMobile");
     if (deviceIdCaptionMobile) {
@@ -126,7 +126,7 @@ function updateTransferGroupCaption() {
     if (transferGroupCaption) {
         if (group) {
             transferGroupCaption.style.display = 'block';
-            transferGroupCaption.textContent = `Transfer Group: ${group}`;
+            transferGroupCaption.textContent = `${group}`;
         } else {
             transferGroupCaption.style.display = 'none';
         }
@@ -160,7 +160,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (usageWarning) {
             usageWarning.remove();
         }
-        const modalContent = document.querySelector('.modal-content');
+        const modalContent = document.querySelector('.file-share-modal-content');
         if (modalContent) {
             modalContent.style.width = "96%";
             modalContent.style.marginTop = "0";
@@ -311,6 +311,14 @@ let pingIntervalId = window.setInterval(function () {
 
 window.addEventListener("beforeunload", function () {
     clearInterval(pingIntervalId);
+});
+
+window.addEventListener('resize', function () {
+    const toolbarNav = document.querySelector('#toolbarNav');
+    const toolbarConnectionInfo = document.querySelector('#toolbarConnectionInfo');
+
+    toolbarNav.classList.add('show');
+    toolbarConnectionInfo.classList.add('show');
 });
 
 FingerprintJS.load().then(fp => {
