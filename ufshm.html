@@ -72,7 +72,7 @@
                 <span id="closeErrorBtn" class="close-btn">&times;</span>
             </div>
         </div>
-        <p id="errorMsg"></p>
+        <p id="errorMsg" class="message-text"></p>
     </div>
 </div>
 
@@ -84,7 +84,7 @@
                 <span id="closeInfoBtn" class="close-btn" style="color: darkblue">&times;</span>
             </div>
         </div>
-        <p id="infoMsg"></p>
+        <p id="infoMsg" class="message-text"></p>
     </div>
 </div>
 
@@ -131,35 +131,6 @@
     </button>
 </div>
 
-<nav id="connectionInfo" class="navbar navbar-expand-lg navbar-light bg-light"
-     style="padding: 0 0 0 0; margin: 0 0 0 0">
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#toolbarConnectionInfo"
-            aria-controls="toolbarConnectionInfo" aria-expanded="false" aria-label="Toggle connection info">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="toolbarConnectionInfo"
-         style="background-color: rgba(135, 206, 235, 0.85)">
-        <ul class="navbar-nav">
-            <li class="nav-item-group-info">
-                <a class="navbar-group-info" href="#">
-                    Device ID:
-                </a>
-            </li>
-            <li class="nav-item">
-                <div class="navbar-text" id="deviceIdCaption"></div>
-            </li>
-            <li class="nav-item-group-info">
-                <a class="navbar-group-info" href="#">
-                    Transfer Group:
-                </a>
-            </li>
-            <li class="nav-item">
-                <div class="navbar-text" id="transferGroupCaption"></div>
-            </li>
-        </ul>
-    </div>
-</nav>
-
 <div id="expandableDiv" style="display: none">
     <div>
         <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" class="doc-link"
@@ -205,26 +176,26 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <img id="addBinaryButton" src="images/document-add-icon-16.png" alt="Share files"
+                <a class="nav-link" href="#" id="addBinaryButton">
+                    <img src="images/document-add-icon-16.png" alt="Share files"
                          class="custom-button-img"> File
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <img id="recordVideoButton" src="images/record-video.png" alt="Share video recording"
+                <a class="nav-link" href="#" id="recordVideoButton">
+                    <img src="images/record-video.png" alt="Share video recording"
                          class="custom-button-img"> Video recording
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <img id="recordAudioButton" src="images/record-audio.png" alt="Share audio recording"
+                <a class="nav-link" href="#" id="recordAudioButton">
+                    <img src="images/record-audio.png" alt="Share audio recording"
                          class="custom-button-img"> Audio recording
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <img id="pastFromBufferButton" src="images/past.png" alt="Share keyboard buffer"
+                <a class="nav-link" href="#" id="pastFromBufferButton">
+                    <img src="images/past.png" alt="Share keyboard buffer"
                          class="custom-button-img"> Keyboard buffer
                 </a>
             </li>
@@ -234,8 +205,8 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <img id="transferFileButton" src="images/file-transfer.png" alt="Search" class="custom-button-img">
+                <a class="nav-link" href="#" id="transferFileButton">
+                    <img src="images/file-transfer.png" alt="Search" class="custom-button-img">
                     File
                 </a>
             </li>
@@ -243,32 +214,77 @@
     </div>
 </nav>
 
-
-<div id="gridToolBar" class="green-half-transparent-div" style="display: block">
-    <h2 id="totalSizeCaption" style="margin-left: 20px; margin-right: 50px"></h2>
-    <div style="display: flex" id="toolBarWithMainActions">
-        <div id="dropZone" class="drop-zone">
-            To
-            <div id="selectShareOrTransferContainer" style="">
-                <label class="share-or-transfer-label">
-                    <input type="radio" name="share-or-transfer" value="share-choice" checked id="shareActionChoice">
-                    share
-                </label>
-                <label class="share-or-transfer-label">
-                    <input type="radio" name="share-or-transfer" value="transfer-choice">
-                    transfer
-                </label>
-            </div>
-            fast just Drag and Drop your files here
-            <div id="download-spinner-main" style="display: none">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden"></span>
+<nav class="navbar navbar-expand-lg navbar-light bg-light" style="padding: 0 0 0 0">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#fastToolbarNav"
+            aria-controls="fastToolbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="fastToolbarNav" style="background-color: rgba(200, 230, 210, 0.85)">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <div id="dropZone" class="drop-zone">
+                    To
+                    <div id="selectShareOrTransferContainer" style="margin-right: 5px">
+                        <label class="share-or-transfer-label">
+                            <input type="radio" name="share-or-transfer" value="share-choice" checked
+                                   id="shareActionChoice">
+                            share
+                        </label>
+                        <label class="share-or-transfer-label">
+                            <input type="radio" name="share-or-transfer" value="transfer-choice">
+                            transfer
+                        </label>
+                    </div>
+                    fast just Drag and Drop your files here
+                    <div id="download-spinner-main" style="display: none">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden"></span>
+                        </div>
+                        <p id="download-message-main">Loading...</p>
+                    </div>
                 </div>
-                <p id="download-message-main">Loading...</p>
-            </div>
-        </div>
+            </li>
+        </ul>
     </div>
-</div>
+</nav>
+
+<nav id="connectionInfo" class="navbar navbar-expand-lg navbar-light bg-light"
+     style="padding: 0 0 0 0; margin: 0 0 0 0">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#toolbarConnectionInfo"
+            aria-controls="toolbarConnectionInfo" aria-expanded="false" aria-label="Toggle connection info">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="toolbarConnectionInfo"
+         style="background-color: rgba(135, 206, 235, 0.85)">
+        <ul class="navbar-nav">
+            <li class="nav-item-group-info">
+                <a class="navbar-group-info" href="#">
+                    Device ID:
+                </a>
+            </li>
+            <li class="nav-item">
+                <div class="navbar-text" id="deviceIdCaption"></div>
+            </li>
+            <li class="nav-item-group-info">
+                <a class="navbar-group-info" href="#">
+                    Transfer Group:
+                </a>
+            </li>
+            <li class="nav-item">
+                <div class="navbar-text" id="transferGroupCaption"></div>
+            </li>
+            <li class="nav-item-group-info">
+                <a class="navbar-group-info" href="#">
+                    Total size:
+                </a>
+            </li>
+            <li class="nav-item">
+                <div class="navbar-text" id="totalSizeCaption"></div>
+            </li>
+        </ul>
+    </div>
+</nav>
+
 <div id="addBinaryPopup" class="modal">
     <div class="file-share-modal-content">
         <div id="popup-content" style="align-items: center;">
@@ -279,7 +295,8 @@
                 <span id="mmProgressPercentage">0%</span>
             </div>
             <div id="protectWithPasswordContainer" style="width: 99%">
-                <div id="shareFromDeviceWarning" style="color: red; margin-bottom: 10px; margin-left: 5px; display: none">
+                <div id="shareFromDeviceWarning"
+                     style="color: red; margin-bottom: 10px; margin-left: 5px; display: none">
                     Our website should be always open to support sharing!!!
                 </div>
                 <div class="option-container">

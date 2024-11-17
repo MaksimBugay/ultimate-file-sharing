@@ -179,10 +179,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (pastFromBufferButton) {
             pastFromBufferButton.style.display = 'none';
         }
-        const toolBarWithMainActions = document.getElementById("toolBarWithMainActions");
-        if (toolBarWithMainActions) {
-            toolBarWithMainActions.style.width = '100%';
-        }
         const connectionInfo = document.getElementById('connectionInfo');
         if (connectionInfo) {
             connectionInfo.style.display = 'none';
@@ -315,9 +311,11 @@ window.addEventListener("beforeunload", function () {
 
 window.addEventListener('resize', function () {
     const toolbarNav = document.querySelector('#toolbarNav');
+    const fastToolbarNav = document.querySelector('#fastToolbarNav');
     const toolbarConnectionInfo = document.querySelector('#toolbarConnectionInfo');
 
     toolbarNav.classList.add('show');
+    fastToolbarNav.classList.add('show');
     toolbarConnectionInfo.classList.add('show');
 });
 
@@ -809,14 +807,14 @@ function updateTotalSize() {
     FileManager.manifests.forEach(manifest => {
         FileManager.totalSize += manifest.getTotalSize();
     });
-    const totalSizeMb = `Total size = ${Math.round(FileManager.totalSize / MemoryBlock.MB)} Mb`;
-    document.getElementById("totalSizeCaption").textContent = `[${totalSizeMb}]`;
+    const totalSizeMb = Math.round(FileManager.totalSize / MemoryBlock.MB);
+    document.getElementById("totalSizeCaption").textContent = `${totalSizeMb} Mb`;
 }
 
 function decrementTotalSize(delta) {
     FileManager.totalSize = FileManager.totalSize - delta;
-    const totalSizeMb = `Total size = ${Math.round(FileManager.totalSize / MemoryBlock.MB)} Mb`;
-    document.getElementById("totalSizeCaption").textContent = `[${totalSizeMb}]`;
+    const totalSizeMb = Math.round(FileManager.totalSize / MemoryBlock.MB);
+    document.getElementById("totalSizeCaption").textContent = `${totalSizeMb} Mb`;
 }
 
 function addManifestToManagerGrid(newManifest) {
