@@ -173,6 +173,17 @@ input[type="text"] {
     background-color: #003f7f;
 }
 
+.frtItem {
+    display: flex;
+    width: 100%;
+}
+
+.frtText {
+    white-space: normal; /* Ensures text wraps to the next line */
+    overflow-wrap: break-word; /* Allows long words to break and wrap */
+    word-break: break-word; /* Optional: breaks long words */
+}
+
 .ftrCaption {
     margin-right: 10px;
     width: 150px;
