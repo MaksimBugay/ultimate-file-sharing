@@ -148,10 +148,6 @@ function updateTransferGroupCaption() {
 
 document.addEventListener("DOMContentLoaded", function () {
     if (isMobile()) {
-        const dropZone = document.getElementById('dropZone');
-        if (dropZone) {
-            dropZone.remove();
-        }
         const expandableDiv = document.getElementById("expandableDiv");
         if (expandableDiv) {
             expandableDiv.remove();
@@ -175,32 +171,12 @@ document.addEventListener("DOMContentLoaded", function () {
             dialogBox.style.paddingLeft = "10px";
             dialogBox.style.paddingRight = "10px";
         }
-        const pastFromBufferButton = document.getElementById('pastFromBufferButton');
-        if (pastFromBufferButton) {
-            pastFromBufferButton.style.display = 'none';
-        }
-        const connectionInfo = document.getElementById('connectionInfo');
-        if (connectionInfo) {
-            connectionInfo.style.display = 'none';
-        }
-        const connectionInfoMobile = document.getElementById('connectionInfoMobile');
-        if (connectionInfoMobile) {
-            connectionInfoMobile.style.display = 'flex';
-        }
     } else {
         const gridToolBar = document.getElementById("gridToolBar");
         if (gridToolBar) {
             gridToolBar.style.display = 'flex';
         }
         expandableDiv.style.display = "block";
-        const connectionInfo = document.getElementById('connectionInfo');
-        if (connectionInfo) {
-            connectionInfo.style.display = 'flex';
-        }
-        const connectionInfoMobile = document.getElementById('connectionInfoMobile');
-        if (connectionInfoMobile) {
-            connectionInfoMobile.style.display = 'none';
-        }
         const usageWarning = document.getElementById("usageWarning");
         if (usageWarning) {
             usageWarning.style.display = 'none';
