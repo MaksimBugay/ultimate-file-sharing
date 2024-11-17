@@ -190,6 +190,11 @@ document.addEventListener("DOMContentLoaded", function () {
             htModalContent.style.left = "0";
             htModalContent.style.top = "0";
         }
+        const selectFileBtn = document.getElementById("selectFileBtn");
+        if (selectFileBtn) {
+            selectFileBtn.width = '60px';
+            selectFileBtn.height = '60px';
+        }
         const dialogBox = document.querySelector('.dialog-box');
         if (dialogBox) {
             dialogBox.style.width = "96%";
