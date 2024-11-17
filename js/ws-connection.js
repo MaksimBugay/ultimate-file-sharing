@@ -166,6 +166,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (toolbarNav) {
             toolbarNav.classList.add('show');
         }
+        const fastAccessToolBar = document.getElementById("fastAccessToolBar");
+        if (fastAccessToolBar) {
+            fastAccessToolBar.remove();
+        }
         const usageWarning = document.getElementById("usageWarning");
         if (usageWarning) {
             usageWarning.remove();
