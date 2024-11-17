@@ -69,7 +69,7 @@ body {
     height: 500px;
 }
 
-.modal {
+.file-share-modal {
     display: none; /* Initially hidden */
     position: fixed;
     z-index: 1000; /* Ensure it appears on top */
@@ -79,6 +79,7 @@ body {
     height: 100%;
     overflow: auto; /* Enable scrolling if content is larger than the modal */
     background-color: rgba(0, 0, 0, 0.4); /* Black background with opacity */
+    scrollbar-width: none;
 }
 
 .file-share-modal-content {
@@ -99,6 +100,7 @@ body {
     margin-top: 0;
     border: 1px solid #888;
     overflow-y: auto;
+    position: relative;
 }
 
 .how-to-modal-content {

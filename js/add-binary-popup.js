@@ -10,9 +10,8 @@ const ContentType = Object.freeze({
 const AddBinaryWidget = {}
 
 const addBinaryPopup = document.getElementById("addBinaryPopup");
-const closeButton = document.querySelector('.close');
+const closeButton = document.getElementById("addBinaryPopupCloseBtn");
 
-const mainModalHeader = document.getElementById("mainModalHeader");
 const fileInput = document.getElementById('fileInput');
 const passwordField = document.getElementById('passwordInput');
 const encryptFileContentCheckbox = document.getElementById('encryptFileContentCheckbox');

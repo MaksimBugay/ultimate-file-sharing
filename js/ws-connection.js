@@ -178,6 +178,14 @@ document.addEventListener("DOMContentLoaded", function () {
             modalContent.style.left = "0";
             modalContent.style.top = "0";
         }
+        const htModalContent = document.querySelector('.how-to-modal-content');
+        if (htModalContent) {
+            htModalContent.style.width = "96%";
+            htModalContent.style.marginTop = "0";
+            htModalContent.style.marginLeft = '0';
+            htModalContent.style.left = "0";
+            htModalContent.style.top = "0";
+        }
         const dialogBox = document.querySelector('.dialog-box');
         if (dialogBox) {
             dialogBox.style.width = "96%";

@@ -131,7 +131,7 @@
     </button>
 </div>
 
-<div id="howToPopup" class="modal">
+<div id="howToPopup" class="file-share-modal">
     <div class="how-to-modal-content">
         <div id="expandableDiv">
             <span id="howToCloseBtn" class="close" style="margin-right: 10px">&times;</span>
@@ -207,6 +207,9 @@
                     <img src="images/file-transfer.png" alt="Search" class="custom-button-img">
                     File
                 </a>
+            </li>
+            <li class="nav-item">
+                <div style="width: 100px"></div>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="#" id ="howToButton"><i class="fas fa-info"></i> How to</a>
@@ -286,10 +289,10 @@
     </div>
 </nav>
 
-<div id="addBinaryPopup" class="modal">
+<div id="addBinaryPopup" class="file-share-modal">
     <div class="file-share-modal-content">
         <div id="popup-content" style="align-items: center;">
-            <span class="close">&times;</span>
+            <span id="addBinaryPopupCloseBtn" class="close">&times;</span>
             <div id="mainModalHeader" class="file-share-header">Prepare content</div>
             <div id="mmProgressBarContainer" style="display: none; width: 100%">
                 <progress id="mmDownloadProgress" value="0" max="100" style="width: 100%"></progress>
