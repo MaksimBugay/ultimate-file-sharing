@@ -192,8 +192,10 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         const selectFileBtn = document.getElementById("selectFileBtn");
         if (selectFileBtn) {
-            selectFileBtn.width = '60px';
-            selectFileBtn.height = '60px';
+            selectFileBtn.style.minWidth = '70px';
+            selectFileBtn.style.width = '70px';
+            selectFileBtn.style.height = '70px';
+            selectFileBtn.parentElement.style.marginLeft = '0';
         }
         const dialogBox = document.querySelector('.dialog-box');
         if (dialogBox) {
