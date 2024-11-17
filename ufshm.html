@@ -96,15 +96,15 @@
                 <legend style="font-size: 20px" class="file-share-legend">File</legend>
                 <div class="frtItem">
                     <p class="ftrCaption">Name: </p>
-                    <p id="ftrName"  class="frtText"></p>
+                    <p id="ftrName" class="frtText"></p>
                 </div>
                 <div class="frtItem">
                     <p class="ftrCaption">Content type: </p>
-                    <p id="ftrType"  class="frtText"></p>
+                    <p id="ftrType" class="frtText"></p>
                 </div>
                 <div class="frtItem">
                     <p class="ftrCaption">Size, Mb: </p>
-                    <p id="ftrSize"  class="frtText"></p>
+                    <p id="ftrSize" class="frtText"></p>
                 </div>
                 <div class="frtItem">
                     <p class="ftrCaption">Originator: </p>
@@ -131,35 +131,33 @@
     </button>
 </div>
 
-<div id="expandableDiv" style="display: none">
-    <div>
-        <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" class="doc-link"
-           target="_blank"
-           rel="noopener noreferrer" style="width: 150px; height: 100%; text-align: center">
-            📄 How to ...
-        </a>
-    </div>
-    <img src="images/how-to-medium-small.png" style="border: none;" alt="How to use Secure FileShare - Manual">
-    <div style="width: 100%; text-align: center;display: flex">
-        <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" target="_blank"
-           rel="noopener noreferrer"
-           style="width: 180px; background-color: transparent;margin-right: 50px;margin-left: 50px; margin-top: 15px">
-            📄 Full documentation
-        </a>
-        <a href="https://secure.fileshare.ovh:31443/privacy/privacy.html" target="_blank"
-           rel="noopener noreferrer" style="width: 100px; margin-top: 15px; background-color: transparent">
-            📄 Privacy
-        </a>
-    </div>
-    <div style="width: 100%; text-align: center;display: flex; margin-bottom: 5px">
-        <a href="https://www.youtube.com/watch?v=2p1BRWFm2Xc" target="_blank" rel="noopener noreferrer"
-           style="width: 180px; background-color: transparent; margin: 20px 50px 0 50px;">
-            🎥 Share files demo
-        </a>
-        <a href="https://www.youtube.com/watch?v=k1-GRewDd_8" target="_blank" rel="noopener noreferrer"
-           style="width: 180px; background-color: transparent; margin-top: 20px">
-            🎥 Transfer files demo
-        </a>
+<div id="howToPopup" class="modal">
+    <div class="how-to-modal-content">
+        <div id="expandableDiv">
+            <span id="howToCloseBtn" class="close" style="margin-right: 10px">&times;</span>
+            <img src="images/how-to-medium-small.png" style="border: none;" alt="How to use Secure FileShare - Manual">
+            <div style="width: 100%; text-align: center;display: flex">
+                <a href="https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html" target="_blank"
+                   rel="noopener noreferrer"
+                   style="width: 180px; background-color: transparent;margin-right: 50px;margin-left: 50px; margin-top: 15px">
+                    📄 Full documentation
+                </a>
+                <a href="https://secure.fileshare.ovh:31443/privacy/privacy.html" target="_blank"
+                   rel="noopener noreferrer" style="width: 100px; margin-top: 15px; background-color: transparent">
+                    📄 Privacy
+                </a>
+            </div>
+            <div style="width: 100%; text-align: center;display: flex; margin-bottom: 5px">
+                <a href="https://www.youtube.com/watch?v=2p1BRWFm2Xc" target="_blank" rel="noopener noreferrer"
+                   style="width: 180px; background-color: transparent; margin: 20px 50px 0 50px;">
+                    🎥 Share files demo
+                </a>
+                <a href="https://www.youtube.com/watch?v=k1-GRewDd_8" target="_blank" rel="noopener noreferrer"
+                   style="width: 180px; background-color: transparent; margin-top: 20px">
+                    🎥 Transfer files demo
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -209,6 +207,9 @@
                     <img src="images/file-transfer.png" alt="Search" class="custom-button-img">
                     File
                 </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" id ="howToButton"><i class="fas fa-info"></i> How to</a>
             </li>
         </ul>
     </div>
@@ -387,7 +388,7 @@
                     </fieldset>
                 </div>
                 <input type="file" id="fileInput" style="display:none" multiple>
-                <div style="margin-left: 15px">
+                <div style="margin-left: 5px">
                     <label id="selectFileLabel" for="fileInput"
                            style="margin-bottom: 0;padding-bottom: 0;font-weight: bold; font-size: 18px;">Select</label>
                     <div style="display: flex">

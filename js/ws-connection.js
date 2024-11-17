@@ -45,12 +45,14 @@ const Fileshare = {};
 Fileshare.noTransferGroupApplicationId = "ultimate-file-sharing";
 Fileshare.wakeLock = null;
 
+const howToPopup = document.getElementById("howToPopup");
+const howToButton = document.getElementById("howToButton");
+const howToCloseBtn = document.getElementById("howToCloseBtn");
 const statusCaption = document.getElementById("statusCaption");
 const channelIndicator = document.getElementById("channelIndicator");
 const addBinaryButton = document.getElementById("addBinaryButton");
 const recordVideoButton = document.getElementById("recordVideoButton");
 const recordAudioButton = document.getElementById("recordAudioButton");
-const expandableDiv = document.getElementById("expandableDiv");
 const pastFromBufferButton = document.getElementById("pastFromBufferButton")
 const transferFileButton = document.getElementById("transferFileButton");
 const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
@@ -66,12 +68,24 @@ const closeInfoBtn = document.getElementById("closeInfoBtn");
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
+howToButton.addEventListener('click', function () {
+    howToPopup.style.display = 'block';
+});
+
+howToCloseBtn.addEventListener('click', function () {
+    howToPopup.style.display = 'none';
+});
+
 document.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
         if (infoDialog.classList.contains('visible')) {
             infoDialog.classList.remove('visible');
         } else if (errorDialog.classList.contains('visible')) {
             errorDialog.classList.remove('visible');
+        }
+        const computedStyle = window.getComputedStyle(howToPopup);
+        if (computedStyle.display === 'block') {
+            howToPopup.style.display = 'none';
         }
     }
 });
@@ -148,9 +162,9 @@ function updateTransferGroupCaption() {
 
 document.addEventListener("DOMContentLoaded", function () {
     if (isMobile()) {
-        const expandableDiv = document.getElementById("expandableDiv");
-        if (expandableDiv) {
-            expandableDiv.remove();
+        const toolbarNav = document.querySelector('#toolbarNav');
+        if (toolbarNav) {
+            toolbarNav.classList.add('show');
         }
         const usageWarning = document.getElementById("usageWarning");
         if (usageWarning) {
@@ -176,21 +190,11 @@ document.addEventListener("DOMContentLoaded", function () {
         if (gridToolBar) {
             gridToolBar.style.display = 'flex';
         }
-        expandableDiv.style.display = "block";
         const usageWarning = document.getElementById("usageWarning");
         if (usageWarning) {
             usageWarning.style.display = 'none';
         }
     }
-});
-
-expandableDiv.addEventListener('mouseover', () => {
-    expandableDiv.classList.add('expand');
-});
-
-// Add mouseout event to shrink the div
-expandableDiv.addEventListener('mouseout', () => {
-    expandableDiv.classList.remove('expand');
 });
 
 joinTransferGroupBtn.addEventListener("click", function () {

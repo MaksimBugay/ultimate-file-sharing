@@ -101,6 +101,21 @@ body {
     overflow-y: auto;
 }
 
+.how-to-modal-content {
+    width: 550px;
+    /*height: 500px;*/
+    min-height: 400px;
+    color: darkblue;
+    font-weight: bold;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    margin-left: 30%;
+    margin-top: 30px;
+    /*border: 1px solid #888;*/
+    overflow-y: auto;
+}
+
+
 .close {
     color: darkblue;
     float: right;
@@ -143,12 +158,13 @@ input[type="text"] {
 }
 
 .icon-button {
-    width: 90px;
-    height: 85px;
+    width: 35%;
+    /*width: 100px;*/
+    /*height: 100px;*/
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 20px;
+    padding-right: 3px;
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -234,26 +250,14 @@ input[type="text"] {
 
 #expandableDiv {
     width: 520px;
-    height: 40px;
-    overflow: hidden; /* Hide content overflow */
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    margin-right: 20px;
-    z-index: 1000;
-    background-color: transparent;
-    border: 0 solid transparent;
-    transition: width 0.3s ease, height 0.3s ease; /* Smooth transition */
-    cursor: pointer; /* Cursor changes to pointer on hover */
-    text-align: right;
-}
-
-/* Expanded state */
-#expandableDiv.expand {
-    width: 520px; /* Expanded width */
     height: 500px;
     border: 1px solid royalblue;
     background-color: azure;
+    overflow: hidden; /* Hide content overflow */
+    margin-right: 20px;
+    transition: width 0.3s ease, height 0.3s ease; /* Smooth transition */
+    cursor: pointer; /* Cursor changes to pointer on hover */
+    text-align: right;
 }
 
 .doc-link {
