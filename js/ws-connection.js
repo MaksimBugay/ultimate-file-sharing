@@ -171,7 +171,7 @@ document.addEventListener("DOMContentLoaded", function () {
             toolbarNav.classList.add('show');
         }
         const hideMainToolbarBtn = document.getElementById("hideMainToolbarBtn");
-        if (hideMainToolbarBtn){
+        if (hideMainToolbarBtn) {
             hideMainToolbarBtn.remove();
         }
         const fastAccessToolBar = document.getElementById("fastAccessToolBar");
@@ -891,6 +891,14 @@ function isWorkspaceIdExposed() {
 function removeParentDiv(button) {
     const parentDiv = button.parentElement;
     parentDiv.remove();
+}
+
+function removeFastToolBar(button) {
+    const fastNavBarTogglerBtn = document.getElementById("fastNavBarTogglerBtn");
+    if (fastNavBarTogglerBtn) {
+        fastNavBarTogglerBtn.remove();
+    }
+    removeParentDiv(button);
 }
 
 //prevent screen lock on mobile

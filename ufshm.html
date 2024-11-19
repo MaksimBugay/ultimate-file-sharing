@@ -193,7 +193,7 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link"   id="pastFromBufferButton">
-                    <img src="images/past.png" alt="Share keyboard buffer"
+                    <img src="images/copy-past.png" alt="Share keyboard buffer"
                          class="custom-button-img"> Keyboard buffer
                 </a>
             </li>
@@ -204,22 +204,22 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link"   id="transferFileButton">
-                    <img src="images/file-transfer.png" alt="Search" class="custom-button-img">
+                    <img src="images/transfer-files.png" alt="Search" class="custom-button-img">
                     File
                 </a>
             </li>
             <li class="nav-item" style="margin-top: 3px">
                 <a class="nav-link" id="howToButton"><i class="fas fa-info" style="padding-right: 10px;"></i> How to</a>
             </li>
-            <li id="hideMainToolbarBtn" class="nav-item close-toolbar-btn" style="margin-top: 3px" onclick="removeParentDiv(this)">
+            <!--<li id="hideMainToolbarBtn" class="nav-item close-toolbar-btn" style="margin-top: 3px" onclick="removeParentDiv(this)">
                 <a class="nav-link"   ><i class="fas fa-delete-left" style="padding-right: 10px;" ></i> Hide toolbar</a>
-            </li>
+            </li>-->
         </ul>
     </div>
 </nav>
 
 <nav id="fastAccessToolBar" class="navbar navbar-expand-lg navbar-light bg-light" style="padding: 0 0 0 0">
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#fastToolbarNav"
+    <button id="fastNavBarTogglerBtn" class="navbar-toggler" type="button" data-toggle="collapse" data-target="#fastToolbarNav"
             aria-controls="fastToolbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
@@ -248,8 +248,8 @@
                     </div>
                 </div>
             </li>
-            <li class="nav-item close-toolbar-btn" onclick="removeParentDiv(this)">
-                <a class="nav-link"   ><i class="fas fa-delete-left" style="padding-right: 10px;" ></i> Hide toolbar</a>
+            <li class="nav-item close-toolbar-btn" onclick="removeFastToolBar(this)">
+                <a class="nav-link"   ><i class="fas fa-delete-left" style="padding-right: 10px;" ></i> Hide fast toolbar</a>
             </li>
         </ul>
     </div>

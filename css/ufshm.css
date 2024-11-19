@@ -482,7 +482,7 @@ input[type="text"] {
 }
 
 .close-toolbar-btn {
-    top: 5px;
+    margin-top: 20px;
     background: none;
     border: none;
 }
