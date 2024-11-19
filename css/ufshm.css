@@ -475,6 +475,12 @@ input[type="text"] {
     margin-top: 10px;
 }
 
+.non-link {
+    color: inherit; /* Use the inherited color instead of link color */
+    text-decoration: none; /* Remove underline */
+    cursor: default; /* Change cursor to default */
+}
+
 /*nice 3D container*/
 /*fieldset {
     width: 320px;
