@@ -487,6 +487,19 @@ input[type="text"] {
     border: none;
 }
 
+.data-tube {
+    background-image: url('../images/protected-binary.png');
+    background-size: cover; /* Make the background cover the entire page */
+    background-repeat: no-repeat; /* Prevent the image from repeating */
+    background-position: center center; /* Center the background image */
+    height: auto;
+    width: 100%;
+}
+
+.navbar {
+    background-color: transparent; /* Make the nav background transparent */
+}
+
 /*nice 3D container*/
 /*fieldset {
     width: 320px;
