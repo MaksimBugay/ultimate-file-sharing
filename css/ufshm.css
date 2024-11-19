@@ -481,6 +481,15 @@ input[type="text"] {
     cursor: default; /* Change cursor to default */
 }
 
+.close-toolbar-btn {
+    position: absolute;
+    top: 5px;
+    right: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
 /*nice 3D container*/
 /*fieldset {
     width: 320px;

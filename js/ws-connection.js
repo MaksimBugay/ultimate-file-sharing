@@ -170,6 +170,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (toolbarNav) {
             toolbarNav.classList.add('show');
         }
+        const hideMainToolbarBtn = document.getElementById("hideMainToolbarBtn");
+        if (hideMainToolbarBtn){
+            hideMainToolbarBtn.remove();
+        }
         const fastAccessToolBar = document.getElementById("fastAccessToolBar");
         if (fastAccessToolBar) {
             fastAccessToolBar.remove();
