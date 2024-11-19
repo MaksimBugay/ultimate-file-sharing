@@ -487,6 +487,9 @@ input[type="text"] {
     right: 0;
     background: none;
     border: none;
+}
+
+.nav-link{
     cursor: pointer;
 }
 
