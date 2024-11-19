@@ -142,6 +142,7 @@
     font-size: 1.2rem; /* Adjust the size of the links */
     display: flex;
     align-items: center;
+    cursor: pointer;
 }
 
 .nav-item-group-caption {

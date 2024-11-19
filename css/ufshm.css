@@ -482,15 +482,9 @@ input[type="text"] {
 }
 
 .close-toolbar-btn {
-    position: absolute;
     top: 5px;
-    right: 0;
     background: none;
     border: none;
-}
-
-.nav-link{
-    cursor: pointer;
 }
 
 /*nice 3D container*/
