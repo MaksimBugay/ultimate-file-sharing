@@ -22,6 +22,8 @@ const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
 const protectWithPasswordContainer = document.getElementById("protectWithPasswordContainer");
 const transferGroupContainer = document.getElementById("transferGroupContainer");
+const transferGroupToggleButton = document.querySelector('[data-bs-toggle="collapse"]');
+const transferGroupCollapsibleDiv = document.getElementById('expandableDiv0');
 const mmProgressBarContainer = document.getElementById("mmProgressBarContainer");
 const mmDownloadProgress = document.getElementById("mmDownloadProgress");
 const mmProgressPercentage = document.getElementById("mmProgressPercentage");
@@ -46,7 +48,7 @@ function passwordFieldWasChangedHandler() {
     }
 }
 
-function openModal(contentType) {
+function openModal(contentType, showForce = false) {
     AddBinaryWidget.contentType = contentType;
 
     shareFromDeviceCheckbox.checked = false;
@@ -89,6 +91,9 @@ function openModal(contentType) {
             } else {
                 postLeaveTransferGroupActions();
             }
+        }
+        if (showForce) {
+            transferGroupCollapsibleDiv.classList.add('show');
         }
     }
 }

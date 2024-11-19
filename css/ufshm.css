@@ -415,7 +415,7 @@ input[type="text"] {
 }
 
 .file-share-fieldset {
-    /*padding: 20px;*/
+    margin-top: 25px;
     padding-left: 10px;
     padding-right: 10px;
     padding-bottom: 20px;
@@ -453,6 +453,7 @@ input[type="text"] {
 }
 
 .file-share-legend {
+    margin-top: -14px;
     font-size: 16px;
     color: darkblue; /* Matching color with border */
     padding: 0 10px;
@@ -466,7 +467,7 @@ input[type="text"] {
     width: 99%;
     margin-top: 15px;
     overflow: auto; /* Add scrollbars if content overflows */
-    resize: vertical; /* Allow the container to be resized vertically */
+    /*resize: vertical;*/ /* Allow the container to be resized vertically */
     /*border: 1px solid #ccc; */
 }
 

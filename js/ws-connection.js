@@ -59,6 +59,7 @@ const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const transferGroupName = document.getElementById("transferGroupName");
 const transferGroupPasswordInput = document.getElementById("transferGroupPasswordInput");
+const transferGroupNavBarItem = document.getElementById("transferGroupNavBarItem");
 const errorDialog = document.getElementById("errorDialog");
 const errorMsg = document.getElementById("errorMsg");
 const closeErrorBtn = document.getElementById("closeErrorBtn");
@@ -68,6 +69,9 @@ const closeInfoBtn = document.getElementById("closeInfoBtn");
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
+transferGroupNavBarItem.addEventListener('click', function () {
+    openModal(ContentType.FILE_TRANSFER, true);
+});
 howToButton.addEventListener('click', function () {
     howToPopup.style.display = 'block';
 });
@@ -261,9 +265,15 @@ function postJoinTransferGroupActions() {
     transferGroupName.readOnly = true;
     transferGroupName.value = Fileshare.properties.transferGroup;
     transferGroupPasswordInput.value = Fileshare.properties.transferGroupPassword;
+
+    transferGroupCollapsibleDiv.classList.remove('show');
+    transferGroupToggleButton.textContent = `Transfer Group: ${Fileshare.properties.transferGroup}`;
 }
 
 function postLeaveTransferGroupActions() {
+    transferGroupCollapsibleDiv.classList.add('show');
+    transferGroupToggleButton.textContent = `Transfer Group`;
+
     joinTransferGroupBtn.disabled = false;
     leaveTransferGroupBtn.disabled = true;
     transferGroupName.readOnly = false;
