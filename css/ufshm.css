@@ -573,6 +573,7 @@ input[type="text"] {
 }
 
 .footer-div {
+    min-height: 210px;
     height: calc(100vh - 450px);
     display: flex;
     flex-direction: column;
