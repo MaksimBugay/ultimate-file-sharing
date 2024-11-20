@@ -251,7 +251,8 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="transferFileButton">
-                    <img src="images/transfer-files.png" alt="Transfer file" class="custom-button-img" style="border-radius: 15px">
+                    <img src="images/transfer-files.png" alt="Transfer file" class="custom-button-img"
+                         style="border-radius: 15px">
                     File
                 </a>
             </li>
@@ -273,6 +274,11 @@
     </button>
     <div class="collapse navbar-collapse data-tube" id="fastToolbarNav">
         <ul class="navbar-nav">
+            <li class="nav-item">
+                <div class="tb-copy-past" id="tbCopyPastMemo">
+                    <textarea class="tb-copy-past-memo" id="toolBarPasteArea" rows="3" cols="10" spellcheck="false"></textarea>
+                </div>
+            </li>
             <li class="nav-item">
                 <div id="dropZone" class="drop-zone">
                     To
@@ -297,8 +303,10 @@
                 </div>
             </li>
             <li class="nav-item close-toolbar-btn" onclick="removeFastToolBar(this)">
-                <a class="nav-link" style="color: white; font-weight: normal"><i class="fas fa-delete-left" style="padding-right: 10px"></i> Hide fast
-                    toolbar</a>
+                <a class="nav-link" style="color: white; font-weight: normal">
+                    <i class="fas fa-delete-left" style="padding-right: 10px"></i>
+                    Hide fast toolbar
+                </a>
             </li>
         </ul>
     </div>

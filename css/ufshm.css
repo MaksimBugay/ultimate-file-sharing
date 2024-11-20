@@ -292,6 +292,28 @@ input[type="text"] {
     color: blue;
 }
 
+.tb-copy-past-memo {
+    border: none;
+    outline: none;
+    resize: none;
+    margin-top: 0;
+    caret-color: transparent;
+    background-color: transparent;
+    width: 100%;
+    font-size: 20pt;
+    font-weight: bold;
+    color: gray;
+    overflow: hidden; /* Completely hides both horizontal and vertical scrollbars */
+}
+
+.tb-copy-past-memo:focus {
+    color: blue;
+}
+
+/*.tb-copy-past-memo::placeholder {
+    color: var(--placeholder-color, transparent);
+}*/
+
 #selectShareOrTransferContainer {
     display: flex;
     flex-direction: column;
@@ -312,6 +334,25 @@ input[type="text"] {
     margin-right: 5px;
 }
 
+.tb-copy-past{
+    width: 50px;
+    height: 75px;
+    font-weight: bold;
+    font-size: 2rem;
+    margin-left: 35px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding: 10px;
+    box-sizing: border-box;
+    justify-content: center; /* Horizontally center */
+    align-items: center; /* Vertically center */
+    text-align: center;
+
+    color: lightgreen;
+    /*background-color: rgba(135, 206, 235, 0.35);
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.8);
+    transition: box-shadow 0.3s;*/
+}
 
 .drop-zone {
     width: 100%;

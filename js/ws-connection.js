@@ -213,10 +213,7 @@ document.addEventListener("DOMContentLoaded", function () {
             dialogBox.style.paddingRight = "10px";
         }
     } else {
-        const gridToolBar = document.getElementById("gridToolBar");
-        if (gridToolBar) {
-            gridToolBar.style.display = 'flex';
-        }
+        toolBarPasteArea.focus();
         const usageWarning = document.getElementById("usageWarning");
         if (usageWarning) {
             usageWarning.style.display = 'none';
@@ -317,6 +314,19 @@ let pingIntervalId = window.setInterval(function () {
         console.log("Connection to DB is healthy");
     }
 }, 30000);
+
+window.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.key === 'v') {
+        const toolBarPasteArea = document.getElementById("toolBarPasteArea");
+        if (toolBarPasteArea && ('block' !== addBinaryPopup.style.display)) {
+            event.stopPropagation();
+            toolBarPasteArea.focus();
+            delay(500).then(() => {
+                toolBarPasteArea.dispatchEvent(event);
+            })
+        }
+    }
+});
 
 window.addEventListener("beforeunload", function () {
     clearInterval(pingIntervalId);
