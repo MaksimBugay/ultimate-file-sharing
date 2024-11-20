@@ -898,7 +898,7 @@ function removeFastToolBar(button) {
     if (fastNavBarTogglerBtn) {
         fastNavBarTogglerBtn.remove();
     }
-    removeParentDiv(button);
+    removeParentDiv(button.parentElement);
 }
 
 //prevent screen lock on mobile

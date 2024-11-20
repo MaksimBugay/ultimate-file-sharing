@@ -171,6 +171,12 @@
          style="background-color: rgba(135, 206, 235, 0.85)">
         <ul class="navbar-nav">
             <li class="nav-item-group-info">
+                <button class="btn btn-primary mb-3 " type="button" data-toggle="collapse"
+                        data-target="#fileManagerContainer" aria-controls="fileManagerContainer" aria-expanded="false" aria-label="Shared content manager">
+                    Open Shared content manager
+                </button>
+            </li>
+            <li class="nav-item-group-info">
                 <a class="navbar-group-info non-link">
                     Device ID:
                 </a>
@@ -289,7 +295,7 @@
                 </div>
             </li>
             <li class="nav-item close-toolbar-btn" onclick="removeFastToolBar(this)">
-                <a class="nav-link"><i class="fas fa-delete-left" style="padding-right: 10px;"></i> Hide fast
+                <a class="nav-link" style="color: white; font-weight: normal"><i class="fas fa-delete-left" style="padding-right: 10px"></i> Hide fast
                     toolbar</a>
             </li>
         </ul>
@@ -435,8 +441,8 @@
         </div>
     </div>
 </div>
-<div class="darkgreen-half-transparent-div" style="display: none">
-    <div id="fileManagerContainer"></div>
+<div class="darkblue-half-transparent-div">
+    <div class="collapse navbar-collapse" id="fileManagerContainer"></div>
 </div>
 <div class="darkgreen-half-transparent-div" style="height: 10px"></div>
 <iframe src="html/footer.html" width="100%" style="border: none;height: 200px"></iframe>

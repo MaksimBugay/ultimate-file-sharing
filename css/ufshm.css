@@ -502,7 +502,7 @@ input[type="text"] {
 }
 
 .nav-link {
-    font-size: 1.2rem; /* Adjust the size of the links */
+    font-size: 1.5rem; /* Adjust the size of the links */
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -527,6 +527,7 @@ input[type="text"] {
 
 .nav-item-group-info {
     margin-top: 8px;
+    margin-left: 10px;
 }
 
 .nav-item div {
@@ -548,7 +549,7 @@ input[type="text"] {
 }
 
 .navbar-group-caption {
-    font-size: 1.5rem;
+    font-size: 1.7rem;
     color: white;
     font-weight: bolder;
     align-items: center;
