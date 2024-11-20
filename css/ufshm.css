@@ -572,6 +572,12 @@ input[type="text"] {
     vertical-align: middle; /* Align the image with the text */
 }
 
+.footer-div {
+    height: calc(100vh - 450px);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
 
 /*nice 3D container*/
 /*fieldset {

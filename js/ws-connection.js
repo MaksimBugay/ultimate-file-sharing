@@ -328,7 +328,9 @@ window.addEventListener('resize', function () {
     const toolbarConnectionInfo = document.querySelector('#toolbarConnectionInfo');
 
     toolbarNav.classList.add('show');
-    fastToolbarNav.classList.add('show');
+    if (fastToolbarNav) {
+        fastToolbarNav.classList.add('show');
+    }
     toolbarConnectionInfo.classList.add('show');
 });
 
@@ -899,6 +901,10 @@ function removeFastToolBar(button) {
         fastNavBarTogglerBtn.remove();
     }
     removeParentDiv(button.parentElement);
+    const footerDiv = document.querySelector(".footer-div");
+    if (footerDiv) {
+        //footerDiv.style.height = "calc(100vh - 500px)";
+    }
 }
 
 //prevent screen lock on mobile
