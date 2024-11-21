@@ -165,7 +165,7 @@ pastArea.addEventListener('paste', async function (event) {
         if (item.kind === 'file') {
             const blob = item.getAsFile();
             const mimeType = blob.type;
-            const name = blob.name ? blob.name : getCopyPastName(mimeType);
+            const name = getCopyPastName(mimeType, blob.name);
             showSpinnerInButton();
             await SaveInCloudHelper.cacheBlobInCloud(
                 name,
@@ -183,7 +183,7 @@ pastArea.addEventListener('paste', async function (event) {
     }
 });
 
-function getCopyPastName(mimeType) {
+function getCopyPastName(mimeType, blobName) {
     let ext = "";
     if (mimeType.includes('png')) {
         ext = '.png';
@@ -195,7 +195,8 @@ function getCopyPastName(mimeType) {
     if (vName) {
         return `${vName}${ext}`;
     }
-    return `binary-${new Date().getTime()}${ext}`
+    const prefix = blobName ? blobName : 'binary';
+    return `${prefix}-${new Date().getTime()}${ext}`
 }
 
 closeButton.addEventListener('click', closeModal);

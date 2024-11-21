@@ -66,8 +66,24 @@ const closeErrorBtn = document.getElementById("closeErrorBtn");
 const infoDialog = document.getElementById("infoDialog");
 const infoMsg = document.getElementById("infoMsg");
 const closeInfoBtn = document.getElementById("closeInfoBtn");
+const showSharedContentManagerBtn = document.getElementById("showSharedContentManagerBtn");
+const fileManagerContainer = document.getElementById("fileManagerContainer");
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
+
+showSharedContentManagerBtn.addEventListener('click', function () {
+    const thirdTube = document.getElementById("thirdTube");
+    if (!thirdTube) {
+        return;
+    }
+    if (fileManagerContainer.classList.contains('show')) {
+        thirdTube.style.display = 'block';
+        showSharedContentManagerBtn.textContent = 'Show Shared content manager';
+    } else {
+        thirdTube.style.display = 'none';
+        showSharedContentManagerBtn.textContent = 'Hide Shared content manager';
+    }
+});
 
 const toolBarPasteArea = document.getElementById("toolBarPasteArea");
 toolBarPasteArea.addEventListener('paste', async function (event) {
@@ -78,7 +94,7 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
         if (item.kind === 'file') {
             const blob = item.getAsFile();
             const mimeType = blob.type;
-            const name = blob.name ? blob.name : getCopyPastName(mimeType);
+            const name = getCopyPastName(mimeType, blob.name);
             showMainSpinnerInButton();
             await SaveInCloudHelper.cacheBlobInCloud(
                 name,
@@ -207,6 +223,10 @@ function updateTransferGroupCaption() {
 
 document.addEventListener("DOMContentLoaded", function () {
     if (isMobile()) {
+        const thirdTube = document.getElementById("thirdTube");
+        if (thirdTube) {
+            thirdTube.remove();
+        }
         const toolbarNav = document.querySelector('#toolbarNav');
         if (toolbarNav) {
             toolbarNav.classList.add('show');
@@ -396,7 +416,7 @@ FingerprintJS.load().then(fp => {
             getFileshareProperties(function (fsProperties) {
                 Fileshare.properties = fsProperties;
                 openWsConnection(result.visitorId);
-            }, function (error) {
+            }, function () {
                 Fileshare.properties = null;
                 updateTransferGroupCaption();
                 openWsConnection(result.visitorId);
@@ -566,7 +586,7 @@ class GridCellButton {
         return this.eGui;
     }
 
-    refresh(params) {
+    refresh() {
         return true;
     }
 
@@ -838,7 +858,6 @@ function initFileManager() {
         if (fileManagerGrid) {
             fileManagerGrid.remove();
         }
-        const fileManagerContainer = document.getElementById("fileManagerContainer");
         fileManagerContainer.style.width = '100%'
         fileManagerContainer.style.margin = '0'
         fileManagerGrid = document.createElement('div');
