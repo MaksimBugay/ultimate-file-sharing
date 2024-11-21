@@ -69,6 +69,7 @@ function byteArrayToString(byteArray) {
     const decoder = new TextDecoder();
     return decoder.decode(byteArray);
 }
+
 function intToBytes(int) {
     const buffer = new ArrayBuffer(4);
     const view = new DataView(buffer);
@@ -322,6 +323,7 @@ function printObject(obj) {
         .filter(value => value !== undefined && value !== null)
         .join('/');
 }
+
 //---------------------------------------------------------------------------------------
 //----------------------------------------BASE64-----------------------------------------
 function encodeToBase64UrlSafe(str) {
@@ -361,6 +363,7 @@ function decodeFromBase64UrlSafe(base64UrlSafe) {
     const decoder = new TextDecoder();
     return decoder.decode(uint8Array);
 }
+
 //---------------------------------------------------------------------------------------
 
 //---------------------------------FILES-------------------------------------------------
@@ -382,4 +385,33 @@ function downloadFile(blob, fileName) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
+
 //---------------------------------------------------------------------------------------
+
+function hasParentWithIdOrClass(element, idOrClassList) {
+    if (!element) {
+        return false;
+    }
+    for (let i = 0; i < idOrClassList.length; i++) {
+        const match = element.closest(`#${idOrClassList[i]}, .${idOrClassList[i]}`)
+        if (match) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function printAllParents(el0, maxDeep) {
+    const pMaxDeep = maxDeep ? maxDeep : 1000;
+    let elP = el0.parentElement;
+    let level = 0;
+    while (elP) {
+        level += 1;
+        console.log(`Parent: level=${level}, height=${elP.getBoundingClientRect().height}`);
+        console.log(elP);
+        if (level > pMaxDeep) {
+            return;
+        }
+        elP = elP.parentElement;
+    }
+}

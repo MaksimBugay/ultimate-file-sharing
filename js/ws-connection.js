@@ -69,6 +69,21 @@ const closeInfoBtn = document.getElementById("closeInfoBtn");
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
+document.addEventListener('mousemove', (event) => {
+    const target = event.target;
+
+    if (!hasParentWithIdOrClass(target, ['navbar'])) {
+        return;
+    }
+    const toolBarPasteArea = document.getElementById("toolBarPasteArea");
+    if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
+        return;
+    }
+    if (toolBarPasteArea) {
+        toolBarPasteArea.focus();
+    }
+});
+
 transferGroupNavBarItem.addEventListener('click', function () {
     openModal(ContentType.FILE_TRANSFER, true);
 });
@@ -213,7 +228,6 @@ document.addEventListener("DOMContentLoaded", function () {
             dialogBox.style.paddingRight = "10px";
         }
     } else {
-        toolBarPasteArea.focus();
         const usageWarning = document.getElementById("usageWarning");
         if (usageWarning) {
             usageWarning.style.display = 'none';
@@ -318,12 +332,9 @@ let pingIntervalId = window.setInterval(function () {
 window.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.key === 'v') {
         const toolBarPasteArea = document.getElementById("toolBarPasteArea");
-        if (toolBarPasteArea && ('block' !== addBinaryPopup.style.display)) {
+        if (toolBarPasteArea && (!hasParentWithIdOrClass(event.target, ['addBinaryPopup', 'fileManagerGrid']))) {
             event.stopPropagation();
             toolBarPasteArea.focus();
-            delay(500).then(() => {
-                toolBarPasteArea.dispatchEvent(event);
-            })
         }
     }
 });
