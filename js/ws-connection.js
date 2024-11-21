@@ -374,6 +374,14 @@ window.addEventListener('resize', function () {
     const fastToolbarNav = document.querySelector('#fastToolbarNav');
     const toolbarConnectionInfo = document.querySelector('#toolbarConnectionInfo');
 
+    if (window.innerWidth < 600) {
+        toolbarNav.style.height = 'auto';
+        if (fastToolbarNav) {
+            fastToolbarNav.style.height = 'auto';
+        }
+        toolbarConnectionInfo.style.height = 'auto';
+    }
+
     toolbarNav.classList.add('show');
     if (fastToolbarNav) {
         fastToolbarNav.classList.add('show');

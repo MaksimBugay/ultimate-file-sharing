@@ -357,7 +357,7 @@ input[type="text"] {
 .drop-zone {
     width: 100%;
     min-width: 150px;
-    height: 75px;
+    min-height: 75px;
     border: 2px dashed gray;
     border-radius: 10px;
     display: flex;
@@ -366,9 +366,7 @@ input[type="text"] {
     text-align: center; /* Ensure text is centered within the block */
     font-weight: bold;
     font-size: 2rem;
-    margin-left: 35px;
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin: 5px 5px 5px 35px;
     padding: 10px;
     box-sizing: border-box; /* Ensure padding doesn't exceed container size */
 
