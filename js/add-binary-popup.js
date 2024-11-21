@@ -165,26 +165,17 @@ pastArea.addEventListener('paste', async function (event) {
         if (item.kind === 'file') {
             const blob = item.getAsFile();
             const mimeType = blob.type;
-            // Optionally, you can do something with the blob, like creating an image URL
+            const name = blob.name ? blob.name : getCopyPastName(mimeType);
             showSpinnerInButton();
-            const binaryId = uuid.v4().toString();
-            const slices = await blobToArrayBuffers(blob, MemoryBlock.MB100);
             await SaveInCloudHelper.cacheBlobInCloud(
-                getCopyPastName(mimeType),
+                name,
                 mimeType,
                 blob,
                 !shareFromDeviceCheckbox.checked,
                 passwordField.value.trim());
             delay(500).then(() => {
-                slices.length = 0;
                 closeModal();
             });
-            /*// Append the image to the output div
-            const url = URL.createObjectURL(blob);
-            const img = document.createElement('img');
-            img.src = url;
-            img.style.maxWidth = '300px';
-            pastArea.parentElement.appendChild(img); */
         } else {
             event.stopPropagation();
             event.preventDefault();

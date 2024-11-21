@@ -69,6 +69,32 @@ const closeInfoBtn = document.getElementById("closeInfoBtn");
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
+const toolBarPasteArea = document.getElementById("toolBarPasteArea");
+toolBarPasteArea.addEventListener('paste', async function (event) {
+    const clipboardItems = event.clipboardData.items;
+
+    for (let item of clipboardItems) {
+        // Check if the clipboard item is a file (binary data)
+        if (item.kind === 'file') {
+            const blob = item.getAsFile();
+            const mimeType = blob.type;
+            const name = blob.name ? blob.name : getCopyPastName(mimeType);
+            showMainSpinnerInButton();
+            await SaveInCloudHelper.cacheBlobInCloud(
+                name,
+                mimeType,
+                blob,
+                true);
+            delay(500).then(() => {
+                hideMainSpinnerInButton();
+            });
+        } else {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+    }
+});
+
 document.addEventListener('mousemove', (event) => {
     const target = event.target;
 
