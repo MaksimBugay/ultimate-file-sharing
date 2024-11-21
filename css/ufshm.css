@@ -371,7 +371,7 @@ input[type="text"] {
     box-sizing: border-box; /* Ensure padding doesn't exceed container size */
 
     color: lightgreen;
-    background-color: rgba(135, 206, 235, 0.35);
+    background-color: rgba(135, 206, 235, 0.55);
     box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.8);
     transition: box-shadow 0.3s;
 }
@@ -548,7 +548,7 @@ input[type="text"] {
     display: flex;
     align-items: center;
     cursor: pointer;
-    color: lawngreen;
+    color: white;
     font-weight: bolder;
     border-radius: 15px;
     padding: 5px;
@@ -592,7 +592,7 @@ input[type="text"] {
 
 .navbar-group-caption {
     font-size: 1.7rem;
-    color: white;
+    color: goldenrod;
     font-weight: bolder;
     align-items: center;
     margin-left: 20px;
