@@ -535,7 +535,7 @@ input[type="text"] {
     background-repeat: no-repeat; /* Prevent the image from repeating */
     background-position: center;
     width: 100%;
-    height: 130px;
+    /*height: 130px;*/
     justify-content: center;
 }
 
@@ -613,7 +613,7 @@ input[type="text"] {
 
 .footer-div {
     min-height: 210px;
-    height: calc(100vh - 450px);
+    /*height: calc(100vh - 450px);*/
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

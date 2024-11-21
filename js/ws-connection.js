@@ -68,19 +68,21 @@ const infoMsg = document.getElementById("infoMsg");
 const closeInfoBtn = document.getElementById("closeInfoBtn");
 const showSharedContentManagerBtn = document.getElementById("showSharedContentManagerBtn");
 const fileManagerContainer = document.getElementById("fileManagerContainer");
+const toolbarNavContainer = document.getElementById('toolbarNavContainer');
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
 showSharedContentManagerBtn.addEventListener('click', function () {
     const thirdTube = document.getElementById("thirdTube");
-    if (!thirdTube) {
-        return;
-    }
     if (fileManagerContainer.classList.contains('show')) {
-        thirdTube.style.display = 'block';
+        if (thirdTube) {
+            thirdTube.style.display = 'block';
+        }
         showSharedContentManagerBtn.textContent = 'Show Shared content manager';
     } else {
-        thirdTube.style.display = 'none';
+        if (thirdTube) {
+            thirdTube.style.display = 'none';
+        }
         showSharedContentManagerBtn.textContent = 'Hide Shared content manager';
     }
 });
@@ -227,6 +229,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (thirdTube) {
             thirdTube.remove();
         }
+        toolbarNavContainer.style.height = 'auto';
         const toolbarNav = document.querySelector('#toolbarNav');
         if (toolbarNav) {
             toolbarNav.classList.add('show');
@@ -400,6 +403,11 @@ window.addEventListener('resize', function () {
             fastToolbarNav.style.height = 'auto';
         }
         toolbarConnectionInfo.style.height = 'auto';
+    } else {
+        toolbarNav.style.height = '130px';
+        if (fastToolbarNav) {
+            fastToolbarNav.style.height = '130px';
+        }
     }
 
     toolbarNav.classList.add('show');
