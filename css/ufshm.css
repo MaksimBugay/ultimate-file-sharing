@@ -86,7 +86,7 @@ body {
     width: 430px;
     /*width: 40%;*/
     min-height: 400px;
-    padding: 10px;
+    padding: 5px;
     color: darkblue;
     font-weight: bold;
     font-family: 'Roboto', sans-serif;
@@ -95,7 +95,7 @@ body {
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
-    background-color: #fefefe;
+    /*background-color: #fefefe;*/
     margin-left: 30%;
     margin-top: 0;
     border: 1px solid #888;
@@ -141,7 +141,7 @@ body {
     flex-direction: column;
     gap: 0;
     align-items: flex-start;
-    margin-bottom: 10px;
+    margin-bottom: 0;
     margin-top: 0;
 }
 
