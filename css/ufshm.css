@@ -433,6 +433,22 @@ input[type="text"] {
     color: darkred;
 }
 
+.remove-toolbar-btn {
+    background-color: transparent;
+    border: none;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 25px;
+    margin-right: 0;
+    margin-bottom: 45px;
+}
+
+.remove-toolbar-btn:hover {
+    color: #007bff;
+}
+
 .action-btn {
     background-color: #0056b3;
     border: none;

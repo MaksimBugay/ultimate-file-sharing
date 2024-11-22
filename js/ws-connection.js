@@ -997,11 +997,7 @@ function removeFastToolBar(button) {
     if (fastNavBarTogglerBtn) {
         fastNavBarTogglerBtn.remove();
     }
-    removeParentDiv(button.parentElement);
-    const footerDiv = document.querySelector(".footer-div");
-    if (footerDiv) {
-        //footerDiv.style.height = "calc(100vh - 500px)";
-    }
+    removeParentDiv(button.parentElement.parentElement.parentElement);
 }
 
 //prevent screen lock on mobile
