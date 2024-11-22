@@ -370,8 +370,9 @@ input[type="text"] {
     padding: 10px;
     box-sizing: border-box; /* Ensure padding doesn't exceed container size */
 
-    color: lightgreen;
-    background-color: rgba(135, 206, 235, 0.55);
+    /*color: lightgreen;*/
+    color: mediumspringgreen;
+    background-color: rgba(135, 206, 235, 0.35);
     box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.8);
     transition: box-shadow 0.3s;
 }
