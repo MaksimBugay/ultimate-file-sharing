@@ -232,7 +232,7 @@ document.addEventListener("DOMContentLoaded", function () {
         toolbarNavContainer.style.height = 'auto';
         const toolbarNav = document.querySelector('#toolbarNav');
         const toolbarConnectionInfo = document.getElementById("toolbarConnectionInfo");
-        swapElements(toolbarNav, toolbarConnectionInfo);
+        //swapElements(toolbarNav, toolbarConnectionInfo);
 
         const showSharedContentManagerBtn = document.getElementById("showSharedContentManagerBtn");
         const showSharedContentManagerMobileContainer = document.getElementById("showSharedContentManagerMobileContainer");
