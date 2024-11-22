@@ -401,6 +401,24 @@ function hasParentWithIdOrClass(element, idOrClassList) {
     return false;
 }
 
+function swapElements(element1, element2) {
+    // Ensure both elements exist
+    if (!element1 || !element2) {
+        console.error("One or both elements not found.");
+        return;
+    }
+
+    // Create a temporary placeholder to swap elements
+    const tempPlaceholder = document.createElement('div');
+    element1.parentNode.insertBefore(tempPlaceholder, element1);
+
+    // Perform the swap
+    element2.parentNode.insertBefore(element1, element2);
+    tempPlaceholder.parentNode.insertBefore(element2, tempPlaceholder);
+
+    // Remove the temporary placeholder
+    tempPlaceholder.parentNode.removeChild(tempPlaceholder);
+}
 function printAllParents(el0, maxDeep) {
     const pMaxDeep = maxDeep ? maxDeep : 1000;
     let elP = el0.parentElement;
