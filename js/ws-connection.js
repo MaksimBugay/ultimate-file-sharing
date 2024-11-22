@@ -78,7 +78,7 @@ showSharedContentManagerBtn.addEventListener('click', function () {
         if (thirdTube) {
             thirdTube.style.display = 'block';
         }
-        showSharedContentManagerBtn.textContent = 'Show Shared content manager';
+        showSharedContentManagerBtn.textContent = 'Open Shared content manager';
     } else {
         if (thirdTube) {
             thirdTube.style.display = 'none';
