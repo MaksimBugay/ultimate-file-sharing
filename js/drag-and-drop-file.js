@@ -55,6 +55,7 @@ dropZone.addEventListener('drop', async function (event) {
         return;
     }
     // Process each dropped file (you can handle multiple files if needed)
+    openModal(ContentType.FILE_TRANSFER);
     for (const file of files) {
         // File is now a Blob object
         const blob = new Blob([file], {type: file.type});
@@ -64,10 +65,11 @@ dropZone.addEventListener('drop', async function (event) {
             file.type,
             blob,
             true);
-        delay(500).then(() => {
-            event.dataTransfer.clearData();
-        });
     }
+    delay(500).then(() => {
+        event.dataTransfer.clearData();
+        closeModal();
+    });
 });
 
 function shareOrTransfer() {

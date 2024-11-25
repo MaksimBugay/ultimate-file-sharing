@@ -166,7 +166,6 @@ pastArea.addEventListener('paste', async function (event) {
             const blob = item.getAsFile();
             const mimeType = blob.type;
             const name = getCopyPastName(mimeType, blob.name);
-            showSpinnerInButton();
             await SaveInCloudHelper.cacheBlobInCloud(
                 name,
                 mimeType,

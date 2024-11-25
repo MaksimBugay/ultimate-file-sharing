@@ -97,14 +97,14 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
             const blob = item.getAsFile();
             const mimeType = blob.type;
             const name = getCopyPastName(mimeType, blob.name);
-            showMainSpinnerInButton();
+            openModal(ContentType.COPY_PAST);
             await SaveInCloudHelper.cacheBlobInCloud(
                 name,
                 mimeType,
                 blob,
                 true);
             delay(500).then(() => {
-                hideMainSpinnerInButton();
+                closeModal();
             });
         } else {
             event.stopPropagation();
