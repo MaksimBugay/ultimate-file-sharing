@@ -45,9 +45,8 @@ const Fileshare = {};
 Fileshare.noTransferGroupApplicationId = "ultimate-file-sharing";
 Fileshare.wakeLock = null;
 
-const howToPopup = document.getElementById("howToPopup");
 const howToButton = document.getElementById("howToButton");
-const howToCloseBtn = document.getElementById("howToCloseBtn");
+const privacyButton = document.getElementById('privacyButton');
 const statusCaption = document.getElementById("statusCaption");
 const channelIndicator = document.getElementById("channelIndicator");
 const addBinaryButton = document.getElementById("addBinaryButton");
@@ -132,11 +131,11 @@ transferGroupNavBarItem.addEventListener('click', function () {
     openModal(ContentType.FILE_TRANSFER, true);
 });
 howToButton.addEventListener('click', function () {
-    howToPopup.style.display = 'block';
+    window.open('manual/secure-file-share-doc.html', '_blank');
 });
 
-howToCloseBtn.addEventListener('click', function () {
-    howToPopup.style.display = 'none';
+privacyButton.addEventListener('click', function () {
+    window.open('privacy/privacy.html', '_blank');
 });
 
 document.addEventListener("keydown", function (event) {
@@ -145,10 +144,6 @@ document.addEventListener("keydown", function (event) {
             infoDialog.classList.remove('visible');
         } else if (errorDialog.classList.contains('visible')) {
             errorDialog.classList.remove('visible');
-        }
-        const computedStyle = window.getComputedStyle(howToPopup);
-        if (computedStyle.display === 'block') {
-            howToPopup.style.display = 'none';
         }
     }
 });
