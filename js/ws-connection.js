@@ -286,6 +286,8 @@ document.addEventListener("DOMContentLoaded", function () {
             dialogBox.style.paddingLeft = "10px";
             dialogBox.style.paddingRight = "10px";
         }
+        howToButton.style.right = '10px';
+        privacyButton.style.right = '50px'
     } else {
         const usageWarning = document.getElementById("usageWarning");
         if (usageWarning) {
@@ -524,19 +526,24 @@ PushcaClient.onMessageHandler = function (ws, data) {
 
 PushcaClient.onFileTransferChunkHandler = TransferFileHelper.processedReceivedChunk;
 
-function openWsConnection(deviceFpId) {
+async function buildSignatureHash(signature) {
+    return await calculateSha256(stringToArrayBuffer(signature));
+}
+
+async function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
+        const signatureHash = await buildSignatureHash(deviceFpId);
         let applicationId = Fileshare.noTransferGroupApplicationId;
         if (Fileshare.properties) {
             applicationId = Fileshare.properties.getTransferApplicationId()
         }
         const pClient = new ClientFilter(
             deviceFpId,
-            "anonymous-sharing",
+            signatureHash,//"anonymous-sharing",
             `${calculateStringHashCode(deviceFpId)}`,
             applicationId
         );
-        PushcaClient.openWsConnection(
+        await PushcaClient.openWsConnection(
             wsUrl,
             pClient,
             function (clientObj) {

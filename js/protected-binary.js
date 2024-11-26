@@ -4,12 +4,17 @@ const urlParams = new URLSearchParams(window.location.search);
 // Retrieve specific parameters
 let protectedUrlSuffix = decodeURIComponent(urlParams.get('suffix'));
 let encryptionContractStr;
+let signatureHash;
 
 const suffixParts = protectedUrlSuffix.split('|');
 if (suffixParts.length > 1) {
     protectedUrlSuffix = suffixParts[0];
     encryptionContractStr = suffixParts[1];
 }
+if (suffixParts.length > 2) {
+    signatureHash = suffixParts[2];
+}
+console.log(`Signature hash: ${signatureHash}`);
 
 const passwordField = document.getElementById('password');
 const workspaceField = document.getElementById('workSpaceId');
