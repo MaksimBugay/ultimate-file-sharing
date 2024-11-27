@@ -856,6 +856,17 @@ function initFileManager() {
                     imgSrc: "../images/delete-file.png",
                     buttonTitle: "",
                     clickHandler: (data) => {
+                        if (data.cachedInCloud) {
+                            PushcaClient.sendDeleteBinaryAppeal(data.id, Fileshare.deviceSecret).then(r => {
+                                const responseObject = JSON.parse(r);
+                                if (responseObject.body !== 'true') {
+                                    console.log(r);
+                                    if (responseObject.error) {
+                                        showErrorMsg(responseObject.error, null);
+                                    }
+                                }
+                            });
+                        }
                         removeBinary(data.id, function () {
                             console.log(`Binary with id ${data.id} was completely removed from DB`);
                             decrementTotalSize(data.getTotalSize());

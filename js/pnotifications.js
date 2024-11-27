@@ -18,6 +18,7 @@ const Command = Object.freeze({
     ADD_IMPRESSION: "ADD_IMPRESSION",
     REMOVE_IMPRESSION: "REMOVE_IMPRESSION",
     SEND_UPLOAD_BINARY_APPEAL: "SEND_UPLOAD_BINARY_APPEAL",
+    SEND_DELETE_BINARY_APPEAL: "SEND_DELETE_BINARY_APPEAL",
     SEND_BINARY_MANIFEST: "SEND_BINARY_MANIFEST",
     SEND_GATEWAY_RESPONSE: "SEND_GATEWAY_RESPONSE"
 });
@@ -1010,6 +1011,26 @@ PushcaClient.sendUploadBinaryAppeal = async function (owner, binaryId, chunkSize
         console.log("Failed send upload binary appeal attempt: " + result.body);
     }
     return result;
+}
+
+/**
+ * Ask binary owner to send some binary
+ *
+ * @param binaryId        - binary identifier
+ * @param deviceSecret - device fingerprint as a part of permissions check
+ */
+PushcaClient.sendDeleteBinaryAppeal = async function (binaryId, deviceSecret) {
+    let metaData = {};
+    metaData["binaryId"] = binaryId;
+    metaData["deviceSecret"] = deviceSecret;
+
+    let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_DELETE_BINARY_APPEAL, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log("Failed send delete binary appeal attempt: " + result.body);
+        return JSON.stringify({body: 'false', error: result.body});
+    }
+    return result.body;
 }
 
 /**
