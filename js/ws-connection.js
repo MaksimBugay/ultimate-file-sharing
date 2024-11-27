@@ -429,6 +429,10 @@ window.addEventListener('resize', function () {
     toolbarConnectionInfo.classList.add('show');
 });
 
+getDeviceSecret().then((secret) => {
+    Fileshare.deviceSecret = secret;
+    console.log(`Device secret = ${Fileshare.deviceSecret}`);
+});
 FingerprintJS.load().then(fp => {
     fp.get().then(result => {
         openDataBase(result.visitorId, function () {
