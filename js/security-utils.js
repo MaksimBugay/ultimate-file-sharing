@@ -378,7 +378,7 @@ async function decryptChunkByChunk(slices, encryptionContract) {
     return new Blob(decChunks, {type: 'application/octet-stream'});
 }
 
-async function decryptAES(slices, base64Key, base64IV) {
+async function decryptAES(slices, base64Key, base64IV, contentType = "application/octet-stream") {
     // Convert slices to ArrayBuffer
     const encryptedContent = concatArrayBuffers(slices);
 
@@ -386,7 +386,7 @@ async function decryptAES(slices, base64Key, base64IV) {
     const decryptedContent = await decryptAESToArrayBuffer(encryptedContent, base64Key, base64IV)
 
     // Convert decrypted ArrayBuffer back to Blob for download or further use
-    return new Blob([new Uint8Array(decryptedContent)], {type: "application/octet-stream"});
+    return new Blob([new Uint8Array(decryptedContent)], {type: contentType});
 }
 
 async function encryptPrivateKey(base64Key, base64IV, pwd, salt) {

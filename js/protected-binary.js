@@ -1,3 +1,24 @@
+const playableMediaTypes = [
+    "video/mp4",
+    'video/webm; codecs="vp8, opus"',
+    'video/webm; codecs="vp9, opus"',
+    "audio/webm"
+];
+
+const playableImageTypes = [
+    "image/jpeg",
+    "image/bmp",
+    "image/png"
+];
+
+function isPlayableMedia(contentType) {
+    // Remove the codec part from the contentType if it exists
+    const baseContentType = contentType.split(';')[0].trim(); // Extract base type, e.g., "video/webm"
+
+    // Check if the base content type exists in the playableMediaTypes array
+    return playableMediaTypes.some(type => type.split(';')[0].trim() === baseContentType);
+}
+
 const serverUrl = 'https://secure.fileshare.ovh:31443';
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -20,9 +41,13 @@ const passwordField = document.getElementById('password');
 const workspaceField = document.getElementById('workSpaceId');
 const downloadBtn = document.getElementById('downloadBtn');
 const togglePasswordBtn = document.getElementById('togglePassword');
+const openInBrowserCheckbox = document.getElementById("openInBrowserCheckbox");
 const progressBar = document.getElementById("downloadProgress");
 const progressPercentage = document.getElementById("progressPercentage");
 const loginContainer = document.querySelector('.login-container');
+const contentContainer = document.getElementById('contentContainer');
+const contentImage = document.getElementById("contentImage");
+const contentVideoPlayer = document.getElementById('contentVideoPlayer');
 const progressBarContainer = document.getElementById("progressBarContainer");
 const downloadButtonText = document.getElementById("buttonText");
 const downloadSpinner = document.getElementById('downloadSpinner');
@@ -30,7 +55,7 @@ const pastCredentialsTextarea = document.getElementById('pastCredentials');
 const errorMessage = document.getElementById('errorMessage');
 
 pastCredentialsTextarea.addEventListener('blur', function () {
-    pastCredentialsTextarea.style.visibility = 'hidden';
+    //pastCredentialsTextarea.style.visibility = 'hidden';
 });
 
 if (urlParams.get('workspace')) {
@@ -86,7 +111,9 @@ function postDownloadProcessor(result) {
         loginContainer.remove();
     }
     if ('RESPONSE_WITH_ERROR' !== result) {
-        delay(1000).then(() => window.close());
+        if (!openInBrowserCheckbox.checked) {
+            delay(1000).then(() => window.close());
+        }
     }
 }
 
@@ -123,6 +150,7 @@ async function downloadProtectedBinary(downloadRequest) {
     if (response === null) {
         return 'RESPONSE_WITH_ERROR';
     }
+    const contentType = response.headers.get('content-type');
     const contentLength = response.headers.get('content-length');
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
@@ -176,6 +204,7 @@ async function downloadProtectedBinarySilently(downloadRequest) {
     if (response === null) {
         return 'RESPONSE_WITH_ERROR';
     }
+    const contentType = response.headers.get('content-type');
     const contentLength = response.headers.get('content-length');
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
@@ -216,12 +245,40 @@ async function downloadProtectedBinarySilently(downloadRequest) {
             console.error(err);
         }
         if (!success) {
-            blob = await decryptAES(chunks, encryptionContract.base64Key, encryptionContract.base64IV);
+            blob = await decryptAES(chunks, encryptionContract.base64Key, encryptionContract.base64IV, contentType);
         }
     } else {
-        blob = new Blob(chunks, {type: 'application/octet-stream'});
+        blob = new Blob(chunks, {type: contentType});
     }
     chunks.length = 0;
+    if (openInBrowserCheckbox.checked) {
+        if (playableImageTypes.includes(contentType)) {
+            const blobUrl = URL.createObjectURL(blob);
+            contentImage.src = blobUrl;
+            contentImage.onload = function () {
+                contentContainer.style.display = 'block';
+                contentImage.style.display = 'block';
+                URL.revokeObjectURL(blobUrl);
+            };
+            return;
+        }
+        if (isPlayableMedia(contentType)) {
+            const blobUrl = URL.createObjectURL(blob);
+            const source = document.createElement('source');
+            source.src = blobUrl;
+            source.type = contentType;
+
+            contentVideoPlayer.appendChild(source);
+
+            contentVideoPlayer.addEventListener('canplay', function () {
+                contentVideoPlayer.play();
+            });
+
+            contentContainer.style.display = 'block';
+            contentVideoPlayer.style.display = 'block';
+            return;
+        }
+    }
     downloadFile(blob, binaryFileName);
     //const blob = new Blob(chunks, {type: response.headers.get('content-type')});
     //const blob = new Blob([await response.arrayBuffer()], {type: response.headers.get('content-type')});
