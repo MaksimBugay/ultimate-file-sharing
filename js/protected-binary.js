@@ -19,6 +19,8 @@ function isPlayableMedia(contentType) {
     return playableMediaTypes.some(type => type.split(';')[0].trim() === baseContentType);
 }
 
+const ownerSignatureLabel = document.getElementById('ownerSignatureLabel');
+
 const serverUrl = 'https://secure.fileshare.ovh:31443';
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -35,10 +37,11 @@ if (suffixParts.length > 1) {
 if (suffixParts.length > 2) {
     signatureHash = suffixParts[2];
     generateHasAndConvertToReadableSignature(signatureHash).then((signaturePhrase) => {
-        console.log(signaturePhrase);
+        if (signaturePhrase) {
+            ownerSignatureLabel.textContent = `Owner signature: ${signaturePhrase}`;
+        }
     })
 }
-console.log(`Signature hash: ${signatureHash}`);
 
 const passwordField = document.getElementById('password');
 const workspaceField = document.getElementById('workSpaceId');
