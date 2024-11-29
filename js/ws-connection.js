@@ -432,21 +432,23 @@ window.addEventListener('resize', function () {
 getDeviceSecret().then((secret) => {
     Fileshare.deviceSecret = secret;
     console.log(`Device secret = ${Fileshare.deviceSecret}`);
-});
-FingerprintJS.load().then(fp => {
-    fp.get().then(result => {
-        openDataBase(result.visitorId, function () {
-            updateDeviceIdCaption(result.visitorId);
-            getFileshareProperties(function (fsProperties) {
-                Fileshare.properties = fsProperties;
-                openWsConnection(result.visitorId);
-            }, function () {
-                Fileshare.properties = null;
-                updateTransferGroupCaption();
-                openWsConnection(result.visitorId);
+
+    FingerprintJS.load().then(fp => {
+        fp.get().then(result => {
+            openDataBase(result.visitorId, function () {
+                updateDeviceIdCaption(result.visitorId);
+                getFileshareProperties(function (fsProperties) {
+                    Fileshare.properties = fsProperties;
+                    openWsConnection(result.visitorId);
+                }, function () {
+                    Fileshare.properties = null;
+                    updateTransferGroupCaption();
+                    openWsConnection(result.visitorId);
+                });
             });
         });
     });
+
 });
 
 PushcaClient.verbose = true;
@@ -536,7 +538,11 @@ async function buildSignatureHash(signature) {
 
 async function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
-        const signatureHash = await buildSignatureHash(deviceFpId);
+        const signatureHash = await calculateSignatureSha256(Fileshare.deviceSecret);
+        Fileshare.ownerSignatureHash = await calculateSha256(stringToArrayBuffer(signatureHash));
+        console.log(`Owner signature hash = ${Fileshare.ownerSignatureHash}`);
+        const signaturePhrase = await generateHasAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
+        console.log(signaturePhrase);
         let applicationId = Fileshare.noTransferGroupApplicationId;
         if (Fileshare.properties) {
             applicationId = Fileshare.properties.getTransferApplicationId()
@@ -769,7 +775,8 @@ function initFileManager() {
                             copyTextToClipboard(JSON.stringify(
                                 {
                                     workspaceId: PushcaClient.ClientObj.workSpaceId,
-                                    password: data.password
+                                    password: data.password,
+                                    signature: Fileshare.ownerSignatureHash
                                 }
                             ));
                         }
@@ -777,7 +784,8 @@ function initFileManager() {
                     afterCreatedHandler: function (eButton, data) {
                         const credentials = {
                             workspaceId: PushcaClient.ClientObj.workSpaceId,
-                            password: data.password
+                            password: data.password,
+                            signature: Fileshare.ownerSignatureHash
                         };
                         eButton.title = JSON.stringify(credentials);
                         if (isEmpty(credentials.password)) {

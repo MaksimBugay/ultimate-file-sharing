@@ -57,6 +57,13 @@ class EncryptionContract {
     }
 }
 
+async function calculateSignatureSha256(inputString) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(inputString);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 async function calculateSha256(content) {
     const hashBuffer = await crypto.subtle.digest('SHA-256', content);
     const hashArray = Array.from(new Uint8Array(hashBuffer));

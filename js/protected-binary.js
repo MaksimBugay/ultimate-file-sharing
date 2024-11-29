@@ -34,6 +34,9 @@ if (suffixParts.length > 1) {
 }
 if (suffixParts.length > 2) {
     signatureHash = suffixParts[2];
+    generateHasAndConvertToReadableSignature(signatureHash).then((signaturePhrase) => {
+        console.log(signaturePhrase);
+    })
 }
 console.log(`Signature hash: ${signatureHash}`);
 
