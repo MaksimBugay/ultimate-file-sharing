@@ -78,6 +78,11 @@ pastCredentialsTextarea.addEventListener('input', () => {
         const object = JSON.parse(memoText);
         workspaceField.value = object['workspaceId'];
         passwordField.value = object['password'];
+        if (signatureHash && (signatureHash !== object['signature'])) {
+            loginContainer.remove();
+            errorMessage.textContent = "The provided signature does not match the content owner's signature!";
+            errorMessage.style.display = 'block';
+        }
         pastCredentialsTextarea.value = '';
         downloadSharedBinary();
     }
