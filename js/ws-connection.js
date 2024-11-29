@@ -516,7 +516,7 @@ PushcaClient.onMessageHandler = function (ws, data) {
             if (getSuffixResponse) {
                 let value = getSuffixResponse.privateUrlSuffix;
                 if (getSuffixResponse.encryptionContract) {
-                    value = encodeURIComponent(value + `|${getSuffixResponse.encryptionContract}`);
+                    value = encodeURIComponent(value + `|${getSuffixResponse.encryptionContract}|${Fileshare.ownerSignature}`);
                 }
                 const msg = `${parts[0]}::${MessageType.PRIVATE_URL_SUFFIX}::${value}`;
                 PushcaClient.broadcastMessage(
@@ -538,8 +538,8 @@ async function buildSignatureHash(signature) {
 
 async function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
-        const signatureHash = await calculateSignatureSha256(Fileshare.deviceSecret);
-        Fileshare.ownerSignatureHash = await calculateSha256(stringToArrayBuffer(signatureHash));
+        Fileshare.ownerSignature = await calculateSignatureSha256(Fileshare.deviceSecret);
+        Fileshare.ownerSignatureHash = await calculateSha256(stringToArrayBuffer(Fileshare.ownerSignature));
         console.log(`Owner signature hash = ${Fileshare.ownerSignatureHash}`);
         const signaturePhrase = await generateHasAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
         console.log(signaturePhrase);
@@ -549,7 +549,7 @@ async function openWsConnection(deviceFpId) {
         }
         const pClient = new ClientFilter(
             deviceFpId,
-            signatureHash,//"anonymous-sharing",
+            Fileshare.ownerSignature,//"anonymous-sharing",
             `${calculateStringHashCode(deviceFpId)}`,
             applicationId
         );
