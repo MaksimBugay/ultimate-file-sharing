@@ -133,6 +133,7 @@ class BinaryManifest {
             id: this.id,
             name: this.name,
             mimeType: this.mimeType,
+            readMeText: this.readMeText,
             sender: this.sender,
             pusherInstanceId: this.pusherInstanceId,
             datagrams: this.datagrams
