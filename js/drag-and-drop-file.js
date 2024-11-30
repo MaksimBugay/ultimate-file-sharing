@@ -63,6 +63,7 @@ dropZone.addEventListener('drop', async function (event) {
         await SaveInCloudHelper.cacheBlobInCloud(
             file.name,
             file.type,
+            Fileshare.defaultReadMeText,
             blob,
             true);
     }

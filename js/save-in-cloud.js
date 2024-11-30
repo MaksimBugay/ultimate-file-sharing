@@ -14,9 +14,9 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
     );
 }
 
-SaveInCloudHelper.cacheBlobInCloud = async function (name, type, blob, storeInCloud, password = null) {
+SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blob, storeInCloud, password = null) {
     return await SaveInCloudHelper.cacheContentInCloud(
-        name, type, blob.size,
+        name, type, blob.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
             const chunks = await blobToArrayBuffers(blob, MemoryBlock.MB);
             let pipeWasBroken = false;
@@ -54,9 +54,9 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, blob, storeInCl
     );
 }
 
-SaveInCloudHelper.cacheFileInCloud = async function (file, storeInCloud, password = null) {
+SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCloud, password = null) {
     return await SaveInCloudHelper.cacheContentInCloud(
-        file.name, file.type, file.size,
+        file.name, file.type, file.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
             return await readFileSequentially(file, async function (inOrder, arrayBuffer) {
                 return await processBinaryChunk(manifest, inOrder, arrayBuffer, storeInCloud, encryptionContract);
@@ -66,13 +66,18 @@ SaveInCloudHelper.cacheFileInCloud = async function (file, storeInCloud, passwor
         password
     );
 }
-SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, splitAndStoreProcessor, storeInCloud, password) {
+SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, inReadMeText, splitAndStoreProcessor, storeInCloud, password) {
+    let readMeText = inReadMeText;
+    if (Fileshare.defaultReadMeText === inReadMeText){
+        readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
+    }
     const binaryId = uuid.v4().toString();
     const encryptionContract = password ? await generateEncryptionContract() : null;
     const createManifestResult = await createBinaryManifest(
         binaryId,
         name,
         type,
+        readMeText,
         password,
         encryptionContract,
         storeInCloud

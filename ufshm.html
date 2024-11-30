@@ -182,7 +182,8 @@
      style="right: 180px;top: 35px">
 
 <nav id="toolbarNavContainer" class="navbar navbar-expand-lg navbar-light bg-light" style="padding: 0 0 0 0;">
-    <button id="mainNavbarTogglerBtn" class="navbar-toggler" type="button" data-toggle="collapse" data-target="#toolbarNav"
+    <button id="mainNavbarTogglerBtn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#toolbarNav"
             aria-controls="toolbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
@@ -244,7 +245,8 @@
 
 <nav id="connectionInfo" class="navbar navbar-expand-lg navbar-light bg-light"
      style="padding: 0 0 0 0; margin: 0 0 0 0">
-    <button id="connectionInfoTogglerBtn" class="navbar-toggler" type="button" data-toggle="collapse" data-target="#toolbarConnectionInfo"
+    <button id="connectionInfoTogglerBtn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#toolbarConnectionInfo"
             aria-controls="toolbarConnectionInfo" aria-expanded="false" aria-label="Toggle connection info">
         <span class="navbar-toggler-icon"></span>
     </button>
@@ -299,6 +301,17 @@
                 <span id="mmProgressPercentage">0%</span>
             </div>
             <div id="protectWithPasswordContainer" style="width: 99%">
+                <fieldset class="file-share-fieldset" style="margin-bottom: 15px; padding-top: 5px; padding-bottom: 5px">
+                    <legend class="file-share-legend">Read Me</legend>
+                    <div id="readMeTextMemo"
+                         class="read-me-text-memo"
+                         aria-label="provide information about content"
+                         contenteditable="true"
+                         spellcheck="true"
+                         data-lexical-editor="true"
+                         role="textbox"
+                    >Default description</div>
+                </fieldset>
                 <div id="shareFromDeviceWarning"
                      style="color: red; margin-bottom: 10px; margin-left: 5px; display: none">
                     Our website should be always open to support sharing!!!
@@ -312,7 +325,8 @@
                 <fieldset class="file-share-fieldset">
                     <legend class="file-share-legend">Protect with</legend>
                     <br>
-                    <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password + end-to-end encryption (optional)</label>
+                    <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password + end-to-end
+                        encryption (optional)</label>
                     <input type="text" id="passwordInput"
                            placeholder="Enter strong password to protect your content"/>
                     <div style="">

@@ -646,6 +646,30 @@ input[type="text"] {
     justify-content: flex-end;
 }
 
+.read-me-text-memo {
+    user-select: text;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: none;
+    border-radius: 4px;
+    min-height: 12px; /* Minimum height */
+    max-width: 100%;
+    overflow-y: auto; /* Show scrollbar as needed */
+    color: darkblue;
+    font-weight: lighter;
+    font-size: 12px;
+}
+
+.read-me-text-memo:focus {
+    outline: 0 solid blue; /* Example focus style */
+}
+
+.read-me-text-memo:empty::before {
+    content: attr(aria-label);
+    color: #aaa; /* Placeholder text color */
+    pointer-events: none; /* Prevent the placeholder from being selectable */
+}
+
 /*nice 3D container*/
 /*fieldset {
     width: 320px;

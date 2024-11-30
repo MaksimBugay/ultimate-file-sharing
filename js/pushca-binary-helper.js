@@ -31,11 +31,12 @@ class Datagram {
 }
 
 class BinaryManifest {
-    constructor(id, name, mimeType, sender, pusherInstanceId, datagrams,
+    constructor(id, name, mimeType, readMeText, sender, pusherInstanceId, datagrams,
                 totalSize, timestamp, password, privateUrlSuffix, downloadCounter, base64Key, base64IV, cachedInCloud = false) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
+        this.readMeText = readMeText;
         this.sender = sender;
         this.pusherInstanceId = pusherInstanceId;
         this.datagrams = isArrayNotEmpty(datagrams) ? datagrams : [];
@@ -143,6 +144,7 @@ class BinaryManifest {
             id: this.id,
             name: this.name,
             mimeType: this.mimeType,
+            readMeText: this.readMeText,
             sender: this.sender,
             pusherInstanceId: this.pusherInstanceId,
             datagrams: this.datagrams,
@@ -174,6 +176,7 @@ class BinaryManifest {
             jsonObject.id,
             jsonObject.name,
             jsonObject.mimeType,
+            jsonObject.readMeText,
             sender,
             jsonObject.pusherInstanceId,
             datagrams,
@@ -228,6 +231,7 @@ async function manifestToJsonObjectWithProtectedAttributes(manifest) {
         id: manifest.id,
         name: manifest.name,
         mimeType: manifest.mimeType,
+        readMeText: manifest.readMeText,
         sender: manifest.sender,
         pusherInstanceId: manifest.pusherInstanceId,
         datagrams: manifest.datagrams,
@@ -323,7 +327,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
     return binaryManifest;
 }
 
-async function createBinaryManifest(id, name, mimeType, password, encryptionContract, cachedInCloud = false) {
+async function createBinaryManifest(id, name, mimeType, readMeText, password, encryptionContract, cachedInCloud = false) {
     if (!PushcaClient.ClientObj) {
         return new WaiterResponse(WaiterResponseType.ERROR, "Owner connection is absent");
     }
@@ -338,6 +342,7 @@ async function createBinaryManifest(id, name, mimeType, password, encryptionCont
             id,
             name,
             mimeType,
+            readMeText,
             sender,
             PushcaClient.pusherInstanceId,
             [],
@@ -359,6 +364,7 @@ async function createBinaryManifest(id, name, mimeType, password, encryptionCont
                 id,
                 name,
                 mimeType,
+                readMeText,
                 sender,
                 PushcaClient.pusherInstanceId,
                 [],

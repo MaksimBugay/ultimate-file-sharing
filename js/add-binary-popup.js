@@ -32,6 +32,7 @@ const pastArea = document.getElementById('pasteArea')
 const videoRecorderContainer = document.getElementById('video-recorder-container');
 const fileSelectorContainer = document.getElementById('file-selector-container');
 const copyPastName = document.getElementById('copyPastName')
+const readMeTextMemo = document.getElementById("readMeTextMemo");
 fileInput.addEventListener('change', processSelectedFiles);
 
 passwordField.value = null;
@@ -51,6 +52,7 @@ function passwordFieldWasChangedHandler() {
 function openModal(contentType, showForce = false) {
     AddBinaryWidget.contentType = contentType;
 
+    readMeTextMemo.textContent = Fileshare.defaultReadMeText;
     shareFromDeviceCheckbox.checked = false;
     shareFromDeviceWarning.style.display = 'none';
     createZipArchiveCheckbox.checked = false;
@@ -169,6 +171,7 @@ pastArea.addEventListener('paste', async function (event) {
             await SaveInCloudHelper.cacheBlobInCloud(
                 name,
                 mimeType,
+                readMeTextMemo.textContent,
                 blob,
                 !shareFromDeviceCheckbox.checked,
                 passwordField.value.trim());
@@ -324,6 +327,7 @@ async function processListOfFiles(files) {
             await SaveInCloudHelper.cacheBlobInCloud(
                 zipArchiveName,
                 "application/zip",
+                readMeTextMemo.textContent,
                 zipBlob,
                 !shareFromDeviceCheckbox.checked,
                 passwordField.value.trim());
@@ -349,7 +353,12 @@ async function addFileToRegistry(file) {
     }
 
     hideSpinnerInButton();
-    return await SaveInCloudHelper.cacheFileInCloud(file, !shareFromDeviceCheckbox.checked, passwordField.value.trim());
+    return await SaveInCloudHelper.cacheFileInCloud(
+        file,
+        readMeTextMemo.textContent,
+        !shareFromDeviceCheckbox.checked,
+        passwordField.value.trim()
+    );
 }
 
 async function readFileToChunkArray(file) {
@@ -407,9 +416,9 @@ async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mi
         let tmpManifest;
         let result;
         if (passwordField.value) {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, passwordField.value, encryptionContract);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeTextMemo.textContent, passwordField.value, encryptionContract);
         } else {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, null, null);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeTextMemo.textContent, null, null);
         }
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             tmpManifest = result.body;

@@ -44,6 +44,7 @@ class FileshareProperties {
 const Fileshare = {};
 Fileshare.noTransferGroupApplicationId = "ultimate-file-sharing";
 Fileshare.wakeLock = null;
+Fileshare.defaultReadMeText = "Default description";
 
 const howToButton = document.getElementById("howToButton");
 const privacyButton = document.getElementById('privacyButton');
@@ -100,6 +101,7 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
             await SaveInCloudHelper.cacheBlobInCloud(
                 name,
                 mimeType,
+                Fileshare.defaultReadMeText,
                 blob,
                 true);
             delay(500).then(() => {
