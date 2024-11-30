@@ -33,7 +33,7 @@ async function fetchProtectedBinaryDescription(suffix) {
             return null;
         }
 
-        return  await response.text();
+        return await response.text();
     } catch (error) {
         console.error('Error fetching protected binary description:', error);
         return null;
@@ -56,7 +56,10 @@ if (suffixParts.length > 1) {
     console.log(`Protected url suffix: ${protectedUrlSuffix}`);
     if (protectedUrlSuffix) {
         fetchProtectedBinaryDescription(protectedUrlSuffix).then(readMeText => {
-            console.log(readMeText);
+            const readMeTextMemo = document.getElementById("readMeTextMemo");
+            if (readMeTextMemo) {
+                readMeTextMemo.textContent = readMeText;
+            }
         });
     }
     encryptionContractStr = suffixParts[1];
@@ -92,7 +95,7 @@ pastCredentialsTextarea.addEventListener('blur', function () {
 });
 
 if (urlParams.get('workspace')) {
-    pastCredentialsTextarea.style.visibility = 'hidden';
+    pastCredentialsTextarea.style.display = 'none';
     workspaceField.value = urlParams.get('workspace');
     passwordField.focus();
 } else {
