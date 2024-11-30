@@ -32,6 +32,7 @@ let signatureHash;
 const suffixParts = protectedUrlSuffix.split('|');
 if (suffixParts.length > 1) {
     protectedUrlSuffix = suffixParts[0];
+    console.log(`Protected url suffix: ${protectedUrlSuffix}`);
     encryptionContractStr = suffixParts[1];
 }
 if (suffixParts.length > 2) {
