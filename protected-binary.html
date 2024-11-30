@@ -40,9 +40,15 @@
                     <button type="button" id="togglePassword" class="toggle-password"></button>
                 </div>
             </div>
-            <div class="input-group">
-                <input type="checkbox" id="openInBrowserCheckbox" checked/>
-                Open in browser
+            <div style="display: flex">
+                <div class="input-group">
+                    <input type="checkbox" id="openInBrowserCheckbox" checked/>
+                    Open in browser
+                </div>
+                <div class="input-group">
+                    <input type="checkbox" id="reuseCredentialsCheckbox" checked/>
+                    Use for all content from that owner
+                </div>
             </div>
             <div class="memo-container">
             <textarea id="pastCredentials" rows="2" cols="30"
@@ -71,10 +77,13 @@
     </div>
 </div>
 </body>
+<script src="js/fp.min.js"></script>
 <script src="js/common-utils.js"></script>
+<script src="js/callable-future.js?v=<?= time(); ?>"></script>
 <script src="js/uuid.min.js"></script>
 <script src="js/security-utils.js"></script>
 <script src="js/owner-signature.js?v=<?= time(); ?>"></script>
+<script src="js/credentials-db.js?v=<?= time(); ?>"></script>
 <script src="js/protected-binary.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>

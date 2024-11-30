@@ -78,6 +78,7 @@ const workspaceField = document.getElementById('workSpaceId');
 const downloadBtn = document.getElementById('downloadBtn');
 const togglePasswordBtn = document.getElementById('togglePassword');
 const openInBrowserCheckbox = document.getElementById("openInBrowserCheckbox");
+const reuseCredentialsCheckbox = document.getElementById("reuseCredentialsCheckbox");
 const progressBar = document.getElementById("downloadProgress");
 const progressPercentage = document.getElementById("progressPercentage");
 const loginContainer = document.querySelector('.login-container');
@@ -148,8 +149,18 @@ function downloadSharedBinary() {
     });
 }
 
-function postDownloadProcessor(result) {
+async function postDownloadProcessor(result) {
     if (loginContainer) {
+        if ('RESPONSE_WITH_ERROR' === result) {
+            removeCredentials(signatureHash);
+        } else {
+            if (reuseCredentialsCheckbox.checked) {
+                await saveCredentialsToDb(
+                    signatureHash,
+                    JSON.stringify({workspaceId: workspaceField.value, password: passwordField.value})
+                );
+            }
+        }
         loginContainer.remove();
     }
     if ('RESPONSE_WITH_ERROR' !== result) {
@@ -371,3 +382,26 @@ togglePasswordBtn.addEventListener('touchend', function () {
     passwordField.setAttribute('type', 'password');
 });
 
+FingerprintJS.load().then(fp => {
+    fp.get().then(result => {
+        openDataBase(result.visitorId, function () {
+            if (signatureHash) {
+                applyCredentialsFromDb(signatureHash);
+            }
+        });
+    });
+});
+
+async function applyCredentialsFromDb(signatureHash) {
+    await delay(3000);
+    if (!reuseCredentialsCheckbox.checked) {
+        return;
+    }
+    const credentials = await getCredentialsFromDb(signatureHash);
+    if (credentials) {
+        const jsonObj = JSON.parse(credentials);
+        workspaceField.value = jsonObj.workspaceId;
+        passwordField.value = jsonObj.password;
+        downloadSharedBinary();
+    }
+}
