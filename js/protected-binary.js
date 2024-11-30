@@ -393,7 +393,7 @@ FingerprintJS.load().then(fp => {
 });
 
 async function applyCredentialsFromDb(signatureHash) {
-    await delay(3000);
+    await delay(2000);
     if (!reuseCredentialsCheckbox.checked) {
         return;
     }
