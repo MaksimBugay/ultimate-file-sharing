@@ -19,6 +19,27 @@ function isPlayableMedia(contentType) {
     return playableMediaTypes.some(type => type.split(';')[0].trim() === baseContentType);
 }
 
+async function fetchProtectedBinaryDescription(suffix) {
+    const url = serverUrl + `/binary/binary-manifest/protected/${suffix}`;
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        return  await response.text();
+    } catch (error) {
+        console.error('Error fetching protected binary description:', error);
+        return null;
+    }
+}
+
 const ownerSignatureLabel = document.getElementById('ownerSignatureLabel');
 
 const serverUrl = 'https://secure.fileshare.ovh:31443';
@@ -33,6 +54,11 @@ const suffixParts = protectedUrlSuffix.split('|');
 if (suffixParts.length > 1) {
     protectedUrlSuffix = suffixParts[0];
     console.log(`Protected url suffix: ${protectedUrlSuffix}`);
+    if (protectedUrlSuffix) {
+        fetchProtectedBinaryDescription(protectedUrlSuffix).then(readMeText => {
+            console.log(readMeText);
+        });
+    }
     encryptionContractStr = suffixParts[1];
 }
 if (suffixParts.length > 2) {

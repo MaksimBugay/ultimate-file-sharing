@@ -52,12 +52,13 @@ label {
 
 input[type="text"], input[type="password"] {
     width: 100%;
-    padding: 10px;
+    padding: 1px;
     border-radius: 5px;
     border: 1px solid #ccc;
     box-sizing: border-box;
-    font-size: 16px;
+    font-size: 14px;
     background-color: lightcyan;
+    max-height: 30px;
 }
 
 input[type="text"]:focus, input[type="password"]:focus {
@@ -108,23 +109,20 @@ input[type="password"],
 input[type="text"] {
     width: 100%;
     height: 50px;
-    padding-right: 50px; /* Reserve space for the toggle button */
+    padding-right: 30px; /* Reserve space for the toggle button */
     box-sizing: border-box;
 }
 
 .toggle-password {
-    height: 50px;
-    width: 50px;
+    height: 30px;
+    width: 30px;
     right: 10px;
-    transform: translateY(-50%);
     border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
     color: #007bff;
-    padding-top: 5px;
-    padding-bottom: 5px;
-    padding-left: 5px;
+    margin-top: 0;
     box-sizing: border-box;
     background-image: url('../images/show-password.png');
     background-size: cover;
@@ -133,7 +131,7 @@ input[type="text"] {
 }
 
 .toggle-password:hover {
-    width: 50px;
+    width: 30px;
     background-color: #e0e0e0;
     border-color: #999;
     color: #0056b3;
