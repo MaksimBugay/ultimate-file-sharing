@@ -658,7 +658,7 @@ class GridHeaderWithCheckBox {
             <div style="margin-bottom: 3px">${params.headerName}</div>
             <div style="display: flex; align-items: center; text-align: inherit; height: 1px">
                 <label style="display: inline-block; text-align: inherit">
-                    <input type="checkbox" id="${params.elementId}"/>
+                    <input type="checkbox" id="${params.elementId}" checked/>
                     ${params.displayName}
                 </label>
             </div>`;
@@ -1010,7 +1010,7 @@ function isWorkspaceIdExposed() {
     if (exposeWorkspaceIdCheckBox) {
         return exposeWorkspaceIdCheckBox.checked;
     } else {
-        return false;
+        return true;
     }
 }
 
