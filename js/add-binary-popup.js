@@ -206,7 +206,7 @@ closeButton.addEventListener('click', closeModal);
 // Add event listener to the modal itself to close it when clicked outside
 window.addEventListener('click', (event) => {
     if (event.target === addBinaryPopup) {
-        closeModal();
+        //closeModal();
     }
 });
 
