@@ -164,6 +164,7 @@ function showInfoMsg(msg, url = null) {
     infoMsg.textContent = msg;
     const qrCodeContainer = document.getElementById('qrcode');
     if (url && qrCodeContainer) {
+        qrCodeContainer.innerHTML = '';
         QRCode.toDataURL(url, {width: 200, height: 200}, (err, url) => {
             if (err) {
                 console.error('Failed to generate QR code:', err);
