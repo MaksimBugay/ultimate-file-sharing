@@ -16,7 +16,7 @@
 .login-container {
     /*position: absolute;*/
     top: 50px;
-    width: 80vh;
+    width: 75vh;
     min-width: 400px;
     max-width: 600px;
     padding: 5px;
@@ -42,6 +42,7 @@ h2 {
 .input-group {
     width: 100%;
     margin-bottom: 15px;
+    margin-right: 10px;
 }
 
 label {
