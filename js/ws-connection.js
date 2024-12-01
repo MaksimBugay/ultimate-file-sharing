@@ -160,8 +160,20 @@ closeInfoBtn.addEventListener('click', function () {
     infoDialog.classList.remove('visible');
 });
 
-function showInfoMsg(msg) {
+function showInfoMsg(msg, url = null) {
     infoMsg.textContent = msg;
+    const qrCodeContainer = document.getElementById('qrcode');
+    if (url && qrCodeContainer) {
+        QRCode.toDataURL(url, {width: 200, height: 200}, (err, url) => {
+            if (err) {
+                console.error('Failed to generate QR code:', err);
+                return;
+            }
+            const img = document.createElement('img');
+            img.src = url;
+            qrCodeContainer.appendChild(img);
+        });
+    }
     infoDialog.classList.add('visible');
 }
 
@@ -969,9 +981,13 @@ function addManifestToManagerGrid(newManifest) {
         rowNode.setSelected(true, true);
         copyTextToClipboard(publicUr);
         if (isMobile()) {
-            showNativeShareDialog(newManifest.name, publicUr);
+            showNativeShareDialog(newManifest.name, publicUr).then(ableToShow => {
+                if (!ableToShow) {
+                    showInfoMsg(`Public url was copied to clipboard`, publicUr);
+                }
+            });
         } else {
-            showInfoMsg(`Public url was copied to clipboard`);
+            showInfoMsg(`Public url was copied to clipboard`, publicUr);
         }
     });
 }
@@ -984,12 +1000,14 @@ async function showNativeShareDialog(vText, vUrl) {
                 text: 'Public download link',
                 url: vUrl
             });
+            return true;
         } catch (error) {
             console.error('Error sharing:', error);
         }
     } else {
         console.log('Web Share API not supported on this browser.');
     }
+    return false;
 }
 
 function incrementDownloadCounterOfManifestRecord(binaryId) {
