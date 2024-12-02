@@ -670,6 +670,26 @@ input[type="text"] {
     pointer-events: none; /* Prevent the placeholder from being selectable */
 }
 
+.custom-link {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #3b8dff;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    margin-left: 100px;
+}
+
+.custom-link:hover {
+    background-color: #3b8dff;
+    color: goldenrod;
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px); /* Slight lift on hover */
+}
 /*nice 3D container*/
 /*fieldset {
     width: 320px;
