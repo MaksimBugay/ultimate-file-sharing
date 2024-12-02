@@ -634,6 +634,16 @@ function cleanRefreshBrokenConnectionInterval() {
     }
 }
 
+PushcaClient.stopWebSocket = function () {
+    cleanRefreshBrokenConnectionInterval();
+    if (PushcaClient.ws
+        && (PushcaClient.ws.readyState !== window.WebSocket.CLOSING)
+        && (PushcaClient.ws.readyState !== window.WebSocket.CLOSED)
+    ) {
+        PushcaClient.ws.close(3000, "Stop websocket connection");
+    }
+}
+
 PushcaClient.isOpen = function () {
     if (!PushcaClient.ws) {
         return false;
