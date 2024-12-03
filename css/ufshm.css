@@ -595,6 +595,12 @@ input[type="text"] {
     margin-left: 10px;
 }
 
+.nav-item span a {
+    color: mediumspringgreen;
+    font-size: 1rem;
+    margin-left: 10px;
+}
+
 .nav-item-group-caption {
     margin-top: 5px;
     padding: 3px;

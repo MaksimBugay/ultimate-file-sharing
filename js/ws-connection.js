@@ -237,7 +237,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (isMobile()) {
         const thirdTube = document.getElementById("thirdTube");
         if (thirdTube) {
-            thirdTube.remove();
+            swapElements(thirdTube, document.getElementById('connectionInfo'));
+            const thirdTubeNav = document.querySelector('#thirdTubeNav');
+            thirdTubeNav.classList.add('show');
         }
         toolbarNavContainer.style.height = 'auto';
         const toolbarNav = document.querySelector('#toolbarNav');
@@ -423,6 +425,7 @@ window.addEventListener('resize', function () {
     const toolbarNav = document.querySelector('#toolbarNav');
     const fastToolbarNav = document.querySelector('#fastToolbarNav');
     const toolbarConnectionInfo = document.querySelector('#toolbarConnectionInfo');
+    const thirdTubeNav = document.querySelector('#thirdTubeNav');
 
     if (window.innerWidth < 600) {
         toolbarNav.style.height = 'auto';
@@ -442,6 +445,7 @@ window.addEventListener('resize', function () {
         fastToolbarNav.classList.add('show');
     }
     toolbarConnectionInfo.classList.add('show');
+    thirdTubeNav.classList.add('show');
 });
 
 getDeviceSecret().then((secret) => {
