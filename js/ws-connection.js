@@ -236,6 +236,8 @@ function updateTransferGroupCaption() {
 document.addEventListener("DOMContentLoaded", function () {
     if (isMobile()) {
         const thirdTube = document.getElementById("thirdTube");
+        const thirdTubeTogglerBtn = document.getElementById('thirdTubeTogglerBtn');
+        thirdTubeTogglerBtn.remove();
         if (thirdTube) {
             swapElements(thirdTube, document.getElementById('connectionInfo'));
             const thirdTubeNav = document.querySelector('#thirdTubeNav');

@@ -372,7 +372,7 @@ input[type="text"] {
 
     /*color: lightgreen;*/
     color: mediumspringgreen;
-    background-color: rgba(135, 206, 235, 0.35);
+    background-color: rgba(135, 206, 235, 0.1);
     box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.8);
     transition: box-shadow 0.3s;
 }
