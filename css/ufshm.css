@@ -696,6 +696,24 @@ input[type="text"] {
     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
     transform: translateY(-3px); /* Slight lift on hover */
 }
+
+.share-text-btn {
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+    background-color: #007bff;
+    margin: 20px 5px 5px 5px;
+}
+
+.share-text-btn:hover {
+    background-color: cornflowerblue;
+}
+
 /*nice 3D container*/
 /*fieldset {
     width: 320px;

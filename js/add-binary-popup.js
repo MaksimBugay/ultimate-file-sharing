@@ -4,7 +4,8 @@ const ContentType = Object.freeze({
     VIDEO: 2,
     COPY_PAST: 3,
     AUDIO: 4,
-    FILE_TRANSFER: 5
+    FILE_TRANSFER: 5,
+    TEXT_MESSAGE: 6
 });
 
 const AddBinaryWidget = {}
@@ -33,6 +34,9 @@ const videoRecorderContainer = document.getElementById('video-recorder-container
 const fileSelectorContainer = document.getElementById('file-selector-container');
 const copyPastName = document.getElementById('copyPastName')
 const readMeTextMemo = document.getElementById("readMeTextMemo");
+const textMessageContainer = document.getElementById("textMessageContainer");
+const textMessageMemo = document.getElementById('textMessageMemo');
+const saveTextMessageBtn = document.getElementById('saveTextMessageBtn');
 fileInput.addEventListener('change', processSelectedFiles);
 
 passwordField.value = null;
@@ -82,6 +86,10 @@ function openModal(contentType, showForce = false) {
         copyPastContainer.style.display = 'block';
         pastArea.focus();
     }
+    if (ContentType.TEXT_MESSAGE === contentType) {
+        textMessageContainer.style.display = 'block';
+        textMessageMemo.focus();
+    }
     if (ContentType.FILE_TRANSFER === contentType) {
         protectWithPasswordContainer.style.display = 'none';
         transferGroupContainer.style.display = 'block';
@@ -106,6 +114,23 @@ function selectFileIfEnterWasPressed(event) {
     }
 }
 
+saveTextMessageBtn.addEventListener('click', async function () {
+    alert(textMessageMemo.textContent);
+    const mimeType = 'text/plain';
+    const name = `text-${new Date().getTime()}.txt`;
+    let textBlob = new Blob([textMessageMemo.textContent], {type: 'text/plain'});
+    await SaveInCloudHelper.cacheBlobInCloud(
+        name,
+        mimeType,
+        readMeTextMemo.textContent,
+        textBlob,
+        !shareFromDeviceCheckbox.checked,
+        passwordField.value.trim());
+    delay(500).then(() => {
+        closeModal();
+        textBlob = null;
+    });
+});
 pastArea.addEventListener('focus', function () {
     pastArea.style.color = 'blue';
     pastArea.value = 'Press Ctrl+V to past content'
@@ -145,6 +170,8 @@ function closeModal() {
     videoPlayer.style.height = '200px';
     document.removeEventListener("keydown", selectFileIfEnterWasPressed);
     mmProgressBarContainer.style.display = 'none';
+    textMessageMemo.textContent = '';
+    textMessageContainer.style.display = 'none';
 }
 
 function resetFileInputElement() {

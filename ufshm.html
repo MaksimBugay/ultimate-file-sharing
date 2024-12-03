@@ -227,6 +227,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" id="textMessageButton">
+                    <img src="images/text-message.png" alt="pure text"
+                         class="custom-button-img"> Text
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" id="pastFromBufferButton">
                     <img src="images/copy-past.png" alt="Share keyboard buffer"
                          class="custom-button-img"> Keyboard buffer
@@ -429,6 +435,22 @@
                             ]
                         </div>
                     </div>
+                </fieldset>
+            </div>
+            <div id="textMessageContainer" style="width: 100%; display: none;">
+                <fieldset class="file-share-fieldset"
+                          style="margin-bottom: 15px; padding-top: 5px; padding-bottom: 5px">
+                    <legend class="file-share-legend">Text message</legend>
+                    <div id="textMessageMemo"
+                         class="read-me-text-memo"
+                         aria-label="text message input"
+                         contenteditable="true"
+                         spellcheck="true"
+                         data-lexical-editor="true"
+                         role="textbox"
+                         style="font-size: 14px"
+                    ></div>
+                    <button class="share-text-btn" id="saveTextMessageBtn">Share</button>
                 </fieldset>
             </div>
             <div id="file-selector-container" style="display: none; width: 100%">

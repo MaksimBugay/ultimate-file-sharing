@@ -54,6 +54,7 @@ const addBinaryButton = document.getElementById("addBinaryButton");
 const recordVideoButton = document.getElementById("recordVideoButton");
 const recordAudioButton = document.getElementById("recordAudioButton");
 const pastFromBufferButton = document.getElementById("pastFromBufferButton")
+const textMessageButton = document.getElementById('textMessageButton');
 const transferFileButton = document.getElementById("transferFileButton");
 const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
@@ -391,6 +392,10 @@ recordAudioButton.addEventListener("click", function () {
 
 pastFromBufferButton.addEventListener("click", function () {
     openModal(ContentType.COPY_PAST);
+});
+
+textMessageButton.addEventListener("click", function () {
+    openModal(ContentType.TEXT_MESSAGE);
 });
 
 transferFileButton.addEventListener("click", function () {

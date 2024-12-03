@@ -83,6 +83,7 @@ const progressBar = document.getElementById("downloadProgress");
 const progressPercentage = document.getElementById("progressPercentage");
 const loginContainer = document.querySelector('.login-container');
 const contentContainer = document.getElementById('contentContainer');
+const contentText = document.getElementById('contentText');
 const contentImage = document.getElementById("contentImage");
 const contentVideoPlayer = document.getElementById('contentVideoPlayer');
 const progressBarContainer = document.getElementById("progressBarContainer");
@@ -305,6 +306,25 @@ async function downloadProtectedBinarySilently(downloadRequest) {
     }
     chunks.length = 0;
     if (openInBrowserCheckbox.checked) {
+        if ('text/plain' === contentType) {
+            const reader = new FileReader();
+            const textDecoder = new TextDecoder("utf-8");
+
+            reader.onload = function () {
+                const resultBuffer = reader.result;
+
+                if (resultBuffer instanceof ArrayBuffer) {
+                    contentText.textContent = textDecoder.decode(resultBuffer);
+                    contentText.style.display = 'block';
+                    contentContainer.style.display = 'block';
+                } else {
+                    console.error("Error: Expected ArrayBuffer, but got something else");
+                }
+            };
+
+            reader.readAsArrayBuffer(blob);
+            return;
+        }
         if (playableImageTypes.includes(contentType)) {
             const blobUrl = URL.createObjectURL(blob);
             contentImage.src = blobUrl;
