@@ -115,7 +115,6 @@ function selectFileIfEnterWasPressed(event) {
 }
 
 saveTextMessageBtn.addEventListener('click', async function () {
-    alert(textMessageMemo.textContent);
     const mimeType = 'text/plain';
     const name = `text-${new Date().getTime()}.txt`;
     let textBlob = new Blob([textMessageMemo.textContent], {type: 'text/plain'});
