@@ -117,7 +117,12 @@ function selectFileIfEnterWasPressed(event) {
 saveTextMessageBtn.addEventListener('click', async function () {
     const mimeType = 'text/plain';
     const name = `text-${new Date().getTime()}.txt`;
-    let textBlob = new Blob([textMessageMemo.textContent], {type: 'text/plain'});
+    let text = textMessageMemo.textContent;
+    if (isEmpty(text)) {
+        return;
+    }
+    text = text.substring(0, 5000);
+    let textBlob = new Blob([text], {type: 'text/plain'});
     await SaveInCloudHelper.cacheBlobInCloud(
         name,
         mimeType,
