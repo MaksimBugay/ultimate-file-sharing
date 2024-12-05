@@ -329,7 +329,7 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
         transferGroupPassword
     );
     if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
-        showErrorMsg("Failed file transfer attempt: all group members are unavailable", null);
+        showErrorMsg("Failed file transfer attempt: all group members are unavailable. Open https://secure.fileshare.ovh on receiver's side and join the group", null);
         return false;
     }
 
@@ -343,7 +343,7 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
             encAndSendResult.encryptionContract
         );
         return WaiterResponseType.SUCCESS === result.type
-    }, "Failed file transfer attempt: all group members are unavailable");
+    }, "Failed file transfer attempt: all group members are unavailable. Open https://secure.fileshare.ovh on receiver's side and join the group");
 }
 
 TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroup, transferGroupPassword) {

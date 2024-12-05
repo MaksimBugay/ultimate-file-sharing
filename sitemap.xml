@@ -7,25 +7,25 @@
     <!-- created with Free Online Sitemap Generator www.xml-sitemaps.com -->
 
     <url>
-        <loc>https://secure.fileshare.ovh:31443/</loc>
-        <lastmod>2024-10-18T04:29:42+00:00</lastmod>
-        <changefreq>yearly</changefreq>
-        <priority>1.00</priority>
-    </url>
-    <url>
-        <loc>https://secure.fileshare.ovh:31443/ufshm.html</loc>
+        <loc>https://secure.fileshare.ovh/index.html</loc>
         <lastmod>2024-10-17T06:19:59+00:00</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.80</priority>
     </url>
     <url>
-        <loc>https://secure.fileshare.ovh:31443/manual/secure-file-share-doc.html</loc>
+        <loc>https://secure.fileshare.ovh/protected-binary.html</loc>
+        <lastmod>2024-10-17T06:19:59+00:00</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.80</priority>
+    </url>
+    <url>
+        <loc>https://secure.fileshare.ovh/manual/secure-file-share-doc.html</loc>
         <lastmod>2024-10-03T09:22:48+00:00</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.64</priority>
     </url>
     <url>
-        <loc>https://secure.fileshare.ovh:31443/privacy/privacy.html</loc>
+        <loc>https://secure.fileshare.ovh/privacy/privacy.html</loc>
         <lastmod>2024-09-27T10:24:25+00:00</lastmod>
         <changefreq>yearly</changefreq>
         <priority>0.64</priority>

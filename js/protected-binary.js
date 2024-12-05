@@ -42,7 +42,7 @@ async function fetchProtectedBinaryDescription(suffix) {
 
 const ownerSignatureLabel = document.getElementById('ownerSignatureLabel');
 
-const serverUrl = 'https://secure.fileshare.ovh:31443';
+const serverUrl = 'https://secure.fileshare.ovh';
 const urlParams = new URLSearchParams(window.location.search);
 
 // Retrieve specific parameters
