@@ -414,9 +414,6 @@ FingerprintJS.load().then(fp => {
 
 async function applyCredentialsFromDb(signatureHash) {
     await delay(2000);
-    if (!reuseCredentialsCheckbox.checked) {
-        return;
-    }
     const credentials = await getCredentialsFromDb(signatureHash);
     if (credentials) {
         const jsonObj = JSON.parse(credentials);
