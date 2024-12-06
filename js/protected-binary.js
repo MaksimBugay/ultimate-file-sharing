@@ -218,7 +218,12 @@ async function downloadBinaryStream(response, binaryFileName, contentLength, wri
 
         receiveQueue.push(value);
         if (processingNotStarted) {
-            processChunkQueue(receiveQueue, contentLength, writable, encryptionContract);
+            processChunkQueue(receiveQueue, contentLength, writable, encryptionContract).then(result => {
+                if (!result){
+                    alert("Data is unavailable");
+                    writable.close();
+                }
+            });
             processingNotStarted = false;
         }
     }
@@ -232,10 +237,7 @@ async function processChunkQueue(receiveQueue, contentLength, writable, encrypti
         const startTime = Date.now();
         while (!receiveQueue[0]) {
             if (Date.now() - startTime >= maxWaitTime) {
-                showErrorMsg("Transferred data is unavailable", function () {
-                    writable.close();
-                });
-                return null;
+                return false;
             }
             await delay(100);
         }
@@ -268,6 +270,7 @@ async function processChunkQueue(receiveQueue, contentLength, writable, encrypti
 
     // Close the writable stream
     await writable.close();
+    return true;
 }
 
 async function downloadProtectedBinary(downloadRequest) {
