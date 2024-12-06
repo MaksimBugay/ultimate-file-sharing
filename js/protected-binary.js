@@ -212,52 +212,59 @@ async function downloadBinaryStream(response, binaryFileName, contentLength, wri
     while (true) {
         const {value, done} = await reader.read();
 
-        if (done) {
-            break;
+        if (value && (value.byteLength > 0)) {
+            receiveQueue.push(value);
         }
-
-        receiveQueue.push(value);
         if (processingNotStarted) {
             processChunkQueue(receiveQueue, contentLength, writable, encryptionContract).then(result => {
-                if (!result){
+                if (!result) {
                     alert("Data is unavailable");
                     writable.close();
                 }
             });
             processingNotStarted = false;
         }
+
+        if (done) {
+            break;
+        }
     }
 }
 
-async function processChunkQueue(receiveQueue, contentLength, writable, encryptionContract, maxWaitTime = 30000) {
+async function processChunkQueue(receiveQueue, contentLength, writable, encryptionContract, maxWaitTime = 180000) {
     let dataBlock = null;
-    let writtenBytes = 0;
+    let encChunk;
+    let chunk;
+    let writtenNumberOfChunks = 0;
+    const totalNumberOfChunks = Math.ceil(contentLength / MemoryBlock.MB_ENC);
+    if (contentLength !== (totalNumberOfChunks * MemoryBlock.MB_ENC)) {
+        console.log(`Broken data! ${contentLength} <> ${totalNumberOfChunks * MemoryBlock.MB_ENC}`);
+    }
 
-    while (writtenBytes < contentLength) {
+    while (writtenNumberOfChunks < totalNumberOfChunks) {
         const startTime = Date.now();
-        while (!receiveQueue[0]) {
+        let firstBlock = receiveQueue.shift();
+        while (!firstBlock) {
             if (Date.now() - startTime >= maxWaitTime) {
                 return false;
             }
             await delay(100);
+            firstBlock = receiveQueue.shift();
         }
-        const firstBlock = receiveQueue.shift();
 
-        dataBlock = dataBlock ? concatArrayBuffers([dataBlock, firstBlock]) : firstBlock;
+        dataBlock = (dataBlock && (dataBlock.byteLength > 0)) ? concatArrayBuffers([dataBlock, firstBlock]) : firstBlock;
 
         while (dataBlock.byteLength >= MemoryBlock.MB_ENC) {
-            let encChunk = popFirstNBytesFromArrayBuffer(dataBlock, MemoryBlock.MB_ENC);
+            encChunk = popFirstNBytesFromArrayBuffer(dataBlock, MemoryBlock.MB_ENC);
             dataBlock = removeFirstNBytesFromArrayBuffer(dataBlock, MemoryBlock.MB_ENC);
 
-            let chunk = await decryptBinaryChunk(encChunk, encryptionContract);
-            encChunk = null;
+            chunk = await decryptBinaryChunk(encChunk, encryptionContract);
 
+            writtenNumberOfChunks = writtenNumberOfChunks + 1;
             await writable.write({type: 'write', data: chunk});
-            writtenBytes += MemoryBlock.MB_ENC;
-            chunk = null;
 
             if (contentLength) {
-                const percentComplete = Math.round((writtenBytes / contentLength) * 100);
+                const percentComplete = Math.round((writtenNumberOfChunks / totalNumberOfChunks) * 100);
                 progressBar.value = percentComplete;
                 progressPercentage.textContent = `${percentComplete}%`;
             } else {

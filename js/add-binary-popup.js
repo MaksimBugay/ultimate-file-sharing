@@ -425,7 +425,7 @@ async function readFileToChunkArray(file) {
 
     readNextChunk();
 
-    while (slices.length < Math.ceil(Math.ceil(fileSize / MemoryBlock.MB100))) {
+    while (slices.length < Math.ceil(fileSize / MemoryBlock.MB100)) {
         await delay(100);
     }
 

@@ -112,7 +112,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
             console.error("Broken file transfer request", err);
         }
 
-        const totalNumberOfChunks = Math.ceil(Math.ceil(manifest.size / TransferFileHelper.blockSize));
+        const totalNumberOfChunks = Math.ceil(manifest.size / TransferFileHelper.blockSize);
         TransferFileHelper.registry.set(
             binaryWithHeader.binaryId,
             {
@@ -432,7 +432,7 @@ async function readFileSequentially(file, chunkHandler, errorMsg) {
     await executeWithShowProgressBar(async function () {
         readNextChunk();
 
-        const totalNumberOfSlices = Math.ceil(Math.ceil(fileSize / TransferFileHelper.blockSize))
+        const totalNumberOfSlices = Math.ceil(fileSize / TransferFileHelper.blockSize)
         while ((!pipeWasBroken) && (sliceNumber < totalNumberOfSlices)) {
             const progress = Math.round((sliceNumber / totalNumberOfSlices) * 100);
             mmDownloadProgress.value = progress;
