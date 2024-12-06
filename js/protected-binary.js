@@ -138,7 +138,7 @@ downloadBtn.addEventListener('click', function () {
 function downloadSharedBinary() {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
-        if (window.showSaveFilePicker && (!encryptionContractStr)) {
+        if (window.showSaveFilePicker && (readMeTextMemo.textContent === "test")) {
             downloadProtectedBinary(request).then((result) => {
                 postDownloadProcessor(result);
             });
@@ -199,26 +199,16 @@ async function loadBinaryResponse(downloadRequest) {
     return response;
 }
 
-async function downloadProtectedBinary(downloadRequest) {
-    const response = await loadBinaryResponse(downloadRequest);
-    if (response === null) {
-        return 'RESPONSE_WITH_ERROR';
-    }
-    const contentType = response.headers.get('content-type');
-    const contentLength = response.headers.get('content-length');
-    const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
+async function downloadBinaryStream(response, binaryFileName, contentLength, writable) {
     const reader = response.body.getReader();
 
-    // Open the file for writing
-    const options = {
-        suggestedName: binaryFileName
-    };
-    const fileHandle = await window.showSaveFilePicker(options);
-    const writable = await fileHandle.createWritable();
-    showDownloadProgress();
-
-    let writtenBytes = 0;
-
+    const encryptionContract = await EncryptionContract.fromTransferableString(
+        encryptionContractStr,
+        passwordField.value,
+        stringToByteArray(workspaceField.value)
+    );
+    const receiveQueue = [];
+    let processingNotStarted = true;
     while (true) {
         const {value, done} = await reader.read();
 
@@ -226,22 +216,77 @@ async function downloadProtectedBinary(downloadRequest) {
             break;
         }
 
-        await writable.write({type: 'write', data: value});
-        writtenBytes += value.byteLength;
+        receiveQueue.push(value);
+        if (processingNotStarted) {
+            processChunkQueue(receiveQueue, contentLength, writable, encryptionContract);
+            processingNotStarted = false;
+        }
+    }
+}
 
-        // Optional progress update
-        if (contentLength) {
-            const percentComplete = Math.round((writtenBytes / contentLength) * 100);
-            progressBar.value = percentComplete;
-            progressPercentage.textContent = `${percentComplete}%`;
-        } else {
-            // If content-length is not available, we can't calculate progress
-            progressBar.removeAttribute('value');
+async function processChunkQueue(receiveQueue, contentLength, writable, encryptionContract, maxWaitTime = 60000) {
+    let dataBlock = null;
+    let writtenBytes = 0;
+
+    while (writtenBytes < contentLength) {
+        const startTime = Date.now();
+        while (!receiveQueue[0]) {
+            if (Date.now() - startTime >= maxWaitTime) {
+                showErrorMsg("Transferred data is unavailable", function () {
+                    writable.close();
+                });
+                return null;
+            }
+            await delay(100);
+        }
+        const firstBlock = receiveQueue.shift();
+
+        dataBlock = dataBlock ? concatArrayBuffers([dataBlock, firstBlock]) : firstBlock;
+
+        while (dataBlock.byteLength >= MemoryBlock.MB_ENC) {
+            const encChunk = popFirstNBytesFromArrayBuffer(dataBlock, MemoryBlock.MB_ENC);
+            dataBlock = removeFirstNBytesFromArrayBuffer(dataBlock);
+
+            const chunk = await decryptBinaryChunk(encChunk, encryptionContract);
+
+            await writable.write({type: 'write', data: chunk});
+            writtenBytes += chunk.byteLength;
+
+            if (contentLength) {
+                const percentComplete = Math.round((writtenBytes / contentLength) * 100);
+                progressBar.value = percentComplete;
+                progressPercentage.textContent = `${percentComplete}%`;
+            } else {
+                // If content-length is not available, we can't calculate progress
+                progressBar.removeAttribute('value');
+                progressBar.textContent = 'Downloading...';
+            }
         }
     }
 
     // Close the writable stream
     await writable.close();
+}
+
+async function downloadProtectedBinary(downloadRequest) {
+    // Open the file for writing
+    const options = {
+        //suggestedName: binaryFileName
+    };
+    const fileHandle = await window.showSaveFilePicker(options);
+    const writable = await fileHandle.createWritable();
+
+    showDownloadProgress();
+
+    const response = await loadBinaryResponse(downloadRequest);
+    if (response === null) {
+        return 'RESPONSE_WITH_ERROR';
+    }
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+    const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
+
+    await downloadBinaryStream(response, binaryFileName, contentLength, writable);
 
     console.log(`File downloaded to: ${fileHandle.name}`);
 }
@@ -419,6 +464,6 @@ async function applyCredentialsFromDb(signatureHash) {
         const jsonObj = JSON.parse(credentials);
         workspaceField.value = jsonObj.workspaceId;
         passwordField.value = jsonObj.password;
-        downloadSharedBinary();
+        //downloadSharedBinary();
     }
 }

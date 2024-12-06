@@ -273,6 +273,18 @@ function splitArrayBuffer(arrayBuffer, chunkSize) {
     return chunks;
 }
 
+function popFirstNBytesFromArrayBuffer(arrayBuffer, n) {
+    const byteArray = new Uint8Array(arrayBuffer);
+    const poppedBytes = byteArray.slice(0, n); // Extract first N bytes
+    return poppedBytes.buffer;
+}
+
+function removeFirstNBytesFromArrayBuffer(arrayBuffer, n) {
+    const byteArray = new Uint8Array(arrayBuffer);
+    return byteArray.slice(n).buffer;
+}
+
+
 function isNotEmpty(x) {
     return (typeof x !== 'undefined') && x !== null && x !== undefined && x !== ''
 }
@@ -419,6 +431,7 @@ function swapElements(element1, element2) {
     // Remove the temporary placeholder
     tempPlaceholder.parentNode.removeChild(tempPlaceholder);
 }
+
 function printAllParents(el0, maxDeep) {
     const pMaxDeep = maxDeep ? maxDeep : 1000;
     let elP = el0.parentElement;

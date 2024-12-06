@@ -358,15 +358,18 @@ async function decryptAESToArrayBuffer(arrayBuffer, base64Key, base64IV) {
 
     const iv = base64ToArrayBuffer(base64IV);
 
-    // Perform decryption
-    return await crypto.subtle.decrypt(
-        {
-            name: "AES-GCM",
-            iv: iv
-        },
-        key,
-        arrayBuffer
-    );
+    try {
+        return await crypto.subtle.decrypt(
+            {
+                name: "AES-GCM",
+                iv: iv
+            },
+            key,
+            arrayBuffer
+        );
+    } catch (error) {
+        console.error("Error during decryption:", error);
+    }
 }
 
 async function decryptChunkByChunk(slices, encryptionContract) {
