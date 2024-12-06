@@ -138,7 +138,7 @@ downloadBtn.addEventListener('click', function () {
 function downloadSharedBinary() {
     createSignedDownloadRequest(passwordField.value, workspaceField.value, protectedUrlSuffix).then(request => {
         console.log(request);
-        if (window.showSaveFilePicker && (readMeTextMemo.textContent === "test")) {
+        if (window.showSaveFilePicker && (!openInBrowserCheckbox.checked)) {
             downloadProtectedBinary(request).then((result) => {
                 postDownloadProcessor(result);
             });
@@ -224,7 +224,7 @@ async function downloadBinaryStream(response, binaryFileName, contentLength, wri
     }
 }
 
-async function processChunkQueue(receiveQueue, contentLength, writable, encryptionContract, maxWaitTime = 60000) {
+async function processChunkQueue(receiveQueue, contentLength, writable, encryptionContract, maxWaitTime = 30000) {
     let dataBlock = null;
     let writtenBytes = 0;
 
@@ -244,13 +244,15 @@ async function processChunkQueue(receiveQueue, contentLength, writable, encrypti
         dataBlock = dataBlock ? concatArrayBuffers([dataBlock, firstBlock]) : firstBlock;
 
         while (dataBlock.byteLength >= MemoryBlock.MB_ENC) {
-            const encChunk = popFirstNBytesFromArrayBuffer(dataBlock, MemoryBlock.MB_ENC);
-            dataBlock = removeFirstNBytesFromArrayBuffer(dataBlock);
+            let encChunk = popFirstNBytesFromArrayBuffer(dataBlock, MemoryBlock.MB_ENC);
+            dataBlock = removeFirstNBytesFromArrayBuffer(dataBlock, MemoryBlock.MB_ENC);
 
-            const chunk = await decryptBinaryChunk(encChunk, encryptionContract);
+            let chunk = await decryptBinaryChunk(encChunk, encryptionContract);
+            encChunk = null;
 
             await writable.write({type: 'write', data: chunk});
-            writtenBytes += chunk.byteLength;
+            writtenBytes += MemoryBlock.MB_ENC;
+            chunk = null;
 
             if (contentLength) {
                 const percentComplete = Math.round((writtenBytes / contentLength) * 100);
@@ -269,15 +271,6 @@ async function processChunkQueue(receiveQueue, contentLength, writable, encrypti
 }
 
 async function downloadProtectedBinary(downloadRequest) {
-    // Open the file for writing
-    const options = {
-        //suggestedName: binaryFileName
-    };
-    const fileHandle = await window.showSaveFilePicker(options);
-    const writable = await fileHandle.createWritable();
-
-    showDownloadProgress();
-
     const response = await loadBinaryResponse(downloadRequest);
     if (response === null) {
         return 'RESPONSE_WITH_ERROR';
@@ -285,6 +278,15 @@ async function downloadProtectedBinary(downloadRequest) {
     const contentType = response.headers.get('content-type');
     const contentLength = response.headers.get('content-length');
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
+
+    // Open the file for writing
+    const options = {
+        suggestedName: binaryFileName
+    };
+    const fileHandle = await window.showSaveFilePicker(options);
+    const writable = await fileHandle.createWritable();
+
+    showDownloadProgress();
 
     await downloadBinaryStream(response, binaryFileName, contentLength, writable);
 

@@ -275,7 +275,7 @@ function splitArrayBuffer(arrayBuffer, chunkSize) {
 
 function popFirstNBytesFromArrayBuffer(arrayBuffer, n) {
     const byteArray = new Uint8Array(arrayBuffer);
-    const poppedBytes = byteArray.slice(0, n); // Extract first N bytes
+    const poppedBytes = byteArray.slice(0, n);
     return poppedBytes.buffer;
 }
 
