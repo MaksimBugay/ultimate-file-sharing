@@ -237,11 +237,9 @@ async function processChunkQueue(receiveQueue, contentLength, writable, encrypti
     let chunk;
     let writtenNumberOfChunks = 0;
     const totalNumberOfChunks = Math.ceil(contentLength / MemoryBlock.MB_ENC);
-    if (contentLength !== (totalNumberOfChunks * MemoryBlock.MB_ENC)) {
-        console.log(`Broken data! ${contentLength} <> ${totalNumberOfChunks * MemoryBlock.MB_ENC}`);
-    }
+    console.log(`Content length = ${contentLength}, total number of chunks = ${totalNumberOfChunks}`);
 
-    while (writtenNumberOfChunks < totalNumberOfChunks) {
+    while ((writtenNumberOfChunks < totalNumberOfChunks) && Math.abs(totalNumberOfChunks - writtenNumberOfChunks) > 0.1) {
         const startTime = Date.now();
         let firstBlock = receiveQueue.shift();
         while (!firstBlock) {
@@ -262,6 +260,7 @@ async function processChunkQueue(receiveQueue, contentLength, writable, encrypti
 
             writtenNumberOfChunks = writtenNumberOfChunks + 1;
             await writable.write({type: 'write', data: chunk});
+            //console.log(`Chunk ${writtenNumberOfChunks} was processed`);
 
             if (contentLength) {
                 const percentComplete = Math.round((writtenNumberOfChunks / totalNumberOfChunks) * 100);
