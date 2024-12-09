@@ -99,6 +99,7 @@ const contentImage = document.getElementById("contentImage");
 const contentVideoPlayer = document.getElementById('contentVideoPlayer');
 const progressBarContainer = document.getElementById("progressBarContainer");
 const pastCredentialsTextarea = document.getElementById('pastCredentials');
+const pastCredentialsContainer = document.getElementById('pastCredentialsContainer');
 const errorMessage = document.getElementById('errorMessage');
 
 //======================================================================================================================
@@ -257,7 +258,7 @@ async function applyCredentialsFromDb(signatureHash) {
         const jsonObj = JSON.parse(credentials);
         workspaceField.value = jsonObj.workspaceId;
         passwordField.value = jsonObj.password;
-        pastCredentialsTextarea.style.display = 'none';
+        pastCredentialsContainer.style.display = 'none';
         downloadBtn.focus();
     }
 }
