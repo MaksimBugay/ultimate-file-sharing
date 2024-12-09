@@ -44,6 +44,7 @@ const ownerSignatureLabel = document.getElementById('ownerSignatureLabel');
 
 const serverUrl = 'https://secure.fileshare.ovh';
 const urlParams = new URLSearchParams(window.location.search);
+const receiveQueue = [];
 
 // Retrieve specific parameters
 let protectedUrlSuffix = decodeURIComponent(urlParams.get('suffix'));
@@ -207,7 +208,6 @@ async function downloadBinaryStream(response, binaryFileName, contentLength, wri
         passwordField.value,
         stringToByteArray(workspaceField.value)
     );
-    const receiveQueue = [];
     let processingNotStarted = true;
     while (true) {
         const {value, done} = await reader.read();
@@ -285,7 +285,10 @@ async function downloadProtectedBinary(downloadRequest) {
         return 'RESPONSE_WITH_ERROR';
     }
     const contentType = response.headers.get('content-type');
-    const contentLength = response.headers.get('content-length');
+    let contentLength = response.headers.get("X-Total-Size");
+    if (!contentLength) {
+        contentLength = response.headers.get('content-length');
+    }
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
 
     // Open the file for writing
@@ -315,7 +318,10 @@ async function downloadProtectedBinarySilently(downloadRequest) {
         return 'RESPONSE_WITH_ERROR';
     }
     const contentType = response.headers.get('content-type');
-    const contentLength = response.headers.get('content-length');
+    let contentLength = response.headers.get("X-Total-Size");
+    if (!contentLength) {
+        contentLength = response.headers.get('content-length');
+    }
     const binaryFileName = extractFileName(response.headers.get('Content-Disposition'));
     const reader = response.body.getReader();
     const chunks = [];
