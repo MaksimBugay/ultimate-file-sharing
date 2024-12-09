@@ -6,27 +6,101 @@ setPressEnterKeyHandler(downloadSharedBinary);
 
 setDownloadBtnHandler(downloadSharedBinary);
 
+let manifest = null;
+let contentSize = null;
+
 async function downloadSharedBinary() {
-    const signedRequest = await createSignedDownloadRequest(
+    const manifest = await downloadProtectedBinaryManifest(
         passwordField.value,
         workspaceField.value,
         protectedUrlSuffix
     );
-
-    const manifest = await downloadProtectedBinaryManifest(signedRequest);
-
     if (!manifest) {
         await postDownloadProcessor('RESPONSE_WITH_ERROR');
         return;
     }
+    contentSize = manifest.datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
+    console.log(`Content size = ${contentSize}`);
+    if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
+        openInBrowserCheckbox.checked = true;
+    }
+    await delay(3_000);
+    if (openInBrowserCheckbox.checked) {
+        await openProtectedBinaryInBrowser(manifest);
+    } else {
+        await saveProtectedBinaryAsFile(manifest);
+    }
+}
 
+async function openProtectedBinaryInBrowser(manifest) {
+    const chunks = [];
+
+    const result = await downloadProtectedBinaryViaWebSocket(manifest,
+        async function (chunk) {
+            chunks.push(chunk);
+        }, null);
+
+    if (result) {
+        const blob = new Blob(chunks, {type: manifest.mimeType});
+
+    }
+
+    await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
+}
+
+function openBlobInBrowser(blob, binaryFileName){
+    if ('text/plain' === blob.contentType) {
+        const reader = new FileReader();
+        const textDecoder = new TextDecoder("utf-8");
+
+        reader.onload = function () {
+            const resultBuffer = reader.result;
+
+            if (resultBuffer instanceof ArrayBuffer) {
+                contentText.textContent = textDecoder.decode(resultBuffer);
+                contentText.style.display = 'block';
+                contentContainer.style.display = 'block';
+            } else {
+                console.error("Error: Expected ArrayBuffer, but got something else");
+            }
+        };
+
+        reader.readAsArrayBuffer(blob);
+    } else if (playableImageTypes.includes(blob.contentType)) {
+        const blobUrl = URL.createObjectURL(blob);
+        contentImage.src = blobUrl;
+        contentImage.onload = function () {
+            contentContainer.style.display = 'block';
+            contentImage.style.display = 'block';
+            URL.revokeObjectURL(blobUrl);
+        };
+    } else if (isPlayableMedia(blob.contentType)) {
+        const blobUrl = URL.createObjectURL(blob);
+        const source = document.createElement('source');
+        source.src = blobUrl;
+        source.type = contentType;
+
+        contentVideoPlayer.appendChild(source);
+
+        contentVideoPlayer.addEventListener('canplay', function () {
+            contentVideoPlayer.play();
+        });
+
+        contentContainer.style.display = 'block';
+        contentVideoPlayer.style.display = 'block';
+    } else {
+        downloadFile(blob, binaryFileName);
+    }
+}
+
+async function saveProtectedBinaryAsFile(manifest) {
     const options = {
         suggestedName: manifest.name
     };
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
 
-    const result = await downloadProtectedBinary(manifest,
+    const result = await downloadProtectedBinaryViaWebSocket(manifest,
         async function (chunk) {
             await writable.write({type: 'write', data: chunk});
         }, async function () {
@@ -36,20 +110,18 @@ async function downloadSharedBinary() {
     await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
 }
 
-async function downloadProtectedBinary(inManifest, binaryChunkProcessor, afterFinishedHandler) {
-    let manifest = inManifest;
+async function downloadProtectedBinaryViaWebSocket(inManifest, binaryChunkProcessor, afterFinishedHandler) {
+    let vManifest = inManifest;
 
-    if (!manifest) {
-        const signedRequest = await createSignedDownloadRequest(
+    if (!vManifest) {
+        vManifest = await downloadProtectedBinaryManifest(
             passwordField.value,
             workspaceField.value,
             protectedUrlSuffix
         );
-
-        manifest = await downloadProtectedBinaryManifest(signedRequest);
     }
 
-    if (!manifest) {
+    if (!vManifest) {
         return false;
     }
 
@@ -67,11 +139,11 @@ async function downloadProtectedBinary(inManifest, binaryChunkProcessor, afterFi
     );
 
     showDownloadProgress();
-    for (let order = 0; order < manifest.datagrams.length; order++) {
+    for (let order = 0; order < vManifest.datagrams.length; order++) {
 
         const encChunk = await PushcaClient.downloadBinaryChunk(
-            manifest.sender,
-            manifest.id,
+            vManifest.sender,
+            vManifest.id,
             order,
             MemoryBlock.MB_ENC
         );
@@ -86,7 +158,7 @@ async function downloadProtectedBinary(inManifest, binaryChunkProcessor, afterFi
             await binaryChunkProcessor(chunk);
         }
 
-        const percentComplete = Math.round(((order + 1) / manifest.datagrams.length) * 100);
+        const percentComplete = Math.round(((order + 1) / vManifest.datagrams.length) * 100);
         progressBar.value = percentComplete;
         progressPercentage.textContent = `${percentComplete}%`;
     }
@@ -99,13 +171,18 @@ async function downloadProtectedBinary(inManifest, binaryChunkProcessor, afterFi
     return true;
 }
 
-async function downloadProtectedBinaryManifest(downloadRequest) {
+async function downloadProtectedBinaryManifest(pwd, workspaceId, suffix) {
+    const signedRequest = await createSignedDownloadRequest(
+        pwd,
+        workspaceId,
+        suffix
+    );
     const response = await fetch(serverUrl + '/binary/m/protected', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(downloadRequest)
+        body: JSON.stringify(signedRequest)
     });
     if (!response.ok) {
         console.error('Failed download protected binary attempt ' + response.statusText);
