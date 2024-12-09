@@ -257,6 +257,7 @@ async function applyCredentialsFromDb(signatureHash) {
         const jsonObj = JSON.parse(credentials);
         workspaceField.value = jsonObj.workspaceId;
         passwordField.value = jsonObj.password;
+        pastCredentialsTextarea.style.display = 'none';
         downloadBtn.focus();
     }
 }

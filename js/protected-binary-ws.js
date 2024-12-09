@@ -25,7 +25,6 @@ async function downloadSharedBinary() {
         openInBrowserCheckbox.checked = true;
     }
     showDownloadProgress();
-    await delay(2_000);
     if (openInBrowserCheckbox.checked || (!window.showSaveFilePicker)) {
         await openProtectedBinaryInBrowser(manifest);
     } else {
