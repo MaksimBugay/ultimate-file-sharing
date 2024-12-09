@@ -94,6 +94,7 @@ const progressPercentage = document.getElementById("progressPercentage");
 const loginContainer = document.querySelector('.login-container');
 const contentContainer = document.getElementById('contentContainer');
 const contentText = document.getElementById('contentText');
+const contentTextContainer = document.getElementById("contentTextContainer");
 const contentImage = document.getElementById("contentImage");
 const contentVideoPlayer = document.getElementById('contentVideoPlayer');
 const progressBarContainer = document.getElementById("progressBarContainer");

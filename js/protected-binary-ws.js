@@ -24,7 +24,7 @@ async function downloadSharedBinary() {
     if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
         openInBrowserCheckbox.checked = true;
     }
-    await delay(3_000);
+    await delay(2_000);
     if (openInBrowserCheckbox.checked) {
         await openProtectedBinaryInBrowser(manifest);
     } else {
@@ -59,6 +59,7 @@ function openBlobInBrowser(blob, binaryFileName) {
             if (resultBuffer instanceof ArrayBuffer) {
                 contentText.textContent = textDecoder.decode(resultBuffer);
                 contentText.style.display = 'block';
+                contentTextContainer.style.display = 'block';
                 contentContainer.style.display = 'block';
             } else {
                 console.error("Error: Expected ArrayBuffer, but got something else");
@@ -91,6 +92,7 @@ function openBlobInBrowser(blob, binaryFileName) {
     } else {
         downloadFile(blob, binaryFileName);
     }
+
 }
 
 async function saveProtectedBinaryAsFile(manifest) {
