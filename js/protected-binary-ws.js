@@ -1,14 +1,12 @@
 const wsUrl = 'wss://secure.fileshare.ovh:31085';
 
-let binaryChunkProcessor;
+setPastCredentialsHandler(downloadSharedBinary);
 
-setPastCredentialsHandler(downloadProtectedBinary);
+setPressEnterKeyHandler(downloadSharedBinary);
 
-setPressEnterKeyHandler(downloadProtectedBinary);
+setDownloadBtnHandler(downloadSharedBinary);
 
-setDownloadBtnHandler(downloadProtectedBinary);
-
-async function downloadProtectedBinary() {
+async function downloadSharedBinary() {
     const signedRequest = await createSignedDownloadRequest(
         passwordField.value,
         workspaceField.value,
@@ -18,35 +16,87 @@ async function downloadProtectedBinary() {
     const manifest = await downloadProtectedBinaryManifest(signedRequest);
 
     if (!manifest) {
-        return
+        await postDownloadProcessor('RESPONSE_WITH_ERROR');
+        return;
+    }
+
+    const options = {
+        suggestedName: manifest.name
+    };
+    const fileHandle = await window.showSaveFilePicker(options);
+    const writable = await fileHandle.createWritable();
+
+    const result = await downloadProtectedBinary(manifest,
+        async function (chunk) {
+            await writable.write({type: 'write', data: chunk});
+        }, async function () {
+            await writable.close();
+        });
+
+    await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
+}
+
+async function downloadProtectedBinary(inManifest, binaryChunkProcessor, afterFinishedHandler) {
+    let manifest = inManifest;
+
+    if (!manifest) {
+        const signedRequest = await createSignedDownloadRequest(
+            passwordField.value,
+            workspaceField.value,
+            protectedUrlSuffix
+        );
+
+        manifest = await downloadProtectedBinaryManifest(signedRequest);
+    }
+
+    if (!manifest) {
+        return false;
     }
 
     await openWsConnection();
 
     if (!PushcaClient.isOpen()) {
         showErrorMessage("Download channel is broken");
+        return false;
     }
 
+    const encryptionContract = await EncryptionContract.fromTransferableString(
+        encryptionContractStr,
+        passwordField.value,
+        stringToByteArray(workspaceField.value)
+    );
+
     showDownloadProgress();
-    let counter = 0;
     for (let order = 0; order < manifest.datagrams.length; order++) {
 
-        const chunk = await PushcaClient.downloadBinaryChunk(
+        const encChunk = await PushcaClient.downloadBinaryChunk(
             manifest.sender,
             manifest.id,
             order,
             MemoryBlock.MB_ENC
         );
 
-        counter += chunk.byteLength;
+        if (!encChunk) {
+            return false;
+        }
 
-        console.log(`Downloaded ${counter} bytes`);
+        const chunk = await decryptBinaryChunk(encChunk, encryptionContract);
+
+        if (typeof binaryChunkProcessor === 'function') {
+            await binaryChunkProcessor(chunk);
+        }
 
         const percentComplete = Math.round(((order + 1) / manifest.datagrams.length) * 100);
         progressBar.value = percentComplete;
         progressPercentage.textContent = `${percentComplete}%`;
     }
     PushcaClient.stopWebSocket();
+
+    if (typeof afterFinishedHandler === 'function') {
+        await afterFinishedHandler();
+    }
+
+    return true;
 }
 
 async function downloadProtectedBinaryManifest(downloadRequest) {

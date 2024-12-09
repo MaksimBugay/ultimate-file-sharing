@@ -1054,6 +1054,7 @@ PushcaClient.downloadBinaryChunk = async function (owner, binaryId, order, chunk
     );
     if (WaiterResponseType.ERROR === result.type) {
         console.log(`Failed send chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);
+        return null;
     }
     return result.body;
 }
