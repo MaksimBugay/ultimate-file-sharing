@@ -42,14 +42,14 @@ async function openProtectedBinaryInBrowser(manifest) {
 
     if (result) {
         const blob = new Blob(chunks, {type: manifest.mimeType});
-
+        openBlobInBrowser(blob, manifest.name);
     }
 
     await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
 }
 
-function openBlobInBrowser(blob, binaryFileName){
-    if ('text/plain' === blob.contentType) {
+function openBlobInBrowser(blob, binaryFileName) {
+    if ('text/plain' === blob.type) {
         const reader = new FileReader();
         const textDecoder = new TextDecoder("utf-8");
 
@@ -66,7 +66,7 @@ function openBlobInBrowser(blob, binaryFileName){
         };
 
         reader.readAsArrayBuffer(blob);
-    } else if (playableImageTypes.includes(blob.contentType)) {
+    } else if (playableImageTypes.includes(blob.type)) {
         const blobUrl = URL.createObjectURL(blob);
         contentImage.src = blobUrl;
         contentImage.onload = function () {
@@ -74,11 +74,11 @@ function openBlobInBrowser(blob, binaryFileName){
             contentImage.style.display = 'block';
             URL.revokeObjectURL(blobUrl);
         };
-    } else if (isPlayableMedia(blob.contentType)) {
+    } else if (isPlayableMedia(blob.type)) {
         const blobUrl = URL.createObjectURL(blob);
         const source = document.createElement('source');
         source.src = blobUrl;
-        source.type = contentType;
+        source.type = blob.type;
 
         contentVideoPlayer.appendChild(source);
 
