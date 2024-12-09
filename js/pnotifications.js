@@ -495,7 +495,15 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 //console.log(`send acknowledge: ${binaryWithHeader.getId()}`);
                 PushcaClient.sendAcknowledge(binaryWithHeader.getId());
             }
-            if (!CallableFuture.releaseWaiterIfExistsWithSuccess(buildDownloadWaiterId(binaryWithHeader.getId()), binaryWithHeader.payload)) {
+            const downloadWaterWasReleased = CallableFuture.releaseWaiterIfExistsWithSuccess(
+                buildDownloadWaiterId(binaryWithHeader.getId()),
+                binaryWithHeader.payload
+            );
+            const singleChunkDownloadWaterWasReleased = CallableFuture.releaseWaiterIfExistsWithSuccess(
+                buildSingleChunkDownloadWaiterId(binaryWithHeader.getId()),
+                binaryWithHeader.payload
+            );
+            if (!(downloadWaterWasReleased || singleChunkDownloadWaterWasReleased)) {
                 const manifest = BinaryWaitingHall.get(buildDownloadWaiterId(binaryWithHeader.binaryId));
                 if (manifest && (BinaryType.FILE === binaryWithHeader.binaryType)) {
                     manifest.setChunkBytes(binaryWithHeader.order, binaryWithHeader.payload).then(() => {
@@ -1021,6 +1029,33 @@ PushcaClient.sendUploadBinaryAppeal = async function (owner, binaryId, chunkSize
         console.log("Failed send upload binary appeal attempt: " + result.body);
     }
     return result;
+}
+
+PushcaClient.downloadBinaryChunk = async function (owner, binaryId, order, chunkSize) {
+    const destHashCode = calculateClientHashCode(
+        PushcaClient.ClientObj.workSpaceId,
+        PushcaClient.ClientObj.accountId,
+        PushcaClient.ClientObj.deviceId,
+        PushcaClient.ClientObj.applicationId
+    );
+
+    const chunkId = buildSingleChunkDownloadWaiterId(buildSharedFileChunkId(binaryId, order, destHashCode));
+
+    const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
+        30_000, chunkId, 3, function () {
+            PushcaClient.sendUploadBinaryAppeal(
+                owner, binaryId, chunkSize, false, [order]
+            ).then(result => {
+                if (WaiterResponseType.ERROR === result.type) {
+                    CallableFuture.releaseWaiterIfExistsWithError(chunkId, "Failed download binary chunk attempt: " + result.body);
+                }
+            });
+        }
+    );
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log(`Failed send chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);
+    }
+    return result.body;
 }
 
 /**

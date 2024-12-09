@@ -169,7 +169,7 @@ function convertToHexPairs(sha256String) {
     return hexPairs;
 }
 
-async function generateHasAndConvertToReadableSignature(inputString) {
+async function generateHashAndConvertToReadableSignature(inputString) {
     const sha256String = await calculateSignatureSha256(inputString);
     return convertHashToReadableSignature(sha256String)
 }

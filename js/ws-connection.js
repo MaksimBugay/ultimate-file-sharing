@@ -574,7 +574,7 @@ async function openWsConnection(deviceFpId) {
         Fileshare.ownerSignature = await calculateSignatureSha256(Fileshare.deviceSecret);
         Fileshare.ownerSignatureHash = await calculateSha256(stringToArrayBuffer(Fileshare.ownerSignature));
         console.log(`Owner signature hash = ${Fileshare.ownerSignatureHash}`);
-        const signaturePhrase = await generateHasAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
+        const signaturePhrase = await generateHashAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
         console.log(signaturePhrase);
         let applicationId = Fileshare.noTransferGroupApplicationId;
         if (Fileshare.properties) {

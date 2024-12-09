@@ -570,6 +570,10 @@ function buildDownloadWaiterId(waiterId) {
     return `wd_${waiterId}`;
 }
 
+function buildSingleChunkDownloadWaiterId(waiterId) {
+    return `wds_${waiterId}`;
+}
+
 function downloadBinary(chunks, fileName, mimeType) {
     const binaryBlob = new Blob(chunks, {type: mimeType});
     downloadFile(binaryBlob, fileName);
