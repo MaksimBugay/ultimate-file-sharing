@@ -165,7 +165,7 @@ function setPressEnterKeyHandler(handler) {
         if (event.key === 'Enter') {
             event.preventDefault();
             event.stopPropagation();
-            if ('password' === event.target.id || 'pastCredentials' === event.target.id) {
+            if ('password' === event.target.id || 'pastCredentials' === event.target.id || 'downloadBtn' === event.target.id) {
                 if (typeof handler === 'function') {
                     handler();
                 }
@@ -252,12 +252,12 @@ FingerprintJS.load().then(fp => {
 });
 
 async function applyCredentialsFromDb(signatureHash) {
-    await delay(2000);
     const credentials = await getCredentialsFromDb(signatureHash);
     if (credentials) {
         const jsonObj = JSON.parse(credentials);
         workspaceField.value = jsonObj.workspaceId;
         passwordField.value = jsonObj.password;
+        downloadBtn.focus();
     }
 }
 
