@@ -24,8 +24,9 @@ async function downloadSharedBinary() {
     if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
         openInBrowserCheckbox.checked = true;
     }
+    showDownloadProgress();
     await delay(2_000);
-    if (openInBrowserCheckbox.checked) {
+    if (openInBrowserCheckbox.checked || (!window.showSaveFilePicker)) {
         await openProtectedBinaryInBrowser(manifest);
     } else {
         await saveProtectedBinaryAsFile(manifest);
@@ -140,7 +141,6 @@ async function downloadProtectedBinaryViaWebSocket(inManifest, binaryChunkProces
         stringToByteArray(workspaceField.value)
     );
 
-    showDownloadProgress();
     for (let order = 0; order < vManifest.datagrams.length; order++) {
 
         const encChunk = await PushcaClient.downloadBinaryChunk(
