@@ -584,7 +584,8 @@ async function openWsConnection(deviceFpId) {
         const pClient = new ClientFilter(
             `${calculateStringHashCode(deviceFpId)}`,
             Fileshare.ownerSignature,//"anonymous-sharing",
-            `${calculateStringHashCode(deviceFpId)}`,
+            JSON.stringify({fp: deviceFpId, session: uuid.v4().toString()}),
+            //`${calculateStringHashCode(deviceFpId)}`,
             applicationId
         );
         await PushcaClient.openWsConnection(

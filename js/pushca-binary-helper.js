@@ -361,7 +361,7 @@ async function createBinaryManifest(id, name, mimeType, readMeText, password, en
     }
 
     return await CallableFuture.callAsynchronously(2000, null, function (waiteId) {
-        createPrivateUrlSuffix(sender.workSpaceId, id).then(privateUrlSuffix => {
+        createPrivateUrlSuffix(Fileshare.workSpaceId, id).then(privateUrlSuffix => {
             const binaryManifest = new BinaryManifest(
                 id,
                 name,
