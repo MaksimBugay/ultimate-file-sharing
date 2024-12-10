@@ -582,7 +582,7 @@ async function openWsConnection(deviceFpId) {
             applicationId = Fileshare.properties.getTransferApplicationId()
         }
         const pClient = new ClientFilter(
-            deviceFpId,
+            `${calculateStringHashCode(deviceFpId)}`,
             Fileshare.ownerSignature,//"anonymous-sharing",
             `${calculateStringHashCode(deviceFpId)}`,
             applicationId

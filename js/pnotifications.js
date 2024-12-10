@@ -1040,7 +1040,7 @@ PushcaClient.downloadBinaryChunk = async function (owner, binaryId, order, chunk
     );
 
     const ownerFilter = new ClientFilter(
-        owner.workSpaceId,
+        isStringPresentNumber(owner.workSpaceId) ? owner.workSpaceId : `${calculateStringHashCode(owner.workSpaceId)}`,
         owner.accountId,
         null,
         owner.applicationId

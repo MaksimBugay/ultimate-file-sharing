@@ -18,6 +18,10 @@ function isMobile() {
     return userAgent && smallScreen && touchDevice;
 }
 
+function isStringPresentNumber(value) {
+    return /^-?\d+$/.test(value.trim());
+}
+
 function convertBlobToArrayBuffer(blob) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
