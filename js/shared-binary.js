@@ -1,3 +1,6 @@
+
+const wsUrl = 'wss://secure.fileshare.ovh:31085';
+
 const playableMediaTypes = [
     "video/mp4",
     'video/webm; codecs="vp8, opus"',

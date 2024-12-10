@@ -35,7 +35,7 @@ async function prepareBinaryDownloading(workspaceId, binaryId) {
     }
     showDownloadProgress();
     if (openInBrowserFlag || (!window.showSaveFilePicker)) {
-        await openProtectedBinaryInBrowser(manifest);
+        await openPublicBinaryInBrowser(manifest);
     } else {
         //await saveProtectedBinaryAsFile(manifest, encryptionContract);
     }

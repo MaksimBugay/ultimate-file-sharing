@@ -1,4 +1,3 @@
-const wsUrl = 'wss://secure.fileshare.ovh:31085';
 
 setPastCredentialsHandler(downloadProtectedBinary);
 
