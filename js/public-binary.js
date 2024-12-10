@@ -66,8 +66,8 @@ async function prepareBinaryDownloading(workspaceId, binaryId) {
     if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
         openInBrowserFlag = true;
     }
-    showDownloadProgress();
     if (openInBrowserFlag || (!window.showSaveFilePicker)) {
+        showDownloadProgress();
         await openPublicBinaryInBrowser(manifest);
     } else {
         downloadBtn.focus();
@@ -82,7 +82,7 @@ async function savePublicBinaryAsFile(manifest) {
     };
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
-
+    showDownloadProgress();
     const result = await downloadSharedBinaryViaWebSocket(manifest,
         async function (chunk) {
             await writable.write({type: 'write', data: chunk});
