@@ -1039,12 +1039,19 @@ PushcaClient.downloadBinaryChunk = async function (owner, binaryId, order, chunk
         PushcaClient.ClientObj.applicationId
     );
 
+    const ownerFilter = new ClientFilter(
+        owner.workSpaceId,
+        owner.accountId,
+        null,
+        owner.applicationId
+    );
+
     const chunkId = buildSingleChunkDownloadWaiterId(buildSharedFileChunkId(binaryId, order, destHashCode));
 
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
         30_000, chunkId, 3, function () {
             PushcaClient.sendUploadBinaryAppeal(
-                owner, binaryId, chunkSize, false, [order]
+                ownerFilter, binaryId, chunkSize, false, [order]
             ).then(result => {
                 if (WaiterResponseType.ERROR === result.type) {
                     CallableFuture.releaseWaiterIfExistsWithError(chunkId, "Failed download binary chunk attempt: " + result.body);
