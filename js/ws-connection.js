@@ -408,7 +408,7 @@ let pingIntervalId = window.setInterval(function () {
     PushcaClient.sendPing();
     if (!dbConnectionHealthCheck()) {
         closeDataBase();
-        openDataBase(PushcaClient.ClientObj.workSpaceId, initFileManager);
+        openDataBase(Fileshare.workSpaceId, initFileManager);
     } else {
         console.log("Connection to DB is healthy");
     }
@@ -570,6 +570,7 @@ async function buildSignatureHash(signature) {
 }
 
 async function openWsConnection(deviceFpId) {
+    Fileshare.workSpaceId = deviceFpId;
     if (!PushcaClient.isOpen()) {
         Fileshare.ownerSignature = await calculateSignatureSha256(Fileshare.deviceSecret);
         Fileshare.ownerSignatureHash = await calculateSha256(stringToArrayBuffer(Fileshare.ownerSignature));
@@ -614,7 +615,7 @@ class GridCellButton {
 
         this.eButton = document.createElement("button");
         this.eButton.className = "btn-simple fm-grid-button";
-        this.publicUrl = `${params.data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed())}`;
+        this.publicUrl = `${params.data.getPublicUrl(Fileshare.workSpaceId, isWorkspaceIdExposed())}`;
         this.eButton.title = this.publicUrl;
         this.eButton.style.marginLeft = '45%';
 
@@ -782,7 +783,7 @@ function initFileManager() {
                     imgSrc: "../images/copy-link-256.png",
                     buttonTitle: "",
                     clickHandler: (data) => {
-                        copyTextToClipboard(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()));
+                        copyTextToClipboard(data.getPublicUrl(Fileshare.workSpaceId, isWorkspaceIdExposed()));
                     }
                 }
             }
@@ -807,7 +808,7 @@ function initFileManager() {
                         } else {
                             copyTextToClipboard(JSON.stringify(
                                 {
-                                    workspaceId: PushcaClient.ClientObj.workSpaceId,
+                                    workspaceId: Fileshare.workSpaceId,
                                     password: data.password,
                                     signature: Fileshare.ownerSignatureHash
                                 }
@@ -816,7 +817,7 @@ function initFileManager() {
                     },
                     afterCreatedHandler: function (eButton, data) {
                         const credentials = {
-                            workspaceId: PushcaClient.ClientObj.workSpaceId,
+                            workspaceId: Fileshare.workSpaceId,
                             password: data.password,
                             signature: Fileshare.ownerSignatureHash
                         };
@@ -843,7 +844,7 @@ function initFileManager() {
                         imgSrc: "../images/downloads-icon.png",
                         buttonTitle: "",
                         clickHandler: (data) => {
-                            window.open(data.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed()), '_blank');
+                            window.open(data.getPublicUrl(Fileshare.workSpaceId, isWorkspaceIdExposed()), '_blank');
                         }
                     }
                 }
@@ -961,9 +962,9 @@ function initFileManager() {
                     document.querySelectorAll(".fm-grid-button").forEach(el0 => {
                         const url = el0.title;
                         if (exposeWorkspaceIdCheckBox.checked) {
-                            el0.title = (!url.includes('workspace')) ? url + `?workspace=${PushcaClient.ClientObj.workSpaceId}` : url;
+                            el0.title = (!url.includes('workspace')) ? url + `?workspace=${Fileshare.workSpaceId}` : url;
                         } else {
-                            el0.title = url.replace(`?workspace=${PushcaClient.ClientObj.workSpaceId}`, '');
+                            el0.title = url.replace(`?workspace=${Fileshare.workSpaceId}`, '');
                         }
                     });
                 });
@@ -994,7 +995,7 @@ function addManifestToManagerGrid(newManifest) {
     });
     updateTotalSize()
     delay(1000).then(() => {
-        const publicUr = newManifest.getPublicUrl(PushcaClient.ClientObj.workSpaceId, isWorkspaceIdExposed());
+        const publicUr = newManifest.getPublicUrl(Fileshare.workSpaceId, isWorkspaceIdExposed());
         const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
         const rowNode = FileManager.gridApi.getRowNode(rowIndex);
         rowNode.setSelected(true, true);

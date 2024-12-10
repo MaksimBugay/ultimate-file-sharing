@@ -32,7 +32,7 @@ async function verifyBinarySignature(header, requestPayload) {
             )
         }
 
-        const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
+        const salt = stringToByteArray(Fileshare.workSpaceId);
         const signature = await makeSignature(
             password,
             salt,

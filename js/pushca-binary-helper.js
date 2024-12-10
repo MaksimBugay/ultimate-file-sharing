@@ -224,7 +224,7 @@ async function manifestToJsonObjectWithProtectedAttributes(manifest) {
     let encryptionContractStr = null;
     if (manifest.base64Key) {
         const ec = new EncryptionContract(manifest.base64Key, manifest.base64IV);
-        const salt = stringToByteArray(PushcaClient.ClientObj.workSpaceId);
+        const salt = stringToByteArray(Fileshare.workSpaceId);
         encryptionContractStr = await ec.toTransferableString(manifest.password, salt);
     }
     const passwordHash = manifest.password ? await calculateSha256(stringToArrayBuffer(manifest.password)) : null;
