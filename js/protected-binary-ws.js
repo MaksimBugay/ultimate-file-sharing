@@ -1,15 +1,15 @@
 const wsUrl = 'wss://secure.fileshare.ovh:31085';
 
-setPastCredentialsHandler(downloadSharedBinary);
+setPastCredentialsHandler(downloadProtectedBinary);
 
-setPressEnterKeyHandler(downloadSharedBinary);
+setPressEnterKeyHandler(downloadProtectedBinary);
 
-setDownloadBtnHandler(downloadSharedBinary);
+setDownloadBtnHandler(downloadProtectedBinary);
 
 let manifest = null;
 let contentSize = null;
 
-async function downloadSharedBinary() {
+async function downloadProtectedBinary() {
     const manifest = await downloadProtectedBinaryManifest(
         passwordField.value,
         workspaceField.value,
