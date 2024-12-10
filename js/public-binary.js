@@ -17,10 +17,27 @@ function showErrorMessage(errorText) {
 
 workspaceIdLabel.textContent = `Workspace ID: ${workspaceId}`;
 
-prepareBinaryDownloading(workspaceId, binaryId);
+prepareBinaryDownloading(workspaceId, binaryId).then((userActionRequired) => {
+    if (!userActionRequired) {
+        return;
+    }
+    downloadBtn.addEventListener('click', function () {
+        savePublicBinaryAsFile(manifest);
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            if ('downloadBtn' === event.target.id) {
+                savePublicBinaryAsFile(manifest);
+            }
+        }
+    });
+});
 
 //======================================== Implementations =============================================================
 async function prepareBinaryDownloading(workspaceId, binaryId) {
+    let userActionRequired = false;
     const readMeText = await fetchPublicBinaryDescription(workspaceId, binaryId);
     const readMeTextMemo = document.getElementById("readMeTextMemo");
     if (readMeText && readMeTextMemo) {
@@ -37,8 +54,27 @@ async function prepareBinaryDownloading(workspaceId, binaryId) {
     if (openInBrowserFlag || (!window.showSaveFilePicker)) {
         await openPublicBinaryInBrowser(manifest);
     } else {
-        //await saveProtectedBinaryAsFile(manifest, encryptionContract);
+        downloadBtn.focus();
+        userActionRequired = true;
     }
+    return userActionRequired;
+}
+
+async function savePublicBinaryAsFile(manifest) {
+    const options = {
+        suggestedName: manifest.name
+    };
+    const fileHandle = await window.showSaveFilePicker(options);
+    const writable = await fileHandle.createWritable();
+
+    const result = await downloadSharedBinaryViaWebSocket(manifest,
+        async function (chunk) {
+            await writable.write({type: 'write', data: chunk});
+        }, async function () {
+            await writable.close();
+        });
+
+    await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
 }
 
 async function openPublicBinaryInBrowser(manifest) {
