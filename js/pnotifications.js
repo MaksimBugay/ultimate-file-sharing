@@ -1040,6 +1040,7 @@ PushcaClient.downloadBinaryChunk = async function (owner, binaryId, order, chunk
     );
 
     const ownerFilter = new ClientFilter(
+        //TODO this is a huck for backward compatibility with old binary manifests (full workspace instead of hash)
         isStringPresentNumber(owner.workSpaceId) ? owner.workSpaceId : `${calculateStringHashCode(owner.workSpaceId)}`,
         owner.accountId,
         null,
