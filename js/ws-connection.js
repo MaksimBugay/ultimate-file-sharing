@@ -66,6 +66,7 @@ const textMessageButton = document.getElementById('textMessageButton');
 const transferFileButton = document.getElementById("transferFileButton");
 const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
+const copyJoinTransferGroupLinkBtn = document.getElementById("copyJoinTransferGroupLinkBtn");
 const transferGroupName = document.getElementById("transferGroupName");
 const transferGroupPasswordInput = document.getElementById("transferGroupPasswordInput");
 const transferGroupNavBarItem = document.getElementById("transferGroupNavBarItem");
@@ -78,7 +79,8 @@ const closeInfoBtn = document.getElementById("closeInfoBtn");
 const showSharedContentManagerBtn = document.getElementById("showSharedContentManagerBtn");
 const fileManagerContainer = document.getElementById("fileManagerContainer");
 const toolbarNavContainer = document.getElementById('toolbarNavContainer');
-leaveTransferGroupBtn.disabled = false;
+leaveTransferGroupBtn.disabled = true;
+copyJoinTransferGroupLinkBtn.disabled = true;
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
@@ -348,10 +350,7 @@ joinTransferGroupBtn.addEventListener("click", function () {
         )
     );
     postJoinTransferGroupActions();
-    const serverUrl = PushcaClient.clusterBaseUrl;
-    const url = `${serverUrl}/index.html?t-group=${encodeURIComponent(Fileshare.properties.transferGroup)}&t-pwd=${encodeURIComponent(Fileshare.properties.transferGroupPassword)}`;
-    copyTextToClipboard(url);
-    showInfoMsg("Open that URL in browser on every group member", url);
+    copyJoinGroupLink();
 });
 
 leaveTransferGroupBtn.addEventListener("click", function () {
@@ -368,9 +367,21 @@ leaveTransferGroupBtn.addEventListener("click", function () {
     postLeaveTransferGroupActions();
 });
 
+copyJoinTransferGroupLinkBtn.addEventListener("click", function () {
+    copyJoinGroupLink();
+});
+
+function copyJoinGroupLink() {
+    const serverUrl = PushcaClient.clusterBaseUrl;
+    const url = `${serverUrl}/index.html?t-group=${encodeURIComponent(Fileshare.properties.transferGroup)}&t-pwd=${encodeURIComponent(Fileshare.properties.transferGroupPassword)}`;
+    copyTextToClipboard(url);
+    showInfoMsg("Join transfer group link was copied to clipboard (open it in browser on receiver side)", url);
+}
+
 function postJoinTransferGroupActions() {
     joinTransferGroupBtn.disabled = true;
     leaveTransferGroupBtn.disabled = false;
+    copyJoinTransferGroupLinkBtn.disabled = false;
     transferGroupName.readOnly = true;
     transferGroupName.value = Fileshare.properties.transferGroup;
     transferGroupPasswordInput.value = Fileshare.properties.transferGroupPassword;
@@ -385,6 +396,7 @@ function postLeaveTransferGroupActions() {
 
     joinTransferGroupBtn.disabled = false;
     leaveTransferGroupBtn.disabled = true;
+    copyJoinTransferGroupLinkBtn.disabled = true;
     transferGroupName.readOnly = false;
     transferGroupName.value = '';
     transferGroupPasswordInput.value = '';
