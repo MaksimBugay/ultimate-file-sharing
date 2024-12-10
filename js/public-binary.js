@@ -1,7 +1,17 @@
 const serverUrl = 'https://secure.fileshare.ovh';
-//https://secure.fileshare.ovh/binary/85fb3881ad15bf9ae956cb30f22c5855/cd1030e5-8c6e-4a4f-a14e-79eb2f4e44fb
-const workspaceId = "85fb3881ad15bf9ae956cb30f22c5855";
-const binaryId = "cd1030e5-8c6e-4a4f-a14e-79eb2f4e44fb";
+const urlParams = new URLSearchParams(window.location.search);
+
+let workspaceId = null;
+let binaryId = null;
+
+if (urlParams.get('w')) {
+    workspaceId = urlParams.get('w');
+}
+
+if (urlParams.get('id')) {
+    binaryId = urlParams.get('id');
+}
+
 let manifest = null;
 let openInBrowserFlag = false;
 let contentSize = 0;
@@ -38,6 +48,12 @@ prepareBinaryDownloading(workspaceId, binaryId).then((userActionRequired) => {
 //======================================== Implementations =============================================================
 async function prepareBinaryDownloading(workspaceId, binaryId) {
     let userActionRequired = false;
+
+    if ((!workspaceId) || (!binaryId)) {
+        showErrorMessage("Undefined binary");
+        return userActionRequired;
+    }
+
     const readMeText = await fetchPublicBinaryDescription(workspaceId, binaryId);
     const readMeTextMemo = document.getElementById("readMeTextMemo");
     if (readMeText && readMeTextMemo) {
