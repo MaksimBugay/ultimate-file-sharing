@@ -85,22 +85,12 @@ if (suffixParts.length > 2) {
 //=============================== Element accessors ====================================================================
 const passwordField = document.getElementById('password');
 const workspaceField = document.getElementById('workSpaceId');
-const downloadBtn = document.getElementById('downloadBtn');
 const togglePasswordBtn = document.getElementById('togglePassword');
 const openInBrowserCheckbox = document.getElementById("openInBrowserCheckbox");
 const reuseCredentialsCheckbox = document.getElementById("reuseCredentialsCheckbox");
-const progressBar = document.getElementById("downloadProgress");
-const progressPercentage = document.getElementById("progressPercentage");
 const loginContainer = document.querySelector('.login-container');
-const contentContainer = document.getElementById('contentContainer');
-const contentText = document.getElementById('contentText');
-const contentTextContainer = document.getElementById("contentTextContainer");
-const contentImage = document.getElementById("contentImage");
-const contentVideoPlayer = document.getElementById('contentVideoPlayer');
-const progressBarContainer = document.getElementById("progressBarContainer");
 const pastCredentialsTextarea = document.getElementById('pastCredentials');
 const pastCredentialsContainer = document.getElementById('pastCredentialsContainer');
-const errorMessage = document.getElementById('errorMessage');
 
 //======================================================================================================================
 function showErrorMessage(errorText) {
@@ -109,10 +99,6 @@ function showErrorMessage(errorText) {
     errorMessage.style.display = 'block';
 }
 
-function showDownloadProgress() {
-    progressBarContainer.style.display = 'block';
-    downloadBtn.style.display = 'none';
-}
 togglePasswordBtn.addEventListener('mousedown', function () {
     passwordField.setAttribute('type', 'text');
 });

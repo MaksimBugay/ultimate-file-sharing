@@ -56,53 +56,6 @@ async function openProtectedBinaryInBrowser(manifest, encryptionContract) {
     await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
 }
 
-function openBlobInBrowser(blob, binaryFileName) {
-    if ('text/plain' === blob.type) {
-        const reader = new FileReader();
-        const textDecoder = new TextDecoder("utf-8");
-
-        reader.onload = function () {
-            const resultBuffer = reader.result;
-
-            if (resultBuffer instanceof ArrayBuffer) {
-                contentText.textContent = textDecoder.decode(resultBuffer);
-                contentText.style.display = 'block';
-                contentTextContainer.style.display = 'block';
-                contentContainer.style.display = 'block';
-            } else {
-                console.error("Error: Expected ArrayBuffer, but got something else");
-            }
-        };
-
-        reader.readAsArrayBuffer(blob);
-    } else if (playableImageTypes.includes(blob.type)) {
-        const blobUrl = URL.createObjectURL(blob);
-        contentImage.src = blobUrl;
-        contentImage.onload = function () {
-            contentContainer.style.display = 'block';
-            contentImage.style.display = 'block';
-            URL.revokeObjectURL(blobUrl);
-        };
-    } else if (isPlayableMedia(blob.type)) {
-        const blobUrl = URL.createObjectURL(blob);
-        const source = document.createElement('source');
-        source.src = blobUrl;
-        source.type = blob.type;
-
-        contentVideoPlayer.appendChild(source);
-
-        contentVideoPlayer.addEventListener('canplay', function () {
-            contentVideoPlayer.play();
-        });
-
-        contentContainer.style.display = 'block';
-        contentVideoPlayer.style.display = 'block';
-    } else {
-        downloadFile(blob, binaryFileName);
-    }
-
-}
-
 async function saveProtectedBinaryAsFile(manifest, encryptionContract) {
     const options = {
         suggestedName: manifest.name
