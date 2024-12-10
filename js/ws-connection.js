@@ -46,6 +46,14 @@ Fileshare.noTransferGroupApplicationId = "ultimate-file-sharing";
 Fileshare.wakeLock = null;
 Fileshare.defaultReadMeText = "Default description";
 
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('t-group')) {
+    Fileshare.transferGroupNameParamValue = decodeURIComponent(urlParams.get('t-group'));
+}
+if (urlParams.get('t-pwd')) {
+    Fileshare.transferGroupPasswordParamValue = decodeURIComponent(urlParams.get('t-pwd'));
+}
+
 const howToButton = document.getElementById("howToButton");
 const privacyButton = document.getElementById('privacyButton');
 const statusCaption = document.getElementById("statusCaption");
@@ -70,6 +78,7 @@ const closeInfoBtn = document.getElementById("closeInfoBtn");
 const showSharedContentManagerBtn = document.getElementById("showSharedContentManagerBtn");
 const fileManagerContainer = document.getElementById("fileManagerContainer");
 const toolbarNavContainer = document.getElementById('toolbarNavContainer');
+leaveTransferGroupBtn.disabled = false;
 Fileshare.afterErrorMsgClosedHandler = function () {
 }
 
@@ -339,6 +348,10 @@ joinTransferGroupBtn.addEventListener("click", function () {
         )
     );
     postJoinTransferGroupActions();
+    const serverUrl = PushcaClient.clusterBaseUrl;
+    const url = `${serverUrl}/index.html?t-group=${encodeURIComponent(Fileshare.properties.transferGroup)}&t-pwd=${encodeURIComponent(Fileshare.properties.transferGroupPassword)}`;
+    copyTextToClipboard(url);
+    showInfoMsg("Open that URL in browser on every group member", url);
 });
 
 leaveTransferGroupBtn.addEventListener("click", function () {
@@ -578,6 +591,22 @@ async function openWsConnection(deviceFpId) {
         const signaturePhrase = await generateHashAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
         console.log(signaturePhrase);
         let applicationId = Fileshare.noTransferGroupApplicationId;
+
+        //====================================================================
+        if (Fileshare.transferGroupNameParamValue) {
+            if (!Fileshare.properties) {
+                Fileshare.properties = new FileshareProperties(
+                    Fileshare.transferGroupNameParamValue,
+                    Fileshare.transferGroupPasswordParamValue
+                );
+            } else {
+                Fileshare.properties.setTransferGroup(Fileshare.transferGroupNameParamValue);
+                Fileshare.properties.setTransferGroupPassword(Fileshare.transferGroupPasswordParamValue);
+            }
+            saveFileshareProperties(Fileshare.properties);
+        }
+        //====================================================================
+
         if (Fileshare.properties) {
             applicationId = Fileshare.properties.getTransferApplicationId()
         }
