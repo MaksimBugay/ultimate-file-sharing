@@ -2,6 +2,9 @@ const serverUrl = 'https://secure.fileshare.ovh';
 //https://secure.fileshare.ovh/binary/85fb3881ad15bf9ae956cb30f22c5855/cd1030e5-8c6e-4a4f-a14e-79eb2f4e44fb
 const workspaceId = "85fb3881ad15bf9ae956cb30f22c5855";
 const binaryId = "cd1030e5-8c6e-4a4f-a14e-79eb2f4e44fb";
+let manifest = null;
+let openInBrowserFlag = false;
+let contentSize = 0;
 
 const workspaceIdLabel = document.getElementById('workspaceIdLabel');
 const contentPreviewContainer = document.getElementById('contentPreviewContainer');
@@ -14,19 +17,55 @@ function showErrorMessage(errorText) {
 
 workspaceIdLabel.textContent = `Workspace ID: ${workspaceId}`;
 
-prepareBinary(workspaceId, binaryId);
+prepareBinaryDownloading(workspaceId, binaryId);
 
 //======================================== Implementations =============================================================
-async function prepareBinary(workspaceId, binaryId) {
+async function prepareBinaryDownloading(workspaceId, binaryId) {
     const readMeText = await fetchPublicBinaryDescription(workspaceId, binaryId);
     const readMeTextMemo = document.getElementById("readMeTextMemo");
     if (readMeText && readMeTextMemo) {
         readMeTextMemo.textContent = readMeText;
     }
 
-    const manifest = await downloadPublicBinaryManifest(workspaceId, binaryId);
+    manifest = await downloadPublicBinaryManifest(workspaceId, binaryId);
 
-    alert(manifest.name);
+    contentSize = manifest.datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
+    if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
+        openInBrowserFlag = true;
+    }
+    showDownloadProgress();
+    if (openInBrowserFlag || (!window.showSaveFilePicker)) {
+        await openProtectedBinaryInBrowser(manifest);
+    } else {
+        //await saveProtectedBinaryAsFile(manifest, encryptionContract);
+    }
+}
+
+async function openPublicBinaryInBrowser(manifest) {
+    const chunks = [];
+
+    const result = await downloadSharedBinaryViaWebSocket(manifest,
+        async function (chunk) {
+            chunks.push(chunk);
+        }, null);
+
+    if (result) {
+        const blob = new Blob(chunks, {type: manifest.mimeType});
+        openBlobInBrowser(blob, manifest.name);
+    }
+
+    await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
+}
+
+async function postDownloadProcessor(result) {
+    if (contentPreviewContainer) {
+        contentPreviewContainer.remove();
+    }
+    if ('RESPONSE_WITH_ERROR' !== result) {
+        if (!openInBrowserFlag) {
+            delay(1000).then(() => window.close());
+        }
+    }
 }
 
 async function fetchPublicBinaryDescription(workspaceId, binaryId) {
