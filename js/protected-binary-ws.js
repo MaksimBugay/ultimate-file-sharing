@@ -74,48 +74,6 @@ async function saveProtectedBinaryAsFile(manifest, encryptionContract) {
     await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
 }
 
-async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, afterFinishedHandler) {
-    if (!manifest) {
-        return false;
-    }
-
-    await openWsConnection();
-
-    if (!PushcaClient.isOpen()) {
-        showErrorMessage("Download channel is broken");
-        return false;
-    }
-
-    for (let order = 0; order < manifest.datagrams.length; order++) {
-
-        const chunk = await PushcaClient.downloadBinaryChunk(
-            manifest.sender,
-            manifest.id,
-            order,
-            MemoryBlock.MB_ENC
-        );
-
-        if (!chunk) {
-            return false;
-        }
-
-        if (typeof binaryChunkProcessor === 'function') {
-            await binaryChunkProcessor(chunk);
-        }
-
-        const percentComplete = Math.round(((order + 1) / manifest.datagrams.length) * 100);
-        progressBar.value = percentComplete;
-        progressPercentage.textContent = `${percentComplete}%`;
-    }
-    PushcaClient.stopWebSocket();
-
-    if (typeof afterFinishedHandler === 'function') {
-        await afterFinishedHandler();
-    }
-
-    return true;
-}
-
 async function downloadProtectedBinaryManifest(pwd, workspaceId, suffix) {
     const signedRequest = await createSignedDownloadRequest(
         pwd,
