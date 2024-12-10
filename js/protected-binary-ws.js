@@ -19,6 +19,13 @@ async function downloadSharedBinary() {
         await postDownloadProcessor('RESPONSE_WITH_ERROR');
         return;
     }
+
+    const encryptionContract = await EncryptionContract.fromTransferableString(
+        encryptionContractStr,
+        passwordField.value,
+        stringToByteArray(workspaceField.value)
+    );
+
     contentSize = manifest.datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
     console.log(`Content size = ${contentSize}`);
     if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
@@ -26,18 +33,19 @@ async function downloadSharedBinary() {
     }
     showDownloadProgress();
     if (openInBrowserCheckbox.checked || (!window.showSaveFilePicker)) {
-        await openProtectedBinaryInBrowser(manifest);
+        await openProtectedBinaryInBrowser(manifest, encryptionContract);
     } else {
-        await saveProtectedBinaryAsFile(manifest);
+        await saveProtectedBinaryAsFile(manifest, encryptionContract);
     }
 }
 
-async function openProtectedBinaryInBrowser(manifest) {
+async function openProtectedBinaryInBrowser(manifest, encryptionContract) {
     const chunks = [];
 
-    const result = await downloadProtectedBinaryViaWebSocket(manifest,
+    const result = await downloadSharedBinaryViaWebSocket(manifest,
         async function (chunk) {
-            chunks.push(chunk);
+            const decChunk = await decryptBinaryChunk(chunk, encryptionContract);
+            chunks.push(decChunk);
         }, null);
 
     if (result) {
@@ -95,16 +103,17 @@ function openBlobInBrowser(blob, binaryFileName) {
 
 }
 
-async function saveProtectedBinaryAsFile(manifest) {
+async function saveProtectedBinaryAsFile(manifest, encryptionContract) {
     const options = {
         suggestedName: manifest.name
     };
     const fileHandle = await window.showSaveFilePicker(options);
     const writable = await fileHandle.createWritable();
 
-    const result = await downloadProtectedBinaryViaWebSocket(manifest,
+    const result = await downloadSharedBinaryViaWebSocket(manifest,
         async function (chunk) {
-            await writable.write({type: 'write', data: chunk});
+            const decChunk = await decryptBinaryChunk(chunk, encryptionContract);
+            await writable.write({type: 'write', data: decChunk});
         }, async function () {
             await writable.close();
         });
@@ -112,18 +121,8 @@ async function saveProtectedBinaryAsFile(manifest) {
     await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
 }
 
-async function downloadProtectedBinaryViaWebSocket(inManifest, binaryChunkProcessor, afterFinishedHandler) {
-    let vManifest = inManifest;
-
-    if (!vManifest) {
-        vManifest = await downloadProtectedBinaryManifest(
-            passwordField.value,
-            workspaceField.value,
-            protectedUrlSuffix
-        );
-    }
-
-    if (!vManifest) {
+async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, afterFinishedHandler) {
+    if (!manifest) {
         return false;
     }
 
@@ -134,32 +133,24 @@ async function downloadProtectedBinaryViaWebSocket(inManifest, binaryChunkProces
         return false;
     }
 
-    const encryptionContract = await EncryptionContract.fromTransferableString(
-        encryptionContractStr,
-        passwordField.value,
-        stringToByteArray(workspaceField.value)
-    );
+    for (let order = 0; order < manifest.datagrams.length; order++) {
 
-    for (let order = 0; order < vManifest.datagrams.length; order++) {
-
-        const encChunk = await PushcaClient.downloadBinaryChunk(
-            vManifest.sender,
-            vManifest.id,
+        const chunk = await PushcaClient.downloadBinaryChunk(
+            manifest.sender,
+            manifest.id,
             order,
             MemoryBlock.MB_ENC
         );
 
-        if (!encChunk) {
+        if (!chunk) {
             return false;
         }
-
-        const chunk = await decryptBinaryChunk(encChunk, encryptionContract);
 
         if (typeof binaryChunkProcessor === 'function') {
             await binaryChunkProcessor(chunk);
         }
 
-        const percentComplete = Math.round(((order + 1) / vManifest.datagrams.length) * 100);
+        const percentComplete = Math.round(((order + 1) / manifest.datagrams.length) * 100);
         progressBar.value = percentComplete;
         progressPercentage.textContent = `${percentComplete}%`;
     }
