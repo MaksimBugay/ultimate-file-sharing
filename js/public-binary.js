@@ -1,6 +1,6 @@
 const serverUrl = 'https://secure.fileshare.ovh';
 const urlParams = new URLSearchParams(window.location.search);
-
+//https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=cd1030e5-8c6e-4a4f-a14e-79eb2f4e44fb
 let workspaceId = null;
 let binaryId = null;
 

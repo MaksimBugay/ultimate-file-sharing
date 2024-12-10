@@ -95,7 +95,8 @@ class BinaryManifest {
             const workspaceIdSuffix = exposeWorkspaceId ? `?workspace=${workSpaceId}` : '';
             downloadUrl = `${serverUrl}/binary/${this.getPrivateUrlShortSuffix()}${workspaceIdSuffix}`;
         } else {
-            downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
+            //downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
+            downloadUrl = `${serverUrl}/public-binary.html?w=${workSpaceId}&id=${this.id}`;
         }
         return downloadUrl;
     }
