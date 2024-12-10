@@ -1,29 +1,4 @@
-const playableMediaTypes = [
-    "video/mp4",
-    'video/webm; codecs="vp8, opus"',
-    'video/webm; codecs="vp9, opus"',
-    "audio/webm"
-];
 
-const playableImageTypes = [
-    "image/jpeg",
-    "image/bmp",
-    "image/png"
-];
-
-function isPlayableMedia(contentType) {
-    // Remove the codec part from the contentType if it exists
-    const baseContentType = contentType.split(';')[0].trim(); // Extract base type, e.g., "video/webm"
-
-    // Check if the base content type exists in the playableMediaTypes array
-    return playableMediaTypes.some(type => type.split(';')[0].trim() === baseContentType);
-}
-
-function canBeShownInBrowser(contentType) {
-    return ('text/plain' === contentType) || playableImageTypes.includes(contentType) || isPlayableMedia(contentType);
-}
-
-//======================================================================================================================
 async function fetchProtectedBinaryDescription(suffix) {
     const url = serverUrl + `/binary/binary-manifest/protected/${suffix}`;
     try {
