@@ -128,3 +128,30 @@ async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, 
     return true;
 }
 
+//================================== Web socket connection =============================================================
+
+async function openWsConnection() {
+    if (!PushcaClient.isOpen()) {
+        const pClient = new ClientFilter(
+            "SecureFileShare",
+            "anonymous-sharing",
+            uuid.v4().toString(),
+            "download-binary-ws-page"
+        );
+        await PushcaClient.openWsConnection(
+            wsUrl,
+            pClient,
+            function (clientObj) {
+                return new ClientFilter(
+                    clientObj.workSpaceId,
+                    clientObj.accountId,
+                    clientObj.deviceId,
+                    clientObj.applicationId
+                );
+            }
+        );
+    }
+}
+
+//======================================================================================================================
+
