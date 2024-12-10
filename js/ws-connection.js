@@ -503,14 +503,14 @@ PushcaClient.onOpenHandler = async function () {
 PushcaClient.onCloseHandler = function (ws, event) {
     if (!event.wasClean) {
         console.log(event);
-        console.error("Your connection died, refresh the page please");
+        console.error(`Your connection died with exit code ${event.code}, refresh the page please`);
     }
-    if (1013 === event.code) {
+    /*if (1013 === event.code) {
         PushcaClient.stopWebSocket();
         showErrorMsg("Another Secure FileShare tab was open, this one should be closed", function () {
             window.close();
         });
-    }
+    }*/
     const usageWarning = document.getElementById("usageWarning");
     if (usageWarning) {
         usageWarning.style.display = 'flex';
