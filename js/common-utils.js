@@ -22,6 +22,32 @@ function isStringPresentNumber(value) {
     return /^-?\d+$/.test(value.trim());
 }
 
+function generateStrongPassword(length = 12) {
+    const upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowerCase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const specialChars = "!@#$%^&*()-_=+[]{}|;:',.<>?";
+
+    // Ensure password contains at least one character from each set
+    const allChars = upperCase + lowerCase + numbers + specialChars;
+
+    let password = "";
+    password += upperCase.charAt(Math.floor(Math.random() * upperCase.length));
+    password += lowerCase.charAt(Math.floor(Math.random() * lowerCase.length));
+    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    password += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+
+    // Fill the rest of the password with random characters
+    for (let i = 4; i < length; i++) {
+        password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    }
+
+    // Shuffle the password for randomness
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+
+    return password;
+}
+
 function convertBlobToArrayBuffer(blob) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();

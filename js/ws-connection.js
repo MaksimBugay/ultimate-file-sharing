@@ -65,6 +65,7 @@ const pastFromBufferButton = document.getElementById("pastFromBufferButton")
 const textMessageButton = document.getElementById('textMessageButton');
 const transferFileButton = document.getElementById("transferFileButton");
 const joinTransferGroupBtn = document.getElementById("joinTransferGroupBtn");
+const generateStrongGroup = document.getElementById('generateStrongGroup');
 const leaveTransferGroupBtn = document.getElementById("leaveTransferGroupBtn");
 const copyJoinTransferGroupLinkBtn = document.getElementById("copyJoinTransferGroupLinkBtn");
 const transferGroupName = document.getElementById("transferGroupName");
@@ -327,6 +328,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
+generateStrongGroup.addEventListener("click", function () {
+    const id = uuid.v4().toString();
+    transferGroupName.value = `${id.substring(id.length / 2 + 1)}`;
+    transferGroupPasswordInput.value = generateStrongPassword();
+});
+
 joinTransferGroupBtn.addEventListener("click", function () {
     if (!transferGroupName.value) {
         showErrorMsg('Transfer group is not defined', function () {
@@ -382,6 +389,7 @@ function copyJoinGroupLink() {
 
 function postJoinTransferGroupActions() {
     joinTransferGroupBtn.disabled = true;
+    generateStrongGroup.disabled = true;
     leaveTransferGroupBtn.disabled = false;
     copyJoinTransferGroupLinkBtn.disabled = false;
     transferGroupName.readOnly = true;
@@ -397,6 +405,7 @@ function postLeaveTransferGroupActions() {
     transferGroupToggleButton.textContent = `Transfer Group`;
 
     joinTransferGroupBtn.disabled = false;
+    generateStrongGroup.disabled = false;
     leaveTransferGroupBtn.disabled = true;
     copyJoinTransferGroupLinkBtn.disabled = true;
     transferGroupName.readOnly = false;
