@@ -79,6 +79,7 @@ const closeInfoBtn = document.getElementById("closeInfoBtn");
 const showSharedContentManagerBtn = document.getElementById("showSharedContentManagerBtn");
 const fileManagerContainer = document.getElementById("fileManagerContainer");
 const toolbarNavContainer = document.getElementById('toolbarNavContainer');
+const selectFileBtn = document.getElementById("selectFileBtn");
 leaveTransferGroupBtn.disabled = true;
 copyJoinTransferGroupLinkBtn.disabled = true;
 Fileshare.afterErrorMsgClosedHandler = function () {
@@ -303,7 +304,6 @@ document.addEventListener("DOMContentLoaded", function () {
             htModalContent.style.left = "0";
             htModalContent.style.top = "0";
         }
-        const selectFileBtn = document.getElementById("selectFileBtn");
         if (selectFileBtn) {
             selectFileBtn.style.minWidth = '70px';
             selectFileBtn.style.width = '70px';
@@ -375,6 +375,8 @@ function copyJoinGroupLink() {
     const serverUrl = PushcaClient.clusterBaseUrl;
     const url = `${serverUrl}/index.html?t-group=${encodeURIComponent(Fileshare.properties.transferGroup)}&t-pwd=${encodeURIComponent(Fileshare.properties.transferGroupPassword)}`;
     copyTextToClipboard(url);
+    Fileshare.joinGroupLinkWasJustCopied = true;
+    copyJoinTransferGroupLinkBtn.blur();
     showInfoMsg("Join transfer group link was copied to clipboard (open it in browser on receiver side)", url);
 }
 

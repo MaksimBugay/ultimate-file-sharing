@@ -110,7 +110,18 @@ function openModal(contentType, showForce = false) {
 
 function selectFileIfEnterWasPressed(event) {
     if (event.key === "Enter") {
-        fileInput.click();
+        if (Fileshare.joinGroupLinkWasJustCopied) {
+            copyJoinTransferGroupLinkBtn.blur();
+            infoDialog.classList.remove('visible');
+            selectFileBtn.focus();
+            Fileshare.joinGroupLinkWasJustCopied = false;
+            event.stopPropagation();
+            event.preventDefault();
+        } else {
+            if (event.target.tagName !== 'BUTTON') {
+                fileInput.click();
+            }
+        }
     }
 }
 
