@@ -117,6 +117,11 @@ function selectFileIfEnterWasPressed(event) {
             Fileshare.joinGroupLinkWasJustCopied = false;
             event.stopPropagation();
             event.preventDefault();
+        } else if (Fileshare.errorMessageWasJustRemoved || errorDialog.classList.contains('visible')) {
+            errorDialog.classList.remove('visible');
+            Fileshare.errorMessageWasJustRemoved = false;
+            event.stopPropagation();
+            event.preventDefault();
         } else {
             if (event.target.tagName !== 'BUTTON') {
                 fileInput.click();
@@ -391,6 +396,12 @@ async function addFileToRegistry(file) {
         return false;
     }
     if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
+        if (!Fileshare.properties.transferGroup) {
+            showErrorMsg('Transfer group is not defined', function () {
+                transferGroupName.focus();
+            });
+            return false;
+        }
         return TransferFileHelper.transferFile(file, transferGroupName.value, transferGroupPasswordInput.value);
     }
 

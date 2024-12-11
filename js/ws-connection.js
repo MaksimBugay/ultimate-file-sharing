@@ -160,6 +160,7 @@ document.addEventListener("keydown", function (event) {
             infoDialog.classList.remove('visible');
         } else if (errorDialog.classList.contains('visible')) {
             errorDialog.classList.remove('visible');
+            Fileshare.errorMessageWasJustRemoved = true;
         }
     }
 });
