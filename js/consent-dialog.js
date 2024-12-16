@@ -34,7 +34,7 @@ function copyTextToClipboard(text) {
         }).catch(err => {
             console.error('Failed to copy text: ', err);
             ConsentDialog.copyTextValue = text;
-            //consentDialog.classList.add('visible');
+            consentDialog.classList.add('visible');
         });
     } else {
         // Fallback for older browsers
