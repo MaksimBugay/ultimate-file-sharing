@@ -38,7 +38,7 @@ if (suffixParts.length > 1) {
         fetchProtectedBinaryDescription(protectedUrlSuffix).then(readMeText => {
             const readMeTextMemo = document.getElementById("readMeTextMemo");
             if (readMeTextMemo) {
-                readMeTextMemo.textContent = readMeText;
+                readMeTextMemo.innerHTML = readMeText;
             }
         });
     }

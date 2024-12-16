@@ -57,7 +57,7 @@ async function prepareBinaryDownloading(workspaceId, binaryId) {
     const readMeText = await fetchPublicBinaryDescription(workspaceId, binaryId);
     const readMeTextMemo = document.getElementById("readMeTextMemo");
     if (readMeText && readMeTextMemo) {
-        readMeTextMemo.textContent = readMeText;
+        readMeTextMemo.innerHTML = readMeText;
     }
 
     manifest = await downloadPublicBinaryManifest(workspaceId, binaryId);

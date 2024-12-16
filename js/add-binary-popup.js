@@ -130,6 +130,10 @@ function selectFileIfEnterWasPressed(event) {
     }
 }
 
+function getReadMeText() {
+    return DOMPurify.sanitize(readMeTextMemo.innerHTML);
+}
+
 saveTextMessageBtn.addEventListener('click', async function () {
     const mimeType = 'text/plain';
     const name = `text-${new Date().getTime()}.txt`;
@@ -142,7 +146,7 @@ saveTextMessageBtn.addEventListener('click', async function () {
     await SaveInCloudHelper.cacheBlobInCloud(
         name,
         mimeType,
-        readMeTextMemo.textContent,
+        getReadMeText(),
         textBlob,
         !shareFromDeviceCheckbox.checked,
         passwordField.value.trim());
@@ -218,7 +222,7 @@ pastArea.addEventListener('paste', async function (event) {
             await SaveInCloudHelper.cacheBlobInCloud(
                 name,
                 mimeType,
-                readMeTextMemo.textContent,
+                getReadMeText(),
                 blob,
                 !shareFromDeviceCheckbox.checked,
                 passwordField.value.trim());
@@ -374,7 +378,7 @@ async function processListOfFiles(files) {
             await SaveInCloudHelper.cacheBlobInCloud(
                 zipArchiveName,
                 "application/zip",
-                readMeTextMemo.textContent,
+                getReadMeText(),
                 zipBlob,
                 !shareFromDeviceCheckbox.checked,
                 passwordField.value.trim());
@@ -408,7 +412,7 @@ async function addFileToRegistry(file) {
     hideSpinnerInButton();
     return await SaveInCloudHelper.cacheFileInCloud(
         file,
-        readMeTextMemo.textContent,
+        getReadMeText(),
         !shareFromDeviceCheckbox.checked,
         passwordField.value.trim()
     );
@@ -469,9 +473,9 @@ async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mi
         let tmpManifest;
         let result;
         if (passwordField.value) {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeTextMemo.textContent, passwordField.value, encryptionContract);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, getReadMeText(), passwordField.value, encryptionContract);
         } else {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeTextMemo.textContent, null, null);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, getReadMeText(), null, null);
         }
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             tmpManifest = result.body;
