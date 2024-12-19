@@ -170,9 +170,10 @@ input[type="text"] {
     max-width: 90vw;
     max-width: 90dvw;
     height: auto;
-    max-height: 90vh;
-    max-height: 90dvh;
+    max-height: 80vh;
+    max-height: 80dvh;
     min-height: 300px;
+    margin: 0;
 }
 
 .read-me-text-memo {
