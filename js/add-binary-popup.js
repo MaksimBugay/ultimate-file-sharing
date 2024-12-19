@@ -142,22 +142,25 @@ function saveInnerHTMLAsBase64(innerHTML) {
         return null;
     }
 
-    // Convert the innerHTML string to a Base64-encoded string
-    // Using TextEncoder to handle UTF-8 characters properly
-    const encoder = new TextEncoder();
-    const encodedData = encoder.encode(innerHTML);
-    const base64String = btoa(String.fromCharCode(...encodedData));
+    const blob = new Blob([innerHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
 
-    // Output the Base64 string to the console
-    console.log(base64String);
-
-    // Return the Base64 string
-    return base64String;
+    try {
+        const response = fetch(url);
+        const reader = new FileReaderSync();
+        const dataURL = reader.readAsDataURL(response.body);
+        return dataURL.split(',')[1];
+    } catch (error) {
+        console.error('Error converting HTML to base64:', error);
+        return null;
+    } finally {
+        URL.revokeObjectURL(url);
+    }
 }
 
 function getReadMeText() {
     //return DOMPurify.sanitize(readMeTextMemo.innerHTML);
-    const readMeText = readMeTextMemo.innerHTML;
+    const readMeText = DOMPurify.sanitize(readMeTextMemo.innerHTML);
     if (Fileshare.defaultReadMeText === readMeText) {
         return readMeText;
     } else {
