@@ -52,9 +52,18 @@ function restoreInnerHTMLFromBase64(base64String) {
         base64String = padBase64String(base64String);
 
         // Step 3: Decode the Base64 string
-        return atob(base64String);
+        //return atob(base64String);
+        const binaryString = atob(base64String);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        // Decode bytes to text using UTF-8
+        const decoder = new TextDecoder('utf-8');
+        return decoder.decode(bytes);
     } catch (error) {
         console.error("Error decoding Base64 string:", error);
+        return "";
     }
 }
 
