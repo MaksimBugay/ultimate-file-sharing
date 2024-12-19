@@ -64,6 +64,7 @@ function openModal(contentType, showForce = false) {
     document.getElementById('fileChoice').checked = true;
     transferGroupContainer.style.display = 'none';
     passwordFieldWasChangedHandler();
+    document.addEventListener("keydown", closeModalIfEscapeWasPressed);
 
     addBinaryPopup.style.display = 'flex';
     if (ContentType.FILE === contentType) {
@@ -108,6 +109,12 @@ function openModal(contentType, showForce = false) {
     }
 }
 
+function closeModalIfEscapeWasPressed(event) {
+    if (event.key === 'Escape') {
+        closeModal();
+    }
+}
+
 function selectFileIfEnterWasPressed(event) {
     if (event.key === "Enter") {
         if (Fileshare.joinGroupLinkWasJustCopied) {
@@ -137,7 +144,7 @@ function getReadMeText() {
 saveTextMessageBtn.addEventListener('click', async function () {
     const mimeType = 'text/plain';
     const name = `text-${new Date().getTime()}.txt`;
-    let text = textMessageMemo.textContent;
+    let text = DOMPurify.sanitize(textMessageMemo.innerHTML);
     if (isEmpty(text)) {
         return;
     }
@@ -193,8 +200,9 @@ function closeModal() {
     fileInput.value = "";
     videoPlayer.style.height = '200px';
     document.removeEventListener("keydown", selectFileIfEnterWasPressed);
+    document.removeEventListener("keydown", closeModalIfEscapeWasPressed);
     mmProgressBarContainer.style.display = 'none';
-    textMessageMemo.textContent = '';
+    textMessageMemo.innerHTML = '';
     textMessageContainer.style.display = 'none';
 }
 
