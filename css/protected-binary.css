@@ -166,11 +166,13 @@ input[type="text"] {
 .media-content-container{
     display: none;
     width: auto;
-    min-width: 200px;
+    min-width: 300px;
     max-width: 90vw;
+    max-width: 90dvw;
     height: auto;
-    max-height: 90vw;
-    min-height: 200px;
+    max-height: 90vh;
+    max-height: 90dvh;
+    min-height: 300px;
 }
 
 .read-me-text-memo {

@@ -65,7 +65,7 @@ function openModal(contentType, showForce = false) {
     transferGroupContainer.style.display = 'none';
     passwordFieldWasChangedHandler();
 
-    addBinaryPopup.style.display = 'block';
+    addBinaryPopup.style.display = 'flex';
     if (ContentType.FILE === contentType) {
         fileSelectorContainer.style.display = 'block';
         document.addEventListener("keydown", selectFileIfEnterWasPressed);

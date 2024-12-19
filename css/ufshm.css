@@ -80,12 +80,17 @@ body {
     overflow: auto; /* Enable scrolling if content is larger than the modal */
     background-color: rgba(0, 0, 0, 0.4); /* Black background with opacity */
     scrollbar-width: none;
+    justify-content: center;
+    align-items: center;
 }
 
 .file-share-modal-content {
     width: 430px;
-    /*width: 40%;*/
+    max-width: 99dvw;
+    max-width: 99vw;
     min-height: 400px;
+    max-height: 99vh;
+    max-height: 99dvh;
     padding: 5px;
     color: darkblue;
     font-weight: bold;
@@ -96,9 +101,10 @@ body {
     background-position: center center;
     background-repeat: no-repeat;
     /*background-color: #fefefe;*/
-    margin-left: 30%;
-    margin-top: 0;
+    /*margin-left: 30%;
+    margin-top: 0;*/
     border: 1px solid #888;
+    border-radius: 8px;
     overflow-y: auto;
     position: relative;
 }
@@ -124,6 +130,8 @@ body {
     font-size: 30px;
     font-weight: bold;
     margin-left: 98%;
+    margin-bottom: 0;
+    margin-top: 0;
 }
 
 .close:hover,
@@ -283,7 +291,7 @@ input[type="text"] {
     margin-top: 25pt;
     background-color: transparent;
     width: 100%;
-    font-size: 20pt;
+    font-size: 16px;
     font-weight: bold;
     color: gray;
 }
@@ -487,7 +495,8 @@ input[type="text"] {
 .file-share-header {
     font-size: 1.5rem;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 0;
+    margin-top: 0;
 }
 
 .file-share-fieldset input[type="text"] {

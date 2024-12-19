@@ -290,22 +290,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (usageWarning) {
             usageWarning.remove();
         }
-        const modalContent = document.querySelector('.file-share-modal-content');
-        if (modalContent) {
-            modalContent.style.width = "96%";
-            modalContent.style.marginTop = "0";
-            modalContent.style.marginLeft = '0';
-            modalContent.style.left = "0";
-            modalContent.style.top = "0";
-        }
-        const htModalContent = document.querySelector('.how-to-modal-content');
-        if (htModalContent) {
-            htModalContent.style.width = "96%";
-            htModalContent.style.marginTop = "0";
-            htModalContent.style.marginLeft = '0';
-            htModalContent.style.left = "0";
-            htModalContent.style.top = "0";
-        }
         if (selectFileBtn) {
             selectFileBtn.style.minWidth = '70px';
             selectFileBtn.style.width = '70px';
