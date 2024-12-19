@@ -93,7 +93,7 @@ recordBtn.addEventListener('click', async function () {
         await SaveInCloudHelper.cacheBlobInCloud(
             getVideoName(),
             mimeType,
-            getReadMeText(),
+            await getReadMeText(),
             fullVideoBlob,
             !shareFromDeviceCheckbox.checked,
             passwordField.value.trim());
