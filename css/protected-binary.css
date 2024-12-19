@@ -140,11 +140,11 @@ input[type="text"] {
 }
 
 .memo-container {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .memo-container:focus {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 .memo-container textarea {
