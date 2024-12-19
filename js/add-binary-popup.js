@@ -142,7 +142,7 @@ async function saveInnerHTMLAsBase64(innerHTML) {
         return null;
     }
 
-    const blob = new Blob([innerHTML], { type: 'text/html' });
+    const blob = new Blob([innerHTML], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
 
     try {
