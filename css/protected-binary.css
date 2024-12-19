@@ -186,6 +186,8 @@ input[type="text"] {
     color: darkblue;
     font-weight: normal;
     font-size: 12px;
+    resize: both;
+    overflow: auto
 }
 
 .text-message-memo {
