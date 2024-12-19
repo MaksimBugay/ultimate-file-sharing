@@ -45,20 +45,30 @@ function showDownloadProgress() {
 
 function restoreInnerHTMLFromBase64(base64String) {
     try {
-        // Decode the Base64 string to a UTF-8 byte array
-        const binaryString = atob(base64String);
-        const binaryArray = new Uint8Array(binaryString.length);
+        // Step 1: Fix URL-safe Base64
+        base64String = fixBase64ForDecoding(base64String);
 
-        for (let i = 0; i < binaryString.length; i++) {
-            binaryArray[i] = binaryString.charCodeAt(i);
-        }
+        // Step 2: Pad the Base64 string
+        base64String = padBase64String(base64String);
 
-        // Convert the UTF-8 byte array back to a string
-        const decoder = new TextDecoder();
-        return decoder.decode(binaryArray);
+        // Step 3: Decode the Base64 string
+        return atob(base64String);
     } catch (error) {
         console.error("Error decoding Base64 string:", error);
     }
+}
+
+// Helper function to fix URL-safe Base64
+function fixBase64ForDecoding(base64String) {
+    return base64String.replace(/-/g, '+').replace(/_/g, '/');
+}
+
+// Helper function to pad Base64 string
+function padBase64String(base64String) {
+    while (base64String.length % 4 !== 0) {
+        base64String += '=';
+    }
+    return base64String;
 }
 
 function openBlobInBrowser(blob, binaryFileName) {
