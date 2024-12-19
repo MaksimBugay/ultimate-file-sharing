@@ -37,10 +37,10 @@ if (suffixParts.length > 1) {
         fetchProtectedBinaryDescription(protectedUrlSuffix).then(readMeText => {
             const readMeTextMemo = document.getElementById("readMeTextMemo");
             if (readMeTextMemo) {
-                if (readMeText.startsWith('name')) {
-                    readMeTextMemo.innerHTML = readMeText;
-                } else {
+                if (isBase64(readMeText)) {
                     readMeTextMemo.innerHTML = restoreInnerHTMLFromBase64(readMeText);
+                } else {
+                    readMeTextMemo.innerHTML = readMeText;
                 }
             }
         });

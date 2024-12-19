@@ -57,10 +57,10 @@ async function prepareBinaryDownloading(workspaceId, binaryId) {
     const readMeText = await fetchPublicBinaryDescription(workspaceId, binaryId);
     const readMeTextMemo = document.getElementById("readMeTextMemo");
     if (readMeText && readMeTextMemo) {
-        if (readMeText.startsWith('name')) {
-            readMeTextMemo.innerHTML = readMeText;
-        } else {
+        if (isBase64(readMeText)) {
             readMeTextMemo.innerHTML = restoreInnerHTMLFromBase64(readMeText);
+        } else {
+            readMeTextMemo.innerHTML = readMeText;
         }
     }
 

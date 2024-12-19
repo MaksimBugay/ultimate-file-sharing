@@ -22,6 +22,15 @@ function isStringPresentNumber(value) {
     return /^-?\d+$/.test(value.trim());
 }
 
+function isBase64(string) {
+    try {
+        atob(string);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 function generateStrongPassword(length = 12) {
     const upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lowerCase = "abcdefghijklmnopqrstuvwxyz";
