@@ -77,7 +77,7 @@ function openModal(contentType, showForce = false) {
     }
     if (ContentType.AUDIO === contentType) {
         const videoPlayer = document.getElementById('videoPlayer');
-        videoPlayer.style.height = '120px';
+        videoPlayer.style.height = '100px';
         videoRecorderContainer.style.display = 'block';
         VideoPlayer.contentType = ContentType.AUDIO
         setFocusToRecordBtn();

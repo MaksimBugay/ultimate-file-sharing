@@ -85,7 +85,7 @@ body {
 }
 
 .file-share-modal-content {
-    width: 430px;
+    width: 500px;
     max-width: 99dvw;
     max-width: 99vw;
     min-height: 400px;
@@ -106,6 +106,7 @@ body {
     border: 1px solid #888;
     border-radius: 8px;
     overflow-y: auto;
+    scrollbar-width: thin;
     position: relative;
 }
 
@@ -421,8 +422,8 @@ input[type="text"] {
     font-size: 24px;
     font-weight: bold;
     margin-top: 50px;
-    margin-left: 30px;
-    margin-right: 30px;
+    margin-left: 50px;
+    margin-right: 50px;
     color: darkblue;
     position: relative;
     white-space: nowrap;
