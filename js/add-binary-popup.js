@@ -157,7 +157,7 @@ saveTextMessageBtn.addEventListener('click', async function () {
 });
 pastArea.addEventListener('focus', function () {
     pastArea.style.color = 'blue';
-    pastArea.value = 'Press Ctrl+V to past content'
+    pastArea.value = 'Press Ctrl+V to paste content'
     pastArea.setSelectionRange(0, 0);
 });
 
