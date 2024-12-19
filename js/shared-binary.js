@@ -1,4 +1,3 @@
-
 const wsUrl = 'wss://secure.fileshare.ovh:31085';
 
 const playableMediaTypes = [
@@ -43,6 +42,25 @@ function showDownloadProgress() {
     progressBarContainer.style.display = 'block';
     downloadBtn.style.display = 'none';
 }
+
+function restoreInnerHTMLFromBase64(base64String) {
+    try {
+        // Decode the Base64 string to a UTF-8 byte array
+        const binaryString = atob(base64String);
+        const binaryArray = new Uint8Array(binaryString.length);
+
+        for (let i = 0; i < binaryString.length; i++) {
+            binaryArray[i] = binaryString.charCodeAt(i);
+        }
+
+        // Convert the UTF-8 byte array back to a string
+        const decoder = new TextDecoder();
+        return decoder.decode(binaryArray);
+    } catch (error) {
+        console.error("Error decoding Base64 string:", error);
+    }
+}
+
 function openBlobInBrowser(blob, binaryFileName) {
     if ('text/plain' === blob.type) {
         const reader = new FileReader();

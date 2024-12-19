@@ -137,8 +137,32 @@ function selectFileIfEnterWasPressed(event) {
     }
 }
 
+function saveInnerHTMLAsBase64(innerHTML) {
+    if (!innerHTML) {
+        return null;
+    }
+
+    // Convert the innerHTML string to a Base64-encoded string
+    // Using TextEncoder to handle UTF-8 characters properly
+    const encoder = new TextEncoder();
+    const encodedData = encoder.encode(innerHTML);
+    const base64String = btoa(String.fromCharCode(...encodedData));
+
+    // Output the Base64 string to the console
+    console.log(base64String);
+
+    // Return the Base64 string
+    return base64String;
+}
+
 function getReadMeText() {
-    return DOMPurify.sanitize(readMeTextMemo.innerHTML);
+    //return DOMPurify.sanitize(readMeTextMemo.innerHTML);
+    const readMeText = readMeTextMemo.innerHTML;
+    if (Fileshare.defaultReadMeText === readMeText) {
+        return readMeText;
+    } else {
+        return saveInnerHTMLAsBase64(readMeTextMemo.innerHTML);
+    }
 }
 
 saveTextMessageBtn.addEventListener('click', async function () {

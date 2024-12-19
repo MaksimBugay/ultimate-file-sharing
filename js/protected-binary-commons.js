@@ -1,4 +1,3 @@
-
 async function fetchProtectedBinaryDescription(suffix) {
     const url = serverUrl + `/binary/binary-manifest/protected/${suffix}`;
     try {
@@ -38,7 +37,11 @@ if (suffixParts.length > 1) {
         fetchProtectedBinaryDescription(protectedUrlSuffix).then(readMeText => {
             const readMeTextMemo = document.getElementById("readMeTextMemo");
             if (readMeTextMemo) {
-                readMeTextMemo.innerHTML = readMeText;
+                if (readMeText.startsWith('name')) {
+                    readMeTextMemo.innerHTML = readMeText;
+                } else {
+                    readMeTextMemo.innerHTML = restoreInnerHTMLFromBase64(readMeText);
+                }
             }
         });
     }
@@ -169,6 +172,7 @@ async function createSignedDownloadRequest(pwd, workspaceId, suffix) {
         passwordHash
     )
 }
+
 async function postDownloadProcessor(result) {
     if (loginContainer) {
         if ('RESPONSE_WITH_ERROR' === result) {
@@ -200,6 +204,7 @@ function extractFileName(contentDisposition) {
 
     return filename;
 }
+
 //======================================================================================================================
 
 //=================================== Credentials database =============================================================

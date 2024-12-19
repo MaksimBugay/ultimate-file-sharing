@@ -67,7 +67,7 @@ SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCl
     );
 }
 SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, inReadMeText, splitAndStoreProcessor, storeInCloud, password) {
-    let readMeText = inReadMeText ? inReadMeText.substring(0, 1500) : '';
+    let readMeText = inReadMeText ? inReadMeText/*.substring(0, 1500)*/ : '';
     if (Fileshare.defaultReadMeText === inReadMeText){
         readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
     }
