@@ -161,7 +161,7 @@ function saveInnerHTMLAsBase64(innerHTML) {
 function getReadMeText() {
     //return DOMPurify.sanitize(readMeTextMemo.innerHTML);
     const readMeText = DOMPurify.sanitize(readMeTextMemo.innerHTML);
-    if (Fileshare.defaultReadMeText === readMeText) {
+    if (readMeTextMemo.innerHTML === readMeTextMemo.innerText) {
         return readMeText;
     } else {
         return saveInnerHTMLAsBase64(readMeTextMemo.innerHTML);
