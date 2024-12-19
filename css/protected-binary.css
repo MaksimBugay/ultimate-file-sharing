@@ -14,10 +14,9 @@
 }
 
 .login-container {
-    /*width: 75vh;*/
-    width: 70%;
     min-width: 300px;
-    max-width: 500px;
+    max-width: 90vw;
+    max-width: 90dvw;
     margin: 0 40px 0 0;
     padding: 5px;
     /*background-color: #007bff;*/
