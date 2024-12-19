@@ -214,7 +214,7 @@ async function downloadProtectedBinarySilently(downloadRequest) {
                 const resultBuffer = reader.result;
 
                 if (resultBuffer instanceof ArrayBuffer) {
-                    contentText.textContent = textDecoder.decode(resultBuffer);
+                    contentText.innerHTML = textDecoder.decode(resultBuffer);
                     contentText.style.display = 'block';
                     contentContainer.style.display = 'block';
                 } else {
