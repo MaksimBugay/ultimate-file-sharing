@@ -130,11 +130,52 @@ function selectFileIfEnterWasPressed(event) {
             event.stopPropagation();
             event.preventDefault();
         } else {
-            if (event.target.tagName !== 'BUTTON') {
-                fileInput.click();
+            if (event.target.tagName === 'BUTTON' || event.target.tagName === 'DIV') {
+                return
             }
+            fileInput.click();
         }
     }
+}
+
+//========================= Read me editor==============================================================================
+
+let readMeObserver;
+
+function initReadMeObserver() {
+    const readMeObserverConfig = {
+        childList: true, // Observes changes to child nodes (e.g., innerHTML)
+        subtree: true   // Observes changes to all descendant nodes
+        //characterData: true // Observes changes to text content
+    };
+
+    readMeObserver = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === "childList" || mutation.type === "characterData") {
+                console.log("InnerHTML changed to:", readMeTextMemo.innerHTML);
+                setImagesMaxWidth();
+            }
+        }
+    });
+
+    readMeObserver.observe(readMeTextMemo, readMeObserverConfig);
+}
+
+document.addEventListener('DOMContentLoaded', initReadMeObserver);
+
+window.addEventListener("beforeunload", function () {
+    if (readMeObserver) {
+        readMeObserver.disconnect();
+    }
+});
+
+function setImagesMaxWidth() {
+    const images = readMeTextMemo.querySelectorAll("img");
+
+    // Update their max-width
+    images.forEach((img) => {
+        img.style.maxWidth = "100%";
+    });
 }
 
 async function saveInnerHTMLAsBase64(innerHTML) {
@@ -142,13 +183,13 @@ async function saveInnerHTMLAsBase64(innerHTML) {
         return null;
     }
 
-    const blob = new Blob([innerHTML], { type: 'text/html;charset=utf-8' });
+    const blob = new Blob([innerHTML], {type: 'text/html;charset=utf-8'});
     const url = URL.createObjectURL(blob);
 
     try {
         const response = await fetch(url); // Wait for the response
         const arrayBuffer = await response.arrayBuffer();
-         // Convert ArrayBuffer to Base64
+        // Convert ArrayBuffer to Base64
         return arrayBufferToBase64(arrayBuffer);
     } catch (error) {
         console.error('Error converting HTML to base64:', error);
@@ -168,6 +209,8 @@ async function getReadMeText() {
         return await saveInnerHTMLAsBase64(readMeTextMemo.innerHTML);
     }
 }
+
+//======================================================================================================================
 
 saveTextMessageBtn.addEventListener('click', async function () {
     const mimeType = 'text/plain';

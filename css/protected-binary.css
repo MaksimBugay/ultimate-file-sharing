@@ -185,7 +185,7 @@ input[type="text"] {
     overflow-y: auto; /* Show scrollbar as needed */
     color: darkblue;
     font-weight: normal;
-    font-size: 12px;
+    font-size: 14px;
     resize: both;
     overflow: auto
 }
