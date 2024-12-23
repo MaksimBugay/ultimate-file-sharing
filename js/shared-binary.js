@@ -115,8 +115,16 @@ function openBlobInBrowser(blob, binaryFileName) {
 
         contentVideoPlayer.appendChild(source);
 
+        if (isMobile()) {
+            contentVideoPlayer.muted = true; // Required for autoplay on mobile
+            contentVideoPlayer.playsInline = true;
+        }
+        contentVideoPlayer.autoplay = true;
+
         contentVideoPlayer.addEventListener('canplay', function () {
-            contentVideoPlayer.play();
+            contentVideoPlayer.play().catch((err) => {
+                console.error('Playback blocked:', err);
+            });
         });
 
         contentContainer.style.display = 'block';
