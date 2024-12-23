@@ -42,6 +42,7 @@ h2 {
 
 .input-group {
     width: 100%;
+    max-width: 500px;
     margin-bottom: 15px;
 }
 
@@ -181,8 +182,7 @@ input[type="text"] {
     border: none;
     border-radius: 4px;
     min-height: 12px; /* Minimum height */
-    max-width: 100%;
-    overflow-y: auto; /* Show scrollbar as needed */
+    max-width: 450px;
     color: darkblue;
     font-weight: normal;
     font-size: 14px;

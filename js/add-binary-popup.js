@@ -152,7 +152,7 @@ function initReadMeObserver() {
     readMeObserver = new MutationObserver((mutationsList) => {
         for (const mutation of mutationsList) {
             if (mutation.type === "childList" || mutation.type === "characterData") {
-                console.log("InnerHTML changed to:", readMeTextMemo.innerHTML);
+                //console.log("InnerHTML changed to:", readMeTextMemo.innerHTML);
                 setImagesMaxWidth();
             }
         }
