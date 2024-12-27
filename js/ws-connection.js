@@ -47,9 +47,11 @@ Fileshare.wakeLock = null;
 Fileshare.defaultReadMeText = "Default description";
 
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('tg-host')) {
+if (urlParams.get('tg-host') && urlParams.get('tg-session')) {
     Fileshare.transferGroupHostValue = decodeURIComponent(urlParams.get('tg-host'));
+    Fileshare.transferGroupSessionValue = decodeURIComponent(urlParams.get('tg-session'));
 }
+
 
 const howToButton = document.getElementById("howToButton");
 const privacyButton = document.getElementById('privacyButton');
@@ -362,7 +364,7 @@ copyJoinTransferGroupLinkBtn.addEventListener("click", function () {
 
 function copyJoinGroupLink() {
     const serverUrl = PushcaClient.clusterBaseUrl;
-    const url = `${serverUrl}/index.html?tg-host=${encodeURIComponent(PushcaClient.ClientObj.accountId)}`;
+    const url = `${serverUrl}/index.html?tg-host=${encodeURIComponent(PushcaClient.ClientObj.accountId)}&tg-session=${Fileshare.sessionId}`;
     copyTextToClipboard(url);
     Fileshare.joinGroupLinkWasJustCopied = true;
     copyJoinTransferGroupLinkBtn.blur();
@@ -587,12 +589,13 @@ async function buildSignatureHash(signature) {
     return await calculateSha256(stringToArrayBuffer(signature));
 }
 
-async function sendJoinTransferGroupRequest(transferGroupHost, deviceFpId) {
+async function sendJoinTransferGroupRequest(transferGroupHost, sessionId, deviceFpId) {
     const {publicKey, privateKey} = await generateRSAKeyPair();
     const publicKeyString = await exportPublicKey(publicKey);
 
     const joinTransferGroupRequest = new JoinTransferGroupRequest(
         deviceFpId,
+        sessionId,
         publicKeyString
     );
 
@@ -632,6 +635,7 @@ async function openWsConnection(deviceFpId) {
     if (!PushcaClient.isOpen()) {
         Fileshare.ownerSignature = await calculateSignatureSha256(Fileshare.deviceSecret);
         Fileshare.ownerSignatureHash = await calculateSha256(stringToArrayBuffer(Fileshare.ownerSignature));
+        Fileshare.sessionId = uuid.v4().toString();
         console.log(`Owner signature hash = ${Fileshare.ownerSignatureHash}`);
         const signaturePhrase = await generateHashAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
         console.log(signaturePhrase);
@@ -642,7 +646,7 @@ async function openWsConnection(deviceFpId) {
         const pClient = new ClientFilter(
             `${calculateStringHashCode(deviceFpId)}`,
             Fileshare.ownerSignature,//"anonymous-sharing",
-            JSON.stringify({fp: deviceFpId, session: uuid.v4().toString()}),
+            JSON.stringify({fp: deviceFpId, session: Fileshare.sessionId}),
             //`${calculateStringHashCode(deviceFpId)}`,
             applicationId
         );
@@ -662,6 +666,7 @@ async function openWsConnection(deviceFpId) {
         if (Fileshare.transferGroupHostValue) {
             const joinGroupResponse = await sendJoinTransferGroupRequest(
                 Fileshare.transferGroupHostValue,
+                Fileshare.transferGroupSessionValue,
                 deviceFpId
             );
             if (joinGroupResponse) {

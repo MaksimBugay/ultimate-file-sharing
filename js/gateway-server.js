@@ -13,6 +13,9 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
         const request = JoinTransferGroupRequest.fromJsonString(requestJson);
         console.log(request);
 
+        if (Fileshare.sessionId !== request.sessionId) {
+            return null;
+        }
         //TODO add check device id popup
 
         let response = errorResponse;
@@ -115,7 +118,7 @@ function processGateWayRequest(path, header, requestPayload, responseConsumer) {
     }
 
     route(header, requestPayload).then(result => {
-        if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+        if (result && (WaiterResponseType.SUCCESS === result.type) && result.body) {
             if (typeof responseConsumer === 'function') {
                 responseConsumer(result.body);
             }

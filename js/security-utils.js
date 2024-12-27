@@ -6,8 +6,9 @@ class CreatePrivateUrlSuffixRequest {
 }
 
 class JoinTransferGroupRequest {
-    constructor(deviceId, publicKeyStr) {
+    constructor(deviceId, sessionId, publicKeyStr) {
         this.deviceId = deviceId;
+        this.sessionId = sessionId;
         this.publicKeyStr = publicKeyStr;
     }
 
@@ -15,6 +16,7 @@ class JoinTransferGroupRequest {
         const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
         return new JoinTransferGroupRequest(
             jsonObject.deviceId,
+            jsonObject.sessionId,
             jsonObject.publicKeyStr
         );
     }
