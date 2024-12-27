@@ -21,7 +21,7 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
             27_000,
             null,
             function (waiterId) {
-                showJoinTransferGroupDialog(waiterId);
+                showJoinTransferGroupDialog(waiterId, request.deviceId);
             }
         )
 
