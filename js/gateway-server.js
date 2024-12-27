@@ -1,13 +1,54 @@
 const routs = new Map();
 
 const GatewayPath = Object.freeze({
-    VERIFY_BINARY_SIGNATURE: "verify-binary-signature"
+    VERIFY_BINARY_SIGNATURE: "verify-binary-signature",
+    VERIFY_JOIN_TRANSFER_GROUP_REQUEST: "verify-join-transfer-group-request"
 });
+
+async function verifyJoinTransferGroupRequest(header, requestPayload) {
+    const errorResponse = 'error';
+    try {
+        const requestJson = byteArrayToString(requestPayload);
+        console.log(`Gateway request payload: JoinTransferGroupRequest`);
+        const request = JoinTransferGroupRequest.fromJsonString(requestJson);
+        console.log(request);
+
+        //TODO add check device id popup
+
+        let response = errorResponse;
+        if (Fileshare.properties.transferGroup && Fileshare.properties.transferGroupPassword) {
+            const responseStr = JSON.stringify({
+                name: Fileshare.properties.transferGroup,
+                pwd: Fileshare.properties.transferGroupPassword
+            });
+            const importedPublicKey = await importPublicKeyFromString(request.publicKeyStr);
+            response = await encryptWithPublicKey(
+                importedPublicKey,
+                responseStr
+            );
+        }
+
+        return new WaiterResponse(
+            WaiterResponseType.SUCCESS,
+            stringToByteArray(
+                JSON.stringify({result: response})
+            )
+        );
+    } catch (error) {
+        console.warn("Rejected join transfer group attempt: " + error);
+        return new WaiterResponse(
+            WaiterResponseType.SUCCESS,
+            stringToByteArray(
+                JSON.stringify({result: errorResponse})
+            )
+        );
+    }
+}
 
 async function verifyBinarySignature(header, requestPayload) {
     try {
         const requestJson = byteArrayToString(requestPayload);
-        console.log(`Gateway request payload`);
+        console.log(`Gateway request payload: DownloadProtectedBinaryRequest`);
         const request = DownloadProtectedBinaryRequest.fromJsonString(requestJson);
         console.log(request);
         let password;
@@ -60,6 +101,7 @@ async function verifyBinarySignature(header, requestPayload) {
 }
 
 routs.set(GatewayPath.VERIFY_BINARY_SIGNATURE, verifyBinarySignature);
+routs.set(GatewayPath.VERIFY_JOIN_TRANSFER_GROUP_REQUEST, verifyJoinTransferGroupRequest);
 
 function processGateWayRequest(path, header, requestPayload, responseConsumer) {
     const route = routs.get(path);

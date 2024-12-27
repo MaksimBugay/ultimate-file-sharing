@@ -20,7 +20,8 @@ const Command = Object.freeze({
     SEND_UPLOAD_BINARY_APPEAL: "SEND_UPLOAD_BINARY_APPEAL",
     SEND_DELETE_BINARY_APPEAL: "SEND_DELETE_BINARY_APPEAL",
     SEND_BINARY_MANIFEST: "SEND_BINARY_MANIFEST",
-    SEND_GATEWAY_RESPONSE: "SEND_GATEWAY_RESPONSE"
+    SEND_GATEWAY_RESPONSE: "SEND_GATEWAY_RESPONSE",
+    SEND_GATEWAY_REQUEST: "SEND_GATEWAY_REQUEST"
 });
 
 const MessageType = Object.freeze({
@@ -811,6 +812,22 @@ PushcaClient.sendAcknowledge = function (id) {
     PushcaClient.ws.send(commandWithId.message);
 }
 
+PushcaClient.sendGatewayRequest = async function (dest, path, requestPayload) {
+    let metaData = {};
+    metaData['receiver'] = dest;
+    metaData['preserveOrder'] = false;
+    metaData['path'] = path;
+    metaData["payload"] = byteArrayToBase64(requestPayload);
+
+    let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_GATEWAY_REQUEST, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error("Failed send gateway request attempt: " + result.body);
+        return null;
+    }
+    return result.body;
+}
+
 PushcaClient.sendGatewayResponse = function (id, responsePayload) {
     let metaData = {};
     metaData["id"] = id;
@@ -818,6 +835,8 @@ PushcaClient.sendGatewayResponse = function (id, responsePayload) {
     let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_GATEWAY_RESPONSE, metaData);
     PushcaClient.ws.send(commandWithId.message);
 }
+
+
 /**
  * Send message to all connected clients that met the filtering requirements
  *

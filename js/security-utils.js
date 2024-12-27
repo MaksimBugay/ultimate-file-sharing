@@ -5,6 +5,21 @@ class CreatePrivateUrlSuffixRequest {
     }
 }
 
+class JoinTransferGroupRequest {
+    constructor(deviceId, publicKeyStr) {
+        this.deviceId = deviceId;
+        this.publicKeyStr = publicKeyStr;
+    }
+
+    static fromJsonString(jsonString) {
+        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        return new JoinTransferGroupRequest(
+            jsonObject.deviceId,
+            jsonObject.publicKeyStr
+        );
+    }
+}
+
 class DownloadProtectedBinaryRequest {
     constructor(suffix, exp, signature, binaryId, passwordHash) {
         this.suffix = suffix;
@@ -64,6 +79,7 @@ async function calculateSignatureSha256(inputString) {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
 async function calculateSha256(content) {
     const hashBuffer = await crypto.subtle.digest('SHA-256', content);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -431,6 +447,66 @@ async function decryptPrivateKey(base64EncryptedKey, pwd, salt, base64IV) {
     );
 
     return arrayBufferToBase64(decryptedKey);
+}
+
+//======================================================================================================================
+//==================== Asymmetric password based encryption ============================================================
+async function generateRSAKeyPair() {
+    return await crypto.subtle.generateKey(
+        {
+            name: "RSA-OAEP", // Use RSA for encryption/decryption
+            modulusLength: 2048,
+            publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+            hash: "SHA-256",
+        },
+        true,
+        ["encrypt", "decrypt"]
+    );
+}
+
+async function encryptWithPublicKey(publicKey, data) {
+    const encodedData = new TextEncoder().encode(data);
+    const encrypted = await crypto.subtle.encrypt(
+        {name: "RSA-OAEP"},
+        publicKey,
+        encodedData
+    );
+    return btoa(String.fromCharCode(...new Uint8Array(encrypted))); // Return encrypted data as Base64
+}
+
+async function decryptWithPrivateKey(privateKey, encryptedBase64) {
+    const encryptedData = Uint8Array.from(
+        atob(encryptedBase64),
+        (c) => c.charCodeAt(0)
+    );
+    const decrypted = await crypto.subtle.decrypt(
+        {name: "RSA-OAEP"},
+        privateKey,
+        encryptedData
+    );
+    return new TextDecoder().decode(decrypted); // Return decrypted string
+}
+
+async function exportPublicKey(key) {
+    const exported = await crypto.subtle.exportKey("spki", key);
+    return btoa(String.fromCharCode(...new Uint8Array(exported))); // Return Base64 encoded public key
+}
+
+async function importPublicKeyFromString(publicKeyString) {
+    // Decode the Base64 string to a binary format
+    const binaryDer = Uint8Array.from(atob(publicKeyString), (c) => c.charCodeAt(0));
+
+    // Import the binary data as an RSA public key
+    return crypto.subtle.importKey(
+        "spki", // Key format
+        binaryDer.buffer, // Key data
+        {
+            name: "RSA-OAEP",
+            hash: "SHA-256", // Must match the hash used during key generation
+        },
+        true, // Key can be exported again
+        ["encrypt"] // Usages for the key
+    );
 }
 
 //======================================================================================================================

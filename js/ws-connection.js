@@ -47,11 +47,8 @@ Fileshare.wakeLock = null;
 Fileshare.defaultReadMeText = "Default description";
 
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('t-group')) {
-    Fileshare.transferGroupNameParamValue = decodeURIComponent(urlParams.get('t-group'));
-}
-if (urlParams.get('t-pwd')) {
-    Fileshare.transferGroupPasswordParamValue = decodeURIComponent(urlParams.get('t-pwd'));
+if (urlParams.get('tg-host')) {
+    Fileshare.transferGroupHostValue = decodeURIComponent(urlParams.get('tg-host'));
 }
 
 const howToButton = document.getElementById("howToButton");
@@ -365,7 +362,7 @@ copyJoinTransferGroupLinkBtn.addEventListener("click", function () {
 
 function copyJoinGroupLink() {
     const serverUrl = PushcaClient.clusterBaseUrl;
-    const url = `${serverUrl}/index.html?t-group=${encodeURIComponent(Fileshare.properties.transferGroup)}&t-pwd=${encodeURIComponent(Fileshare.properties.transferGroupPassword)}`;
+    const url = `${serverUrl}/index.html?tg-host=${encodeURIComponent(PushcaClient.ClientObj.deviceId)}`;
     copyTextToClipboard(url);
     Fileshare.joinGroupLinkWasJustCopied = true;
     copyJoinTransferGroupLinkBtn.blur();
@@ -590,6 +587,46 @@ async function buildSignatureHash(signature) {
     return await calculateSha256(stringToArrayBuffer(signature));
 }
 
+async function sendJoinTransferGroupRequest(transferGroupHost, deviceFpId) {
+    const {publicKey, privateKey} = await generateRSAKeyPair();
+    const publicKeyString = await exportPublicKey(publicKey);
+
+    const joinTransferGroupRequest = new JoinTransferGroupRequest(
+        deviceFpId,
+        publicKeyString
+    );
+
+    const ownerFilter = new ClientFilter(
+        null,
+        null,
+        transferGroupHost,
+        null
+    );
+    const response = await PushcaClient.sendGatewayRequest(
+        ownerFilter,
+        GatewayPath.VERIFY_JOIN_TRANSFER_GROUP_REQUEST,
+        stringToByteArray(JSON.stringify(joinTransferGroupRequest))
+    );
+
+    if (!response) {
+        return null;
+    }
+
+    if ('error' === response) {
+        return null;
+    }
+
+    try {
+        const jsonResponseWrapper = JSON.parse(response);
+        const responseJson = base64ToArrayBuffer(jsonResponseWrapper.body);
+        const jsonObject = JSON.parse(arrayBufferToString(responseJson));
+        return JSON.parse(await decryptWithPrivateKey(privateKey, jsonObject.result));
+    } catch (err) {
+        console.warn("Failed join transfer group attempt: " + err);
+        return null;
+    }
+}
+
 async function openWsConnection(deviceFpId) {
     Fileshare.workSpaceId = deviceFpId;
     if (!PushcaClient.isOpen()) {
@@ -599,23 +636,7 @@ async function openWsConnection(deviceFpId) {
         const signaturePhrase = await generateHashAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
         console.log(signaturePhrase);
         let applicationId = Fileshare.noTransferGroupApplicationId;
-
-        //====================================================================
-        if (Fileshare.transferGroupNameParamValue) {
-            if (!Fileshare.properties) {
-                Fileshare.properties = new FileshareProperties(
-                    Fileshare.transferGroupNameParamValue,
-                    Fileshare.transferGroupPasswordParamValue
-                );
-            } else {
-                Fileshare.properties.setTransferGroup(Fileshare.transferGroupNameParamValue);
-                Fileshare.properties.setTransferGroupPassword(Fileshare.transferGroupPasswordParamValue);
-            }
-            saveFileshareProperties(Fileshare.properties);
-        }
-        //====================================================================
-
-        if (Fileshare.properties) {
+        if (Fileshare.properties && (!Fileshare.transferGroupHostValue)) {
             applicationId = Fileshare.properties.getTransferApplicationId()
         }
         const pClient = new ClientFilter(
@@ -637,6 +658,34 @@ async function openWsConnection(deviceFpId) {
                 );
             }
         );
+        //====================================================================
+        if (Fileshare.transferGroupHostValue) {
+            const joinGroupResponse = await sendJoinTransferGroupRequest(
+                Fileshare.transferGroupHostValue,
+                deviceFpId
+            );
+            if (joinGroupResponse) {
+                if (!Fileshare.properties) {
+                    Fileshare.properties = new FileshareProperties(
+                        joinGroupResponse.name,
+                        joinGroupResponse.pwd
+                    );
+                } else {
+                    Fileshare.properties.setTransferGroup(joinGroupResponse.name);
+                    Fileshare.properties.setTransferGroupPassword(joinGroupResponse.pwd);
+                }
+                saveFileshareProperties(Fileshare.properties);
+                PushcaClient.changeClientObject(
+                    new ClientFilter(
+                        PushcaClient.ClientObj.workSpaceId,
+                        PushcaClient.ClientObj.accountId,
+                        PushcaClient.ClientObj.deviceId,
+                        Fileshare.properties.getTransferApplicationId()
+                    )
+                );
+            }
+        }
+        //====================================================================
     }
 }
 
@@ -1144,6 +1193,20 @@ async function chunkEncryptionTest() {
     const resStr = arrayBufferToString(decChunk);
     if (str !== resStr) {
         alert("Failed binary chunk decryption!");
+    }
+
+    const {publicKey, privateKey} = await generateRSAKeyPair();
+
+    const publicKeyString = await exportPublicKey(publicKey);
+
+    const importedPublicKey = await importPublicKeyFromString(publicKeyString);
+
+    const encryptedText = await encryptWithPublicKey(importedPublicKey, str);
+
+    const decryptedText = await decryptWithPrivateKey(privateKey, encryptedText);
+
+    if (str !== decryptedText) {
+        alert("Failed asymmetric decryption!");
     }
 }
 
