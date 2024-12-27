@@ -621,8 +621,13 @@ async function sendJoinTransferGroupRequest(transferGroupHost, sessionId, device
 
     try {
         const jsonResponseWrapper = JSON.parse(response);
-        const responseJson = base64ToArrayBuffer(jsonResponseWrapper.body);
-        const jsonObject = JSON.parse(arrayBufferToString(responseJson));
+        const responseBytes = base64ToArrayBuffer(jsonResponseWrapper.body);
+        const responseStr = arrayBufferToString(responseBytes);
+        const jsonObject = JSON.parse(responseStr);
+        if ((JoinTransferGroupResponse.DENIED === jsonObject.result) || (JoinTransferGroupResponse.ERROR === jsonObject.result)) {
+            console.warn("Declined join transfer group attempt: " + jsonObject.result);
+            return null;
+        }
         return JSON.parse(await decryptWithPrivateKey(privateKey, jsonObject.result));
     } catch (err) {
         console.warn("Failed join transfer group attempt: " + err);

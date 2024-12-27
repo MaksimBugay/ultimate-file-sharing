@@ -50,12 +50,51 @@ const ftDownloadProgress = document.getElementById("ftDownloadProgress");
 const ftProgressPercentage = document.getElementById("ftProgressPercentage");
 const ftProgressBarContainer = document.getElementById("ftProgressBarContainer");
 const acceptFileTransferDialog = document.getElementById("acceptFileTransferDialog");
+const joinTransferGroupDialog = document.getElementById('joinTransferGroupDialog');
+const allowJoinTransferGroupBtn = document.getElementById('allowJoinTransferGroupBtn');
+const denyJoinTransferGroupBtn = document.getElementById('denyJoinTransferGroupBtn');
 const acceptFileTransferBtn = document.getElementById("acceptFileTransferBtn");
 const denyFileTransferBtn = document.getElementById("denyFileTransferBtn");
 const ftrName = document.getElementById("ftrName");
 const ftrType = document.getElementById("ftrType");
 const ftrSize = document.getElementById("ftrSize");
 const ftrOriginatorDeviceId = document.getElementById("ftrOriginatorDeviceId");
+
+joinTransferGroupDialog.addEventListener("click", (event) => {
+    if (event.target === acceptFileTransferDialog) {
+        event.stopPropagation(); // Prevent click from propagating if outside dialog
+    }
+});
+
+function showJoinTransferGroupDialog(waiterId) {
+    const allowHandler = function () {
+        CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
+        cleanUp();
+        hideJoinTransferGroupDialog();
+    }
+    const denyHandler = function () {
+        CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, false);
+        cleanUp();
+        hideJoinTransferGroupDialog();
+    }
+
+    function cleanUp() {
+        allowJoinTransferGroupBtn.removeEventListener('click', allowHandler);
+        denyJoinTransferGroupBtn.removeEventListener('click', denyHandler);
+    }
+
+    allowJoinTransferGroupBtn.addEventListener('click', allowHandler);
+    denyJoinTransferGroupBtn.addEventListener('click', denyHandler);
+    joinTransferGroupDialog.classList.add('visible');
+}
+
+function isJoinTransferGroupDialogVisible() {
+    return joinTransferGroupDialog.classList.contains('visible');
+}
+
+function hideJoinTransferGroupDialog() {
+    joinTransferGroupDialog.classList.remove('visible');
+}
 
 acceptFileTransferDialog.addEventListener("click", (event) => {
     if (event.target === acceptFileTransferDialog) {

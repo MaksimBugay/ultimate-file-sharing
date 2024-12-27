@@ -820,7 +820,7 @@ PushcaClient.sendGatewayRequest = async function (dest, path, requestPayload) {
     metaData["payload"] = byteArrayToBase64(requestPayload);
 
     let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_GATEWAY_REQUEST, metaData);
-    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId, 30_000)
     if (WaiterResponseType.ERROR === result.type) {
         console.error("Failed send gateway request attempt: " + result.body);
         return null;

@@ -6,29 +6,44 @@ const GatewayPath = Object.freeze({
 });
 
 async function verifyJoinTransferGroupRequest(header, requestPayload) {
-    const errorResponse = 'error';
     try {
         const requestJson = byteArrayToString(requestPayload);
         console.log(`Gateway request payload: JoinTransferGroupRequest`);
         const request = JoinTransferGroupRequest.fromJsonString(requestJson);
         console.log(request);
 
+        let response;
         if (Fileshare.sessionId !== request.sessionId) {
             return null;
         }
-        //TODO add check device id popup
 
-        let response = errorResponse;
-        if (Fileshare.properties.transferGroup && Fileshare.properties.transferGroupPassword) {
-            const responseStr = JSON.stringify({
-                name: Fileshare.properties.transferGroup,
-                pwd: Fileshare.properties.transferGroupPassword
-            });
-            const importedPublicKey = await importPublicKeyFromString(request.publicKeyStr);
-            response = await encryptWithPublicKey(
-                importedPublicKey,
-                responseStr
-            );
+        const result = await CallableFuture.callAsynchronously(
+            27_000,
+            null,
+            function (waiterId) {
+                showJoinTransferGroupDialog(waiterId);
+            }
+        )
+
+        if (result && (WaiterResponseType.SUCCESS === result.type)) {
+            if (result.body && Fileshare.properties.transferGroup && Fileshare.properties.transferGroupPassword) {
+                const responseStr = JSON.stringify({
+                    name: Fileshare.properties.transferGroup,
+                    pwd: Fileshare.properties.transferGroupPassword
+                });
+                const importedPublicKey = await importPublicKeyFromString(request.publicKeyStr);
+                response = await encryptWithPublicKey(
+                    importedPublicKey,
+                    responseStr
+                );
+            } else {
+                response = JoinTransferGroupResponse.DENIED;
+            }
+        } else {
+            if (isJoinTransferGroupDialogVisible()) {
+                hideJoinTransferGroupDialog();
+            }
+            return null;
         }
 
         return new WaiterResponse(
@@ -42,7 +57,7 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
         return new WaiterResponse(
             WaiterResponseType.SUCCESS,
             stringToByteArray(
-                JSON.stringify({result: errorResponse})
+                JSON.stringify({result: JoinTransferGroupResponse.ERROR})
             )
         );
     }

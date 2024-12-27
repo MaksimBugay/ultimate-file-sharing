@@ -1,3 +1,8 @@
+const JoinTransferGroupResponse = Object.freeze({
+    DENIED: "DENIED",
+    ERROR: "ERROR"
+});
+
 class CreatePrivateUrlSuffixRequest {
     constructor(workspaceId, binaryId) {
         this.workspaceId = workspaceId;
