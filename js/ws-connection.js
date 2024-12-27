@@ -362,7 +362,7 @@ copyJoinTransferGroupLinkBtn.addEventListener("click", function () {
 
 function copyJoinGroupLink() {
     const serverUrl = PushcaClient.clusterBaseUrl;
-    const url = `${serverUrl}/index.html?tg-host=${encodeURIComponent(PushcaClient.ClientObj.deviceId)}`;
+    const url = `${serverUrl}/index.html?tg-host=${encodeURIComponent(PushcaClient.ClientObj.accountId)}`;
     copyTextToClipboard(url);
     Fileshare.joinGroupLinkWasJustCopied = true;
     copyJoinTransferGroupLinkBtn.blur();
@@ -598,8 +598,8 @@ async function sendJoinTransferGroupRequest(transferGroupHost, deviceFpId) {
 
     const ownerFilter = new ClientFilter(
         null,
-        null,
         transferGroupHost,
+        null,
         null
     );
     const response = await PushcaClient.sendGatewayRequest(
