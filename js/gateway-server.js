@@ -11,6 +11,8 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
         console.log(`Gateway request payload: JoinTransferGroupRequest`);
         const request = JoinTransferGroupRequest.fromJsonString(requestJson);
         console.log(request);
+        console.log(`Gateway request header`);
+        console.log(header);
 
         let response;
         if (Fileshare.sessionId !== request.sessionId) {
@@ -21,7 +23,7 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
             27_000,
             null,
             function (waiterId) {
-                showJoinTransferGroupDialog(waiterId, request.deviceId);
+                showJoinTransferGroupDialog(waiterId, request.deviceId, header.ip);
             }
         )
 
