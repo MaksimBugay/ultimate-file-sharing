@@ -6,6 +6,23 @@ const GatewayPath = Object.freeze({
 });
 
 async function verifyJoinTransferGroupRequest(header, requestPayload) {
+    let fpHash;
+    try {
+        const deviceInfo = JSON.parse(header.client.deviceId);
+        fpHash = deviceInfo.fp;
+        if (!fpHash) {
+            return null;
+        }
+    } catch (error) {
+        console.warn("Rejected join transfer group attempt: " + error);
+        return new WaiterResponse(
+            WaiterResponseType.SUCCESS,
+            stringToByteArray(
+                JSON.stringify({result: JoinTransferGroupResponse.ERROR})
+            )
+        );
+    }
+
     try {
         const requestJson = byteArrayToString(requestPayload);
         console.log(`Gateway request payload: JoinTransferGroupRequest`);
@@ -17,6 +34,17 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
         let response;
         if (Fileshare.sessionId !== request.sessionId) {
             return null;
+        }
+
+        const deviceIdHash = await calculateSha256(stringToArrayBuffer(request.deviceId));
+
+        if (deviceIdHash !== fpHash) {
+            return new WaiterResponse(
+                WaiterResponseType.SUCCESS,
+                stringToByteArray(
+                    JSON.stringify({result: JoinTransferGroupResponse.DENIED})
+                )
+            );
         }
 
         const result = await CallableFuture.callAsynchronously(

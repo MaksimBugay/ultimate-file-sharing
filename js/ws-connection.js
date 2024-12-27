@@ -641,6 +641,7 @@ async function openWsConnection(deviceFpId) {
         Fileshare.ownerSignature = await calculateSignatureSha256(Fileshare.deviceSecret);
         Fileshare.ownerSignatureHash = await calculateSha256(stringToArrayBuffer(Fileshare.ownerSignature));
         Fileshare.sessionId = uuid.v4().toString();
+        Fileshare.deviceFpHash = await calculateSha256(stringToArrayBuffer(deviceFpId));
         console.log(`Owner signature hash = ${Fileshare.ownerSignatureHash}`);
         const signaturePhrase = await generateHashAndConvertToReadableSignature(Fileshare.ownerSignatureHash);
         console.log(signaturePhrase);
@@ -651,7 +652,7 @@ async function openWsConnection(deviceFpId) {
         const pClient = new ClientFilter(
             `${calculateStringHashCode(deviceFpId)}`,
             Fileshare.ownerSignature,//"anonymous-sharing",
-            JSON.stringify({fp: deviceFpId, session: Fileshare.sessionId}),
+            JSON.stringify({fp: Fileshare.deviceFpHash, session: Fileshare.sessionId}),
             //`${calculateStringHashCode(deviceFpId)}`,
             applicationId
         );
