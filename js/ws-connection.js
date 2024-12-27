@@ -686,14 +686,8 @@ async function openWsConnection(deviceFpId) {
                     Fileshare.properties.setTransferGroupPassword(joinGroupResponse.pwd);
                 }
                 saveFileshareProperties(Fileshare.properties);
-                PushcaClient.changeClientObject(
-                    new ClientFilter(
-                        PushcaClient.ClientObj.workSpaceId,
-                        PushcaClient.ClientObj.accountId,
-                        PushcaClient.ClientObj.deviceId,
-                        Fileshare.properties.getTransferApplicationId()
-                    )
-                );
+
+                window.location.href = window.location.origin + window.location.pathname;
             }
         }
         //====================================================================
