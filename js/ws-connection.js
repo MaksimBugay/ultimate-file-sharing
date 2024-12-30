@@ -656,18 +656,46 @@ async function openWsConnection(deviceFpId) {
             //`${calculateStringHashCode(deviceFpId)}`,
             applicationId
         );
-        await PushcaClient.openWsConnection(
-            wsUrl,
-            pClient,
-            function (clientObj) {
-                return new ClientFilter(
-                    clientObj.workSpaceId,
-                    clientObj.accountId,
-                    clientObj.deviceId,
-                    clientObj.applicationId
+
+        const result = await CallableFuture.callAsynchronously(
+            10_000,
+            `${pClient.hashCode()}`,
+            function () {
+                PushcaClient.openWsConnection(
+                    wsUrl,
+                    pClient,
+                    function (clientObj) {
+                        const refreshedClientFilter = new ClientFilter(
+                            clientObj.workSpaceId,
+                            clientObj.accountId,
+                            clientObj.deviceId,
+                            clientObj.applicationId
+                        );
+                        CallableFuture.callAsynchronously(
+                            10_000,
+                            `${refreshedClientFilter.hashCode()}`,
+                            function () {
+                                console.log("Connection refresh was requested");
+                            }
+                        ).then(aResult => {
+                            if (WaiterResponseType.SUCCESS === aResult.type) {
+                                Fileshare.connectionAlias = aResult.body;
+                                console.log(`Connection alias = ${Fileshare.connectionAlias}`);
+                            } else {
+                                console.warn("Failed attempt to get connection alias");
+                            }
+                        });
+                        return refreshedClientFilter;
+                    }
                 );
             }
         );
+        if (WaiterResponseType.SUCCESS === result.type) {
+            Fileshare.connectionAlias = result.body;
+            console.log(`Connection alias = ${Fileshare.connectionAlias}`);
+        } else {
+            console.warn("Failed attempt to get connection alias");
+        }
         //====================================================================
         if (Fileshare.transferGroupHostValue) {
             const joinGroupResponse = await sendJoinTransferGroupRequest(
@@ -1188,6 +1216,9 @@ function releaseWakeLock() {
 }
 
 async function chunkEncryptionTest() {
+    //const geoData = await geoLookup('82.147.182.104');
+    //console.log(geoData);
+
     const str = "Hello world!";
     const testData = stringToArrayBuffer(str);
 

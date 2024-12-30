@@ -485,3 +485,32 @@ function printAllParents(el0, maxDeep) {
         elP = elP.parentElement;
     }
 }
+
+//===================================== Geo API lookup =================================================================
+async function geoLookup(ip) {
+    const url = "https://app.multiloginapp.com/resolve";
+    const payload = {
+        ip: ip
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Error querying the API:", error);
+        return null;
+    }
+}
+
+//======================================================================================================================

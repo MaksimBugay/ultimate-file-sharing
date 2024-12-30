@@ -32,7 +32,8 @@ const MessageType = Object.freeze({
     UPLOAD_BINARY_APPEAL: "UPLOAD_BINARY_APPEAL",
     BINARY_MANIFEST: "BINARY_MANIFEST",
     GATEWAY_REQUEST: "GATEWAY_REQUEST",
-    PRIVATE_URL_SUFFIX: "PRIVATE_URL_SUFFIX"
+    PRIVATE_URL_SUFFIX: "PRIVATE_URL_SUFFIX",
+    CONNECTION_ALIAS: "CONNECTION_ALIAS"
 });
 
 const ResourceType = Object.freeze({
@@ -561,6 +562,10 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
             if (typeof PushcaClient.onChannelMessageHandler === 'function') {
                 PushcaClient.onChannelMessageHandler(ChannelMessage.fromJSON(parts[2]));
             }
+            return;
+        }
+        if (parts[1] === MessageType.CONNECTION_ALIAS) {
+            CallableFuture.releaseWaiterIfExistsWithSuccess(parts[2], parts[3]);
             return;
         }
         if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
