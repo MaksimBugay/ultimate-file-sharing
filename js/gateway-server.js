@@ -51,7 +51,12 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
         let asyncOperation;
         if (geoInfo) {
             asyncOperation = function (waiterId) {
-                showJoinTransferGroupDialog(waiterId, request.deviceId, geoInfo.ip, geoInfo.countryName);
+                showJoinTransferGroupDialog(
+                    waiterId,
+                    request.deviceId,
+                    geoInfo.ip,
+                    getCountryWithFlagInnerHtml(geoInfo.countryCode, geoInfo.countryName)
+                );
             }
         } else {
             asyncOperation = function (waiterId) {

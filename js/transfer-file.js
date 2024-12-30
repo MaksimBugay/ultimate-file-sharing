@@ -69,10 +69,10 @@ joinTransferGroupDialog.addEventListener("click", (event) => {
     }
 });
 
-function showJoinTransferGroupDialog(waiterId, deviceId, ip, country) {
+function showJoinTransferGroupDialog(waiterId, deviceId, ip, countryInnerHtml) {
     jtgDeviceId.textContent = deviceId;
     jtgIP.textContent = ip;
-    jtgCountry.textContent = country;
+    jtgCountry.innerHTML = countryInnerHtml;
     const allowHandler = function () {
         CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
         cleanUp();
