@@ -487,8 +487,8 @@ function printAllParents(el0, maxDeep) {
 }
 
 //===================================== Geo API lookup =================================================================
-async function geoLookup(ip) {
-    const url = "https://app.multiloginapp.com/resolve";
+async function geoLookup(ip, clusterBaseUrl) {
+    const url = `${clusterBaseUrl}/binary/resolve-ip`;
     const payload = {
         ip: ip
     };

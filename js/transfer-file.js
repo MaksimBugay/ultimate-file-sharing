@@ -55,6 +55,7 @@ const allowJoinTransferGroupBtn = document.getElementById('allowJoinTransferGrou
 const denyJoinTransferGroupBtn = document.getElementById('denyJoinTransferGroupBtn');
 const jtgDeviceId = document.getElementById('jtgDeviceId');
 const jtgIP = document.getElementById('jtgIP');
+const jtgCountry = document.getElementById('jtgCountry');
 const acceptFileTransferBtn = document.getElementById("acceptFileTransferBtn");
 const denyFileTransferBtn = document.getElementById("denyFileTransferBtn");
 const ftrName = document.getElementById("ftrName");
@@ -68,9 +69,10 @@ joinTransferGroupDialog.addEventListener("click", (event) => {
     }
 });
 
-function showJoinTransferGroupDialog(waiterId, deviceId, ip) {
+function showJoinTransferGroupDialog(waiterId, deviceId, ip, country) {
     jtgDeviceId.textContent = deviceId;
     jtgIP.textContent = ip;
+    jtgCountry.textContent = country;
     const allowHandler = function () {
         CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
         cleanUp();

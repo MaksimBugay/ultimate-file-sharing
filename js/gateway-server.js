@@ -47,12 +47,21 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
             );
         }
 
+        const geoInfo = await geoLookup(header.ip, PushcaClient.clusterBaseUrl)
+        let asyncOperation;
+        if (geoInfo) {
+            asyncOperation = function (waiterId) {
+                showJoinTransferGroupDialog(waiterId, request.deviceId, geoInfo.ip, geoInfo.countryName);
+            }
+        } else {
+            asyncOperation = function (waiterId) {
+                showJoinTransferGroupDialog(waiterId, request.deviceId, header.ip, null);
+            }
+        }
         const result = await CallableFuture.callAsynchronously(
             27_000,
             null,
-            function (waiterId) {
-                showJoinTransferGroupDialog(waiterId, request.deviceId, header.ip);
-            }
+            asyncOperation
         )
 
         if (result && (WaiterResponseType.SUCCESS === result.type)) {

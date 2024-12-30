@@ -1216,8 +1216,8 @@ function releaseWakeLock() {
 }
 
 async function chunkEncryptionTest() {
-    //const geoData = await geoLookup('82.147.182.104');
-    //console.log(geoData);
+    const geoData = await geoLookup('82.147.182.104', PushcaClient.clusterBaseUrl);
+    console.log(geoData);
 
     const str = "Hello world!";
     const testData = stringToArrayBuffer(str);
