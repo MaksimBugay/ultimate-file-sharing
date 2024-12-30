@@ -513,11 +513,9 @@ async function geoLookup(ip, clusterBaseUrl) {
     }
 }
 
-`<img src="${flagUrl}" alt="Estonia Flag" />`
-
 function getCountryWithFlagInnerHtml(countryCode, countryName) {
     const flagUrl = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
-    return `<div style="display: flex"> <img src="${flagUrl}" alt="Estonia Flag" /> ${countryName}</div>`;
+    return `<div style="display: flex"> <img style="margin-right: 10px" src="${flagUrl}" alt="Estonia Flag" /> ${countryName}</div>`;
 }
 
 //======================================================================================================================
