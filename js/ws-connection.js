@@ -696,6 +696,10 @@ async function openWsConnection(deviceFpId) {
         } else {
             console.warn("Failed attempt to get connection alias");
         }
+        if (Fileshare.connectionAlias) {
+            const clientWithAlias = await PushcaClient.connectionAliasLookup(Fileshare.connectionAlias);
+            console.log(clientWithAlias);
+        }
         //====================================================================
         if (Fileshare.transferGroupHostValue) {
             const joinGroupResponse = await sendJoinTransferGroupRequest(
@@ -1216,9 +1220,6 @@ function releaseWakeLock() {
 }
 
 async function chunkEncryptionTest() {
-    const geoData = await geoLookup('82.147.182.104', PushcaClient.clusterBaseUrl);
-    console.log(geoData);
-
     const str = "Hello world!";
     const testData = stringToArrayBuffer(str);
 

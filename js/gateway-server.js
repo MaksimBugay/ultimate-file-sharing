@@ -2,7 +2,8 @@ const routs = new Map();
 
 const GatewayPath = Object.freeze({
     VERIFY_BINARY_SIGNATURE: "verify-binary-signature",
-    VERIFY_JOIN_TRANSFER_GROUP_REQUEST: "verify-join-transfer-group-request"
+    VERIFY_JOIN_TRANSFER_GROUP_REQUEST: "verify-join-transfer-group-request",
+    RESOLVE_IP_WITH_PROXY_CHECK: "RESOLVE_IP_WITH_PROXY_CHECK"
 });
 
 async function verifyJoinTransferGroupRequest(header, requestPayload) {
@@ -67,7 +68,7 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
             27_000,
             null,
             asyncOperation
-        )
+        );
 
         if (result && (WaiterResponseType.SUCCESS === result.type)) {
             if (result.body && Fileshare.properties.transferGroup && Fileshare.properties.transferGroupPassword) {

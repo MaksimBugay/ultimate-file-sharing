@@ -21,7 +21,8 @@ const Command = Object.freeze({
     SEND_DELETE_BINARY_APPEAL: "SEND_DELETE_BINARY_APPEAL",
     SEND_BINARY_MANIFEST: "SEND_BINARY_MANIFEST",
     SEND_GATEWAY_RESPONSE: "SEND_GATEWAY_RESPONSE",
-    SEND_GATEWAY_REQUEST: "SEND_GATEWAY_REQUEST"
+    SEND_GATEWAY_REQUEST: "SEND_GATEWAY_REQUEST",
+    CONNECTION_ALIAS_LOOKUP: "CONNECTION_ALIAS_LOOKUP"
 });
 
 const MessageType = Object.freeze({
@@ -77,6 +78,16 @@ class ClientFilter {
 
     equals(otherClientFilter) {
         return this.hashCode() === otherClientFilter.hashCode();
+    }
+
+    toJSON(findAny) {
+        return {
+            workSpaceId: this.workSpaceId,
+            accountId: this.accountId,
+            deviceId: this.deviceId,
+            applicationId: this.applicationId,
+            findAny: (!findAny) ? false : findAny
+        };
     }
 
     cloneWithoutDeviceId() {
@@ -408,6 +419,45 @@ class GatewayRequestHeader {
     }
 }
 
+class ClientWithAlias {
+    constructor(client, alias, ip, latitude, longitude, countryCode, countryName, city, proxyInfo) {
+        this.client = client;
+        this.alias = alias;
+        this.ip = ip;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.countryCode = countryCode;
+        this.countryName = countryName;
+        this.city = city;
+        this.proxyInfo = proxyInfo;
+    }
+
+    static fromObject(jsonObject) {
+        const client = new ClientFilter(
+            jsonObject.body.client.workSpaceId,
+            jsonObject.body.client.accountId,
+            jsonObject.body.client.deviceId,
+            jsonObject.body.client.applicationId
+        );
+
+        return new ClientWithAlias(
+            client,
+            jsonObject.body.alias,
+            jsonObject.body.ip,
+            jsonObject.body.latitude,
+            jsonObject.body.longitude,
+            jsonObject.body.countryCode,
+            jsonObject.body.countryName,
+            jsonObject.body.city,
+            jsonObject.body.proxyInfo
+        );
+    }
+
+    static fromJSON(jsonString) {
+        const jsonObject = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+        return this.fromObject(jsonObject);
+    }
+}
 
 let PushcaClient = {};
 PushcaClient.clusterBaseUrl = 'https://secure.fileshare.ovh'
@@ -1223,6 +1273,18 @@ PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuf
         console.log(`Failed cache in cloud  chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);
     }
     return result;
+}
+
+PushcaClient.connectionAliasLookup = async function (fragment) {
+    let metaData = {};
+    metaData["fragment"] = fragment;
+    let commandWithId = PushcaClient.buildCommandMessage(Command.CONNECTION_ALIAS_LOOKUP, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error("Failed connection alias lookup attempt: " + result.body);
+        return null;
+    }
+    return ClientWithAlias.fromJSON(result.body);
 }
 
 window.addEventListener('beforeunload', function () {
