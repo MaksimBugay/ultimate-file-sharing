@@ -392,10 +392,17 @@ class UploadBinaryAppeal {
 }
 
 class GatewayRequestHeader {
-    constructor(client, roles, ip) {
+    constructor(alias, client, roles, ip, latitude, longitude, countryCode, countryName, city, proxyInfo ) {
+        this.alias = alias;
         this.client = client;
         this.roles = roles ? roles : [];
         this.ip = ip;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.countryCode = countryCode;
+        this.countryName = countryName;
+        this.city = city;
+        this.proxyInfo = proxyInfo;
     }
 
     static fromObject(jsonObject) {
@@ -407,9 +414,16 @@ class GatewayRequestHeader {
         );
 
         return new GatewayRequestHeader(
+            jsonObject.alias,
             client,
             jsonObject.roles,
-            jsonObject.ip
+            jsonObject.ip,
+            jsonObject.latitude,
+            jsonObject.longitude,
+            jsonObject.countryCode,
+            jsonObject.countryName,
+            jsonObject.city,
+            jsonObject.proxyInfo
         );
     }
 

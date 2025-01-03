@@ -487,31 +487,6 @@ function printAllParents(el0, maxDeep) {
 }
 
 //===================================== Geo API lookup =================================================================
-async function geoLookup(ip, clusterBaseUrl) {
-    const url = `${clusterBaseUrl}/binary/resolve-ip`;
-    const payload = {
-        ip: ip
-    };
-
-    try {
-        const response = await fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error("Error querying the API:", error);
-        return null;
-    }
-}
 
 function getCountryWithFlagInnerHtml(countryCode, countryName) {
     const flagUrl = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
