@@ -883,7 +883,7 @@ PushcaClient.sendAcknowledge = function (id) {
 
 PushcaClient.sendGatewayRequest = async function (dest, path, requestPayload) {
     let metaData = {};
-    metaData['receiver'] = dest;
+    metaData['receiver'] = dest.toJSON(false);
     metaData['preserveOrder'] = false;
     metaData['path'] = path;
     metaData["payload"] = byteArrayToBase64(requestPayload);
@@ -946,7 +946,7 @@ PushcaClient.sendMessageWithAcknowledge = async function (id, dest, preserveOrde
     let metaData = {};
     metaData["id"] = id;
     metaData["client"] = dest;
-    metaData["sender"] = PushcaClient.client;
+    metaData["sender"] = PushcaClient.ClientObj;
     metaData["message"] = message;
     metaData["preserveOrder"] = preserveOrder;
 
