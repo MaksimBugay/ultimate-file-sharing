@@ -52,8 +52,7 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
             showJoinTransferGroupDialog(
                 waiterId,
                 request.deviceId,
-                header.ip,
-                header.countryCode ? getCountryWithFlagInnerHtml(header.countryCode, header.countryName) : null
+                header
             );
         };
         const result = await CallableFuture.callAsynchronously(

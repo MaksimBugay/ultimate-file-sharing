@@ -69,10 +69,11 @@ joinTransferGroupDialog.addEventListener("click", (event) => {
     }
 });
 
-function showJoinTransferGroupDialog(waiterId, deviceId, ip, countryInnerHtml) {
+function showJoinTransferGroupDialog(waiterId, deviceId, gatewayRequestHeader) {
     jtgDeviceId.textContent = deviceId;
-    jtgIP.textContent = ip;
-    jtgCountry.innerHTML = countryInnerHtml;
+    jtgIP.textContent = gatewayRequestHeader.ip;
+    jtgCountry.innerHTML = gatewayRequestHeader.countryCode ?
+        getCountryWithFlagInnerHtml(gatewayRequestHeader.countryCode, gatewayRequestHeader.countryName) : null;
     const allowHandler = function () {
         CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
         cleanUp();
