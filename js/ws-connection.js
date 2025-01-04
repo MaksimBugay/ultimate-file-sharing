@@ -70,6 +70,7 @@ const copyJoinTransferGroupLinkBtn = document.getElementById("copyJoinTransferGr
 const transferGroupName = document.getElementById("transferGroupName");
 const transferGroupPasswordInput = document.getElementById("transferGroupPasswordInput");
 const transferGroupNavBarItem = document.getElementById("transferGroupNavBarItem");
+const virtualHostNavBarItem = document.getElementById('virtualHostNavBarItem');
 const errorDialog = document.getElementById("errorDialog");
 const errorMsg = document.getElementById("errorMsg");
 const closeErrorBtn = document.getElementById("closeErrorBtn");
@@ -80,6 +81,32 @@ const showSharedContentManagerBtn = document.getElementById("showSharedContentMa
 const fileManagerContainer = document.getElementById("fileManagerContainer");
 const toolbarNavContainer = document.getElementById('toolbarNavContainer');
 const selectFileBtn = document.getElementById("selectFileBtn");
+
+const hostDetailsDialog = document.getElementById('hostDetailsDialog');
+const hdCloseBtn = document.getElementById('hdCloseBtn');
+const hdDeviceId = document.getElementById('hdDeviceId');
+const hdVirtualHostName = document.getElementById('hdVirtualHostName');
+const hdCity = document.getElementById('hdCity');
+const hdProxyInfo = document.getElementById('hdProxyInfo');
+const hdIP = document.getElementById('hdIP');
+const hdCountry = document.getElementById('hdCountry');
+
+hdCloseBtn.addEventListener('click', function () {
+    hostDetailsDialog.classList.remove('visible');
+});
+
+function showHostDetailsDialog(deviceId, connectionDetails) {
+    hdDeviceId.textContent = deviceId;
+    hdVirtualHostName.textContent = connectionDetails.alias;
+    hdIP.textContent = connectionDetails.ip;
+    hdCountry.innerHTML = connectionDetails.countryCode ?
+        getCountryWithFlagInnerHtml(connectionDetails.countryCode, connectionDetails.countryName) : null;
+    hdCity.textContent = connectionDetails.city;
+    hdProxyInfo.textContent = connectionDetails.proxyInfo ? connectionDetails.proxyInfo : '-';
+
+    hostDetailsDialog.classList.add('visible');
+}
+
 leaveTransferGroupBtn.disabled = true;
 copyJoinTransferGroupLinkBtn.disabled = true;
 Fileshare.afterErrorMsgClosedHandler = function () {
@@ -144,6 +171,13 @@ document.addEventListener('mousemove', (event) => {
 
 transferGroupNavBarItem.addEventListener('click', function () {
     openModal(ContentType.FILE_TRANSFER, true);
+});
+
+virtualHostNavBarItem.addEventListener('click', async function () {
+    if (Fileshare.connectionAlias) {
+        const clientWithAlias = await PushcaClient.connectionAliasLookup(Fileshare.connectionAlias);
+        showHostDetailsDialog(Fileshare.workSpaceId, clientWithAlias);
+    }
 });
 howToButton.addEventListener('click', function () {
     window.open('manual/secure-file-share-doc.html', '_blank');
@@ -482,7 +516,6 @@ getDeviceSecret().then((secret) => {
     FingerprintJS.load().then(fp => {
         fp.get().then(result => {
             openDataBase(result.visitorId, function () {
-                updateDeviceIdCaption(result.visitorId);
                 getFileshareProperties(function (fsProperties) {
                     Fileshare.properties = fsProperties;
                     openWsConnection(result.visitorId);
@@ -681,6 +714,7 @@ async function openWsConnection(deviceFpId) {
                             if (WaiterResponseType.SUCCESS === aResult.type) {
                                 Fileshare.connectionAlias = aResult.body;
                                 console.log(`Connection alias = ${Fileshare.connectionAlias}`);
+                                updateDeviceIdCaption(Fileshare.connectionAlias);
                             } else {
                                 console.warn("Failed attempt to get connection alias");
                             }
@@ -698,7 +732,8 @@ async function openWsConnection(deviceFpId) {
         }
         if (Fileshare.connectionAlias) {
             const clientWithAlias = await PushcaClient.connectionAliasLookup(Fileshare.connectionAlias);
-            console.log(clientWithAlias);
+            //showHostDetailsDialog(Fileshare.workSpaceId, clientWithAlias);
+            updateDeviceIdCaption(Fileshare.connectionAlias);
         }
         //====================================================================
         if (Fileshare.transferGroupHostValue) {

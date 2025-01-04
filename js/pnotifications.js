@@ -81,13 +81,22 @@ class ClientFilter {
     }
 
     toJSON(findAny) {
-        return {
-            workSpaceId: this.workSpaceId,
-            accountId: this.accountId,
-            deviceId: this.deviceId,
-            applicationId: this.applicationId,
-            findAny: (!findAny) ? false : findAny
-        };
+        if (findAny) {
+            return {
+                workSpaceId: this.workSpaceId,
+                accountId: this.accountId,
+                deviceId: this.deviceId,
+                applicationId: this.applicationId,
+                findAny: (findAny === true)
+            };
+        } else {
+            return {
+                workSpaceId: this.workSpaceId,
+                accountId: this.accountId,
+                deviceId: this.deviceId,
+                applicationId: this.applicationId,
+            };
+        }
     }
 
     cloneWithoutDeviceId() {
@@ -392,7 +401,7 @@ class UploadBinaryAppeal {
 }
 
 class GatewayRequestHeader {
-    constructor(alias, client, roles, ip, latitude, longitude, countryCode, countryName, city, proxyInfo ) {
+    constructor(alias, client, roles, ip, latitude, longitude, countryCode, countryName, city, proxyInfo) {
         this.alias = alias;
         this.client = client;
         this.roles = roles ? roles : [];

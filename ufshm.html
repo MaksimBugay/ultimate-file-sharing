@@ -130,12 +130,12 @@
             <fieldset class="file-share-fieldset">
                 <legend style="font-size: 20px" class="file-share-legend">Originator</legend>
                 <div class="frtItem">
-                    <p class="ftrCaption">Device ID: </p>
-                    <p id="jtgDeviceId" class="frtText"></p>
-                </div>
-                <div class="frtItem">
                     <p class="ftrCaption">Virtual host name: </p>
                     <p id="jtgVirtualHostName" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Device ID: </p>
+                    <p id="jtgDeviceId" class="frtText"></p>
                 </div>
                 <div class="frtItem">
                     <p class="ftrCaption">IP address: </p>
@@ -159,6 +159,43 @@
         <button id="denyJoinTransferGroupBtn">Deny</button>
     </div>
 </div>
+
+<div id="hostDetailsDialog" class="consent-dialog">
+    <div class="dialog-box">
+        <h2>Host details</h2>
+        <div style="justify-content: left; align-items: flex-start; text-align: left; margin-bottom: 15px; font-size: 16px;">
+            <fieldset class="file-share-fieldset">
+                <!--<legend style="font-size: 20px" class="file-share-legend"></legend>-->
+                <div class="frtItem" style="margin-top: 15px">
+                    <p class="ftrCaption">Virtual host name: </p>
+                    <p id="hdVirtualHostName" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Device ID: </p>
+                    <p id="hdDeviceId" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">IP address: </p>
+                    <p id="hdIP" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Country: </p>
+                    <p id="hdCountry" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">City: </p>
+                    <p id="hdCity" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Proxy details: </p>
+                    <p id="hdProxyInfo" class="frtText"></p>
+                </div>
+            </fieldset>
+        </div>
+        <button id="hdCloseBtn">Close</button>
+    </div>
+</div>
+
 
 <span id="channelIndicator" class="bauble"></span>
 <iframe src="html/header.html" width="100%" height="93px"
@@ -335,9 +372,9 @@
                     Open Shared content manager
                 </button>
             </li>
-            <li class="nav-item-group-info">
-                <a class="navbar-group-info non-link">
-                    Device ID:
+            <li class="nav-item-group-info" id="virtualHostNavBarItem" style="cursor: pointer">
+                <a class="navbar-group-info">
+                    Virtual Host:
                 </a>
             </li>
             <li class="nav-item">
