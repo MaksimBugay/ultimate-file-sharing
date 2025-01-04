@@ -54,6 +54,9 @@ const joinTransferGroupDialog = document.getElementById('joinTransferGroupDialog
 const allowJoinTransferGroupBtn = document.getElementById('allowJoinTransferGroupBtn');
 const denyJoinTransferGroupBtn = document.getElementById('denyJoinTransferGroupBtn');
 const jtgDeviceId = document.getElementById('jtgDeviceId');
+const jtgVirtualHostName = document.getElementById('jtgVirtualHostName');
+const jtgCity = document.getElementById('jtgCity');
+const jtgProxyInfo = document.getElementById('jtgProxyInfo');
 const jtgIP = document.getElementById('jtgIP');
 const jtgCountry = document.getElementById('jtgCountry');
 const acceptFileTransferBtn = document.getElementById("acceptFileTransferBtn");
@@ -71,9 +74,12 @@ joinTransferGroupDialog.addEventListener("click", (event) => {
 
 function showJoinTransferGroupDialog(waiterId, deviceId, gatewayRequestHeader) {
     jtgDeviceId.textContent = deviceId;
+    jtgVirtualHostName.textContent = gatewayRequestHeader.alias;
     jtgIP.textContent = gatewayRequestHeader.ip;
     jtgCountry.innerHTML = gatewayRequestHeader.countryCode ?
         getCountryWithFlagInnerHtml(gatewayRequestHeader.countryCode, gatewayRequestHeader.countryName) : null;
+    jtgCity.textContent = gatewayRequestHeader.city;
+    jtgProxyInfo.textContent = gatewayRequestHeader.proxyInfo ? gatewayRequestHeader.proxyInfo : '-';
     const allowHandler = function () {
         CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, true);
         cleanUp();
