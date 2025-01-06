@@ -104,7 +104,10 @@ function openModal(contentType, showForce = false) {
             }
         }
         if (showForce) {
+            setTransferTargetChoice('group');
             transferGroupCollapsibleDiv.classList.add('show');
+        } else {
+            setTransferTargetChoice('host');
         }
     }
 }
@@ -125,12 +128,16 @@ function selectFileIfEnterWasPressed(event) {
             event.stopPropagation();
             event.preventDefault();
         } else if (Fileshare.errorMessageWasJustRemoved || errorDialog.classList.contains('visible')) {
-            errorDialog.classList.remove('visible');
+            closeErrorDialog();
             Fileshare.errorMessageWasJustRemoved = false;
             event.stopPropagation();
             event.preventDefault();
         } else {
-            if (event.target.tagName === 'BUTTON' || event.target.tagName === 'DIV') {
+            if (event.target.tagName === 'BUTTON'
+                || event.target.tagName === 'DIV'
+                || event.target.id === 'virtualHost'
+                || isJoinTransferGroupDialogVisible()
+            ) {
                 return
             }
             fileInput.click();
@@ -479,13 +486,23 @@ async function addFileToRegistry(file) {
         return false;
     }
     if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
-        if (!Fileshare.properties.transferGroup) {
-            showErrorMsg('Transfer group is not defined', function () {
-                transferGroupName.focus();
-            });
-            return false;
+        if (TransferTargetType.HOST === getTransferTargetChoice()) {
+            if (!virtualHost.value) {
+                showErrorMsg("Receiver's virtual host was not provided", function () {
+                    virtualHost.focus();
+                });
+                return false;
+            }
+            return TransferFileHelper.transferFileToVirtualHost(file, virtualHost.value);
+        } else {
+            if (!Fileshare.properties.transferGroup) {
+                showErrorMsg('Transfer group is not defined', function () {
+                    transferGroupName.focus();
+                });
+                return false;
+            }
+            return TransferFileHelper.transferFile(file, transferGroupName.value, transferGroupPasswordInput.value);
         }
-        return TransferFileHelper.transferFile(file, transferGroupName.value, transferGroupPasswordInput.value);
     }
 
     hideSpinnerInButton();

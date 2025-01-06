@@ -192,17 +192,21 @@ document.addEventListener("keydown", function (event) {
         if (infoDialog.classList.contains('visible')) {
             infoDialog.classList.remove('visible');
         } else if (errorDialog.classList.contains('visible')) {
-            errorDialog.classList.remove('visible');
+            closeErrorDialog();
             Fileshare.errorMessageWasJustRemoved = true;
         }
     }
 });
 closeErrorBtn.addEventListener('click', function () {
+    closeErrorDialog();
+});
+
+function closeErrorDialog() {
     errorDialog.classList.remove('visible');
     if (typeof Fileshare.afterErrorMsgClosedHandler === 'function') {
         Fileshare.afterErrorMsgClosedHandler();
     }
-});
+}
 
 closeInfoBtn.addEventListener('click', function () {
     infoDialog.classList.remove('visible');

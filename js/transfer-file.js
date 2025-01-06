@@ -1,3 +1,8 @@
+const TransferTargetType = Object.freeze({
+    HOST: 'host',
+    GROUP: 'group'
+});
+
 class FileTransferManifest {
     constructor(id, name, type, size, originatorDeviceId) {
         this.id = id ? id : uuid.v4().toString();
@@ -65,6 +70,41 @@ const ftrName = document.getElementById("ftrName");
 const ftrType = document.getElementById("ftrType");
 const ftrSize = document.getElementById("ftrSize");
 const ftrOriginatorDeviceId = document.getElementById("ftrOriginatorDeviceId");
+const transReceiverContainer = document.getElementById('transReceiverContainer');
+const transGroupContainer = document.getElementById('transGroupContainer');
+const virtualHost = document.getElementById('virtualHost');
+const hostAsTransferTargetChoice = document.getElementById('hostAsTransferTargetChoice');
+const groupAsTransferTargetChoice = document.getElementById('groupAsTransferTargetChoice');
+
+document.querySelectorAll('input[name="transferTargetChoice"]').forEach((element) => {
+    element.addEventListener('change', function () {
+        virtualHost.value = null;
+        setTransferTargetChoice(this.value);
+    });
+});
+
+function setTransferTargetChoice(choiceName) {
+    if (choiceName === TransferTargetType.HOST) {
+        hostAsTransferTargetChoice.checked = true;
+        transReceiverContainer.style.display = 'block';
+        transGroupContainer.style.display = 'none';
+        virtualHost.focus();
+    } else if (choiceName === TransferTargetType.GROUP) {
+        groupAsTransferTargetChoice.checked = true;
+        transReceiverContainer.style.display = 'none';
+        transGroupContainer.style.display = 'block';
+    }
+}
+
+function getTransferTargetChoice() {
+    if (hostAsTransferTargetChoice.checked) {
+        return TransferTargetType.HOST;
+    } else if (groupAsTransferTargetChoice.checked) {
+        return TransferTargetType.GROUP;
+    } else {
+        return null;
+    }
+}
 
 joinTransferGroupDialog.addEventListener("click", (event) => {
     if (event.target === acceptFileTransferDialog) {
@@ -369,6 +409,11 @@ async function sendTransferManifest(ftManifest, transferGroup, transferGroupPass
         encryptionContract: encryptionData.encryptionContract,
         transferGroupId: transferGroupId
     }
+}
+
+TransferFileHelper.transferFileToVirtualHost = async function (file, alias) {
+    //TODO
+    return true;
 }
 
 TransferFileHelper.transferFile = async function transferFile(file, transferGroup, transferGroupPassword) {

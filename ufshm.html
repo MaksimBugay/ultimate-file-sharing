@@ -452,31 +452,55 @@
             </div>
             <div id="transferGroupContainer">
                 <div>
-                    <button class="btn btn-primary mb-3" type="button" data-toggle="collapse"
-                            data-target="#expandableDiv0">
-                        Transfer Group
-                    </button>
+                    <fieldset class="file-share-fieldset">
+                        <legend class="file-share-legend">Target</legend>
+                        <div id="selectTransferTargetContainer" style="margin-top: 10px;display: flex">
+                            <label>
+                                <input type="radio" name="transferTargetChoice" value="host" checked
+                                       id="hostAsTransferTargetChoice">
+                                Virtual host
+                            </label>
+                            <label style="margin-left: 10px">
+                                <input id="groupAsTransferTargetChoice" type="radio" name="transferTargetChoice" value="group">
+                                Transfer group
+                            </label>
+                        </div>
+                    </fieldset>
+                    <div id="transReceiverContainer">
+                        <fieldset class="file-share-fieldset">
+                            <legend class="file-share-legend">Receiver</legend>
+                            <input type="text" id="virtualHost" placeholder="Provide a virtual host name"/>
+                        </fieldset>
+                    </div>
 
-                    <div class="collapse" id="expandableDiv0">
-                        <div class="card card-body file-share-fieldset"
-                             style="margin-top: 0; background-color: transparent">
-                            <button id="generateStrongGroup" type="button" class="action-btn" style="margin-top: -5px">
-                                Generate secure values
-                            </button>
-                            <label for="transferGroupName" style="margin-bottom: 0;padding-bottom: 0">Name</label>
-                            <input type="text" id="transferGroupName"
-                                   placeholder="Provide a name of your transfer group"/>
-                            <br>
-                            <label for="transferGroupPasswordInput" style="margin-bottom: 0;padding-bottom: 0">Password
-                                (optional)</label>
-                            <input type="text" style="margin-bottom: 15px" id="transferGroupPasswordInput"
-                                   placeholder="Choose a strong password to protect your transfer"/>
-                            <div class="button-container">
-                                <button id="joinTransferGroupBtn" type="button" class="action-btn">Join</button>
-                                <button id="leaveTransferGroupBtn" type="button" class="action-btn">Leave</button>
-                                <button id="copyJoinTransferGroupLinkBtn" type="button" class="action-btn">Copy join
-                                    link
+                    <div id="transGroupContainer">
+                        <button class="btn btn-primary mb-3 margin-top15" type="button" data-toggle="collapse"
+                                data-target="#expandableDiv0">
+                            Transfer Group
+                        </button>
+
+                        <div class="collapse" id="expandableDiv0">
+                            <div class="card card-body file-share-fieldset"
+                                 style="margin-top: 0; background-color: transparent">
+                                <button id="generateStrongGroup" type="button" class="action-btn"
+                                        style="margin-top: -5px">
+                                    Generate secure values
                                 </button>
+                                <label for="transferGroupName" style="margin-bottom: 0;padding-bottom: 0">Name</label>
+                                <input type="text" id="transferGroupName"
+                                       placeholder="Provide a name of your transfer group"/>
+                                <br>
+                                <label for="transferGroupPasswordInput" style="margin-bottom: 0;padding-bottom: 0">Password
+                                    (optional)</label>
+                                <input type="text" style="margin-bottom: 15px" id="transferGroupPasswordInput"
+                                       placeholder="Choose a strong password to protect your transfer"/>
+                                <div class="button-container">
+                                    <button id="joinTransferGroupBtn" type="button" class="action-btn">Join</button>
+                                    <button id="leaveTransferGroupBtn" type="button" class="action-btn">Leave</button>
+                                    <button id="copyJoinTransferGroupLinkBtn" type="button" class="action-btn">Copy join
+                                        link
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

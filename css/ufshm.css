@@ -17,6 +17,10 @@ body {
     background-color: azure;*/
 }
 
+.margin-top15 {
+    margin-top: 15px;
+}
+
 .blue-right-half-transparent-div {
     width: 100%;
     background: rgba(135, 206, 235, 0.85);
