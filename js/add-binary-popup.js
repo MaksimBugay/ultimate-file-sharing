@@ -278,6 +278,7 @@ function closeModal() {
     fileInput.value = "";
     virtualHost.value = "";
     virtualHost.removeAttribute('readonly');
+    virtualHost.style.color = 'black';
     videoPlayer.style.height = '200px';
     document.removeEventListener("keydown", selectFileIfEnterWasPressed);
     document.removeEventListener("keydown", closeModalIfEscapeWasPressed);

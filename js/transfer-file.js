@@ -454,7 +454,7 @@ async function sendTransferManifest(ftManifest, transferGroup, transferGroupPass
 async function acquireTmpGroupHandshake(alias, binaryId) {
     const clientWithAlias = await PushcaClient.connectionAliasLookup(alias);
     if (!clientWithAlias) {
-        showErrorMsg("Unknown virtual host", null);
+        showErrorMsg("Unknown virtual host", closeModal);
         return null;
     }
 
@@ -464,7 +464,7 @@ async function acquireTmpGroupHandshake(alias, binaryId) {
     );
 
     if (!joinGroupResponse) {
-        showErrorMsg("Failed virtual host handshake", null);
+        showErrorMsg("Failed virtual host handshake", closeModal);
         return null;
     }
 
