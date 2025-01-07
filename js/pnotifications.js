@@ -1307,7 +1307,12 @@ PushcaClient.connectionAliasLookup = async function (fragment) {
         console.error("Failed connection alias lookup attempt: " + result.body);
         return null;
     }
-    return ClientWithAlias.fromJSON(result.body);
+    const jsonObject = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+    if (jsonObject.error) {
+        console.error("Failed connection alias lookup attempt: " + jsonObject.error);
+        return null;
+    }
+    return ClientWithAlias.fromObject(jsonObject);
 }
 
 window.addEventListener('beforeunload', function () {

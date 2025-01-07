@@ -7,23 +7,6 @@ const GatewayPath = Object.freeze({
 });
 
 async function verifyJoinTransferGroupRequest(header, requestPayload) {
-    let fpHash;
-    try {
-        const deviceInfo = JSON.parse(header.client.deviceId);
-        fpHash = deviceInfo.fp;
-        if (!fpHash) {
-            return null;
-        }
-    } catch (error) {
-        console.warn("Rejected join transfer group attempt: " + error);
-        return new WaiterResponse(
-            WaiterResponseType.SUCCESS,
-            stringToByteArray(
-                JSON.stringify({result: JoinTransferGroupResponse.ERROR})
-            )
-        );
-    }
-
     try {
         const requestJson = byteArrayToString(requestPayload);
         console.log(`Gateway request payload: JoinTransferGroupRequest`);
@@ -31,6 +14,35 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
         console.log(request);
         console.log(`Gateway request header`);
         console.log(header);
+
+        if (request.binaryId) {
+            const transferGroupPassword = generateStrongPassword(32);
+            const transferGroup = uuid.v4().toString();
+            const responseStr = JSON.stringify({
+                name: transferGroup,
+                pwd: transferGroupPassword
+            });
+
+            storeTmpTransferGroupForBinary(request.binaryId, transferGroup, transferGroupPassword);
+
+            const importedPublicKey = await importPublicKeyFromString(request.publicKeyStr);
+            const response = await encryptWithPublicKey(
+                importedPublicKey,
+                responseStr
+            );
+            return new WaiterResponse(
+                WaiterResponseType.SUCCESS,
+                stringToByteArray(
+                    JSON.stringify({result: response})
+                )
+            );
+        }
+
+        const deviceInfo = JSON.parse(header.client.deviceId);
+        if (!deviceInfo.fp) {
+            return null;
+        }
+        const fpHash = deviceInfo.fp;
 
         let response;
         if (Fileshare.sessionId !== request.sessionId) {

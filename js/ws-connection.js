@@ -626,52 +626,6 @@ async function buildSignatureHash(signature) {
     return await calculateSha256(stringToArrayBuffer(signature));
 }
 
-async function sendJoinTransferGroupRequest(transferGroupHost, sessionId, deviceFpId) {
-    const {publicKey, privateKey} = await generateRSAKeyPair();
-    const publicKeyString = await exportPublicKey(publicKey);
-
-    const joinTransferGroupRequest = new JoinTransferGroupRequest(
-        deviceFpId,
-        sessionId,
-        publicKeyString
-    );
-
-    const ownerFilter = new ClientFilter(
-        null,
-        transferGroupHost,
-        null,
-        null
-    );
-    const response = await PushcaClient.sendGatewayRequest(
-        ownerFilter,
-        GatewayPath.VERIFY_JOIN_TRANSFER_GROUP_REQUEST,
-        stringToByteArray(JSON.stringify(joinTransferGroupRequest))
-    );
-
-    if (!response) {
-        return null;
-    }
-
-    if ('error' === response) {
-        return null;
-    }
-
-    try {
-        const jsonResponseWrapper = JSON.parse(response);
-        const responseBytes = base64ToArrayBuffer(jsonResponseWrapper.body);
-        const responseStr = arrayBufferToString(responseBytes);
-        const jsonObject = JSON.parse(responseStr);
-        if ((JoinTransferGroupResponse.DENIED === jsonObject.result) || (JoinTransferGroupResponse.ERROR === jsonObject.result)) {
-            console.warn("Declined join transfer group attempt: " + jsonObject.result);
-            return null;
-        }
-        return JSON.parse(await decryptWithPrivateKey(privateKey, jsonObject.result));
-    } catch (err) {
-        console.warn("Failed join transfer group attempt: " + err);
-        return null;
-    }
-}
-
 async function openWsConnection(deviceFpId) {
     Fileshare.workSpaceId = deviceFpId;
     if (!PushcaClient.isOpen()) {
@@ -744,7 +698,8 @@ async function openWsConnection(deviceFpId) {
             const joinGroupResponse = await sendJoinTransferGroupRequest(
                 Fileshare.transferGroupHostValue,
                 Fileshare.transferGroupSessionValue,
-                deviceFpId
+                deviceFpId,
+                null
             );
             if (joinGroupResponse) {
                 if (!Fileshare.properties) {

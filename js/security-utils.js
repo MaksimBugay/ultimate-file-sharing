@@ -11,10 +11,20 @@ class CreatePrivateUrlSuffixRequest {
 }
 
 class JoinTransferGroupRequest {
-    constructor(deviceId, sessionId, publicKeyStr) {
+    constructor(deviceId, sessionId, publicKeyStr, binaryId) {
         this.deviceId = deviceId;
         this.sessionId = sessionId;
         this.publicKeyStr = publicKeyStr;
+        this.binaryId = binaryId;
+    }
+
+    cloneAndReplacePublicKey(publicKeyStr) {
+        return new JoinTransferGroupRequest(
+            this.deviceId,
+            this.sessionId,
+            publicKeyStr,
+            this.binaryId
+        );
     }
 
     static fromJsonString(jsonString) {
@@ -22,7 +32,8 @@ class JoinTransferGroupRequest {
         return new JoinTransferGroupRequest(
             jsonObject.deviceId,
             jsonObject.sessionId,
-            jsonObject.publicKeyStr
+            jsonObject.publicKeyStr,
+            jsonObject.binaryId
         );
     }
 }

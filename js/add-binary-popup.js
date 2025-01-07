@@ -455,10 +455,17 @@ async function processListOfFiles(files) {
         const zipBlob = await zip.generateAsync({type: "blob"});
         if (ContentType.FILE_TRANSFER === AddBinaryWidget.contentType) {
             hideSpinnerInButton();
-            await TransferFileHelper.transferBlob(
-                zipBlob, zipArchiveName, "application/zip",
-                transferGroupName.value, transferGroupPasswordInput.value
-            )
+            if (TransferTargetType.HOST === getTransferTargetChoice()) {
+                await TransferFileHelper.transferBlobToVirtualHost(
+                    zipBlob, zipArchiveName, "application/zip",
+                    virtualHost.value
+                );
+            } else {
+                await TransferFileHelper.transferBlob(
+                    zipBlob, zipArchiveName, "application/zip",
+                    transferGroupName.value, transferGroupPasswordInput.value
+                );
+            }
         } else {
             hideSpinnerInButton();
             await SaveInCloudHelper.cacheBlobInCloud(

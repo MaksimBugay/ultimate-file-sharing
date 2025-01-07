@@ -48,6 +48,7 @@ class FileTransferManifest {
 
 const TransferFileHelper = {}
 TransferFileHelper.registry = new Map();
+TransferFileHelper.tmpGroupRegistry = new Map();
 TransferFileHelper.blockSize = MemoryBlock.MB;
 TransferFileHelper.preparedFile = [];
 
@@ -75,6 +76,16 @@ const transGroupContainer = document.getElementById('transGroupContainer');
 const virtualHost = document.getElementById('virtualHost');
 const hostAsTransferTargetChoice = document.getElementById('hostAsTransferTargetChoice');
 const groupAsTransferTargetChoice = document.getElementById('groupAsTransferTargetChoice');
+
+function storeTmpTransferGroupForBinary(binaryId, groupName, groupPassword) {
+    TransferFileHelper.tmpGroupRegistry.set(
+        binaryId,
+        {
+            name: groupName,
+            pwd: groupPassword
+        }
+    );
+}
 
 document.querySelectorAll('input[name="transferTargetChoice"]').forEach((element) => {
     element.addEventListener('change', function () {
@@ -180,8 +191,18 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
             console.warn("Transfer group is not defined but transfer request was received");
             return;
         }
-        const transferGroupPassword = Fileshare.properties.transferGroupPassword;
-        const transferGroup = Fileshare.properties.transferGroup;
+        const binaryId = binaryWithHeader.binaryId;
+        let transferGroupPassword
+        let transferGroup
+        const tmpGroup = TransferFileHelper.tmpGroupRegistry.get(binaryId);
+        if (tmpGroup) {
+            transferGroupPassword = tmpGroup.pwd;
+            transferGroup = tmpGroup.name;
+            TransferFileHelper.tmpGroupRegistry.delete(binaryId);
+        } else {
+            transferGroupPassword = Fileshare.properties.transferGroupPassword;
+            transferGroup = Fileshare.properties.transferGroup;
+        }
         let encryptionContract;
         let manifest;
         try {
@@ -389,8 +410,8 @@ async function downloadBinaryStreamSilently(response, binaryFileName, contentLen
     downloadFile(blob, binaryFileName);
 }
 
-async function sendTransferManifest(ftManifest, transferGroup, transferGroupPassword) {
-    const transferGroupId = calculateStringHashCode(transferGroup);
+async function sendTransferManifest(ftManifest, transferGroup, transferGroupPassword, destHashCode = null) {
+    const transferGroupId = destHashCode ? destHashCode : calculateStringHashCode(transferGroup);
     const encryptionData = await encryptWithAES(ftManifest.toBinaryChunk());
     const transferableEncryptionContract = await encryptionData.encryptionContract.toTransferableString(
         transferGroupPassword ? transferGroupPassword : `TRANSFER_GROUP_${transferGroup}`,
@@ -411,19 +432,56 @@ async function sendTransferManifest(ftManifest, transferGroup, transferGroupPass
     }
 }
 
-TransferFileHelper.transferFileToVirtualHost = async function (file, alias) {
-    //TODO
-    return true;
+async function acquireTmpGroupHandshake(alias, binaryId) {
+    const clientWithAlias = await PushcaClient.connectionAliasLookup(alias);
+    if (!clientWithAlias) {
+        showErrorMsg("Unknown virtual host", null);
+        return null;
+    }
+
+    const joinGroupResponse = await sendJoinTransferGroupRequestToClient(
+        clientWithAlias.client,
+        new JoinTransferGroupRequest(null, null, null, binaryId)
+    );
+
+    if (!joinGroupResponse) {
+        showErrorMsg("Failed virtual host handshake", null);
+        return null;
+    }
+
+    return {
+        name: joinGroupResponse.name,
+        pwd: joinGroupResponse.pwd,
+        destHashCode: clientWithAlias.client.hashCode()
+    };
 }
 
-TransferFileHelper.transferFile = async function transferFile(file, transferGroup, transferGroupPassword) {
+TransferFileHelper.transferFileToVirtualHost = async function (file, alias) {
+    const binaryId = uuid.v4().toString();
+    const joinGroupResponse = await acquireTmpGroupHandshake(alias, binaryId);
+
+    if (!joinGroupResponse) {
+        return false;
+    }
+
+    return await TransferFileHelper.transferFile(
+        file,
+        joinGroupResponse.name,
+        joinGroupResponse.pwd,
+        binaryId,
+        joinGroupResponse.destHashCode
+    );
+}
+
+TransferFileHelper.transferFile = async function (file, transferGroup, transferGroupPassword, binaryId = null, destHashCode = null) {
     const ftManifest = new FileTransferManifest(
-        null, file.name, file.type, file.size, IndexDbDeviceId
+        binaryId, file.name, file.type, file.size, IndexDbDeviceId
     );
     const encAndSendResult = await sendTransferManifest(
         ftManifest,
         transferGroup,
-        transferGroupPassword
+        transferGroupPassword,
+        destHashCode
     );
     if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
         showErrorMsg("Failed file transfer attempt: all group members are unavailable. Open https://secure.fileshare.ovh on receiver's side and join the group", null);
@@ -443,14 +501,34 @@ TransferFileHelper.transferFile = async function transferFile(file, transferGrou
     }, "Failed file transfer attempt: all group members are unavailable. Open https://secure.fileshare.ovh on receiver's side and join the group");
 }
 
-TransferFileHelper.transferBlob = async function transferBlob(blob, name, type, transferGroup, transferGroupPassword) {
+TransferFileHelper.transferBlobToVirtualHost = async function (blob, name, type, alias) {
+    const binaryId = uuid.v4().toString();
+    const joinGroupResponse = await acquireTmpGroupHandshake(alias, binaryId);
+
+    if (!joinGroupResponse) {
+        return false;
+    }
+
+    return await TransferFileHelper.transferBlob(
+        blob, name, type,
+        joinGroupResponse.name,
+        joinGroupResponse.pwd,
+        binaryId,
+        joinGroupResponse.destHashCode
+    );
+}
+
+TransferFileHelper.transferBlob = async function (blob, name, type,
+                                                  transferGroup, transferGroupPassword,
+                                                  binaryId = null, destHashCode = null) {
     const ftManifest = new FileTransferManifest(
-        null, name, type, blob.size, IndexDbDeviceId
+        binaryId, name, type, blob.size, IndexDbDeviceId
     );
     const encAndSendResult = await sendTransferManifest(
         ftManifest,
         transferGroup,
-        transferGroupPassword
+        transferGroupPassword,
+        destHashCode
     );
     if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
         console.error(`Failed file transfer attempt: ${name}`);
@@ -563,3 +641,58 @@ async function encryptAndTransferBinaryChunk(binaryId, order, destHashCode, arra
         encArrayBuffer
     );
 }
+
+async function sendJoinTransferGroupRequestToClient(dest, joinTransferGroupRequest) {
+    const {publicKey, privateKey} = await generateRSAKeyPair();
+    const publicKeyString = await exportPublicKey(publicKey);
+
+    const request = joinTransferGroupRequest.cloneAndReplacePublicKey(publicKeyString);
+
+    const response = await PushcaClient.sendGatewayRequest(
+        dest,
+        GatewayPath.VERIFY_JOIN_TRANSFER_GROUP_REQUEST,
+        stringToByteArray(JSON.stringify(request))
+    );
+
+    if (!response) {
+        return null;
+    }
+
+    if ('error' === response) {
+        return null;
+    }
+
+    try {
+        const jsonResponseWrapper = JSON.parse(response);
+        const responseBytes = base64ToArrayBuffer(jsonResponseWrapper.body);
+        const responseStr = arrayBufferToString(responseBytes);
+        const jsonObject = JSON.parse(responseStr);
+        if ((JoinTransferGroupResponse.DENIED === jsonObject.result) || (JoinTransferGroupResponse.ERROR === jsonObject.result)) {
+            console.warn("Declined join transfer group attempt: " + jsonObject.result);
+            return null;
+        }
+        return JSON.parse(await decryptWithPrivateKey(privateKey, jsonObject.result));
+    } catch (err) {
+        console.warn("Failed join transfer group attempt: " + err);
+        return null;
+    }
+}
+
+async function sendJoinTransferGroupRequest(transferGroupHost, sessionId, deviceFpId, binaryId) {
+    const joinTransferGroupRequest = new JoinTransferGroupRequest(
+        deviceFpId,
+        sessionId,
+        null,
+        binaryId
+    );
+
+    const ownerFilter = new ClientFilter(
+        null,
+        transferGroupHost,
+        null,
+        null
+    );
+
+    return await sendJoinTransferGroupRequestToClient(ownerFilter, joinTransferGroupRequest);
+}
+
