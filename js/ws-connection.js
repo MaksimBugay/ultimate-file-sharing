@@ -209,10 +209,13 @@ function closeErrorDialog() {
 }
 
 closeInfoBtn.addEventListener('click', function () {
+    if (typeof Fileshare.closeQRCodeHandler === 'function') {
+        Fileshare.closeQRCodeHandler();
+    }
     infoDialog.classList.remove('visible');
 });
 
-function showInfoMsg(msg, url = null) {
+function showInfoMsg(msg, url = null, name = null) {
     infoMsg.textContent = msg;
     const qrCodeContainer = document.getElementById('qrcode');
     if (url && qrCodeContainer) {
@@ -226,6 +229,17 @@ function showInfoMsg(msg, url = null) {
             img.src = url;
             qrCodeContainer.appendChild(img);
         });
+        Fileshare.closeQRCodeHandler = function () {
+            if (isMobile()) {
+                showNativeShareDialog(name, url).then(ableToShow => {
+                    if (!ableToShow) {
+                        console.log('Cannot show native share dialog');
+                    }
+                });
+            }
+        }
+    } else {
+        Fileshare.closeQRCodeHandler = null;
     }
     infoDialog.classList.add('visible');
 }
@@ -406,7 +420,7 @@ function copyJoinGroupLink() {
     copyTextToClipboard(url);
     Fileshare.joinGroupLinkWasJustCopied = true;
     copyJoinTransferGroupLinkBtn.blur();
-    showInfoMsg("Join transfer group link was copied to clipboard (open it in browser on receiver side)", url);
+    showInfoMsg("Join transfer group link was copied to clipboard (open it in browser on receiver side)", url, Fileshare.properties.transferGroup);
 }
 
 function postJoinTransferGroupActions() {
@@ -1118,15 +1132,7 @@ function addManifestToManagerGrid(newManifest) {
         const rowNode = FileManager.gridApi.getRowNode(rowIndex);
         rowNode.setSelected(true, true);
         copyTextToClipboard(publicUr);
-        if (isMobile()) {
-            showNativeShareDialog(newManifest.name, publicUr).then(ableToShow => {
-                if (!ableToShow) {
-                    showInfoMsg(`Public url was copied to clipboard`, publicUr);
-                }
-            });
-        } else {
-            showInfoMsg(`Public url was copied to clipboard`, publicUr);
-        }
+        showInfoMsg(`Public url was copied to clipboard`, publicUr, newManifest.name);
     });
 }
 
@@ -1135,7 +1141,7 @@ async function showNativeShareDialog(vText, vUrl) {
         try {
             await navigator.share({
                 title: vText,
-                text: 'Public download link',
+                text: `Download link ${vText}`,
                 url: vUrl
             });
             return true;
