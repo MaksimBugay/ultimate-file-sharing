@@ -77,6 +77,25 @@ const virtualHost = document.getElementById('virtualHost');
 const hostAsTransferTargetChoice = document.getElementById('hostAsTransferTargetChoice');
 const groupAsTransferTargetChoice = document.getElementById('groupAsTransferTargetChoice');
 
+let isUpdatingProgrammatically = false;
+virtualHost.addEventListener('input', (event) => {
+    if (isUpdatingProgrammatically) {
+        return;
+    }
+
+    if (event.target.value.length > 3) {
+        PushcaClient.connectionAliasLookup(event.target.value).then(clientWithAlias => {
+            if (clientWithAlias) {
+                isUpdatingProgrammatically = true;
+                event.target.setAttribute('readonly', true);
+                event.target.style.color = 'green';
+                event.target.value = clientWithAlias.alias;
+                isUpdatingProgrammatically = false;
+            }
+        });
+    }
+});
+
 function storeTmpTransferGroupForBinary(binaryId, groupName, groupPassword) {
     TransferFileHelper.tmpGroupRegistry.set(
         binaryId,
