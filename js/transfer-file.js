@@ -206,10 +206,6 @@ denyFileTransferBtn.addEventListener('click', function () {
 
 TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
     if (binaryWithHeader.order === 0) {
-        if (!(Fileshare.properties && Fileshare.properties.transferGroup)) {
-            console.warn("Transfer group is not defined but transfer request was received");
-            return;
-        }
         const binaryId = binaryWithHeader.binaryId;
         let transferGroupPassword
         let transferGroup
@@ -219,6 +215,10 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
             transferGroup = tmpGroup.name;
             TransferFileHelper.tmpGroupRegistry.delete(binaryId);
         } else {
+            if (!(Fileshare.properties && Fileshare.properties.transferGroup)) {
+                console.warn("Transfer group is not defined but transfer request was received");
+                return;
+            }
             transferGroupPassword = Fileshare.properties.transferGroupPassword;
             transferGroup = Fileshare.properties.transferGroup;
         }
