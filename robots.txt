@@ -3,4 +3,5 @@ Disallow: /:31443/
 Disallow: /ufshm.html
 Disallow: /html/header.html
 Disallow: /html/footer.html
+Allow: /sitemap.xml
 Sitemap: https://secure.fileshare.ovh/sitemap.xml
