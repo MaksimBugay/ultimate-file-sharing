@@ -17,6 +17,15 @@ body {
     background-color: azure;*/
 }
 
+.link-like {
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.link-like:hover {
+    color: darkblue;
+}
+
 .margin-top15 {
     margin-top: 15px;
 }

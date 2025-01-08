@@ -4,12 +4,12 @@ const TransferTargetType = Object.freeze({
 });
 
 class FileTransferManifest {
-    constructor(id, name, type, size, originatorDeviceId) {
+    constructor(id, name, type, size, originatorVirtualHost) {
         this.id = id ? id : uuid.v4().toString();
         this.name = name;
         this.type = type;
         this.size = size;
-        this.originatorDeviceId = originatorDeviceId;
+        this.originatorVirtualHost = originatorVirtualHost;
     }
 
     toJSON() {
@@ -18,7 +18,7 @@ class FileTransferManifest {
             name: this.name,
             type: this.type,
             size: this.size,
-            originatorDeviceId: this.originatorDeviceId
+            originatorVirtualHost: this.originatorVirtualHost
         };
     }
 
@@ -32,7 +32,7 @@ class FileTransferManifest {
             jsonObject.name,
             jsonObject.type,
             jsonObject.size,
-            jsonObject.originatorDeviceId
+            jsonObject.originatorVirtualHost
         );
     }
 
@@ -70,7 +70,7 @@ const denyFileTransferBtn = document.getElementById("denyFileTransferBtn");
 const ftrName = document.getElementById("ftrName");
 const ftrType = document.getElementById("ftrType");
 const ftrSize = document.getElementById("ftrSize");
-const ftrOriginatorDeviceId = document.getElementById("ftrOriginatorDeviceId");
+const frOriginatorVirtualHost = document.getElementById("frOriginatorVirtualHost");
 const transReceiverContainer = document.getElementById('transReceiverContainer');
 const transGroupContainer = document.getElementById('transGroupContainer');
 const virtualHost = document.getElementById('virtualHost');
@@ -78,6 +78,15 @@ const hostAsTransferTargetChoice = document.getElementById('hostAsTransferTarget
 const groupAsTransferTargetChoice = document.getElementById('groupAsTransferTargetChoice');
 
 let isUpdatingProgrammatically = false;
+
+frOriginatorVirtualHost.addEventListener('click', function (event) {
+    const alias = event.target.textContent;
+    PushcaClient.connectionAliasLookup(alias).then(clientWithAlias => {
+        if (clientWithAlias) {
+            showHostDetailsDialog(Fileshare.workSpaceId, clientWithAlias);
+        }
+    });
+});
 virtualHost.addEventListener('input', (event) => {
     if (isUpdatingProgrammatically) {
         return;
@@ -297,7 +306,7 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         ftrName.textContent = manifest.name;
         ftrType.textContent = manifest.type;
         ftrSize.textContent = `${Math.round((manifest.size * 100) / MemoryBlock.MB) / 100}`;
-        ftrOriginatorDeviceId.textContent = manifest.originatorDeviceId;
+        frOriginatorVirtualHost.textContent = manifest.originatorVirtualHost;
         showAcceptFileTransferDialog();
     } else {
         const receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
@@ -494,7 +503,7 @@ TransferFileHelper.transferFileToVirtualHost = async function (file, alias) {
 
 TransferFileHelper.transferFile = async function (file, transferGroup, transferGroupPassword, binaryId = null, destHashCode = null) {
     const ftManifest = new FileTransferManifest(
-        binaryId, file.name, file.type, file.size, IndexDbDeviceId
+        binaryId, file.name, file.type, file.size, Fileshare.connectionAlias
     );
     const encAndSendResult = await sendTransferManifest(
         ftManifest,
@@ -541,7 +550,7 @@ TransferFileHelper.transferBlob = async function (blob, name, type,
                                                   transferGroup, transferGroupPassword,
                                                   binaryId = null, destHashCode = null) {
     const ftManifest = new FileTransferManifest(
-        binaryId, name, type, blob.size, IndexDbDeviceId
+        binaryId, name, type, blob.size, Fileshare.connectionAlias
     );
     const encAndSendResult = await sendTransferManifest(
         ftManifest,

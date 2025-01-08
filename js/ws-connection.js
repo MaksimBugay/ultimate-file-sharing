@@ -92,8 +92,16 @@ const hdIP = document.getElementById('hdIP');
 const hdCountry = document.getElementById('hdCountry');
 
 hdCloseBtn.addEventListener('click', function () {
-    hostDetailsDialog.classList.remove('visible');
+    hideHostDetailsDialog();
 });
+
+function isHostDetailsDialogVisible() {
+    return hostDetailsDialog.classList.contains('visible');
+}
+
+function hideHostDetailsDialog() {
+    hostDetailsDialog.classList.remove('visible');
+}
 
 function showHostDetailsDialog(deviceId, connectionDetails) {
     hdDeviceId.textContent = deviceId;
@@ -194,6 +202,8 @@ document.addEventListener("keydown", function (event) {
         } else if (errorDialog.classList.contains('visible')) {
             closeErrorDialog();
             Fileshare.errorMessageWasJustRemoved = true;
+        } else if (isHostDetailsDialogVisible()) {
+            hideHostDetailsDialog();
         }
     }
 });
