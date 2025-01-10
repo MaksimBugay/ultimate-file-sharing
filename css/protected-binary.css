@@ -173,6 +173,7 @@ input[type="text"] {
     max-height: 80dvh;
     min-height: 300px;
     margin: 0;
+    overflow-y: auto;
 }
 
 .read-me-text-memo {
