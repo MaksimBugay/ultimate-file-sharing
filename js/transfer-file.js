@@ -93,7 +93,7 @@ virtualHost.addEventListener('click', function () {
     if (value && virtualHost.readOnly) {
         PushcaClient.connectionAliasLookup(value).then(clientWithAlias => {
             if (clientWithAlias) {
-                showHostDetailsDialog(Fileshare.workSpaceId, clientWithAlias);
+                showHostDetailsDialog(null, clientWithAlias);
             }
         });
     }

@@ -104,7 +104,7 @@ function hideHostDetailsDialog() {
 }
 
 function showHostDetailsDialog(deviceId, connectionDetails) {
-    hdDeviceId.textContent = deviceId;
+    hdDeviceId.textContent = deviceId ? deviceId : '-';
     hdVirtualHostName.textContent = connectionDetails.alias;
     hdIP.textContent = connectionDetails.ip;
     hdCountry.innerHTML = connectionDetails.countryCode ?
