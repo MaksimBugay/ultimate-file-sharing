@@ -226,7 +226,7 @@ saveTextMessageBtn.addEventListener('click', async function () {
     if (isEmpty(text)) {
         return;
     }
-    text = text.substring(0, 5000);
+    text = text.replace(/<button aria-label="Copy" class="flex gap-1 items-center select-none py-1">.*?Copy code<\/button>/gs, '\n');
     let textBlob = new Blob([text], {type: 'text/plain'});
     await SaveInCloudHelper.cacheBlobInCloud(
         name,
