@@ -17,6 +17,15 @@ body {
     background-color: azure;*/
 }
 
+.embedded-link {
+    color: green; /* Hyperlink color */
+    text-decoration: underline; /* Underline text */
+    cursor: pointer; /* Pointer cursor */
+    border: none; /* Remove input border */
+    outline: none; /* Remove focus outline */
+    background-color: transparent; /* Transparent background */
+}
+
 .link-like {
     color: blue;
     text-decoration: underline;

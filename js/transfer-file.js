@@ -87,6 +87,17 @@ frOriginatorVirtualHost.addEventListener('click', function (event) {
         }
     });
 });
+
+virtualHost.addEventListener('click', function () {
+    const value = this.value.trim();
+    if (value && virtualHost.readOnly) {
+        PushcaClient.connectionAliasLookup(value).then(clientWithAlias => {
+            if (clientWithAlias) {
+                showHostDetailsDialog(Fileshare.workSpaceId, clientWithAlias);
+            }
+        });
+    }
+});
 virtualHost.addEventListener('input', (event) => {
     if (isUpdatingProgrammatically) {
         return;
@@ -97,7 +108,7 @@ virtualHost.addEventListener('input', (event) => {
             if (clientWithAlias) {
                 isUpdatingProgrammatically = true;
                 event.target.setAttribute('readonly', true);
-                event.target.style.color = 'green';
+                event.target.classList.add('embedded-link');
                 event.target.value = clientWithAlias.alias;
                 isUpdatingProgrammatically = false;
             }
