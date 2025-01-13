@@ -36,6 +36,8 @@ h1 {
     height: auto;
     max-width: 90vw;
     max-width: 90dvw;
+    max-height: 90vh;
+    max-height: 90dvh;
     margin: 0 0 0 0;
     padding: 5px;
     border-radius: 8px;
