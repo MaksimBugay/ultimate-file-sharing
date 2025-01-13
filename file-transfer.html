@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="canonical" href="https://secure.fileshare.ovh/file-transfer.html"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ultimate file transfer</title>
+    <link rel="stylesheet" href="css/file-transfer.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Ultimate file transfer">
+    <meta property="og:description" content="Simple file transfer with Zero trust ulinate security">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Ultimate file transfer">
+    <meta name="twitter:description" content="Simple file transfer with Zero trust ulinate security">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+</head>
+<body style="background-color: #006BFD;padding: 0;margin: 0;">
+<iframe src="html/header.html" width="100%" height="93px"
+        style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
+<h1>
+    Please open <a href="https://secure.fileshare.ovh/" target="_blank">OUR SITE</a> on receiver's devices and use assigned virtual host as a destination
+</h1>
+<div class="main-container">
+
+    <div id="mainFlowContainer" class="main-flow-container">
+        <div class="device-container">
+            <div class="device-caption">FROM (your assigned virtual host name)</div>
+            <label for="ownerVirtualHost"></label>
+            <input class="fancy-input" type="text" readonly id="ownerVirtualHost" placeholder=""/>
+
+            <div id="progressBarContainer" style="display: none; width: 100%">
+                <progress id="uploadProgress" value="0" max="100" style="width: 100%"></progress>
+                <span id="uploadProgressPercentage">0%</span>
+            </div>
+
+            <img id="deviceFromImage" class="device-image" src="images/device1.png"
+                 alt="Device From">
+
+            <button id="selectFilesBtn" class="fancy-button select-files-button">Select files</button>
+        </div>
+
+        <button id="fileTransferBtn" class="fancy-button" onclick="alert('Button Clicked!')">TRANSFER</button>
+
+        <div class="device-container">
+            <div class="device-caption">TO (receiver virtual host name)</div>
+            <label for="receiverVirtualHost"></label>
+            <input class="fancy-input" type="text" id="receiverVirtualHost" placeholder="Start typing receiver virtual host name"/>
+
+            <img id="deviceToImage" class="device-image" src="images/device2.png"
+                 alt="Device To">
+
+            <div id="dropZone" class="drop-zone multi-line-text">
+                Drag and Drop your files here or press Ctrl + V to paste from buffer
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+<script src="js/fp.min.js"></script>
+<script src="js/detect.min.js"></script>
+<script src="js/client.min.js"></script>
+<script src="js/uuid.min.js"></script>
+
+<script src="js/device-secret.js?v=<?= time(); ?>"></script>
+<script src="js/common-utils.js?v=<?= time(); ?>"></script>
+<script src="js/callable-future.js?v=<?= time(); ?>"></script>
+<script src="js/pnotifications.js?v=<?= time(); ?>"></script>
+<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
+<script src="js/security-utils.js?v=<?= time(); ?>"></script>
+<script src="js/gateway-server.js?v=<?= time(); ?>"></script>
+<script src="js/transfer-file.js?v=<?= time(); ?>"></script>
+<script src="js/transfer-site.js?v=<?= time(); ?>"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-W6XK68E4CF');
+</script>
+</html>

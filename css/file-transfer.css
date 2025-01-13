@@ -1,0 +1,169 @@
+
+h1 {
+    font-size: 2rem;
+    font-weight: bold;
+    background: linear-gradient(90deg, gold, coral 90%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /*text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); */
+    font-family: 'Roboto', sans-serif;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1rem; /* Mobile */
+    }
+}
+
+.main-container {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    width: 100%;
+    height: calc(100vh - 220px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('../images/protected-binary.png');
+    background-size: 100% 100%; /* Make the background cover the entire page */
+    background-repeat: no-repeat; /* Prevent the image from repeating */
+    background-position: center center; /* Center the background image */
+}
+
+.main-flow-container {
+    width: auto;
+    height: auto;
+    max-width: 90vw;
+    max-width: 90dvw;
+    margin: 0 0 0 0;
+    padding: 5px;
+    border-radius: 8px;
+    background-color: transparent;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    overflow-y: auto;
+}
+
+.device-container {
+    width: fit-content;
+    height: fit-content;
+    max-width: 300px;
+    margin: 0 0 0 0;
+    padding: 5px 5px 5px 5px;
+    border-radius: 8px;
+    background-color: aliceblue;
+    font-size: 10px;
+    font-weight: bold;
+    color: #006BFD;
+}
+
+.device-caption {
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+}
+
+.device-image {
+    max-width: 285px;
+    padding: 0;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.fancy-input {
+    width: 80%;
+    max-width: 280px;
+    padding: 5px;
+    font-size: 16px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    color: #333;
+}
+
+.fancy-input:focus {
+    border-color: #007bff; /* Highlight border on focus */
+    box-shadow: 0 6px 10px rgba(0, 123, 255, 0.2);
+}
+
+.fancy-input::placeholder {
+    color: #aaa; /* Placeholder color */
+    font-style: italic; /* Placeholder font style */
+}
+
+.fancy-input:hover {
+    border-color: #666; /* Slight hover effect */
+}
+
+.fancy-button {
+    display: block;
+    width: 130px;
+    height: 130px;
+    background: url('/images/arrow-down-icon-png.png') no-repeat center center;
+    background-size: contain;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    margin: 20px;
+}
+
+.fancy-button:hover {
+    transform: scale(1.1); /* Slight zoom-in effect on hover */
+    box-shadow: 0 6px 10px rgba(0, 123, 255, 0.4);
+}
+
+.fancy-button:active {
+    transform: scale(0.95); /* Slight zoom-out effect on click */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.select-files-button {
+    width: 150px;
+    height: 150px;
+    background: url('/images/open-file-main.png') no-repeat center center;
+    background-size: contain;
+    left: 10px;
+    top: 10px;
+    position: absolute;
+    display: none;
+    z-index: 1000;
+}
+
+.drop-zone {
+    min-width: 150px;
+    min-height: 75px;
+    border: 2px dashed gray;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center; /* Horizontally center */
+    align-items: center; /* Vertically center */
+    text-align: center; /* Ensure text is centered within the block */
+    font-weight: bold;
+    font-size: 1rem;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box; /* Ensure padding doesn't exceed container size */
+
+    /*color: mediumspringgreen;*/
+    color: #007bff;
+    background-color: rgba(135, 206, 235, 0.1);
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.8);
+    transition: box-shadow 0.3s;
+    position: absolute;
+    z-index: 1000;
+}
+
+.multi-line-text {
+    white-space: normal; /* Ensures text wraps to the next line */
+    overflow-wrap: break-word; /* Allows long words to break and wrap */
+    word-break: break-word; /* Optional: breaks long words */
+}
