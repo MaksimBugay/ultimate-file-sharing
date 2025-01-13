@@ -48,6 +48,12 @@ h1 {
     overflow-y: auto;
 }
 
+@media (max-width: 768px) { /* Adjust breakpoint as needed */
+    .main-flow-container {
+        flex-direction: column; /* Change direction for mobile devices */
+    }
+}
+
 .device-container {
     width: fit-content;
     height: fit-content;
