@@ -177,7 +177,7 @@ h1 {
 }
 
 .embedded-link {
-    color: green; /* Hyperlink color */
+    color: darkblue; /* Hyperlink color */
     text-decoration: underline; /* Underline text */
     cursor: pointer; /* Pointer cursor */
     border: none; /* Remove input border */

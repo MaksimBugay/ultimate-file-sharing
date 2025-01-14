@@ -1,6 +1,13 @@
 const FileTransfer = {};
 FileTransfer.applicationId = 'DIRECT_TRANSFER';
 FileTransfer.wsUrl = 'wss://secure.fileshare.ovh:31085';
+FileTransfer.pingIntervalId = window.setInterval(function () {
+    PushcaClient.sendPing();
+}, 10000);
+
+window.addEventListener("beforeunload", function () {
+    clearInterval(pingIntervalId);
+});
 
 const selectFilesBtn = document.getElementById('selectFilesBtn');
 const ownerVirtualHost = document.getElementById('ownerVirtualHost');
