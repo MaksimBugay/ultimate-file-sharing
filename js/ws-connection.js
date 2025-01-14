@@ -686,20 +686,22 @@ async function openWsConnection(deviceFpId) {
                             clientObj.deviceId,
                             clientObj.applicationId
                         );
-                        CallableFuture.callAsynchronously(
-                            10_000,
-                            `${refreshedClientFilter.hashCode()}`,
-                            function () {
-                                console.log("Connection refresh was requested");
-                            }
-                        ).then(aResult => {
-                            if (WaiterResponseType.SUCCESS === aResult.type) {
-                                Fileshare.connectionAlias = aResult.body;
-                                console.log(`Connection alias = ${Fileshare.connectionAlias}`);
-                                updateDeviceIdCaption(Fileshare.connectionAlias);
-                            } else {
-                                console.warn("Failed attempt to get connection alias");
-                            }
+                        delay(100).then(() => {
+                            CallableFuture.callAsynchronously(
+                                4_000,
+                                `${refreshedClientFilter.hashCode()}`,
+                                function () {
+                                    console.log("Connection refresh was requested");
+                                }
+                            ).then(aResult => {
+                                if (WaiterResponseType.SUCCESS === aResult.type) {
+                                    Fileshare.connectionAlias = aResult.body;
+                                    console.log(`Connection alias = ${Fileshare.connectionAlias}`);
+                                    updateDeviceIdCaption(Fileshare.connectionAlias);
+                                } else {
+                                    console.warn("Failed attempt to get connection alias");
+                                }
+                            });
                         });
                         return refreshedClientFilter;
                     }

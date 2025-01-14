@@ -778,9 +778,13 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
     PushcaClient.serverBaseUrl = baseUrl;
     PushcaClient.ClientObj = clientObj;
 
+    if (!withoutRefresh) {
+        initConnectionRecoveryInterval(baseUrl, clientObjRefresher);
+    }
     let result = await getAuthorizedWsUrl(baseUrl, clientObj);
     if (WaiterResponseType.ERROR === result.type) {
-        console.error(`cannot open authorized ws connection: url ${PushcaClient.wsUrl}, caused by ${result.body}`);
+        console.error(`cannot open authorized ws connection: url ${PushcaClient.wsUrl}, caused by`);
+        console.log(result.body);
         return;
     }
     if (!result.body) {
@@ -789,7 +793,7 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
     }
     PushcaClient.wsUrl = result.body;
 
-    result = await CallableFuture.callAsynchronously(3000, null, function (waiterId) {
+    return await CallableFuture.callAsynchronously(3000, null, function (waiterId) {
         PushcaClient.openWebSocket(
             function () {
                 CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, window.WebSocket.OPEN);
@@ -802,9 +806,9 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
             }
         );
     });
-    if (withoutRefresh) {
-        return result;
-    }
+}
+
+function initConnectionRecoveryInterval(baseUrl, clientObjRefresher) {
     cleanRefreshBrokenConnectionInterval();
     delay(5000).then(() => {
         PushcaClient.refreshBrokenConnectionIntervalId = window.setInterval(function () {
@@ -844,7 +848,6 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
             }
         }, 5000);
     });
-    return result;
 }
 
 function refreshClientObj(clientObj) {

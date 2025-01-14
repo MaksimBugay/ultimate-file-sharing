@@ -175,3 +175,12 @@ h1 {
     overflow-wrap: break-word; /* Allows long words to break and wrap */
     word-break: break-word; /* Optional: breaks long words */
 }
+
+.embedded-link {
+    color: green; /* Hyperlink color */
+    text-decoration: underline; /* Underline text */
+    cursor: pointer; /* Pointer cursor */
+    border: none; /* Remove input border */
+    outline: none; /* Remove focus outline */
+    background-color: transparent; /* Transparent background */
+}
