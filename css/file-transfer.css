@@ -183,4 +183,37 @@ h1 {
     border: none; /* Remove input border */
     outline: none; /* Remove focus outline */
     background-color: transparent; /* Transparent background */
+    text-align: center;
+}
+
+.green-text {
+    color: #4CAF50;
+}
+
+.file-share-fieldset {
+    margin-top: 25px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-bottom: 20px;
+    border: 1px solid darkblue; /* Noticeable blue border */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Light shadow for depth */
+}
+
+.frtItem {
+    display: flex;
+    width: 100%;
+}
+
+.frtText {
+    white-space: normal; /* Ensures text wraps to the next line */
+    overflow-wrap: break-word; /* Allows long words to break and wrap */
+    word-break: break-word; /* Optional: breaks long words */
+}
+
+.ftrCaption {
+    margin-right: 10px;
+    width: 150px;
+    font-weight: bold;
+    color: darkblue;
 }

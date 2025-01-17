@@ -45,7 +45,7 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blo
                         return;
                     }
                 }
-            });
+            }, Fileshare);
             chunks.length = 0;
             return !pipeWasBroken;
         },

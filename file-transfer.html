@@ -5,6 +5,7 @@
     <link rel="canonical" href="https://secure.fileshare.ovh/file-transfer.html"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ultimate file transfer</title>
+    <link rel="stylesheet" href="css/consent-dialog.css">
     <link rel="stylesheet" href="css/file-transfer.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
@@ -27,8 +28,59 @@
 <iframe src="html/header.html" width="100%" height="93px"
         style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
 <h1>
-    Please open <a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">OUR SITE</a> on receiver's device and use virtual host name assigned to receiver as a destination
+    Please open <a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">OUR SITE</a> on receiver's
+    device and use virtual host name assigned to receiver as a destination
 </h1>
+
+<div id="errorDialog" class="consent-dialog">
+    <div class="error-content">
+        <div class="error-caption">
+            <h2>Error</h2>
+            <div class="close-btn-container">
+                <span id="closeErrorBtn" class="close-btn">&times;</span>
+            </div>
+        </div>
+        <p id="errorMsg" class="message-text"></p>
+    </div>
+</div>
+
+<div id="hostDetailsDialog" class="consent-dialog">
+    <div class="dialog-box">
+        <h2>Host details</h2>
+        <div style="justify-content: left; align-items: flex-start; text-align: left; margin-bottom: 15px; font-size: 16px;">
+            <fieldset class="file-share-fieldset">
+                <!--<legend style="font-size: 20px" class="file-share-legend"></legend>-->
+                <div class="frtItem" style="margin-top: 15px">
+                    <p class="ftrCaption">Virtual host name: </p>
+                    <p id="hdVirtualHostName" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Device ID: </p>
+                    <p id="hdDeviceId" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">IP address: </p>
+                    <p id="hdIP" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Country: </p>
+                    <p id="hdCountry" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">City: </p>
+                    <p id="hdCity" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Proxy details: </p>
+                    <p id="hdProxyInfo" class="frtText"></p>
+                </div>
+            </fieldset>
+        </div>
+        <button id="hdCloseBtn">Close</button>
+    </div>
+</div>
+
+
 <div class="main-container">
 
     <div id="mainFlowContainer" class="main-flow-container">
@@ -46,6 +98,8 @@
                  alt="Device From">
 
             <button id="selectFilesBtn" class="fancy-button select-files-button">Select files</button>
+
+            <input type="file" id="fileInput" style="display:none" multiple>
         </div>
 
         <button id="fileTransferBtn" class="fancy-button" onclick="alert('Button Clicked!')">TRANSFER</button>
@@ -53,7 +107,8 @@
         <div class="device-container">
             <div class="device-caption">TO (receiver virtual host name)</div>
             <label for="receiverVirtualHost"></label>
-            <input class="fancy-input" type="text" id="receiverVirtualHost" placeholder="Start typing receiver virtual host name"/>
+            <input class="fancy-input" type="text" id="receiverVirtualHost"
+                   placeholder="Start typing receiver virtual host name"/>
 
             <img id="deviceToImage" class="device-image" src="images/device2.png"
                  alt="Device To">
@@ -78,7 +133,7 @@
 <script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
 <script src="js/security-utils.js?v=<?= time(); ?>"></script>
 <script src="js/gateway-server.js?v=<?= time(); ?>"></script>
-<!--<script src="js/transfer-file.js?v=<?= time(); ?>"></script>-->
+<script src="js/transfer-commons.js?v=<?= time(); ?>"></script>
 <script src="js/transfer-site.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>

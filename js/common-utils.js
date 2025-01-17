@@ -6,6 +6,23 @@ const MemoryBlock = Object.freeze({
     GB: 1024 * 1024 * 1024
 });
 
+class ProgressBarWidget {
+    constructor(pbContainer, pbProgress, pbProgressPercentage) {
+        this.pbContainer = pbContainer;
+        this.pbProgress = pbProgress;
+        this.pbProgressPercentage = pbProgressPercentage;
+    }
+
+    reset() {
+        this.setProgress(0);
+    }
+
+    setProgress(progress) {
+        this.pbProgress.value = progress;
+        this.pbProgressPercentage.textContent = `${progress}%`;
+    }
+}
+
 function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
@@ -491,6 +508,38 @@ function printAllParents(el0, maxDeep) {
 function getCountryWithFlagInnerHtml(countryCode, countryName) {
     const flagUrl = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
     return `<div style="display: flex"> <img style="margin-right: 10px; border: 1px solid black;" src="${flagUrl}" alt="Estonia Flag" /> ${countryName}</div>`;
+}
+
+//======================================================================================================================
+
+//=================================prevent screen lock on mobile========================================================
+async function requestWakeLock(propertiesHolder) {
+    if (!isMobile()) {
+        return;
+    }
+    try {
+        propertiesHolder.wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Wake lock is active.');
+
+        // Listen for the wake lock release event
+        propertiesHolder.wakeLock.addEventListener('release', () => {
+            console.log('Wake lock was released.');
+        });
+    } catch (err) {
+        console.error(`Failed to request wake lock: ${err.message}`);
+    }
+}
+
+function releaseWakeLock(propertiesHolder) {
+    if (!isMobile()) {
+        return;
+    }
+    if (propertiesHolder.wakeLock !== null) {
+        propertiesHolder.wakeLock.release().then(() => {
+            propertiesHolder.wakeLock = null;
+            console.log('Wake lock has been released.');
+        });
+    }
 }
 
 //======================================================================================================================

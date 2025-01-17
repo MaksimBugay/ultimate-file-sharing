@@ -1201,36 +1201,6 @@ function removeFastToolBar(button) {
     removeParentDiv(button.parentElement.parentElement.parentElement);
 }
 
-//prevent screen lock on mobile
-async function requestWakeLock() {
-    if (!isMobile()) {
-        return;
-    }
-    try {
-        Fileshare.wakeLock = await navigator.wakeLock.request('screen');
-        console.log('Wake lock is active.');
-
-        // Listen for the wake lock release event
-        Fileshare.wakeLock.addEventListener('release', () => {
-            console.log('Wake lock was released.');
-        });
-    } catch (err) {
-        console.error(`Failed to request wake lock: ${err.message}`);
-    }
-}
-
-function releaseWakeLock() {
-    if (!isMobile()) {
-        return;
-    }
-    if (Fileshare.wakeLock !== null) {
-        Fileshare.wakeLock.release().then(() => {
-            Fileshare.wakeLock = null;
-            console.log('Wake lock has been released.');
-        });
-    }
-}
-
 async function chunkEncryptionTest() {
     const str = "Hello world!";
     const testData = stringToArrayBuffer(str);
