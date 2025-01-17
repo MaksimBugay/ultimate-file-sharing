@@ -91,6 +91,11 @@ const hdProxyInfo = document.getElementById('hdProxyInfo');
 const hdIP = document.getElementById('hdIP');
 const hdCountry = document.getElementById('hdCountry');
 
+Fileshare.progressBarWidget = new ProgressBarWidget(
+    mmProgressBarContainer,
+    mmDownloadProgress,
+    mmProgressPercentage
+);
 hdCloseBtn.addEventListener('click', function () {
     hideHostDetailsDialog();
 });

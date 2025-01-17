@@ -38,11 +38,6 @@ const textMessageContainer = document.getElementById("textMessageContainer");
 const textMessageMemo = document.getElementById('textMessageMemo');
 const saveTextMessageBtn = document.getElementById('saveTextMessageBtn');
 fileInput.addEventListener('change', processSelectedFiles);
-Fileshare.progressBarWidget = new ProgressBarWidget(
-    mmProgressBarContainer,
-    mmDownloadProgress,
-    mmProgressPercentage
-)
 
 passwordField.value = null;
 encryptFileContentCheckbox.checked = false;

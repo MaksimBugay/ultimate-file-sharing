@@ -266,7 +266,11 @@ TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
         frOriginatorVirtualHost.textContent = manifest.originatorVirtualHost;
         showAcceptFileTransferDialog();
     } else {
-        const receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
+        let receiveQueue = null;
+        while (!receiveQueue) {
+            receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
+            await delay(100);
+        }
         if (receiveQueue) {
             receiveQueue.data[binaryWithHeader.order - 1] = binaryWithHeader.payload;
         } else {
