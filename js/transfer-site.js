@@ -24,25 +24,67 @@ FileTransfer.progressBarWidget = new ProgressBarWidget(
     uploadProgress,
     uploadProgressPercentage
 )
-//====================================SELECT FILES ==============================================
+//====================================Drag and Drop files===============================================================
+const deviceToArea = deviceToImage.getBoundingClientRect();
+dropZone.style.width = `${0.86 * deviceToArea.width}px`;
+dropZone.style.height = `${0.45 * deviceToArea.width}px`;
+dropZone.style.top = `${deviceToArea.top + 30}px`;
+dropZone.style.left = `${deviceToArea.left + 20}px`;
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+function initDropZone(dzElement) {
+// Prevent default behavior for drag and drop events (to prevent opening the file in the browser)
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dzElement.addEventListener(eventName, preventDefaults, false);
+    });
+
+// Add visual feedback for when file is being dragged over the drop zone
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dzElement.addEventListener(eventName, () => dzElement.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dzElement.addEventListener(eventName, () => dzElement.classList.remove('dragover'), false);
+    });
+}
+
+initDropZone(dropZone);
+
+dropZone.addEventListener('drop', async function (event) {
+    await processSelectedFiles(event.dataTransfer.files);
+    delay(500).then(() => {
+        event.dataTransfer.clearData();
+    });
+});
+//====================================SELECT FILES =====================================================================
 const fileInput = document.getElementById('fileInput');
 fileInput.removeAttribute('webkitdirectory');
 fileInput.setAttribute('multiple', '');
-fileInput.addEventListener('change', processSelectedFiles);
-
-async function processSelectedFiles(event) {
+fileInput.addEventListener('change', async function (event) {
     if (event.target.files && fileInput.value && event.target.files.length > 0) {
         const files = event.target.files;
+        await processSelectedFiles(files);
+    }
+});
 
-        for (let i = 0; i < files.length; i++) {
-            await TransferFileHelper.transferFileToVirtualHostBase(
-                files[i],
-                receiverVirtualHost.value,
-                ownerVirtualHost.value,
-                "Failed file transfer attempt: receiver is not unavailable",
-                FileTransfer
-            );
-        }
+async function processSelectedFiles(files) {
+    if (!receiverVirtualHost.readOnly) {
+        showErrorMsg("Receiver's virtual host was not provided", function () {
+            receiverVirtualHost.focus();
+        });
+        return;
+    }
+    for (let i = 0; i < files.length; i++) {
+        await TransferFileHelper.transferFileToVirtualHostBase(
+            files[i],
+            receiverVirtualHost.value,
+            ownerVirtualHost.value,
+            "Failed file transfer attempt: receiver is not unavailable",
+            FileTransfer
+        );
     }
 }
 
@@ -88,12 +130,6 @@ selectFilesBtn.addEventListener('click', function () {
     fileInput.click();
 });
 
-const deviceToArea = deviceToImage.getBoundingClientRect();
-dropZone.style.width = `${0.86 * deviceToArea.width}px`;
-dropZone.style.height = `${0.45 * deviceToArea.width}px`;
-dropZone.style.top = `${deviceToArea.top + 30}px`;
-dropZone.style.left = `${deviceToArea.left + 20}px`;
-
 receiverVirtualHost.focus();
 document.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
@@ -125,6 +161,7 @@ receiverVirtualHost.addEventListener('input', (event) => {
                 event.target.classList.add('green-text');
                 event.target.value = clientWithAlias.alias;
                 FileTransfer.isUpdatingProgrammatically = false;
+                dropZone.classList.remove('disabled-zone');
             }
         });
     }

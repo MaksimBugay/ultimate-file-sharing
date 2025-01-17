@@ -170,6 +170,11 @@ h1 {
     z-index: 1000;
 }
 
+.drop-zone.dragover {
+    background-color: #e0ffe0;
+    color: #333;
+}
+
 .multi-line-text {
     white-space: normal; /* Ensures text wraps to the next line */
     overflow-wrap: break-word; /* Allows long words to break and wrap */
@@ -216,4 +221,11 @@ h1 {
     width: 150px;
     font-weight: bold;
     color: darkblue;
+}
+
+.disabled-zone {
+    pointer-events: none; /* Disables user interaction */
+    opacity: 0.5; /* Makes it look visually disabled */
+    cursor: not-allowed; /* Changes the cursor to indicate disabled state */
+    color: gray;
 }

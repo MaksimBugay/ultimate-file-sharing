@@ -22,8 +22,8 @@ function initDropZone(dzElement) {
     });
 }
 
-initDropZone(dropZone)
-initDropZone(dropZonePopup)
+initDropZone(dropZone);
+initDropZone(dropZonePopup);
 
 dropZonePopup.addEventListener('drop', async function (event) {
     await processListOfFiles(event.dataTransfer.files);
