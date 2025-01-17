@@ -131,12 +131,71 @@ TransferFileHelper.transferFileBase = async function (file, transferGroup, trans
     }, errorMsg, propertiesHolder);
 }
 
+TransferFileHelper.transferBlobToVirtualHostBase = async function (blob, name, type,
+                                                                   receiverVirtualHost, senderVirtualHost,
+                                                                   propertiesHolder) {
+    const binaryId = uuid.v4().toString();
+    const joinGroupResponse = await acquireTmpGroupHandshake(receiverVirtualHost, binaryId, closeModal);
+
+    if (!joinGroupResponse) {
+        return false;
+    }
+
+    return await TransferFileHelper.transferBlobBase(
+        blob, name, type,
+        joinGroupResponse.name,
+        joinGroupResponse.pwd,
+        senderVirtualHost,
+        propertiesHolder,
+        binaryId,
+        joinGroupResponse.destHashCode
+    );
+}
+
+TransferFileHelper.transferBlobBase = async function (blob, name, type,
+                                                      transferGroup, transferGroupPassword,
+                                                      senderVirtualHost, propertiesHolder,
+                                                      binaryId = null, destHashCode = null) {
+    const ftManifest = new FileTransferManifest(
+        binaryId, name, type, blob.size, senderVirtualHost
+    );
+    const encAndSendResult = await sendTransferManifest(
+        ftManifest,
+        transferGroup,
+        transferGroupPassword,
+        destHashCode
+    );
+    if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
+        showErrorMsg(`Failed file transfer attempt: ${name}`, null);
+        return false;
+    }
+
+    await executeWithShowProgressBar(async function (progressBarWidget) {
+        const slices = await blobToArrayBuffers(blob, TransferFileHelper.blockSize);
+        for (let i = 0; i < slices.length; i++) {
+            const result = await encryptAndTransferBinaryChunk(
+                ftManifest.id,
+                i + 1,
+                encAndSendResult.transferGroupId,
+                slices[i],
+                encAndSendResult.encryptionContract
+            );
+            if (WaiterResponseType.ERROR === result.type) {
+                console.error(`Failed file transfer attempt: ${name}`);
+                return false;
+            }
+            const progress = Math.round(((i + 1) / slices.length) * 100);
+            progressBarWidget.setProgress(progress);
+        }
+    }, propertiesHolder);
+}
+
 async function executeWithShowProgressBar(operation, propertiesHolder) {
     await requestWakeLock(propertiesHolder);
     const progressBarWidget = propertiesHolder.progressBarWidget
     progressBarWidget.pbContainer.style.display = 'block';
     if (typeof operation === 'function') {
-        await operation();
+        await operation(progressBarWidget);
     }
     progressBarWidget.pbProgress.value = 0;
     progressBarWidget.pbProgressPercentage.textContent = `0%`;
@@ -192,7 +251,7 @@ async function readFileSequentiallyBase(file, chunkHandler, errorMsg, properties
         reader.readAsArrayBuffer(blob);
     }
 
-    await executeWithShowProgressBar(async function () {
+    await executeWithShowProgressBar(async function (progressBarWidget) {
         readNextChunk();
 
         const totalNumberOfSlices = Math.ceil(fileSize / TransferFileHelper.blockSize)

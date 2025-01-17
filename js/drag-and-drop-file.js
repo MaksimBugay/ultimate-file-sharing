@@ -60,11 +60,9 @@ dropZone.addEventListener('drop', async function (event) {
         // File is now a Blob object
         const blob = new Blob([file], {type: file.type});
 
-        await SaveInCloudHelper.cacheBlobInCloud(
-            file.name,
-            file.type,
+        await SaveInCloudHelper.cacheFileInCloud(
+            file,
             Fileshare.defaultReadMeText,
-            blob,
             true);
     }
     delay(500).then(() => {

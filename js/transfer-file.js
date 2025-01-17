@@ -423,58 +423,20 @@ TransferFileHelper.transferFile = async function (file, transferGroup, transferG
 }
 
 TransferFileHelper.transferBlobToVirtualHost = async function (blob, name, type, alias) {
-    const binaryId = uuid.v4().toString();
-    const joinGroupResponse = await acquireTmpGroupHandshake(alias, binaryId, closeModal);
-
-    if (!joinGroupResponse) {
-        return false;
-    }
-
-    return await TransferFileHelper.transferBlob(
-        blob, name, type,
-        joinGroupResponse.name,
-        joinGroupResponse.pwd,
-        binaryId,
-        joinGroupResponse.destHashCode
+    return await TransferFileHelper.transferBlobToVirtualHostBase(
+        blob, name, type, alias,
+        Fileshare.connectionAlias, Fileshare
     );
 }
 
 TransferFileHelper.transferBlob = async function (blob, name, type,
                                                   transferGroup, transferGroupPassword,
                                                   binaryId = null, destHashCode = null) {
-    const ftManifest = new FileTransferManifest(
-        binaryId, name, type, blob.size, Fileshare.connectionAlias
+    return await TransferFileHelper.transferBlobBase(
+        blob, name, type, transferGroup, transferGroupPassword,
+        Fileshare.connectionAlias, Fileshare,
+        binaryId, destHashCode
     );
-    const encAndSendResult = await sendTransferManifest(
-        ftManifest,
-        transferGroup,
-        transferGroupPassword,
-        destHashCode
-    );
-    if (WaiterResponseType.ERROR === encAndSendResult.result.type) {
-        console.error(`Failed file transfer attempt: ${name}`);
-        return false;
-    }
-
-    await executeWithShowProgressBar(async function () {
-        const slices = await blobToArrayBuffers(blob, TransferFileHelper.blockSize);
-        for (let i = 0; i < slices.length; i++) {
-            const result = await encryptAndTransferBinaryChunk(
-                ftManifest.id,
-                i + 1,
-                encAndSendResult.transferGroupId,
-                slices[i],
-                encAndSendResult.encryptionContract
-            );
-            if (WaiterResponseType.ERROR === result.type) {
-                console.error(`Failed file transfer attempt: ${name}`);
-                return false;
-            }
-            const progress = Math.round(((i + 1) / slices.length) * 100);
-            mmDownloadProgress.value = progress;
-            mmProgressPercentage.textContent = `${progress}%`;
-        }
-    }, Fileshare);
 }
 
 async function readFileSequentially(file, chunkHandler, errorMsg) {
