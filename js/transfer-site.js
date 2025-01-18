@@ -6,6 +6,7 @@ FileTransfer.pingIntervalId = window.setInterval(function () {
 }, 10000);
 
 window.addEventListener("beforeunload", function () {
+    FileTransfer.observer.disconnect();
     clearInterval(pingIntervalId);
 });
 
@@ -18,23 +19,47 @@ const receiverVirtualHost = document.getElementById('receiverVirtualHost');
 const progressBarContainer = document.getElementById('progressBarContainer');
 const uploadProgress = document.getElementById('uploadProgress');
 const uploadProgressPercentage = document.getElementById('uploadProgressPercentage');
+const destinationHint = document.getElementById('destinationHint');
+const destinationContainer = document.getElementById('destinationContainer');
 
 FileTransfer.progressBarWidget = new ProgressBarWidget(
     progressBarContainer,
     uploadProgress,
     uploadProgressPercentage
-)
-//====================================Drag and Drop files===============================================================
-const deviceToArea = deviceToImage.getBoundingClientRect();
-dropZone.style.width = `${0.86 * deviceToArea.width}px`;
-dropZone.style.height = `${0.45 * deviceToArea.width}px`;
-dropZone.style.top = `${deviceToArea.top + 30}px`;
-dropZone.style.left = `${deviceToArea.left + 20}px`;
+);
 
+function reBindControls() {
+    const deviceToArea = deviceToImage.getBoundingClientRect();
+    dropZone.style.width = `${0.86 * deviceToArea.width}px`;
+    dropZone.style.height = `${0.45 * deviceToArea.width}px`;
+    dropZone.style.top = `${deviceToArea.top + 30}px`;
+    dropZone.style.left = `${deviceToArea.left + 20}px`;
+
+    selectFilesBtn.style.display = 'none';
+    const deviceFromArea = deviceFromImage.getBoundingClientRect();
+    selectFilesBtn.style.top = `${deviceFromArea.top + 50}px`;
+    selectFilesBtn.style.left = `${deviceFromArea.left + 70}px`;
+    selectFilesBtn.style.display = 'block';
+}
+
+window.addEventListener('load', function () {
+    FileTransfer.observer = new ResizeObserver(() => {
+        reBindControls();
+    });
+
+    FileTransfer.observer.observe(destinationContainer);
+});
+
+window.addEventListener('resize', function () {
+    reBindControls();
+});
+
+//====================================Drag and Drop files===============================================================
 function preventDefaults(e) {
     e.preventDefault();
     e.stopPropagation();
 }
+
 function initDropZone(dzElement) {
 // Prevent default behavior for drag and drop events (to prevent opening the file in the browser)
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -116,10 +141,6 @@ function closeErrorDialog() {
 }
 
 //================================================================================
-const deviceFromArea = deviceFromImage.getBoundingClientRect();
-selectFilesBtn.style.top = `${deviceFromArea.top + 30}px`;
-selectFilesBtn.style.left = `${deviceFromArea.left + 50}px`;
-selectFilesBtn.style.display = 'block';
 selectFilesBtn.addEventListener('click', function () {
     if (!receiverVirtualHost.readOnly) {
         showErrorMsg("Receiver's virtual host was not provided", function () {
@@ -162,6 +183,7 @@ receiverVirtualHost.addEventListener('input', (event) => {
                 event.target.value = clientWithAlias.alias;
                 FileTransfer.isUpdatingProgrammatically = false;
                 dropZone.classList.remove('disabled-zone');
+                destinationHint.style.display = 'none';
             }
         });
     }

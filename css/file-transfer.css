@@ -1,6 +1,6 @@
 
 h1 {
-    font-size: 1.5rem;
+    font-size: 1.0rem;
     font-weight: bold;
     background: linear-gradient(90deg, gold, coral 90%);
     -webkit-background-clip: text;
@@ -50,9 +50,18 @@ h1 {
     overflow-y: auto;
 }
 
-@media (max-width: 768px) { /* Adjust breakpoint as needed */
+.device-to-image-box {
+
+}
+
+@media (max-width: 768px) {
+    /* Adjust breakpoint as needed */
     .main-flow-container {
         flex-direction: column; /* Change direction for mobile devices */
+    }
+
+    .device-to-image-box {
+        display: none;
     }
 }
 
@@ -117,6 +126,17 @@ h1 {
     background: url('/images/arrow-down-icon-png.png') no-repeat center center;
     background-size: contain;
     border: none;
+    border-radius: 8px;
+    margin: 20px;
+}
+
+.transfer-button {
+    display: block;
+    width: 200px;
+    height: 100px;
+    background: url('/images/main-background.png') no-repeat center center;
+    background-size: contain;
+    border: none;
     cursor: pointer;
     border-radius: 8px;
     transition: all 0.3s ease-in-out;
@@ -124,12 +144,12 @@ h1 {
     margin: 20px;
 }
 
-.fancy-button:hover {
+.transfer-button:hover {
     transform: scale(1.1); /* Slight zoom-in effect on hover */
     box-shadow: 0 6px 10px rgba(0, 123, 255, 0.4);
 }
 
-.fancy-button:active {
+.transfer-button:active {
     transform: scale(0.95); /* Slight zoom-out effect on click */
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
 }
@@ -139,11 +159,23 @@ h1 {
     height: 150px;
     background: url('/images/open-file-main.png') no-repeat center center;
     background-size: contain;
+    border: none;
+    cursor: pointer;
     left: 10px;
     top: 10px;
     position: absolute;
     display: none;
     z-index: 1000;
+}
+
+.select-files-button:hover {
+    transform: scale(1.1); /* Slight zoom-in effect on hover */
+    box-shadow: 0 6px 10px rgba(0, 123, 255, 0.4);
+}
+
+.select-files-button:active {
+    transform: scale(0.95); /* Slight zoom-out effect on click */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
 }
 
 .drop-zone {

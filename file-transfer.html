@@ -27,10 +27,6 @@
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
 <iframe src="html/header.html" width="100%" height="93px"
         style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
-<h1>
-    Please open <a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">OUR SITE</a> on receiver's
-    device and use virtual host name assigned to receiver as a destination
-</h1>
 
 <div id="errorDialog" class="consent-dialog">
     <div class="error-content">
@@ -97,24 +93,29 @@
             <img id="deviceFromImage" class="device-image" src="images/device1.png"
                  alt="Device From">
 
-            <button id="selectFilesBtn" class="fancy-button select-files-button">Select files</button>
+            <button id="selectFilesBtn" class="select-files-button">Select files</button>
 
             <input type="file" id="fileInput" style="display:none" multiple>
         </div>
 
-        <button id="fileTransferBtn" class="fancy-button" onclick="alert('Button Clicked!')">TRANSFER</button>
+        <button id="fileTransferBtn" class="fancy-button"></button>
 
-        <div class="device-container">
+        <div id="destinationContainer" class="device-container">
             <div class="device-caption">TO (receiver virtual host name)</div>
             <label for="receiverVirtualHost"></label>
             <input class="fancy-input" type="text" id="receiverVirtualHost"
                    placeholder="Start typing receiver virtual host name"/>
+            <h1 id="destinationHint">
+                Please open <a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">OUR SITE</a> on receiver's
+                device and enter virtual host name assigned to receiver
+            </h1>
+            <div id="deviceToImageBox" class="device-to-image-box">
+                <img id="deviceToImage" class="device-image" src="images/device2.png"
+                     alt="Device To">
 
-            <img id="deviceToImage" class="device-image" src="images/device2.png"
-                 alt="Device To">
-
-            <div id="dropZone" class="drop-zone multi-line-text disabled-zone">
-                Drag and Drop your files here or press Ctrl + V to paste from buffer
+                <div id="dropZone" class="drop-zone multi-line-text disabled-zone">
+                    Drag and Drop your files here or press Ctrl + V to paste from buffer
+                </div>
             </div>
         </div>
     </div>
