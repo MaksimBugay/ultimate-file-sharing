@@ -230,10 +230,11 @@ h2 {
     justify-content: center; /* Horizontally center */
     align-items: center; /* Vertically center */
     text-align: center; /* Ensure text is centered within the block */
+    vertical-align: center;
     font-weight: bold;
     font-size: 1rem;
     margin: 0;
-    padding: 10px;
+    padding: 25px;
     box-sizing: border-box; /* Ensure padding doesn't exceed container size */
 
     /*color: mediumspringgreen;*/
