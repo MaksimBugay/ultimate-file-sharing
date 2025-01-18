@@ -10,6 +10,16 @@ h1 {
     text-align: center;
 }
 
+h2 {
+    font-size: 1.0rem;
+    font-weight: bold;
+    background: linear-gradient(90deg, lightskyblue, royalblue 90%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: 'Roboto', sans-serif;
+    text-align: center;
+}
+
 @media (max-width: 768px) {
     h1 {
         font-size: 1rem; /* Mobile */
@@ -119,7 +129,8 @@ h1 {
 
 .device-caption {
     font-family: 'Roboto', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: bold;
 }
 
 .device-image {

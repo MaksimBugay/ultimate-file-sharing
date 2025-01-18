@@ -46,7 +46,6 @@ function reBindControls() {
         selectFilesBtn.style.display = 'block';
     } else {
         selectFilesBtn.style.display = 'none';
-        deviceFromImage.src = 'images/device1.png';
         const deviceToArea = deviceToImage.getBoundingClientRect();
         dropZone.style.width = `${0.86 * deviceToArea.width}px`;
         dropZone.style.height = `${0.45 * deviceToArea.width}px`;
@@ -55,6 +54,7 @@ function reBindControls() {
         dropZone.style.display = 'block';
 
         selectFilesBtn.style.display = 'none';
+        deviceFromImage.src = 'images/device1.png';
         const deviceFromArea = deviceFromImage.getBoundingClientRect();
         selectFilesBtn.style.top = `${deviceFromArea.top + 50}px`;
         selectFilesBtn.style.left = `${deviceFromArea.left + 70}px`;
