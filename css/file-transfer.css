@@ -20,12 +20,6 @@ h2 {
     text-align: center;
 }
 
-@media (max-width: 768px) {
-    h1 {
-        font-size: 1rem; /* Mobile */
-    }
-}
-
 .main-container {
     margin: 0;
     padding: 0;
@@ -39,6 +33,12 @@ h2 {
     background-size: 100% 100%; /* Make the background cover the entire page */
     background-repeat: no-repeat; /* Prevent the image from repeating */
     background-position: center center; /* Center the background image */
+}
+
+@media (max-width: 768px) {
+    .main-container {
+        background-image: url('../images/data-pipe.webp'); /* Mobile */
+    }
 }
 
 .main-flow-container {
@@ -77,8 +77,9 @@ h2 {
     height: 150px;
 }
 
-.fancy-button-size {
+.fancy-button-view {
     display: block;
+    background: url('/images/arrow-down-icon-png.png') no-repeat center center;
     width: 130px;
     height: 130px;
     margin: 20px;
@@ -107,8 +108,9 @@ h2 {
         height: 110px;
     }
 
-    .fancy-button-size {
+    .fancy-button-view {
         display: block;
+        background: url('/images/arrow-down-icon-png-6.png') no-repeat center center;
         width: 75px;
         height: 75px;
         margin: 5px;
@@ -169,7 +171,6 @@ h2 {
 }
 
 .fancy-button {
-    background: url('/images/arrow-down-icon-png.png') no-repeat center center;
     background-size: contain;
     border: none;
     border-radius: 8px;
@@ -200,7 +201,7 @@ h2 {
 }
 
 .select-files-button {
-    background: url('/images/open-file-main.png') no-repeat center center;
+    background: url('/images/open-file-main1.png') no-repeat center center;
     background-size: contain;
     border: none;
     cursor: pointer;
