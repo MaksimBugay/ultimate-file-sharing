@@ -30,11 +30,13 @@ FileTransfer.progressBarWidget = new ProgressBarWidget(
 
 function reBindControls() {
     if (isMobile()) {
+        dropZone.style.display = 'none';
         const deviceToArea = deviceToImage.getBoundingClientRect();
         dropZone.style.width = `${0.86 * deviceToArea.width}px`;
         dropZone.style.height = `${0.45 * deviceToArea.width}px`;
         dropZone.style.top = `${deviceToArea.top + 20}px`;
         dropZone.style.left = `${deviceToArea.left + 13}px`;
+        dropZone.style.display = 'block';
 
         selectFilesBtn.style.display = 'none';
         const deviceFromArea = deviceFromImage.getBoundingClientRect();
@@ -42,11 +44,13 @@ function reBindControls() {
         selectFilesBtn.style.left = `${deviceFromArea.left + 40}px`;
         selectFilesBtn.style.display = 'block';
     } else {
+        selectFilesBtn.style.display = 'none';
         const deviceToArea = deviceToImage.getBoundingClientRect();
         dropZone.style.width = `${0.86 * deviceToArea.width}px`;
         dropZone.style.height = `${0.45 * deviceToArea.width}px`;
         dropZone.style.top = `${deviceToArea.top + 30}px`;
         dropZone.style.left = `${deviceToArea.left + 20}px`;
+        dropZone.style.display = 'block';
 
         selectFilesBtn.style.display = 'none';
         const deviceFromArea = deviceFromImage.getBoundingClientRect();
