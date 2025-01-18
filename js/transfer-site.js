@@ -61,6 +61,12 @@ function reBindControls() {
 }
 
 window.addEventListener('load', function () {
+    if (isMobile()){
+        deviceFromImage.src = 'images/device1-mobile.png';
+    } else {
+        deviceFromImage.src = 'images/device1.png';
+    }
+
     FileTransfer.observer = new ResizeObserver(() => {
         reBindControls();
     });

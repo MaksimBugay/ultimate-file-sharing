@@ -71,6 +71,7 @@ h1 {
     display: block;
     width: 130px;
     height: 130px;
+    margin: 20px;
 }
 
 @media (max-width: 768px) {
@@ -100,6 +101,7 @@ h1 {
         display: block;
         width: 75px;
         height: 75px;
+        margin: 5px;
     }
 }
 
@@ -160,7 +162,6 @@ h1 {
     background-size: contain;
     border: none;
     border-radius: 8px;
-    margin: 20px;
 }
 
 .transfer-button {
