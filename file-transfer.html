@@ -80,7 +80,7 @@
 <div class="main-container">
 
     <div id="mainFlowContainer" class="main-flow-container">
-        <div class="device-container">
+        <div class="device-container container-max-width">
             <div class="device-caption">FROM (your assigned virtual host name)</div>
             <label for="ownerVirtualHost"></label>
             <input class="fancy-input" type="text" readonly id="ownerVirtualHost" placeholder="data channel is broken"/>
@@ -90,17 +90,17 @@
                 <span id="uploadProgressPercentage">0%</span>
             </div>
 
-            <img id="deviceFromImage" class="device-image" src="images/device1.png"
+            <img id="deviceFromImage" class="device-image image-max-width" src="images/device1.png"
                  alt="Device From">
 
-            <button id="selectFilesBtn" class="select-files-button">Select files</button>
+            <button id="selectFilesBtn" class="select-files-button select-files-button-size">Select files</button>
 
             <input type="file" id="fileInput" style="display:none" multiple>
         </div>
 
         <button id="fileTransferBtn" class="fancy-button"></button>
 
-        <div id="destinationContainer" class="device-container">
+        <div id="destinationContainer" class="device-container container-max-width">
             <div class="device-caption">TO (receiver virtual host name)</div>
             <label for="receiverVirtualHost"></label>
             <input class="fancy-input" type="text" id="receiverVirtualHost"
@@ -110,7 +110,7 @@
                 device and enter virtual host name assigned to receiver
             </h1>
             <div id="deviceToImageBox" class="device-to-image-box">
-                <img id="deviceToImage" class="device-image" src="images/device2.png"
+                <img id="deviceToImage" class="device-image image-max-width" src="images/device2.png"
                      alt="Device To">
 
                 <div id="dropZone" class="drop-zone multi-line-text disabled-zone">

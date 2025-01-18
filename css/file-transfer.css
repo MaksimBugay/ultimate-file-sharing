@@ -63,12 +63,37 @@ h1 {
     .device-to-image-box {
         display: none;
     }
+
+    .container-max-width {
+        max-width: 200px;
+    }
+
+    .image-max-width {
+        max-width: 185px;
+    }
+
+    .select-files-button-size {
+        width: 110px;
+        height: 110px;
+    }
+}
+
+.container-max-width {
+    max-width: 300px;
+}
+
+.image-max-width {
+    max-width: 285px;
+}
+
+.select-files-button-size {
+    width: 150px;
+    height: 150px;
 }
 
 .device-container {
     width: fit-content;
     height: fit-content;
-    max-width: 300px;
     margin: 0 0 0 0;
     padding: 5px 5px 5px 5px;
     border-radius: 8px;
@@ -84,7 +109,6 @@ h1 {
 }
 
 .device-image {
-    max-width: 285px;
     padding: 0;
     border-radius: 8px;
     transition: all 0.3s ease-in-out;
@@ -155,8 +179,6 @@ h1 {
 }
 
 .select-files-button {
-    width: 150px;
-    height: 150px;
     background: url('/images/open-file-main.png') no-repeat center center;
     background-size: contain;
     border: none;
