@@ -285,8 +285,13 @@ PushcaClient.onCloseHandler = function (ws, event) {
     //channelIndicator.style.backgroundColor = 'red';
 };
 
+PushcaClient.onFileTransferChunkHandler = async function (binaryWithHeader) {
+    return await TransferFileHelper.processedReceivedChunk(binaryWithHeader, FileTransfer);
+};
+
 async function openWsConnection(deviceFpId) {
     FileTransfer.deviceFpId = deviceFpId;
+    setOriginatorVirtualHostClickHandler(FileTransfer.deviceFpId);
     if (!PushcaClient.isOpen()) {
         FileTransfer.sessionId = uuid.v4().toString();
         FileTransfer.deviceFpHash = await calculateSha256(stringToArrayBuffer(deviceFpId));

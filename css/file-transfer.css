@@ -306,3 +306,12 @@ h2 {
     cursor: not-allowed; /* Changes the cursor to indicate disabled state */
     color: gray;
 }
+
+.link-like {
+    color: blue;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.link-like:hover {
+    color: darkblue;
+}

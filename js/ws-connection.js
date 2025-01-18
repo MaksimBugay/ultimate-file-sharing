@@ -649,7 +649,9 @@ PushcaClient.onMessageHandler = function (ws, data) {
     }
 }
 
-PushcaClient.onFileTransferChunkHandler = TransferFileHelper.processedReceivedChunk;
+PushcaClient.onFileTransferChunkHandler = async function (binaryWithHeader) {
+    return await TransferFileHelper.processedReceivedChunk(binaryWithHeader, Fileshare);
+};
 
 async function buildSignatureHash(signature) {
     return await calculateSha256(stringToArrayBuffer(signature));

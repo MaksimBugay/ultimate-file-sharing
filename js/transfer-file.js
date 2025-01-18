@@ -1,7 +1,4 @@
-const ftDownloadProgress = document.getElementById("ftDownloadProgress");
-const ftProgressPercentage = document.getElementById("ftProgressPercentage");
-const ftProgressBarContainer = document.getElementById("ftProgressBarContainer");
-const acceptFileTransferDialog = document.getElementById("acceptFileTransferDialog");
+
 const joinTransferGroupDialog = document.getElementById('joinTransferGroupDialog');
 const allowJoinTransferGroupBtn = document.getElementById('allowJoinTransferGroupBtn');
 const denyJoinTransferGroupBtn = document.getElementById('denyJoinTransferGroupBtn');
@@ -11,12 +8,6 @@ const jtgCity = document.getElementById('jtgCity');
 const jtgProxyInfo = document.getElementById('jtgProxyInfo');
 const jtgIP = document.getElementById('jtgIP');
 const jtgCountry = document.getElementById('jtgCountry');
-const acceptFileTransferBtn = document.getElementById("acceptFileTransferBtn");
-const denyFileTransferBtn = document.getElementById("denyFileTransferBtn");
-const ftrName = document.getElementById("ftrName");
-const ftrType = document.getElementById("ftrType");
-const ftrSize = document.getElementById("ftrSize");
-const frOriginatorVirtualHost = document.getElementById("frOriginatorVirtualHost");
 const transReceiverContainer = document.getElementById('transReceiverContainer');
 const transGroupContainer = document.getElementById('transGroupContainer');
 const virtualHost = document.getElementById('virtualHost');
@@ -25,14 +16,7 @@ const groupAsTransferTargetChoice = document.getElementById('groupAsTransferTarg
 
 let isUpdatingProgrammatically = false;
 
-frOriginatorVirtualHost.addEventListener('click', function (event) {
-    const alias = event.target.textContent;
-    PushcaClient.connectionAliasLookup(alias).then(clientWithAlias => {
-        if (clientWithAlias) {
-            showHostDetailsDialog(Fileshare.workSpaceId, clientWithAlias);
-        }
-    });
-});
+setOriginatorVirtualHostClickHandler(Fileshare.workSpaceId);
 
 virtualHost.addEventListener('click', function () {
     const value = this.value.trim();
@@ -61,16 +45,6 @@ virtualHost.addEventListener('input', (event) => {
         });
     }
 });
-
-function storeTmpTransferGroupForBinary(binaryId, groupName, groupPassword) {
-    TransferFileHelper.tmpGroupRegistry.set(
-        binaryId,
-        {
-            name: groupName,
-            pwd: groupPassword
-        }
-    );
-}
 
 document.querySelectorAll('input[name="transferTargetChoice"]').forEach((element) => {
     element.addEventListener('change', function () {
@@ -143,260 +117,6 @@ function isJoinTransferGroupDialogVisible() {
 
 function hideJoinTransferGroupDialog() {
     joinTransferGroupDialog.classList.remove('visible');
-}
-
-acceptFileTransferDialog.addEventListener("click", (event) => {
-    if (event.target === acceptFileTransferDialog) {
-        event.stopPropagation(); // Prevent click from propagating if outside dialog
-    }
-});
-
-acceptFileTransferBtn.addEventListener('click', async function () {
-    try {
-        showDownloadProgress();
-        await TransferFileHelper.saveTransfer().then(() => {
-            TransferFileHelper.cleanTransfer();
-            hideAcceptFileTransferDialog();
-        });
-    } catch (err) {
-        console.error("Failed receive transferred file operation: ", err);
-        TransferFileHelper.cleanTransfer();
-        hideAcceptFileTransferDialog();
-    }
-});
-
-denyFileTransferBtn.addEventListener('click', function () {
-    TransferFileHelper.cleanTransfer();
-    hideAcceptFileTransferDialog();
-});
-
-TransferFileHelper.processedReceivedChunk = async function (binaryWithHeader) {
-    if (binaryWithHeader.order === 0) {
-        const binaryId = binaryWithHeader.binaryId;
-        let transferGroupPassword
-        let transferGroup
-        const tmpGroup = TransferFileHelper.tmpGroupRegistry.get(binaryId);
-        if (tmpGroup) {
-            transferGroupPassword = tmpGroup.pwd;
-            transferGroup = tmpGroup.name;
-            TransferFileHelper.tmpGroupRegistry.delete(binaryId);
-        } else {
-            if (!(Fileshare.properties && Fileshare.properties.transferGroup)) {
-                console.warn("Transfer group is not defined but transfer request was received");
-                return;
-            }
-            transferGroupPassword = Fileshare.properties.transferGroupPassword;
-            transferGroup = Fileshare.properties.transferGroup;
-        }
-        let encryptionContract;
-        let manifest;
-        try {
-            const tRequestStr = byteArrayToString(binaryWithHeader.payload);
-            const parts = tRequestStr.split("|");
-            encryptionContract = await EncryptionContract.fromTransferableString(
-                parts[1],
-                transferGroupPassword ? transferGroupPassword : `TRANSFER_GROUP_${transferGroup}`,
-                stringToByteArray(transferGroup)
-            );
-            const payload = await decryptAESToArrayBuffer(
-                base64ToArrayBuffer(parts[0]),
-                encryptionContract.base64Key,
-                encryptionContract.base64IV
-            );
-            manifest = FileTransferManifest.fromBinary(payload);
-            console.log(JSON.stringify(manifest.toJSON()));
-        } catch (err) {
-            showErrorMsg("Unrecognized file transfer request was received");
-            console.error("Broken file transfer request", err);
-        }
-
-        const totalNumberOfChunks = Math.ceil(manifest.size / TransferFileHelper.blockSize);
-        TransferFileHelper.registry.set(
-            binaryWithHeader.binaryId,
-            {
-                encryptionContract: encryptionContract,
-                data: new Array(totalNumberOfChunks).fill(null)
-            }
-        );
-        // Define a stream to manage chunked downloads
-        const stream = new ReadableStream({
-            async start(controller) {
-                let index = 0;
-                while (index < totalNumberOfChunks) {
-                    const chunk = await getChunk(manifest.id, index);
-                    if (!chunk) {
-                        controller.signal.aborted;
-                        break;
-                    }
-                    controller.enqueue(new Uint8Array(chunk));
-                    index++;
-                }
-                controller.close();
-            }
-        });
-
-        // Create a Blob URL from the stream
-        const response = new Response(stream, {
-            headers: {
-                'Content-Type': `${manifest.type}`,
-                'Content-Length': `${manifest.size.toString()}`
-            }
-        });
-
-        while (isAcceptFileTransferDialogVisible()) {
-            await delay(500);
-        }
-
-        TransferFileHelper.saveTransfer = async function () {
-            await requestWakeLock(Fileshare);
-            if (window.showSaveFilePicker) {
-                await downloadBinaryStream(response, manifest.name, manifest.size);
-            } else {
-                await downloadBinaryStreamSilently(response, manifest.name, manifest.size, manifest.type);
-            }
-            releaseWakeLock(Fileshare);
-        }
-        TransferFileHelper.cleanTransfer = function () {
-            TransferFileHelper.registry.delete(manifest.id);
-        }
-
-        ftrName.textContent = manifest.name;
-        ftrType.textContent = manifest.type;
-        ftrSize.textContent = `${Math.round((manifest.size * 100) / MemoryBlock.MB) / 100}`;
-        frOriginatorVirtualHost.textContent = manifest.originatorVirtualHost;
-        showAcceptFileTransferDialog();
-    } else {
-        let receiveQueue = null;
-        while (!receiveQueue) {
-            receiveQueue = TransferFileHelper.registry.get(binaryWithHeader.binaryId);
-            await delay(100);
-        }
-        if (receiveQueue) {
-            receiveQueue.data[binaryWithHeader.order - 1] = binaryWithHeader.payload;
-        } else {
-            console.warn(`Unassigned transferred chunk was received: binaryId = ${binaryWithHeader.binaryId}, order = ${binaryWithHeader.order}`);
-        }
-    }
-}
-
-async function getChunk(binaryId, order, maxWaitTime = 60000) {
-    const receiveQueue = TransferFileHelper.registry.get(binaryId);
-    if (!receiveQueue) {
-        return null;
-    }
-    const startTime = Date.now();
-    while (!receiveQueue.data[order]) {
-        if (Date.now() - startTime >= maxWaitTime) {
-            showErrorMsg("Transferred data is unavailable", function () {
-                TransferFileHelper.registry.delete(binaryId);
-            });
-            return null;
-        }
-        await delay(100);
-    }
-    if (order > 0) {
-        receiveQueue.data[order - 1] = null;
-    }
-    const encChunk = receiveQueue.data[order];
-
-    return decryptAESToArrayBuffer(
-        encChunk,
-        receiveQueue.encryptionContract.base64Key,
-        receiveQueue.encryptionContract.base64IV
-    );
-}
-
-function showAcceptFileTransferDialog() {
-    acceptFileTransferDialog.classList.add('visible');
-}
-
-function isAcceptFileTransferDialogVisible() {
-    return acceptFileTransferDialog.classList.contains('visible');
-}
-
-function hideAcceptFileTransferDialog() {
-    hideDownloadProgress();
-    acceptFileTransferDialog.classList.remove('visible');
-}
-
-function showDownloadProgress() {
-    ftProgressBarContainer.style.display = 'block';
-    acceptFileTransferBtn.style.display = 'none';
-    denyFileTransferBtn.style.display = 'none';
-}
-
-function hideDownloadProgress() {
-    ftProgressBarContainer.style.display = 'none';
-    acceptFileTransferBtn.style.display = '';
-    denyFileTransferBtn.style.display = '';
-    ftDownloadProgress.value = 0;
-    ftProgressPercentage.textContent = `0%`;
-}
-
-async function downloadBinaryStream(response, binaryFileName, contentLength) {
-    const reader = response.body.getReader();
-
-    // Open the file for writing
-    const options = {
-        suggestedName: binaryFileName
-    };
-    const fileHandle = await window.showSaveFilePicker(options);
-    const writable = await fileHandle.createWritable();
-
-    let writtenBytes = 0;
-
-    while (true) {
-        const {value, done} = await reader.read();
-
-        if (done) {
-            break;
-        }
-
-        await writable.write({type: 'write', data: value});
-        writtenBytes += value.byteLength;
-
-        if (contentLength) {
-            const percentComplete = Math.round((writtenBytes / contentLength) * 100);
-            ftDownloadProgress.value = percentComplete;
-            ftProgressPercentage.textContent = `${percentComplete}%`;
-        } else {
-            // If content-length is not available, we can't calculate progress
-            ftDownloadProgress.removeAttribute('value');
-            ftDownloadProgress.textContent = 'Downloading...';
-        }
-    }
-
-    // Close the writable stream
-    await writable.close();
-
-    console.log(`File downloaded to: ${fileHandle.name}`);
-}
-
-async function downloadBinaryStreamSilently(response, binaryFileName, contentLength, contentType) {
-    const reader = response.body.getReader();
-    const chunks = [];
-    let receivedLength = 0;
-
-    while (true) {
-        const {done, value} = await reader.read();
-        if (done) {
-            break;
-        }
-        chunks.push(value);
-        receivedLength += value.length;
-
-        if (contentLength) {
-            const progress = Math.round((receivedLength / contentLength) * 100);
-            ftDownloadProgress.value = progress;
-            ftProgressPercentage.textContent = `${progress}%`;
-        } else {
-            // Handle case where content-length is not available
-            ftDownloadProgress.removeAttribute('value');
-            ftDownloadProgress.textContent = 'Downloading...';
-        }
-    }
-    const blob = new Blob(chunks, {type: `${contentType}`});
-    downloadFile(blob, binaryFileName);
 }
 
 TransferFileHelper.transferFileToVirtualHost = async function (file, receiverVirtualHost) {

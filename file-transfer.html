@@ -40,7 +40,7 @@
     </div>
 </div>
 
-<div id="hostDetailsDialog" class="consent-dialog">
+<div id="hostDetailsDialog" class="consent-dialog" style="z-index: 10001">
     <div class="dialog-box">
         <h2>Host details</h2>
         <div style="justify-content: left; align-items: flex-start; text-align: left; margin-bottom: 15px; font-size: 16px;">
@@ -73,6 +73,39 @@
             </fieldset>
         </div>
         <button id="hdCloseBtn">Close</button>
+    </div>
+</div>
+
+<div id="acceptFileTransferDialog" class="consent-dialog">
+    <div class="dialog-box">
+        <h2>Transfer request</h2>
+        <div style="justify-content: left; align-items: flex-start; text-align: left; margin-bottom: 15px; font-size: 16px;">
+            <fieldset class="file-share-fieldset">
+                <legend style="font-size: 20px" class="file-share-legend">File</legend>
+                <div class="frtItem">
+                    <p class="ftrCaption">Name: </p>
+                    <p id="ftrName" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Content type: </p>
+                    <p id="ftrType" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Size, Mb: </p>
+                    <p id="ftrSize" class="frtText"></p>
+                </div>
+                <div class="frtItem">
+                    <p class="ftrCaption">Originator: </p>
+                    <p id="frOriginatorVirtualHost" class="frtText link-like"></p>
+                </div>
+            </fieldset>
+        </div>
+        <button id="acceptFileTransferBtn">Accept</button>
+        <button id="denyFileTransferBtn">Deny</button>
+        <div id="ftProgressBarContainer" style="display: none">
+            <progress id="ftDownloadProgress" value="0" max="100" style="width: 100%"></progress>
+            <span id="ftProgressPercentage">0%</span>
+        </div>
     </div>
 </div>
 
