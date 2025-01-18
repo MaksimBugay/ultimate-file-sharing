@@ -39,12 +39,14 @@ function reBindControls() {
         dropZone.style.display = 'block';
 
         selectFilesBtn.style.display = 'none';
+        deviceFromImage.src = 'images/device1-mobile.png';
         const deviceFromArea = deviceFromImage.getBoundingClientRect();
         selectFilesBtn.style.top = `${deviceFromArea.top + 30}px`;
         selectFilesBtn.style.left = `${deviceFromArea.left + 40}px`;
         selectFilesBtn.style.display = 'block';
     } else {
         selectFilesBtn.style.display = 'none';
+        deviceFromImage.src = 'images/device1.png';
         const deviceToArea = deviceToImage.getBoundingClientRect();
         dropZone.style.width = `${0.86 * deviceToArea.width}px`;
         dropZone.style.height = `${0.45 * deviceToArea.width}px`;
@@ -60,13 +62,10 @@ function reBindControls() {
     }
 }
 
+delay(100).then(() => {
+    reBindControls();
+});
 window.addEventListener('load', function () {
-    if (isMobile()){
-        deviceFromImage.src = 'images/device1-mobile.png';
-    } else {
-        deviceFromImage.src = 'images/device1.png';
-    }
-
     FileTransfer.observer = new ResizeObserver(() => {
         reBindControls();
     });
