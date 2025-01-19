@@ -346,3 +346,49 @@ h2 {
 .link-like:hover {
     color: darkblue;
 }
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-button {
+    padding: 10px 20px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    background-color: lightskyblue;
+}
+
+.dropdown-list {
+    display: none;
+    position: absolute;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ccc;
+    background-color: lightskyblue;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.dropdown-list li {
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.dropdown-list li:hover {
+    background-color: #f0f0f0;
+}
+
+.flag {
+    width: 16px;
+    height: 12px;
+    margin-right: 10px;
+}
+
+.dropdown.open .dropdown-list {
+    display: block;
+}

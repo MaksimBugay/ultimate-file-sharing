@@ -510,6 +510,26 @@ function getCountryWithFlagInnerHtml(countryCode, countryName) {
     return `<div style="display: flex"> <img style="margin-right: 10px; border: 1px solid black;" src="${flagUrl}" alt="Estonia Flag" /> ${countryName}</div>`;
 }
 
+/*function getCountryFlagImage(countryCode) {
+    const flagUrl = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
+    return `<img style="margin-right: 10px; border: 1px solid black;" src="${flagUrl}" alt="CountryFlag" />`;
+}*/
+
+function getCountryFlagImage(langCode) {
+    const baseFlagUrl = "https://flagcdn.com"; // Example flag source
+    const supportedFlags = {
+        en: "us", es: "es", fr: "fr", de: "de", zh: "cn", ru: "ru", ja: "jp",
+        it: "it", pt: "pt", ar: "sa", hi: "in", ko: "kr", tr: "tr", nl: "nl",
+        sv: "se", pl: "pl", vi: "vn", id: "id", th: "th", uk: "ua", ms: "my",
+        tl: "ph", fa: "ir", ro: "ro", hu: "hu", cs: "cz", el: "gr", da: "dk",
+        fi: "fi", no: "no"
+    };
+
+    const countryCode = supportedFlags[langCode];
+    return countryCode
+        ? `<img src="${baseFlagUrl}/${countryCode}.svg" alt="${langCode}" class="flag">`
+        : `<span class="flag">🏳️</span>`;
+}
 //======================================================================================================================
 
 //=================================prevent screen lock on mobile========================================================

@@ -109,13 +109,16 @@
     </div>
 </div>
 
-
+<div id="languageDropdown" class="dropdown" style="position: absolute; right: 10px; top: 15px;">
+    <button id="dropdownButton" class="dropdown-button">Select Language</button>
+    <ul id="dropdownList" class="dropdown-list"></ul>
+</div>
 <div class="main-container">
 
     <div id="mainFlowContainer" class="main-flow-container">
         <div class="device-container container-max-width">
             <h2>===== FROM =====</h2>
-            <div class="device-caption">your assigned virtual host name</div>
+            <div id="deviceCaptionHint" class="device-caption">$deviceCaptionHintString$</div>
             <label for="ownerVirtualHost"></label>
             <input class="fancy-input" type="text" readonly id="ownerVirtualHost" placeholder="data channel is broken"/>
 
@@ -126,13 +129,15 @@
 
             <img id="deviceFromImage" class="device-image image-max-width" alt="Device From">
 
-            <button id="selectFilesBtn" class="select-files-button select-files-button-size" style="display: none"></button>
+            <button id="selectFilesBtn" class="select-files-button select-files-button-size"
+                    style="display: none"></button>
 
             <input type="file" id="fileInput" style="display:none" multiple>
         </div>
 
         <button id="fileTransferBtn" class="fancy-button fancy-button-view"></button>
-        <button id="fileTransferProgressBtn" class="transfer-files-button transfer-files-button-size" style="display: none"></button>
+        <button id="fileTransferProgressBtn" class="transfer-files-button transfer-files-button-size"
+                style="display: none"></button>
 
         <div id="destinationContainer" class="device-container container-max-width">
             <h2>====== TO ======</h2>
@@ -140,10 +145,8 @@
             <label for="receiverVirtualHost"></label>
             <input class="fancy-input" type="text" id="receiverVirtualHost"
                    placeholder="Start typing receiver virtual host name"/>
-            <h1 id="destinationHint">
-                Please open <a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">OUR SITE</a> on receiver's
-                device and enter virtual host name assigned to receiver
-            </h1>
+            <h1 id="destinationHint">$destinationHintString$</h1>
+            <!--<a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">link</a>-->
             <div id="deviceToImageBox" class="device-to-image-box">
                 <img id="deviceToImage" class="device-image image-max-width" src="images/device2.png"
                      alt="Device To">
@@ -170,6 +173,7 @@
 <script src="js/security-utils.js?v=<?= time(); ?>"></script>
 <script src="js/gateway-server.js?v=<?= time(); ?>"></script>
 <script src="js/transfer-commons.js?v=<?= time(); ?>"></script>
+<script src="js/localization.js?v=<?= time(); ?>"></script>
 <script src="js/transfer-site.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
