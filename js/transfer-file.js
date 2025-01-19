@@ -16,8 +16,6 @@ const groupAsTransferTargetChoice = document.getElementById('groupAsTransferTarg
 
 let isUpdatingProgrammatically = false;
 
-setOriginatorVirtualHostClickHandler(Fileshare.workSpaceId);
-
 virtualHost.addEventListener('click', function () {
     const value = this.value.trim();
     if (value && virtualHost.readOnly) {
@@ -46,10 +44,13 @@ virtualHost.addEventListener('input', (event) => {
     }
 });
 
-document.querySelectorAll('input[name="transferTargetChoice"]').forEach((element) => {
-    element.addEventListener('change', function () {
-        virtualHost.value = null;
-        setTransferTargetChoice(this.value);
+document.addEventListener('DOMContentLoaded', function () {
+    setOriginatorVirtualHostClickHandler(Fileshare.workSpaceId);
+    document.querySelectorAll('input[name="transferTargetChoice"]').forEach((element) => {
+        element.addEventListener('change', function () {
+            virtualHost.value = null;
+            setTransferTargetChoice(this.value);
+        });
     });
 });
 
