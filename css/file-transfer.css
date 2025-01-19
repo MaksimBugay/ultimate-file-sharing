@@ -356,7 +356,8 @@ h2 {
     padding: 10px 10px;
     border: 1px solid #ccc;
     cursor: pointer;
-    background-color: lightskyblue;
+    background-color: #007bff;
+    color: lightyellow;
 }
 
 .dropdown-list {
