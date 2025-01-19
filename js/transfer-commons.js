@@ -548,6 +548,9 @@ async function readFileSequentiallyBase(file, chunkHandler, errorMsg, properties
         while ((!pipeWasBroken) && (sliceNumber < totalNumberOfSlices)) {
             const progress = Math.round((sliceNumber / totalNumberOfSlices) * 100);
             progressBarWidget.setProgress(progress);
+            if (typeof propertiesHolder.extraProgressHandler === 'function') {
+                propertiesHolder.extraProgressHandler();
+            }
             await delay(100);
         }
     }, propertiesHolder);

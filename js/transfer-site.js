@@ -22,13 +22,16 @@ const uploadProgressPercentage = document.getElementById('uploadProgressPercenta
 const destinationHint = document.getElementById('destinationHint');
 const destinationContainer = document.getElementById('destinationContainer');
 
+const fileTransferBtn = document.getElementById('fileTransferBtn');
+const fileTransferProgressBtn = document.getElementById('fileTransferProgressBtn');
+
 FileTransfer.progressBarWidget = new ProgressBarWidget(
     progressBarContainer,
     uploadProgress,
     uploadProgressPercentage
 );
 
-function reBindControls(force = false) {
+FileTransfer.reBindControls = function (force = false) {
     if (dropZone.style.display === 'none') {
         if (!force) {
             return;
@@ -72,14 +75,14 @@ window.addEventListener('load', function () {
         deviceFromImage.src = 'images/device1.png';
     }
     FileTransfer.observer = new ResizeObserver(() => {
-        reBindControls();
+        FileTransfer.reBindControls();
     });
 
     FileTransfer.observer.observe(destinationContainer);
 });
 
 window.addEventListener('resize', function () {
-    reBindControls();
+    FileTransfer.reBindControls();
 });
 
 //====================================Drag and Drop files===============================================================
@@ -130,6 +133,22 @@ async function processSelectedFiles(files) {
         });
         return;
     }
+
+    fileTransferBtn.style.display = 'none';
+    fileTransferProgressBtn.style.display = 'block';
+    selectFilesBtn.style.display = 'none';
+    dropZone.style.display = 'none';
+    let i = 0;
+    FileTransfer.extraProgressHandler = function () {
+        i += 1;
+        if (i % 5 === 0) {
+            if (fileTransferProgressBtn.style.transform === 'scale(0.95)') {
+                fileTransferProgressBtn.style.transform = 'scale(1.1)';
+            } else {
+                fileTransferProgressBtn.style.transform = 'scale(0.95)';
+            }
+        }
+    }
     for (let i = 0; i < files.length; i++) {
         await TransferFileHelper.transferFileToVirtualHostBase(
             files[i],
@@ -139,6 +158,10 @@ async function processSelectedFiles(files) {
             FileTransfer
         );
     }
+    FileTransfer.extraProgressHandler = null;
+    fileTransferBtn.style.display = 'block';
+    fileTransferProgressBtn.style.display = 'none';
+    FileTransfer.reBindControls(true);
 }
 
 function afterTransferDoneHandler() {
@@ -213,7 +236,7 @@ receiverVirtualHost.addEventListener('input', (event) => {
                 dropZone.classList.remove('disabled-zone');
                 destinationHint.style.display = 'none';
 
-                reBindControls(true);
+                FileTransfer.reBindControls(true);
             }
         });
     }

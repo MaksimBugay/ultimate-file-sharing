@@ -77,12 +77,17 @@ h2 {
     height: 150px;
 }
 
+.transfer-files-button-size {
+    width: 200px;
+    height: 100px;
+}
+
 .fancy-button-view {
     display: block;
     background: url('/images/arrow-down-icon-png.png') no-repeat center center;
-    width: 130px;
-    height: 130px;
-    margin: 20px;
+    width: 200px;
+    height: 200px;
+    margin: 5px;
 }
 
 @media (max-width: 768px) {
@@ -106,6 +111,11 @@ h2 {
     .select-files-button-size {
         width: 110px;
         height: 110px;
+    }
+
+    .transfer-files-button-size {
+        width: 150px;
+        height: 75px;
     }
 
     .fancy-button-view {
@@ -218,6 +228,26 @@ h2 {
 }
 
 .select-files-button:active {
+    transform: scale(0.95); /* Slight zoom-out effect on click */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.transfer-files-button {
+    background: url('/images/main-background.png') no-repeat center center;
+    background-size: contain;
+    border: none;
+    cursor: pointer;
+    left: 10px;
+    top: 10px;
+    margin: 5px;
+}
+
+.transfer-files-button:hover {
+    transform: scale(1.1); /* Slight zoom-in effect on hover */
+    box-shadow: 0 6px 10px rgba(0, 123, 255, 0.4);
+}
+
+.transfer-files-button:active {
     transform: scale(0.95); /* Slight zoom-out effect on click */
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
 }
