@@ -237,6 +237,7 @@ h2 {
     background-size: contain;
     border: none;
     cursor: pointer;
+    border-radius: 8px;
     left: 10px;
     top: 10px;
     margin: 5px;
