@@ -1,6 +1,7 @@
 const FileTransfer = {};
 FileTransfer.applicationId = 'DIRECT_TRANSFER';
 FileTransfer.wsUrl = 'wss://secure.fileshare.ovh:31085';
+FileTransfer.scanQrCodeWaiterId = 'scan-qr-code-result';
 FileTransfer.pingIntervalId = window.setInterval(function () {
     PushcaClient.sendPing();
 }, 10000);
@@ -84,6 +85,146 @@ window.addEventListener('load', function () {
 window.addEventListener('resize', function () {
     FileTransfer.reBindControls();
 });
+
+//==================================== Show owner QR code ==============================================================
+const ownerQrCodeBtn = document.getElementById('ownerQrCodeBtn');
+const infoDialog = document.getElementById("infoDialog");
+const closeInfoBtn = document.getElementById("closeInfoBtn");
+
+function isInfoDialogVisible() {
+    return infoDialog.classList.contains('visible');
+}
+
+function closeInfoDialog() {
+    infoDialog.classList.remove('visible');
+}
+
+function showInfoDialog() {
+    infoDialog.classList.add('visible');
+}
+
+closeInfoBtn.addEventListener('click', function () {
+    closeInfoDialog();
+});
+
+
+function showInfoMsg(msg, url = null) {
+    infoMsg.textContent = msg;
+    const qrCodeContainer = document.getElementById('qrcode');
+    if (url && qrCodeContainer) {
+        qrCodeContainer.innerHTML = '';
+        QRCode.toDataURL(url, {width: 200, height: 200}, (err, url) => {
+            if (err) {
+                console.error('Failed to generate QR code:', err);
+                return;
+            }
+            const img = document.createElement('img');
+            img.src = url;
+            qrCodeContainer.appendChild(img);
+        });
+    }
+    showInfoDialog();
+}
+
+ownerQrCodeBtn.addEventListener('click', function () {
+    if (ownerVirtualHost.value) {
+        ownerQrCodeBtn.blur();
+        showInfoMsg("Use our website on the sender's side to scan this code", ownerVirtualHost.value);
+    }
+});
+
+//====================================Scan QR code======================================================================
+const scanQrCodeBtn = document.getElementById('scanQrCodeBtn');
+const qrCodeScannerDialog = document.getElementById('qrCodeScannerDialog');
+const closeQrScannerBtn = document.getElementById('closeQrScannerBtn');
+
+function isQrCodeScannerDialog() {
+    return qrCodeScannerDialog.classList.contains('visible');
+}
+
+function closeQrCodeScannerDialog() {
+    resultElement.textContent = 'None'
+    stopQRScanner();
+    qrCodeScannerDialog.classList.remove('visible');
+}
+
+async function showQrCodeScannerDialog() {
+    qrCodeScannerDialog.classList.add('visible');
+    await startQRScanner();
+}
+
+closeQrScannerBtn.addEventListener('click', function () {
+    closeQrCodeScannerDialog();
+});
+scanQrCodeBtn.addEventListener('click', async function () {
+    const result = await CallableFuture.callAsynchronously(
+        120_000,
+        FileTransfer.scanQrCodeWaiterId,
+        function () {
+            showQrCodeScannerDialog();
+        }
+    );
+    if (WaiterResponseType.SUCCESS === result.type) {
+        FileTransfer.receiverVirtualHost = result.body;
+        console.log(`Receiver virtual host ${FileTransfer.receiverVirtualHost}`);
+        performReceiverAliasLookup(ownerVirtualHost, FileTransfer.receiverVirtualHost)
+    } else {
+        console.warn("Failed attempt to scan receiver virtual host name");
+    }
+});
+
+const video = document.getElementById('video');
+const resultElement = document.getElementById('result');
+
+async function startQRScanner() {
+    try {
+        // Request camera access
+        video.srcObject = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}});
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        // Continuously scan video frames
+        const scan = () => {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Process the image for QR code
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (qrCode) {
+                    resultElement.textContent = qrCode.data; // Display the scanned string
+                    CallableFuture.releaseWaiterIfExistsWithSuccess(
+                        FileTransfer.scanQrCodeWaiterId,
+                        qrCode.data
+                    )
+                    delay(2000).then(() => {
+                        closeQrCodeScannerDialog();
+                    });
+                }
+            }
+            requestAnimationFrame(scan);
+        };
+
+        scan(); // Start scanning
+    } catch (error) {
+        console.error('Error accessing camera:', error);
+        showErrorMsg('Unable to access the camera. Please check permissions and try again.',
+            closeQrCodeScannerDialog);
+    }
+}
+
+function stopQRScanner() {
+    const stream = video.srcObject;
+    if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop()); // Stop all video tracks
+    }
+    video.srcObject = null;
+}
 
 //====================================Drag and Drop files===============================================================
 function preventDefaults(e) {
@@ -209,6 +350,8 @@ document.addEventListener("keydown", function (event) {
             closeErrorDialog();
         } else if (isHostDetailsDialogVisible()) {
             hideHostDetailsDialog();
+        } else if (isInfoDialogVisible()) {
+            closeInfoDialog();
         }
     }
 });
@@ -225,22 +368,27 @@ receiverVirtualHost.addEventListener('input', (event) => {
     }
 
     if (event.target.value.length > 3) {
-        PushcaClient.connectionAliasLookup(event.target.value).then(clientWithAlias => {
-            if (clientWithAlias) {
-                FileTransfer.isUpdatingProgrammatically = true;
-                event.target.setAttribute('readonly', true);
-                event.target.classList.add('embedded-link');
-                event.target.classList.add('green-text');
-                event.target.value = clientWithAlias.alias;
-                FileTransfer.isUpdatingProgrammatically = false;
-                dropZone.classList.remove('disabled-zone');
-                destinationHint.style.display = 'none';
-
-                FileTransfer.reBindControls(true);
-            }
-        });
+        performReceiverAliasLookup(event.target, event.target.value);
     }
 });
+
+function performReceiverAliasLookup(subject, str) {
+    PushcaClient.connectionAliasLookup(str).then(clientWithAlias => {
+        if (clientWithAlias) {
+            FileTransfer.isUpdatingProgrammatically = true;
+            subject.setAttribute('readonly', true);
+            subject.classList.add('embedded-link');
+            subject.classList.add('green-text');
+            subject.value = clientWithAlias.alias;
+            FileTransfer.isUpdatingProgrammatically = false;
+            dropZone.classList.remove('disabled-zone');
+            destinationHint.style.display = 'none';
+            scanQrCodeBtn.style.display = 'none';
+
+            FileTransfer.reBindControls(true);
+        }
+    });
+}
 
 receiverVirtualHost.addEventListener('click', showHostDetailsHandler);
 //===================================Host details===================================================

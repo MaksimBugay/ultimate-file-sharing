@@ -113,11 +113,41 @@
     <button id="dropdownButton" class="dropdown-button">Select Language</button>
     <ul id="dropdownList" class="dropdown-list"></ul>
 </div>
+
+<div id="infoDialog" class="consent-dialog">
+    <div class="info-content">
+        <div class="info-caption">
+            <h2>Info</h2>
+            <div class="close-btn-container">
+                <span id="closeInfoBtn" class="close-btn" style="color: darkblue">&times;</span>
+            </div>
+        </div>
+        <div id="qrcode"></div>
+        <p id="infoMsg" class="message-text"></p>
+    </div>
+</div>
+
+<div id="qrCodeScannerDialog" class="consent-dialog">
+    <div class="info-content">
+        <div class="info-caption">
+            <h2>QR Code Scanner</h2>
+            <div class="close-btn-container">
+                <span id="closeQrScannerBtn" class="close-btn" style="color: darkblue">&times;</span>
+            </div>
+        </div>
+        <video id="video" autoplay></video>
+        <div id="output">Scanned Result: <span id="result">None</span></div>
+    </div>
+</div>
+
 <div class="main-container">
 
     <div id="mainFlowContainer" class="main-flow-container">
         <div class="device-container container-max-width">
-            <h2>===== FROM =====</h2>
+            <div class="centered-container">
+                <h2> FROM </h2>
+                <button id="ownerQrCodeBtn" class="qr-code-button qr-code-button-img" title="show as QR code"></button>
+            </div>
             <div id="deviceCaptionHint" class="device-caption">$deviceCaptionHintString$</div>
             <label for="ownerVirtualHost"></label>
             <input class="fancy-input" type="text" readonly id="ownerVirtualHost" placeholder="data channel is broken"/>
@@ -140,7 +170,10 @@
                 style="display: none"></button>
 
         <div id="destinationContainer" class="device-container container-max-width">
-            <h2>====== TO ======</h2>
+            <div class="centered-container">
+                <h2> TO </h2>
+                <button id="scanQrCodeBtn" class="qr-code-button scan-qr-code-button-img" title="Scan QR code"></button>
+            </div>
             <!--<div class="device-caption">TO (receiver virtual host name)</div>-->
             <label for="receiverVirtualHost"></label>
             <input class="fancy-input" type="text" id="receiverVirtualHost"
@@ -164,6 +197,8 @@
 <script src="js/detect.min.js"></script>
 <script src="js/client.min.js"></script>
 <script src="js/uuid.min.js"></script>
+<script src="js/qrcode.min.js"></script>
+<script src="js/jsQR.js"></script>
 
 <script src="js/device-secret.js?v=<?= time(); ?>"></script>
 <script src="js/common-utils.js?v=<?= time(); ?>"></script>
