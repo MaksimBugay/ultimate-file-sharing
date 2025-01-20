@@ -89,7 +89,14 @@ window.addEventListener('resize', function () {
 //==================================== Copy paste ======================================================================
 const toolBarPasteArea = document.getElementById("toolBarPasteArea");
 
+function hasFileExtension(fileName) {
+    return /\.[a-zA-Z0-9]+$/.test(fileName); // Matches .extension at the end of the string
+}
+
 function getCopyPastName(mimeType, blobName) {
+    if (hasFileExtension(blobName)) {
+        return blobName;
+    }
     let ext = "";
     if (mimeType.includes('png')) {
         ext = '.png';
@@ -111,6 +118,8 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
         // Check if the clipboard item is a file (binary data)
         if (item.kind === 'file') {
             const blob = item.getAsFile();
+            console.log('item.getAsFile');
+            console.log(blob);
             const mimeType = blob.type;
             const name = getCopyPastName(mimeType, blob.name);
             await TransferFileHelper.transferBlobToVirtualHostBase(
