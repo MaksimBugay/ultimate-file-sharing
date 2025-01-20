@@ -167,7 +167,7 @@ scanQrCodeBtn.addEventListener('click', async function () {
     if (WaiterResponseType.SUCCESS === result.type) {
         FileTransfer.receiverVirtualHost = result.body;
         console.log(`Receiver virtual host ${FileTransfer.receiverVirtualHost}`);
-        performReceiverAliasLookup(ownerVirtualHost, FileTransfer.receiverVirtualHost)
+        performReceiverAliasLookup(receiverVirtualHost, FileTransfer.receiverVirtualHost)
     } else {
         console.warn("Failed attempt to scan receiver virtual host name");
     }
