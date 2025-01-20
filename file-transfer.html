@@ -141,7 +141,6 @@
 </div>
 
 <div class="main-container">
-
     <div id="mainFlowContainer" class="main-flow-container">
         <div class="device-container container-max-width">
             <div class="centered-container">
@@ -165,9 +164,15 @@
             <input type="file" id="fileInput" style="display:none" multiple>
         </div>
 
-        <button id="fileTransferBtn" class="fancy-button fancy-button-view"></button>
-        <button id="fileTransferProgressBtn" class="transfer-files-button transfer-files-button-size"
-                style="display: none"></button>
+        <div style="display: flex; flex-direction: column">
+            <button id="fileTransferBtn" class="fancy-button fancy-button-view"></button>
+            <button id="fileTransferProgressBtn" class="transfer-files-button transfer-files-button-size"
+                    style="display: none"></button>
+            <div class="tb-copy-past" id="tbCopyPastMemo">
+                    <textarea class="tb-copy-past-memo" id="toolBarPasteArea" rows="3" cols="10"
+                              spellcheck="false"></textarea>
+            </div>
+        </div>
 
         <div id="destinationContainer" class="device-container container-max-width">
             <div class="centered-container">
@@ -199,6 +204,7 @@
 <script src="js/uuid.min.js"></script>
 <script src="js/qrcode.min.js"></script>
 <script src="js/jsQR.js"></script>
+<script src="js/purify.min.js"></script>
 
 <script src="js/device-secret.js?v=<?= time(); ?>"></script>
 <script src="js/common-utils.js?v=<?= time(); ?>"></script>

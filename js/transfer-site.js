@@ -86,6 +86,70 @@ window.addEventListener('resize', function () {
     FileTransfer.reBindControls();
 });
 
+//==================================== Copy paste ======================================================================
+const toolBarPasteArea = document.getElementById("toolBarPasteArea");
+
+function getCopyPastName(mimeType, blobName) {
+    let ext = "";
+    if (mimeType.includes('png')) {
+        ext = '.png';
+    }
+    if (mimeType.includes('bmp')) {
+        ext = '.bmp';
+    }
+    const prefix = blobName ? blobName : 'binary';
+    return `${prefix}-${new Date().getTime()}${ext}`
+}
+
+toolBarPasteArea.addEventListener('paste', async function (event) {
+    const clipboardItems = event.clipboardData.items;
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    for (let item of clipboardItems) {
+        // Check if the clipboard item is a file (binary data)
+        if (item.kind === 'file') {
+            const blob = item.getAsFile();
+            const mimeType = blob.type;
+            const name = getCopyPastName(mimeType, blob.name);
+            await TransferFileHelper.transferBlobToVirtualHostBase(
+                blob, name, blob.type,
+                receiverVirtualHost.value,
+                ownerVirtualHost.value,
+                FileTransfer
+            );
+        } else if (item.kind === 'string') {
+            const mimeType = 'text/plain';
+            const name = `text-message-${new Date().getTime()}.txt`;
+            item.getAsString((pasteText) => {
+                const text = DOMPurify.sanitize(pasteText);
+                if (isNotEmpty(text)) {
+                    const textBlob = new Blob([text], {type: mimeType});
+                    TransferFileHelper.transferBlobToVirtualHostBase(
+                        textBlob, name, textBlob.type,
+                        receiverVirtualHost.value,
+                        ownerVirtualHost.value,
+                        FileTransfer
+                    );
+                }
+            });
+        }
+    }
+});
+
+document.addEventListener('mousemove', (event) => {
+    if (!receiverVirtualHost.readOnly) {
+        return;
+    }
+    if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
+        return;
+    }
+    if (toolBarPasteArea) {
+        toolBarPasteArea.focus();
+    }
+});
+
 //==================================== Show owner QR code ==============================================================
 const ownerQrCodeBtn = document.getElementById('ownerQrCodeBtn');
 const infoDialog = document.getElementById("infoDialog");
@@ -386,6 +450,7 @@ function performReceiverAliasLookup(subject, str) {
             scanQrCodeBtn.style.display = 'none';
 
             FileTransfer.reBindControls(true);
+            toolBarPasteArea.focus();
         }
     });
 }

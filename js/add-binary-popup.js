@@ -393,22 +393,6 @@ document.querySelectorAll('input[name="choice"]').forEach((element) => {
     });
 });
 
-
-async function blobToArrayBuffers(blob, chunkSize) {
-    const arrayBuffers = [];
-    const totalSize = blob.size;
-    let offset = 0;
-
-    while (offset < totalSize) {
-        const chunk = blob.slice(offset, offset + chunkSize);
-        const arrayBuffer = await chunk.arrayBuffer();
-        arrayBuffers.push(arrayBuffer);
-        offset += chunkSize;
-    }
-
-    return arrayBuffers;
-}
-
 function showSpinnerInButton() {
     document.getElementById('download-spinner').style.display = 'flex';
     document.getElementById('download-message').textContent = 'Loading...';

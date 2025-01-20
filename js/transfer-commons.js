@@ -425,7 +425,11 @@ TransferFileHelper.transferBlobToVirtualHostBase = async function (blob, name, t
                                                                    receiverVirtualHost, senderVirtualHost,
                                                                    propertiesHolder) {
     const binaryId = uuid.v4().toString();
-    const joinGroupResponse = await acquireTmpGroupHandshake(receiverVirtualHost, binaryId, closeModal);
+    const joinGroupResponse = await acquireTmpGroupHandshake(
+        receiverVirtualHost, binaryId, function () {
+            location.reload();
+        }
+    );
 
     if (!joinGroupResponse) {
         return false;

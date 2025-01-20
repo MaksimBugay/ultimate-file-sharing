@@ -432,6 +432,20 @@ function decodeFromBase64UrlSafe(base64UrlSafe) {
     return decoder.decode(uint8Array);
 }
 
+async function blobToArrayBuffers(blob, chunkSize) {
+    const arrayBuffers = [];
+    const totalSize = blob.size;
+    let offset = 0;
+
+    while (offset < totalSize) {
+        const chunk = blob.slice(offset, offset + chunkSize);
+        const arrayBuffer = await chunk.arrayBuffer();
+        arrayBuffers.push(arrayBuffer);
+        offset += chunkSize;
+    }
+
+    return arrayBuffers;
+}
 //---------------------------------------------------------------------------------------
 
 //---------------------------------FILES-------------------------------------------------
