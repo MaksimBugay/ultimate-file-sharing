@@ -260,7 +260,7 @@ video.addEventListener('play', () => {
 async function startQRScanner() {
     try {
         const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
 
         // Request camera access
         video.srcObject = await navigator.mediaDevices.getUserMedia(
@@ -279,10 +279,19 @@ async function startQRScanner() {
         )
 
         if (WaiterResponseType.ERROR === result.type) {
-            showErrorMsg(
+            video.play()
+                .then(() => console.log('Video play was forced'))
+                .catch(err => {
+                    alert(err);
+                    showErrorMsg(
+                        'To use the QR scanner, please open this page in a standard web browser like Chrome, Firefox, Opera etc.',
+                        closeQrCodeScannerDialog
+                    );
+                });
+            /*showErrorMsg(
                 'To use the QR scanner, please open this page in a standard web browser like Chrome, Firefox, Opera etc.',
                 closeQrCodeScannerDialog
-            );
+            );*/
             return;
         }
         // Continuously scan video frames
