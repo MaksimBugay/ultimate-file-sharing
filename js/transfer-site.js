@@ -77,6 +77,12 @@ FileTransfer.reBindControls = function (force = false) {
     }
 }
 
+document.addEventListener('DOMContentLoaded', function () {
+    const runningLine = document.getElementById('runningLine');
+    if (runningLine) {
+        runningLine.style.animationPlayState = 'running';
+    }
+});
 window.addEventListener('load', function () {
     if (isMobile()) {
         deviceFromImage.src = 'images/device1-mobile.png';

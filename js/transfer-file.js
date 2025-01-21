@@ -45,7 +45,6 @@ virtualHost.addEventListener('input', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelector('.running-line span').style.animationPlayState = 'running';
     setOriginatorVirtualHostClickHandler(Fileshare.workSpaceId);
     document.querySelectorAll('input[name="transferTargetChoice"]').forEach((element) => {
         element.addEventListener('change', function () {
