@@ -246,8 +246,16 @@ scanQrCodeBtn.addEventListener('click', async function () {
     }
 });
 
+FileTransfer.videoWasStartedWaiterId = 'video-was-started';
 const video = document.getElementById('video');
 const resultElement = document.getElementById('result');
+
+video.addEventListener('play', () => {
+    CallableFuture.releaseWaiterIfExistsWithSuccess(
+        FileTransfer.videoWasStartedWaiterId,
+        true
+    );
+});
 
 async function startQRScanner() {
     try {
@@ -264,8 +272,19 @@ async function startQRScanner() {
             }
         );
 
-        await delay(2000);
+        const result = await CallableFuture.callAsynchronously(
+            7000,
+            FileTransfer.videoWasStartedWaiterId,
+            () => console.log("Waiting for video stream")
+        )
 
+        if (WaiterResponseType.ERROR === result.type) {
+            showErrorMsg(
+                'To use the QR scanner, please open this page in a standard web browser like Chrome, Firefox, Opera etc.',
+                closeQrCodeScannerDialog
+            );
+            return;
+        }
         // Continuously scan video frames
         const scan = () => {
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
