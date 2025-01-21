@@ -443,6 +443,19 @@ h2 {
     display: inline-block;
 }
 
+.help-button {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
+    vertical-align: middle;
+    position: absolute;
+    padding: 3px 3px;
+    border: none;
+    cursor: pointer;
+    right: 15px;
+    top: 55px
+}
+
 .dropdown-button {
     padding: 3px 3px;
     border: 1px solid #ccc;
