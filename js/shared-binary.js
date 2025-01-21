@@ -22,7 +22,7 @@ function isPlayableMedia(contentType) {
 }
 
 function canBeShownInBrowser(contentType) {
-    return ('text/plain' === contentType) || playableImageTypes.includes(contentType) || isPlayableMedia(contentType);
+    return ('application/pdf' === contentType) || ('text/plain' === contentType) || playableImageTypes.includes(contentType) || isPlayableMedia(contentType);
 }
 
 //======================================================================================================================
@@ -31,6 +31,7 @@ const contentContainer = document.getElementById('contentContainer');
 const contentText = document.getElementById('contentText');
 const contentTextContainer = document.getElementById("contentTextContainer");
 const contentImage = document.getElementById("contentImage");
+const pdfViewer = document.getElementById('pdfViewer');
 const contentVideoPlayer = document.getElementById('contentVideoPlayer');
 const downloadBtn = document.getElementById('downloadBtn');
 const progressBarContainer = document.getElementById("progressBarContainer");
@@ -105,6 +106,14 @@ function openBlobInBrowser(blob, binaryFileName) {
         contentImage.onload = function () {
             contentContainer.style.display = 'block';
             contentImage.style.display = 'block';
+            URL.revokeObjectURL(blobUrl);
+        };
+    } else if (blob.type.includes('pdf')) {
+        const blobUrl = URL.createObjectURL(blob);
+        pdfViewer.src = blobUrl;
+        pdfViewer.onload = function () {
+            contentContainer.style.display = 'block';
+            pdfViewer.style.display = 'block';
             URL.revokeObjectURL(blobUrl);
         };
     } else if (isPlayableMedia(blob.type)) {
