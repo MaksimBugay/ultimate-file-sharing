@@ -28,7 +28,7 @@
 <iframe src="html/header.html" width="100%" height="93px"
         style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
 
-<div id="errorDialog" class="consent-dialog"  style="z-index: 10050">
+<div id="errorDialog" class="consent-dialog" style="z-index: 10050">
     <div class="error-content">
         <div class="error-caption">
             <h2>Error</h2>
@@ -136,8 +136,10 @@
             </div>
         </div>
         <video id="video" autoplay></video>
-        <div id="output">Scanned Result: <span id="result">None</span></div>
-        <button id="qrScanBtn">Scan</button>
+        <div class="centered-container">
+            <div id="output">Scanned Result: <span id="result">None</span></div>
+            <button id="qrScanBtn" class="qr-code-button scan-qr-code-button-img" title="Scan QR code"></button>
+        </div>
     </div>
 </div>
 

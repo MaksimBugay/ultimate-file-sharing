@@ -216,7 +216,10 @@ qrScanBtn.style.display = 'none';
 
 qrScanBtn.addEventListener('click', function () {
     video.play()
-        .then(() => console.log('Video is playing'))
+        .then(() => {
+            console.log('Video is playing');
+            qrScanBtn.style.display = 'none';
+        })
         .catch(err => console.error('Error trying to play video:', err));
 });
 
@@ -301,6 +304,7 @@ async function startQRScanner() {
                         "Autoplay is not allowed, press scan button manually",
                         null
                     );
+                    delay(1000).then(() => closeErrorDialog());
                 } else {
                     showErrorMsg(
                         'To use the QR scanner, please open this page in a standard web browser like Chrome, Firefox, Opera etc.',
