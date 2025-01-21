@@ -110,12 +110,14 @@ function openBlobInBrowser(blob, binaryFileName) {
         };
     } else if (blob.type.includes('pdf')) {
         const blobUrl = URL.createObjectURL(blob);
-        pdfViewer.src = blobUrl;
-        pdfViewer.onload = function () {
+        delay(1000).then(() => {
+            pdfViewer.src = blobUrl;
             contentContainer.style.display = 'block';
             pdfViewer.style.display = 'block';
+        });
+        delay(5000).then(() => {
             URL.revokeObjectURL(blobUrl);
-        };
+        });
     } else if (isPlayableMedia(blob.type)) {
         const blobUrl = URL.createObjectURL(blob);
         const source = document.createElement('source');

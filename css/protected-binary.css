@@ -176,6 +176,22 @@ input[type="text"] {
     overflow-y: auto;
 }
 
+.pdf-content-container {
+    display: none;
+    width: 100%;
+    height: 100%;
+    max-width: 90vw;
+    max-width: 90dvw;
+    min-width: 300px;
+    max-height: 80vh;
+    max-height: 80dvh;
+    min-height: 300px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    overflow-y: auto;
+}
+
 .read-me-text-memo {
     user-select: text;
     white-space: pre-wrap;
