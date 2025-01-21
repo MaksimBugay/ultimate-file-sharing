@@ -210,12 +210,22 @@ ownerQrCodeBtn.addEventListener('click', function () {
 const scanQrCodeBtn = document.getElementById('scanQrCodeBtn');
 const qrCodeScannerDialog = document.getElementById('qrCodeScannerDialog');
 const closeQrScannerBtn = document.getElementById('closeQrScannerBtn');
+const qrScanBtn = document.getElementById('qrScanBtn');
+
+qrScanBtn.style.display = 'none';
+
+qrScanBtn.addEventListener('click', function () {
+    video.play()
+        .then(() => console.log('Video is playing'))
+        .catch(err => console.error('Error trying to play video:', err));
+});
 
 function isQrCodeScannerDialog() {
     return qrCodeScannerDialog.classList.contains('visible');
 }
 
 function closeQrCodeScannerDialog() {
+    qrScanBtn.style.display = 'none';
     resultElement.textContent = 'None'
     stopQRScanner();
     qrCodeScannerDialog.classList.remove('visible');
@@ -260,7 +270,7 @@ video.addEventListener('play', () => {
 async function startQRScanner() {
     try {
         const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const context = canvas.getContext('2d', {willReadFrequently: true});
 
         // Request camera access
         video.srcObject = await navigator.mediaDevices.getUserMedia(
@@ -272,27 +282,44 @@ async function startQRScanner() {
             }
         );
 
-        const result = await CallableFuture.callAsynchronously(
-            7000,
+        let result = await CallableFuture.callAsynchronously(
+            5000,
             FileTransfer.videoWasStartedWaiterId,
             () => console.log("Waiting for video stream")
-        )
+        );
 
+        let manualStartRequired = false;
         if (WaiterResponseType.ERROR === result.type) {
-            video.play()
-                .then(() => console.log('Video play was forced'))
-                .catch(err => {
-                    alert(err);
+            try {
+                await video.play();
+                console.log('Video play was forced');
+            } catch (err) {
+                if (err.message && err.message.includes('can only be initiated by a user gesture')) {
+                    manualStartRequired = true;
+                    qrScanBtn.style.display = 'block';
+                    showErrorMsg(
+                        "Autoplay is not allowed, press scan button manually",
+                        null
+                    );
+                } else {
                     showErrorMsg(
                         'To use the QR scanner, please open this page in a standard web browser like Chrome, Firefox, Opera etc.',
                         closeQrCodeScannerDialog
                     );
-                });
-            /*showErrorMsg(
-                'To use the QR scanner, please open this page in a standard web browser like Chrome, Firefox, Opera etc.',
-                closeQrCodeScannerDialog
-            );*/
-            return;
+                    return;
+                }
+            }
+        }
+
+        if (manualStartRequired) {
+            result = await CallableFuture.callAsynchronously(
+                10_000,
+                FileTransfer.videoWasStartedWaiterId,
+                () => console.log("Waiting for video stream")
+            );
+            if (WaiterResponseType.ERROR === result.type) {
+                return;
+            }
         }
         // Continuously scan video frames
         const scan = () => {
