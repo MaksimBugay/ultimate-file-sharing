@@ -444,7 +444,7 @@ h2 {
 }
 
 .dropdown-button {
-    padding: 10px 10px;
+    padding: 3px 3px;
     border: 1px solid #ccc;
     cursor: pointer;
     background-color: #007bff;
@@ -459,14 +459,14 @@ h2 {
     padding: 0;
     border: 1px solid #ccc;
     background-color: lightskyblue;
-    max-height: 400px;
+    max-height: 500px;
     overflow-y: auto;
     z-index: 1000;
     scrollbar-width: thin
 }
 
 .dropdown-list li {
-    padding: 10px;
+    padding: 3px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -477,9 +477,10 @@ h2 {
 }
 
 .flag {
-    width: 16px;
-    height: 12px;
-    margin-right: 10px;
+    width: 15px;
+    height: 10px;
+    margin-right: 5px;
+    margin-left: 0;
 }
 
 .dropdown.open .dropdown-list {
