@@ -251,21 +251,20 @@ const resultElement = document.getElementById('result');
 
 async function startQRScanner() {
     try {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
         // Request camera access
         video.srcObject = await navigator.mediaDevices.getUserMedia(
             {
-                /*video: {
-                    facingMode: 'environment'
-                }*/
                 video: {
-                    frameRate: {ideal: 60, max: 60},  // Request 60 FPS if available
-                    facingMode: {ideal: "user"}
+                    //frameRate: {ideal: 60, max: 60},
+                    facingMode: 'environment'
                 }
             }
         );
 
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+        await delay(2000);
 
         // Continuously scan video frames
         const scan = () => {
