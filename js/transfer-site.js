@@ -270,7 +270,6 @@ function closeQrCodeScannerDialog() {
 async function showQrCodeScannerDialog() {
     receiverVirtualHost.removeEventListener('blur', holdFocus);
     receiverVirtualHost.blur();
-    await delay(1000);
     qrCodeScannerDialog.classList.add('visible');
     await startQRScanner();
 }
@@ -278,7 +277,9 @@ async function showQrCodeScannerDialog() {
 closeQrScannerBtn.addEventListener('click', function () {
     closeQrCodeScannerDialog();
 });
-scanQrCodeBtn.addEventListener('click', async function () {
+scanQrCodeBtn.addEventListener('click', async function (event) {
+    event.stopPropagation();
+    event.preventDefault();
     const result = await CallableFuture.callAsynchronously(
         120_000,
         FileTransfer.scanQrCodeWaiterId,
