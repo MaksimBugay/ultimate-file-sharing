@@ -262,9 +262,15 @@ function closeQrCodeScannerDialog() {
     resultElement.textContent = 'None'
     stopQRScanner();
     qrCodeScannerDialog.classList.remove('visible');
+
+    receiverVirtualHost.addEventListener('blur', holdFocus);
+    receiverVirtualHost.focus();
 }
 
 async function showQrCodeScannerDialog() {
+    receiverVirtualHost.removeEventListener('blur', holdFocus);
+    receiverVirtualHost.blur();
+    await delay(1000);
     qrCodeScannerDialog.classList.add('visible');
     await startQRScanner();
 }
