@@ -165,11 +165,14 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
     }
 });
 
-receiverVirtualHost.addEventListener('blur', (event) => {
+receiverVirtualHost.addEventListener('blur', holdFocus);
+
+function holdFocus(event) {
     if (!event.target.readOnly) {
         event.target.focus();
     }
-});
+}
+
 document.addEventListener('mousemove', (event) => {
     if (!receiverVirtualHost.readOnly) {
         return;
@@ -193,9 +196,13 @@ function isInfoDialogVisible() {
 
 function closeInfoDialog() {
     infoDialog.classList.remove('visible');
+    receiverVirtualHost.addEventListener('blur', holdFocus);
+    receiverVirtualHost.focus();
 }
 
 function showInfoDialog() {
+    receiverVirtualHost.removeEventListener('blur', holdFocus);
+    receiverVirtualHost.blur();
     infoDialog.classList.add('visible');
 }
 
