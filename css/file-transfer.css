@@ -150,7 +150,7 @@ h2 {
     }
 
     .image-max-width {
-        max-width: 150px;
+        max-width: 120px;
     }
 
     .select-files-button-size {
@@ -212,12 +212,15 @@ h2 {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.fancy-input-container-width {
+    width: 90%;
+    margin: 5px 8px 0 0;
+}
+
 .fancy-input-container {
     position: relative;
-    width: 80%;
     max-width: 290px;
     border-radius: 8px;
-    margin-top: 5px;
 }
 
 .fancy-input-container::before {
@@ -244,7 +247,7 @@ h2 {
     }
     50% {
         opacity: 0.8;
-        transform: scale(1.1);
+        transform: scale(1.05);
     }
     100% {
         opacity: 0.6;
@@ -264,7 +267,7 @@ h2 {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     background: #ffffff;
     color: #333;
-    position: relative;
+    margin: 0;
 }
 
 .fancy-input:focus {
@@ -278,7 +281,7 @@ h2 {
 }
 
 .fancy-input-with-warning {
-    width: 80%;
+    width: 90%;
 }
 
 .fancy-input-with-warning::placeholder {
@@ -575,7 +578,7 @@ canvas {
     border: none;
     display: flex;
     align-items: center;
-    margin-top: 50px;
+    margin-top: 55px;
 }
 
 .running-line span {
