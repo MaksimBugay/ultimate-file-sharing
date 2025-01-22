@@ -539,6 +539,7 @@ function performReceiverAliasLookup(subject, str) {
             dropZone.classList.remove('disabled-zone');
             destinationHint.style.display = 'none';
             scanQrCodeBtn.style.display = 'none';
+            document.querySelector('.fancy-input-container').classList.remove('fancy-input-container');
 
             FileTransfer.reBindControls(true);
             toolBarPasteArea.focus();

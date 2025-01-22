@@ -194,9 +194,7 @@ h2 {
     font-size: 10px;
     font-weight: bold;
     color: #006BFD;
-    box-shadow:
-            4px 4px 8px rgba(0, 0, 0, 0.2), /* Outer shadow for depth */
-            -4px -4px 8px rgba(255, 255, 255, 0.6); /* Inner highlight for a lifted look */
+    box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.2), /* Outer shadow for depth */ -4px -4px 8px rgba(255, 255, 255, 0.6); /* Inner highlight for a lifted look */
     border: 1px solid rgba(0, 107, 253, 0.3); /* Subtle border to define the container */
     transition: all 0.3s ease-in-out; /* Smooth hover effects */
 }
@@ -214,8 +212,48 @@ h2 {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.fancy-input {
+.fancy-input-container {
+    position: relative;
     width: 80%;
+    max-width: 290px;
+    border-radius: 8px;
+    margin-top: 5px;
+}
+
+.fancy-input-container::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    border-radius: 8px; /* Matches input's border-radius + extra space */
+    background: radial-gradient(circle, rgba(123, 0, 255, 0.58), transparent);
+    animation: pulsar 2s infinite;
+    z-index: 0; /* Place behind input */
+}
+
+.fancy-input-container.no-glow::before {
+    animation: none; /* Disables the animation */
+}
+
+@keyframes pulsar {
+    0% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+}
+
+.fancy-input {
+    width: 100%;
     max-width: 280px;
     padding: 5px;
     font-size: 16px;
@@ -226,6 +264,7 @@ h2 {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     background: #ffffff;
     color: #333;
+    position: relative;
 }
 
 .fancy-input:focus {
@@ -234,8 +273,17 @@ h2 {
 }
 
 .fancy-input::placeholder {
-    color: #aaa; /* Placeholder color */
-    font-style: italic; /* Placeholder font style */
+    color: #aaa;
+    font-style: italic;
+}
+
+.fancy-input-with-warning {
+    width: 80%;
+}
+
+.fancy-input-with-warning::placeholder {
+    color: orangered;
+    font-style: italic;
 }
 
 .fancy-input:hover {
@@ -527,7 +575,7 @@ canvas {
     border: none;
     display: flex;
     align-items: center;
-    margin-top: 10px;
+    margin-top: 50px;
 }
 
 .running-line span {

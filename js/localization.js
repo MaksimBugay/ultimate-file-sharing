@@ -62,6 +62,38 @@ const translations = {
         da: "dit tildelte virtuelle værtsnavn",
         fi: "sinulle osoitettu virtuaalinen isäntänimi",
         no: "ditt tildelte virtuelle vertsnavn"
+    },
+    runningLineString: {
+        "en": "We have developed a dedicated website that empowers every internet user with the essential ability to seamlessly transfer files between devices, backed by robust protection against data theft and unauthorized access.",
+        "es": "Hemos desarrollado un sitio web dedicado que ofrece a cada usuario de Internet la capacidad esencial de transferir archivos entre dispositivos de manera fluida, respaldado por una sólida protección contra el robo de datos y el acceso no autorizado.",
+        "fr": "Nous avons développé un site Web dédié qui offre à chaque utilisateur d'Internet la capacité essentielle de transférer des fichiers entre appareils de manière fluide, avec une protection robuste contre le vol de données et les accès non autorisés.",
+        "de": "Wir haben eine dedizierte Website entwickelt, die jedem Internetnutzer die wesentliche Fähigkeit bietet, Dateien nahtlos zwischen Geräten zu übertragen, mit robuster Sicherheit gegen Datendiebstahl und unbefugten Zugriff.",
+        "zh": "我们开发了一个专门的网站，使每位互联网用户能够无缝地在设备之间传输文件，并提供强大的数据盗窃和未经授权访问保护。",
+        "ru": "Мы разработали специализированный веб-сайт, который предоставляет каждому интернет-пользователю важную возможность беспрепятственно передавать файлы между устройствами, с надежной защитой от кражи данных и несанкционированного доступа.",
+        "ja": "私たちは、すべてのインターネットユーザーがデバイス間でファイルをシームレスに転送するための重要な機能を備えた専用のウェブサイトを開発しました。データ盗難や不正アクセスに対する強力な保護も備えています。",
+        "it": "Abbiamo sviluppato un sito web dedicato che offre a ogni utente di Internet la capacità essenziale di trasferire file tra dispositivi senza problemi, con una protezione robusta contro il furto di dati e l'accesso non autorizzato.",
+        "pt": "Criamos um site dedicado que oferece a todos os usuários da Internet a capacidade essencial de transferir arquivos entre dispositivos de forma contínua, com proteção robusta contra roubo de dados e acesso não autorizado.",
+        "ar": "لقد قمنا بتطوير موقع ويب مخصص يمنح كل مستخدم للإنترنت القدرة الأساسية على نقل الملفات بين الأجهزة بسلاسة، مع حماية قوية ضد سرقة البيانات والوصول غير المصرح به.",
+        "hi": "हमने एक समर्पित वेबसाइट विकसित की है जो हर इंटरनेट उपयोगकर्ता को उपकरणों के बीच निर्बाध रूप से फाइलें स्थानांतरित करने की महत्वपूर्ण क्षमता प्रदान करती है, साथ ही डेटा चोरी और अनधिकृत पहुंच के खिलाफ मजबूत सुरक्षा प्रदान करती है।",
+        "ko": "우리는 모든 인터넷 사용자가 장치 간 파일을 원활하게 전송할 수 있는 필수 기능을 제공하는 전용 웹사이트를 개발했으며, 데이터 도난 및 무단 액세스로부터 강력하게 보호합니다.",
+        "tr": "Her internet kullanıcısına cihazlar arasında dosya aktarımı yapma yeteneğini kazandıran ve veri hırsızlığına ve yetkisiz erişime karşı güçlü bir koruma sunan özel bir web sitesi geliştirdik.",
+        "nl": "We hebben een speciale website ontwikkeld die elke internetgebruiker de essentiële mogelijkheid biedt om naadloos bestanden tussen apparaten over te dragen, ondersteund door robuuste bescherming tegen gegevensdiefstal en ongeautoriseerde toegang.",
+        "sv": "Vi har utvecklat en dedikerad webbplats som ger varje internetanvändare den viktiga möjligheten att sömlöst överföra filer mellan enheter, med ett starkt skydd mot datastöld och obehörig åtkomst.",
+        "pl": "Stworzyliśmy dedykowaną stronę internetową, która zapewnia każdemu użytkownikowi internetu możliwość płynnego przesyłania plików między urządzeniami, chronioną przed kradzieżą danych i nieautoryzowanym dostępem.",
+        "vi": "Chúng tôi đã phát triển một trang web chuyên dụng cung cấp cho mọi người dùng internet khả năng chuyển tệp giữa các thiết bị một cách liền mạch, được hỗ trợ bởi sự bảo vệ mạnh mẽ chống lại trộm cắp dữ liệu và truy cập trái phép.",
+        "id": "Kami telah mengembangkan situs web khusus yang memungkinkan setiap pengguna internet untuk mentransfer file antar perangkat secara mulus, didukung oleh perlindungan kuat terhadap pencurian data dan akses tidak sah.",
+        "th": "เราได้พัฒนาเว็บไซต์เฉพาะที่มอบความสามารถสำคัญในการถ่ายโอนไฟล์ระหว่างอุปกรณ์ได้อย่างราบรื่น พร้อมการป้องกันข้อมูลสูญหายและการเข้าถึงที่ไม่ได้รับอนุญาตอย่างแข็งแกร่ง",
+        "uk": "Ми розробили спеціалізований веб-сайт, який надає кожному інтернет-користувачу важливу можливість безперешкодно передавати файли між пристроями з надійним захистом від крадіжки даних та несанкціонованого доступу.",
+        "ms": "Kami telah membangunkan laman web khas yang memberi setiap pengguna internet keupayaan penting untuk memindahkan fail antara peranti secara lancar, disokong oleh perlindungan kukuh terhadap kecurian data dan akses tanpa kebenaran.",
+        "tl": "Nilikha namin ang isang dedikadong website na nagbibigay sa bawat gumagamit ng internet ng mahalagang kakayahang maglipat ng mga file sa pagitan ng mga device nang walang abala, na sinusuportahan ng matatag na proteksyon laban sa pagnanakaw ng data at hindi awtorisadong pag-access.",
+        "fa": "ما یک وب‌سایت اختصاصی طراحی کرده‌ایم که به هر کاربر اینترنت این امکان را می‌دهد که فایل‌ها را به‌صورت یکپارچه بین دستگاه‌ها منتقل کند و از داده‌ها در برابر سرقت و دسترسی غیرمجاز محافظت کند.",
+        "ro": "Am dezvoltat un site web dedicat care oferă fiecărui utilizator de internet capacitatea esențială de a transfera fișiere între dispozitive fără probleme, cu protecție robustă împotriva furtului de date și accesului neautorizat.",
+        "hu": "Kifejlesztettünk egy dedikált weboldalt, amely minden internetfelhasználónak lehetővé teszi a fájlok zökkenőmentes átvitelét az eszközök között, erős védelmet nyújtva az adatlopás és az illetéktelen hozzáférés ellen.",
+        "cs": "Vyvinuli jsme speciální webovou stránku, která umožňuje každému uživateli internetu snadno přenášet soubory mezi zařízeními, s robustní ochranou proti krádeži dat a neoprávněnému přístupu.",
+        "el": "Έχουμε αναπτύξει έναν ειδικό ιστότοπο που παρέχει σε κάθε χρήστη του διαδικτύου τη βασική δυνατότητα μεταφοράς αρχείων μεταξύ συσκευών, με ισχυρή προστασία κατά της κλοπής δεδομένων και της μη εξουσιοδοτημένης πρόσβασης.",
+        "da": "Vi har udviklet en dedikeret hjemmeside, der giver alle internetbrugere den essentielle mulighed for problemfrit at overføre filer mellem enheder, med robust beskyttelse mod datatyveri og uautoriseret adgang.",
+        "fi": "Olemme kehittäneet erityisen verkkosivuston, joka tarjoaa jokaiselle internetin käyttäjälle olennaisen mahdollisuuden siirtää tiedostoja laitteiden välillä saumattomasti, vahvalla suojalla tietovarkauksia ja luvattomia pääsyjä vastaan.",
+        "no": "Vi har utviklet et dedikert nettsted som gir alle internettbrukere muligheten til å overføre filer sømløst mellom enheter, med solid beskyttelse mot datatyveri og uautorisert tilgang."
     }
 };
 
@@ -78,6 +110,11 @@ function localizePage(lang) {
     const deviceCaptionHint = document.getElementById('deviceCaptionHint');
     if (deviceCaptionHint) {
         deviceCaptionHint.innerText = translations.deviceCaptionHintString[lang] || translations.deviceCaptionHintString['en'];
+    }
+
+    const runningLine = document.getElementById('runningLine');
+    if (runningLine) {
+        runningLine.innerText = translations.runningLineString[lang] || translations.runningLineString['en'];
     }
 }
 

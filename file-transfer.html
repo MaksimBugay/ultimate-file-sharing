@@ -154,7 +154,8 @@
             </div>
             <div id="deviceCaptionHint" class="device-caption">$deviceCaptionHintString$</div>
             <label for="ownerVirtualHost"></label>
-            <input class="fancy-input" type="text" readonly id="ownerVirtualHost" placeholder="data channel is broken"/>
+            <input class="fancy-input  fancy-input-with-warning" type="text" readonly id="ownerVirtualHost"
+                   placeholder="data channel is broken"/>
 
             <div id="progressBarContainer" style="display: none; width: 100%">
                 <progress id="uploadProgress" value="0" max="100" style="width: 100%"></progress>
@@ -186,8 +187,12 @@
             </div>
             <!--<div class="device-caption">TO (receiver virtual host name)</div>-->
             <label for="receiverVirtualHost"></label>
-            <input class="fancy-input" type="text" id="receiverVirtualHost"
-                   placeholder="Start typing receiver virtual host name"/>
+            <div class="centered-container">
+                <div class="fancy-input-container">
+                    <input class="fancy-input" type="text" id="receiverVirtualHost"
+                           placeholder="Start typing receiver virtual host name"/>
+                </div>
+            </div>
             <h1 id="destinationHint">$destinationHintString$</h1>
             <!--<a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">link</a>-->
             <div id="deviceToImageBox" class="device-to-image-box">
@@ -202,7 +207,7 @@
     </div>
 </div>
 <div class="running-line">
-    <span id="runningLine">We've developed a dedicated website that empowers every internet user with the essential ability to seamlessly transfer files between devices, backed by robust protection against data theft and unauthorized access.</span>
+    <span id="runningLine">We have developed a dedicated website that empowers every internet user with the essential ability to seamlessly transfer files between devices, backed by robust protection against data theft and unauthorized access.</span>
 </div>
 </body>
 <script src="js/fp.min.js"></script>
