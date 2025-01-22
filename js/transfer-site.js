@@ -165,6 +165,11 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
     }
 });
 
+receiverVirtualHost.addEventListener('blur', (event) => {
+    if (!event.target.readOnly) {
+        event.target.focus();
+    }
+});
 document.addEventListener('mousemove', (event) => {
     if (!receiverVirtualHost.readOnly) {
         return;
