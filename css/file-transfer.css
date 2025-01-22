@@ -333,7 +333,7 @@ h2 {
     position: absolute;
     display: none;
     z-index: 1000;
-    margin: 3px;
+    margin: 5px;
 }
 
 .select-files-button:hover {
