@@ -61,7 +61,7 @@ FileTransfer.reBindControls = function (force = false) {
         selectFilesBtn.style.left = `${deviceFromArea.left + 40}px`;
         selectFilesBtn.style.position = 'relative';
         selectFilesBtn.style.top = '0';
-        selectFilesBtn.style.left = '0';
+        selectFilesBtn.style.left = '50px';
         deviceFromImage.style.display = 'none';
         selectFilesBtn.style.display = 'block';
     } else {
