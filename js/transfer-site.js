@@ -35,8 +35,8 @@ FileTransfer.progressBarWidget = new ProgressBarWidget(
 
 howToButton.addEventListener('click', function () {
     const url = isMobile() ?
-        'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=e9e547f0-e9a3-4c2a-8130-db714af133f2' :
-        'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=cc294c99-269f-416c-a48e-b39652ea4179';
+        'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=cce24836-7e24-4694-bc6c-f832089249fe' :
+        'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=d866b398-77be-40e6-9435-0a437de7c099';
     window.open(url, '_blank');
 });
 
