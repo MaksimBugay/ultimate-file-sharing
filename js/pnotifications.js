@@ -335,10 +335,11 @@ class CommandWithId {
 }
 
 class OpenConnectionRequest {
-    constructor(client, pusherInstanceId, apiKey) {
+    constructor(client, mobile, pusherInstanceId, apiKey) {
         this.client = client;
         this.pusherInstanceId = pusherInstanceId;
         this.apiKey = apiKey;
+        this.mobile = mobile;
     }
 }
 
@@ -565,6 +566,10 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
         if (event.data instanceof ArrayBuffer) {
             const arrayBuffer = event.data;
             console.log('binary', arrayBuffer.byteLength);
+            if (arrayBuffer.byteLength === 13) {
+                PushcaClient.ws.send(arrayBuffer);
+                return;
+            }
             const binaryWithHeader = new BinaryWithHeader(arrayBuffer);
             if (binaryWithHeader.withAcknowledge) {
                 //console.log(`send acknowledge: ${binaryWithHeader.getId()}`);
@@ -740,7 +745,7 @@ PushcaClient.isOpen = function () {
 
 async function getAuthorizedWsUrl(baseUrl, clientObj) {
     const openConnectionRequest = new OpenConnectionRequest(
-        clientObj, null, null);
+        clientObj, isMobile(), null, null);
     //console.log(`Sign-in attempt: ${JSON.stringify(openConnectionRequest)}`);
     const wsUrl = `${baseUrl}/sign-in/${encodeToBase64UrlSafe(JSON.stringify(openConnectionRequest))}`;
     console.log("Public sign-in url: " + wsUrl);
