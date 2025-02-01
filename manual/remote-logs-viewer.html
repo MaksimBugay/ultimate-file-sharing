@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Logs Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: darkblue;
+            font-weight: bold;
+        }
+
+        strong {
+            color: crimson;
+            font-weight: bolder
+        }
+
+        code {
+            font-size: 1.0rem;
+            color: #6aa84f;
+            font-weight: normal;
+        }
+
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+
+        section {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        section h2 {
+            color: #007bff;
+            margin-top: 0;
+        }
+
+        section ul {
+            padding-left: 20px;
+        }
+
+        section ul li {
+            margin-bottom: 10px;
+        }
+
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .image-container img {
+            width: 90vw;
+            width: 90dvw;
+            max-width: 300px;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Remote Logs Viewer</h1>
+</header>
+
+<section>
+    <h2>Overview</h2>
+    <p>Enables replacing the default JavaScript console object with <br><strong>r-console</strong>, allowing you to monitor
+        client browser logs remotely in real-time.</p>
+
+    <h2>Main Use Cases</h2>
+    <ul>
+        <li>View logs from a browser on a mobile device.</li>
+        <li>Seamless client-side issue investigation by enabling remote access to browser logs, eliminating the need to
+            request clients to manually send log files.
+        </li>
+    </ul>
+
+    <h2>How It Works</h2>
+    <ul>
+        <li>Open the <strong>logs viewer website</strong> in your browser and memorize the log-session ID.</li>
+        <li>Open your webpage on the client side using the log-session ID as an extra query parameter:
+            <code>&lt;your webpage url&gt;?log-session=&lt;some uuid&gt;</code>
+        </li>
+        <li>Logs will be visible on the logs viewer page automatically with a small delay—no need to refresh the page.
+        </li>
+        <li>Every transfer is secured with <strong>end-to-end encryption</strong> and protected from unauthorized
+            access, making it safe to pass sensitive data.
+        </li>
+        <li>Use <strong>full-text search</strong> and log record filters to simplify analysis.</li>
+        <li>Reuse the same log-session ID across multiple clients to consolidate logs in one place.</li>
+    </ul>
+
+    <div class="image-container">
+        <img src="https://secure.fileshare.ovh/images/remote-logs-viewer.webp" alt="Real-time logs viewer">
+    </div>
+</section>
+
+<footer>
+    &copy; 2025 Remote Logs Viewer. All rights reserved.
+</footer>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced CAPTCHA</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<h1>Advanced CAPTCHA Generator</h1>
+<canvas id="captchaCanvas" width="300" height="100"></canvas>
+<script>
+    function generateCaptcha() {
+        const canvas = document.getElementById("captchaCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Gradient Background
+        const gradient = ctx.createLinearGradient(0, 0, width, height);
+        gradient.addColorStop(0, `rgb(${randomInt(180, 220)}, ${randomInt(180, 220)}, ${randomInt(180, 220)})`);
+        gradient.addColorStop(1, `rgb(${randomInt(200, 255)}, ${randomInt(200, 255)}, ${randomInt(200, 255)})`);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+
+        // Add Dotted Background
+        for (let i = 0; i < 500; i++) {
+            ctx.fillStyle = `rgba(${randomInt(0, 255)}, ${randomInt(0, 255)}, ${randomInt(0, 255)}, 0.3)`;
+            ctx.beginPath();
+            ctx.arc(randomInt(0, width), randomInt(0, height), randomInt(1, 3), 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        // Configure Text Properties
+        ctx.font = `${randomInt(30, 40)}px Arial`;
+        ctx.fillStyle = `rgba(${randomInt(0, 100)}, ${randomInt(0, 100)}, ${randomInt(0, 100)}, 1)`;
+        ctx.textBaseline = "middle";
+
+        // Generate Random Text
+        //const text = generateRandomText(6);
+        const randomNumber1 = Math.floor(Math.random() * 9) + 1;
+        const randomNumber2 = Math.floor(Math.random() * 9) + 1;
+        const text = `${randomNumber1} x ${randomNumber2} =`;
+
+        // Apply Text Effects
+        ctx.save();
+        ctx.translate(randomInt(50, 100), randomInt(30, 70));
+        ctx.rotate((Math.PI / 180) * randomInt(-10, 10));
+        ctx.shadowColor = `rgba(${randomInt(0, 100)}, ${randomInt(0, 100)}, ${randomInt(0, 100)}, 0.5)`;
+        ctx.shadowBlur = 8;
+        ctx.fillText(text, 0, 0);
+        ctx.restore();
+
+        // Add Random Lines
+        for (let i = 0; i < 8; i++) {
+            ctx.strokeStyle = `rgba(${randomInt(0, 255)}, ${randomInt(0, 255)}, ${randomInt(0, 255)}, 0.7)`;
+            ctx.lineWidth = randomInt(1, 3);
+            ctx.beginPath();
+            ctx.moveTo(randomInt(0, width), randomInt(0, height));
+            ctx.lineTo(randomInt(0, width), randomInt(0, height));
+            ctx.stroke();
+        }
+
+        // Apply Blur Effect
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const blurredData = applyBlur(imageData, 2);
+        ctx.putImageData(blurredData, 0, 0);
+    }
+
+    // Generate Random Text
+    function generateRandomText(length) {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let result = "";
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
+
+    // Random Integer Helper
+    function randomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Apply Blur Effect to ImageData
+    function applyBlur(imageData, radius) {
+        const { data, width, height } = imageData;
+        const newData = new Uint8ClampedArray(data);
+
+        for (let x = 0; x < width; x++) {
+            for (let y = 0; y < height; y++) {
+                let r = 0, g = 0, b = 0, a = 0, count = 0;
+
+                for (let dx = -radius; dx <= radius; dx++) {
+                    for (let dy = -radius; dy <= radius; dy++) {
+                        const nx = x + dx;
+                        const ny = y + dy;
+
+                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                            const index = (ny * width + nx) * 4;
+                            r += data[index];
+                            g += data[index + 1];
+                            b += data[index + 2];
+                            a += data[index + 3];
+                            count++;
+                        }
+                    }
+                }
+
+                const i = (y * width + x) * 4;
+                newData[i] = r / count;
+                newData[i + 1] = g / count;
+                newData[i + 2] = b / count;
+                newData[i + 3] = a / count;
+            }
+        }
+
+        return new ImageData(newData, width, height);
+    }
+
+    // Generate CAPTCHA on page load
+    generateCaptcha();
+</script>
+</body>
+</html>
