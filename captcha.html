@@ -46,30 +46,29 @@
             ctx.fill();
         }
 
-        // Configure Text Properties
-        ctx.font = `${randomInt(30, 40)}px Arial`;
-        ctx.fillStyle = `rgba(${randomInt(0, 100)}, ${randomInt(0, 100)}, ${randomInt(0, 100)}, 1)`;
-        ctx.textBaseline = "middle";
-
         // Generate Random Text
-        //const text = generateRandomText(6);
         const randomNumber1 = Math.floor(Math.random() * 9) + 1;
         const randomNumber2 = Math.floor(Math.random() * 9) + 1;
         const text = `${randomNumber1} x ${randomNumber2} =`;
+
+        // Configure Text Properties
+        ctx.font = `${randomInt(30, 40)}px Arial`;
+        ctx.fillStyle = `rgba(${randomInt(80, 120)}, ${randomInt(80, 120)}, ${randomInt(80, 120)}, 0.7)`; // Low contrast
+        ctx.textBaseline = "middle";
 
         // Apply Text Effects
         ctx.save();
         ctx.translate(randomInt(50, 100), randomInt(30, 70));
         ctx.rotate((Math.PI / 180) * randomInt(-10, 10));
-        ctx.shadowColor = `rgba(${randomInt(0, 100)}, ${randomInt(0, 100)}, ${randomInt(0, 100)}, 0.5)`;
-        ctx.shadowBlur = 8;
+        ctx.shadowColor = `rgba(${randomInt(50, 100)}, ${randomInt(50, 100)}, ${randomInt(50, 100)}, 0.5)`;
+        ctx.shadowBlur = 12; // Stronger blur for text
         ctx.fillText(text, 0, 0);
         ctx.restore();
 
         // Add Random Lines
-        for (let i = 0; i < 8; i++) {
-            ctx.strokeStyle = `rgba(${randomInt(0, 255)}, ${randomInt(0, 255)}, ${randomInt(0, 255)}, 0.7)`;
-            ctx.lineWidth = randomInt(1, 3);
+        for (let i = 0; i < 12; i++) { // Increased lines
+            ctx.strokeStyle = `rgba(${randomInt(0, 255)}, ${randomInt(0, 255)}, ${randomInt(0, 255)}, 0.5)`; // Softer lines
+            ctx.lineWidth = randomInt(1, 2);
             ctx.beginPath();
             ctx.moveTo(randomInt(0, width), randomInt(0, height));
             ctx.lineTo(randomInt(0, width), randomInt(0, height));
@@ -78,18 +77,8 @@
 
         // Apply Blur Effect
         const imageData = ctx.getImageData(0, 0, width, height);
-        const blurredData = applyBlur(imageData, 2);
+        const blurredData = applyBlur(imageData, 3); // Increased blur radius
         ctx.putImageData(blurredData, 0, 0);
-    }
-
-    // Generate Random Text
-    function generateRandomText(length) {
-        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        let result = "";
-        for (let i = 0; i < length; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
     }
 
     // Random Integer Helper
