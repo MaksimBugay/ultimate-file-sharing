@@ -41,7 +41,7 @@ const captchaImage = document.getElementById("captchaImage");
 const resultsContainer = document.getElementById("resultsContainer");
 const errorMessage = document.getElementById('errorMessage');
 
-delay(120_000).then(() => {
+delay(60_000).then(() => {
     PushcaClient.stopWebSocket();
     displayCaptchaContainer.style.display = 'none';
     errorMessage.textContent = `You can try better next time!`;
