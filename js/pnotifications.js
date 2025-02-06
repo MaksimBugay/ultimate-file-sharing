@@ -566,7 +566,7 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
     PushcaClient.ws.onmessage = function (event) {
         if (event.data instanceof ArrayBuffer) {
             const arrayBuffer = event.data;
-            console.log('binary', arrayBuffer.byteLength);
+            //console.log('binary', arrayBuffer.byteLength);
             if (arrayBuffer.byteLength === 13) {
                 PushcaClient.ws.send(arrayBuffer);
                 return;
