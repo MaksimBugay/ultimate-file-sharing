@@ -40,7 +40,7 @@ const captchaImage = document.getElementById("captchaImage");
 const resultsContainer = document.getElementById("resultsContainer");
 
 PushcaClient.onCaptchaSetHandler = async function (binaryWithHeader) {
-    const captchaId = binaryWithHeader.getId();
+    const captchaId = binaryWithHeader.binaryId;
     const captchaBinaries = CaptchaSetBinaries.fromBytes(
         binaryWithHeader.payload
     );
@@ -72,12 +72,18 @@ function addResults(captchaId, arrayBuffer, index) {
     button.classList.add('dynamic-button');
     button.style.backgroundImage = `url('${blobUrl}')`;
 
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async function () {
         if (DynamicCaptcha.blocked) {
             return;
         }
         DynamicCaptcha.blocked = true;
-        alert(`Button ${captchaId}/${index + 1} clicked!`);
+        await PushcaClient.CaptchaVerify(
+            captchaId,
+            DynamicCaptcha.pageId,
+            index,
+            DynamicCaptcha.backendUrl
+        );
+        //alert(`Button ${captchaId}/${index + 1} clicked!`);
     });
 
     resultsContainer.appendChild(button);
@@ -113,4 +119,5 @@ async function openWsConnection() {
         );
     }
 }
+
 //======================================================================================================================

@@ -22,7 +22,8 @@ const Command = Object.freeze({
     SEND_BINARY_MANIFEST: "SEND_BINARY_MANIFEST",
     SEND_GATEWAY_RESPONSE: "SEND_GATEWAY_RESPONSE",
     SEND_GATEWAY_REQUEST: "SEND_GATEWAY_REQUEST",
-    CONNECTION_ALIAS_LOOKUP: "CONNECTION_ALIAS_LOOKUP"
+    CONNECTION_ALIAS_LOOKUP: "CONNECTION_ALIAS_LOOKUP",
+    CAPTCHA_VERIFY: "CAPTCHA_VERIFY"
 });
 
 const MessageType = Object.freeze({
@@ -34,7 +35,8 @@ const MessageType = Object.freeze({
     BINARY_MANIFEST: "BINARY_MANIFEST",
     GATEWAY_REQUEST: "GATEWAY_REQUEST",
     PRIVATE_URL_SUFFIX: "PRIVATE_URL_SUFFIX",
-    CONNECTION_ALIAS: "CONNECTION_ALIAS"
+    CONNECTION_ALIAS: "CONNECTION_ALIAS",
+    HUMAN_TOKEN: "HUMAN_TOKEN"
 });
 
 const ResourceType = Object.freeze({
@@ -649,6 +651,10 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
         }
         if (parts[1] === MessageType.CONNECTION_ALIAS) {
             CallableFuture.releaseWaiterIfExistsWithSuccess(parts[2], parts[3]);
+            return;
+        }
+        if (parts[1] === MessageType.HUMAN_TOKEN) {
+            alert(parts[2]);
             return;
         }
         if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
@@ -1326,6 +1332,21 @@ PushcaClient.connectionAliasLookup = async function (fragment) {
         return null;
     }
     return ClientWithAlias.fromObject(jsonObject);
+}
+
+PushcaClient.CaptchaVerify = async function (captchaId, pageId, resultIndex, backendUrl) {
+    let metaData = {};
+    metaData["captchaId"] = captchaId;
+    metaData["pageId"] = pageId;
+    metaData["resultIndex"] = resultIndex;
+    if (backendUrl) {
+        metaData["backendUrl"] = captchaId;
+    }
+    let commandWithId = PushcaClient.buildCommandMessage(Command.CAPTCHA_VERIFY, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error("Failed verify captcha attempt: " + result.body);
+    }
 }
 
 window.addEventListener('beforeunload', function () {
