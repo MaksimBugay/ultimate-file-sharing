@@ -117,7 +117,7 @@ function stringToArrayBuffer(str) {
 }
 
 function arrayBufferToString(buffer) {
-    const decoder = new TextDecoder();
+    const decoder = new TextDecoder("utf-8");
     return decoder.decode(buffer);
 }
 

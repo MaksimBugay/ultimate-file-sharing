@@ -3,7 +3,9 @@ const BinaryType = Object.freeze({
     MEDIA_STREAM: 1,
     BINARY_MESSAGE: 2,
     FILE_TRANSFER: 3,
-    CACHE_BINARY: 4
+    CACHE_BINARY: 4,
+    PING: 5,
+    CAPTCHA_SET: 6
 });
 
 const DatagramState = Object.freeze({
