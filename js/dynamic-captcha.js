@@ -36,9 +36,24 @@ if (urlParams.get('backend-url')) {
     DynamicCaptcha.backendUrl = urlParams.get('backend-url');
 }
 
+const displayCaptchaContainer = document.getElementById("displayCaptchaContainer");
 const captchaImage = document.getElementById("captchaImage");
 const resultsContainer = document.getElementById("resultsContainer");
+const errorMessage = document.getElementById('errorMessage');
 
+delay(120_000).then(() => {
+    PushcaClient.stopWebSocket();
+    displayCaptchaContainer.style.display = 'none';
+    errorMessage.textContent = `You can try better next time!`;
+    errorMessage.style.display = 'block';
+});
+
+PushcaClient.onHumanTokenHandler = function (token) {
+    PushcaClient.stopWebSocket();
+    displayCaptchaContainer.style.display = 'none';
+    errorMessage.textContent = `Congratulations! You've successfully proven your humanity and unlocked your unique human token. Amazing job!`;
+    errorMessage.style.display = 'block';
+}
 PushcaClient.onCaptchaSetHandler = async function (binaryWithHeader) {
     const captchaId = binaryWithHeader.binaryId;
     const captchaBinaries = CaptchaSetBinaries.fromBytes(

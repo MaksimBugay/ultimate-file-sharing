@@ -498,6 +498,7 @@ PushcaClient.onCloseHandler = null;
 PushcaClient.onMessageHandler = null;
 PushcaClient.onChannelEventHandler = null;
 PushcaClient.onChannelMessageHandler = null;
+PushcaClient.onHumanTokenHandler = null;
 PushcaClient.onDataHandler = null;
 PushcaClient.onFileTransferChunkHandler = null;
 PushcaClient.onCaptchaSetHandler = null;
@@ -654,7 +655,9 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
             return;
         }
         if (parts[1] === MessageType.HUMAN_TOKEN) {
-            alert(parts[2]);
+            if (typeof PushcaClient.onHumanTokenHandler === 'function') {
+                PushcaClient.onHumanTokenHandler(parts[2]);
+            }
             return;
         }
         if (parts[1] === MessageType.UPLOAD_BINARY_APPEAL) {
