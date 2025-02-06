@@ -20,13 +20,27 @@ class CaptchaSetBinaries {
     }
 }
 
-const serverUrl = 'https://secure.fileshare.ovh';
-const wsUrl = 'wss://secure.fileshare.ovh:31085';
+const DynamicCaptcha = {}
+DynamicCaptcha.serverUrl = 'https://secure.fileshare.ovh';
+DynamicCaptcha.wsUrl = 'wss://secure.fileshare.ovh:31085';
+DynamicCaptcha.pageId = uuid.v4().toString();
+DynamicCaptcha.backendUrl = null;
+DynamicCaptcha.blocked = false;
+
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('page-id')) {
+    DynamicCaptcha.pageId = urlParams.get('page-id');
+}
+
+if (urlParams.get('backend-url')) {
+    DynamicCaptcha.backendUrl = urlParams.get('backend-url');
+}
 
 const captchaImage = document.getElementById("captchaImage");
 const resultsContainer = document.getElementById("resultsContainer");
 
 PushcaClient.onCaptchaSetHandler = async function (binaryWithHeader) {
+    const captchaId = binaryWithHeader.getId();
     const captchaBinaries = CaptchaSetBinaries.fromBytes(
         binaryWithHeader.payload
     );
@@ -44,12 +58,13 @@ PushcaClient.onCaptchaSetHandler = async function (binaryWithHeader) {
         button.dispatchEvent(removeEvent);
         button.remove();
     });
+    DynamicCaptcha.blocked = false;
     captchaBinaries.results.forEach((arrayBuffer, index) => {
-        addResults(arrayBuffer, index);
+        addResults(captchaId, arrayBuffer, index);
     });
 };
 
-function addResults(arrayBuffer, index) {
+function addResults(captchaId, arrayBuffer, index) {
     const blob = new Blob([arrayBuffer], {type: 'image/png'});
     const blobUrl = URL.createObjectURL(blob);
 
@@ -58,7 +73,11 @@ function addResults(arrayBuffer, index) {
     button.style.backgroundImage = `url('${blobUrl}')`;
 
     button.addEventListener('click', () => {
-        alert(`Button ${index + 1} clicked!`);
+        if (DynamicCaptcha.blocked) {
+            return;
+        }
+        DynamicCaptcha.blocked = true;
+        alert(`Button ${captchaId}/${index + 1} clicked!`);
     });
 
     resultsContainer.appendChild(button);
@@ -77,11 +96,11 @@ async function openWsConnection() {
         const pClient = new ClientFilter(
             "SecureFileShare",
             "dynamic-captcha",
-            uuid.v4().toString(),
+            DynamicCaptcha.backendUrl ? uuid.v4().toString() : DynamicCaptcha.pageId,
             "CAPTCHA_APP"
         );
         await PushcaClient.openWsConnection(
-            wsUrl,
+            DynamicCaptcha.wsUrl,
             pClient,
             function (clientObj) {
                 return new ClientFilter(
@@ -94,5 +113,4 @@ async function openWsConnection() {
         );
     }
 }
-
 //======================================================================================================================
