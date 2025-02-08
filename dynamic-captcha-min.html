@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="canonical" href="https://secure.fileshare.ovh/dynamic-captcha.html"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure FileShare: Dynamic captcha</title>
+    <link rel="stylesheet" href="css/dynamic-captcha.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Secure FileShare: dynamic captcha">
+    <meta property="og:description" content="Dynamic captcha demo">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Secure FileShare: dynamic captcha">
+    <meta name="twitter:description" content="Dynamic captcha demo">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+</head>
+<body style="background-color: #006BFD;padding: 0;margin: 0;">
+<div id="displayCaptchaContainer" class="captcha-container" style="width: 380px;margin: 15px">
+    <div id="previewBox" class="captcha-box">
+        <h2>Dynamic captcha</h2>
+        <img id="captchaImage" class="captcha-section-container" src="images/not-a-robot.png"
+             alt="Captcha image">
+        <h2>Select correct result</h2>
+        <div id="resultsContainer" class="button-container">
+
+        </div>
+    </div>
+</div>
+</body>
+<script src="js/common-utils.js"></script>
+<script src="js/callable-future.js?v=<?= time(); ?>"></script>
+<script src="js/uuid.min.js"></script>
+<script src="js/security-utils.js"></script>
+<script src="js/pnotifications.js?v=<?= time(); ?>"></script>
+<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
+<script src="js/dynamic-captcha.js?v=<?= time(); ?>"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-W6XK68E4CF');
+</script>
+</html>

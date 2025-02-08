@@ -26,10 +26,12 @@ DynamicCaptcha.wsUrl = 'wss://secure.fileshare.ovh:31085';
 DynamicCaptcha.pageId = uuid.v4().toString();
 DynamicCaptcha.backendUrl = null;
 DynamicCaptcha.blocked = false;
+DynamicCaptcha.embedded = false;
 
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('page-id')) {
     DynamicCaptcha.pageId = urlParams.get('page-id');
+    DynamicCaptcha.embedded = true;
 }
 
 if (urlParams.get('backend-url')) {
@@ -117,7 +119,7 @@ async function openWsConnection() {
         const pClient = new ClientFilter(
             "SecureFileShare",
             "dynamic-captcha",
-            DynamicCaptcha.backendUrl ? uuid.v4().toString() : DynamicCaptcha.pageId,
+            DynamicCaptcha.embedded ? uuid.v4().toString() : DynamicCaptcha.pageId,
             "CAPTCHA_APP"
         );
         await PushcaClient.openWsConnection(

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="canonical" href="https://secure.fileshare.ovh/dynamic-captcha.html"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure FileShare: Dynamic captcha</title>
+    <link rel="stylesheet" href="css/dynamic-captcha.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Secure FileShare: dynamic captcha">
+    <meta property="og:description" content="Dynamic captcha demo">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Secure FileShare: dynamic captcha">
+    <meta name="twitter:description" content="Dynamic captcha demo">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+</head>
+<body style="background-color: #006BFD;padding: 0;margin: 0;">
+
+<div class="main-container" style="flex-direction: column; height: 100vh">
+    <iframe id="captchaFrame" src="https://secure.fileshare.ovh/dynamic-captcha-min.html" width="420px" height="680px"
+            style="border: none; margin: 0 0 0 0; padding: 0 0 0 0; border-radius: 12px"></iframe>
+</div>
+</body>
+<script src="js/common-utils.js"></script>
+<script src="js/callable-future.js?v=<?= time(); ?>"></script>
+<script src="js/uuid.min.js"></script>
+<script src="js/security-utils.js"></script>
+<script src="js/pnotifications.js?v=<?= time(); ?>"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    const pageId = uuid.v4().toString();
+
+    PushcaClient.onHumanTokenHandler = function (token) {
+        PushcaClient.stopWebSocket();
+        alert(token);
+        location.reload();
+    }
+
+    document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/dynamic-captcha-min.html?page-id=${pageId}`;
+    openWsConnection();
+
+    async function openWsConnection() {
+        if (!PushcaClient.isOpen()) {
+            const pClient = new ClientFilter(
+                "SecureFileShare",
+                "dynamic-captcha",
+                pageId,
+                "CAPTCHA_CLIENT"
+            );
+            await PushcaClient.openWsConnection(
+                'wss://secure.fileshare.ovh:31085',
+                pClient,
+                function (clientObj) {
+                    return new ClientFilter(
+                        clientObj.workSpaceId,
+                        clientObj.accountId,
+                        clientObj.deviceId,
+                        clientObj.applicationId
+                    );
+                }
+            );
+        }
+    }
+</script>
+</html>
