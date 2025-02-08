@@ -30,18 +30,18 @@
             style="border: none; margin: 0 0 0 0; padding: 0 0 0 0; border-radius: 12px"></iframe>
 </div>
 </body>
-<script src="https://raw.githubusercontent.com/MaksimBugay/ultimate-file-sharing/refs/heads/main/js/common-utils.js"></script>
-<script src="https://raw.githubusercontent.com/MaksimBugay/ultimate-file-sharing/refs/heads/main/js/callable-future.js?v=<?= time(); ?>"></script>
-<script src="https://raw.githubusercontent.com/MaksimBugay/ultimate-file-sharing/refs/heads/main/js/uuid.min.js"></script>
-<script src="https://raw.githubusercontent.com/MaksimBugay/ultimate-file-sharing/refs/heads/main/js/security-utils.js"></script>
-<script src="https://raw.githubusercontent.com/MaksimBugay/ultimate-file-sharing/refs/heads/main/js/pnotifications.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/uuid.min.js"></script>
+<script src="https://secure.fileshare.ovh/js/common-utils.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/callable-future.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/security-utils.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/pnotifications.js?v=<?= time(); ?>"></script>
 <script>
     const pageId = uuid.v4().toString();
 
     PushcaClient.onHumanTokenHandler = function (token) {
         PushcaClient.stopWebSocket();
         alert(token);
-        location.reload();
+        //location.reload();
     }
 
     document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/dynamic-captcha-min.html?page-id=${pageId}`;
