@@ -96,6 +96,7 @@ recordBtn.addEventListener('click', async function () {
             await getReadMeText(),
             fullVideoBlob,
             !shareFromDeviceCheckbox.checked,
+            protectWithCaptchaCheckBox.checked,
             passwordField.value.trim());
         delay(500).then(() => {
             chunks.length = 0;

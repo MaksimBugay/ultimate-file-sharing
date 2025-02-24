@@ -63,7 +63,9 @@ dropZone.addEventListener('drop', async function (event) {
         await SaveInCloudHelper.cacheFileInCloud(
             file,
             Fileshare.defaultReadMeText,
-            true);
+            true,
+            false,
+            null);
     }
     delay(500).then(() => {
         event.dataTransfer.clearData();

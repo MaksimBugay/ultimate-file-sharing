@@ -14,7 +14,7 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
     );
 }
 
-SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blob, storeInCloud, password = null) {
+SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blob, storeInCloud, forHuman, password) {
     return await SaveInCloudHelper.cacheContentInCloud(
         name, type, blob.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
@@ -50,11 +50,12 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blo
             return !pipeWasBroken;
         },
         storeInCloud,
+        forHuman,
         password
     );
 }
 
-SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCloud, password = null) {
+SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCloud, forHuman, password) {
     return await SaveInCloudHelper.cacheContentInCloud(
         file.name, file.type, file.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
@@ -63,10 +64,11 @@ SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCl
             }, `Failed share file attempt: ${file.name}`);
         },
         storeInCloud,
+        forHuman,
         password
     );
 }
-SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, inReadMeText, splitAndStoreProcessor, storeInCloud, password) {
+SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, inReadMeText, splitAndStoreProcessor, storeInCloud, forHuman, password) {
     let readMeText = inReadMeText ? inReadMeText/*.substring(0, 1500)*/ : '';
     if (Fileshare.defaultReadMeText === inReadMeText){
         readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
@@ -80,7 +82,8 @@ SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, inRead
         readMeText,
         password,
         encryptionContract,
-        storeInCloud
+        storeInCloud,
+        forHuman
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${name}`, null);

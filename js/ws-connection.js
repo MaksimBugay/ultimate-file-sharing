@@ -156,7 +156,9 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
                 mimeType,
                 Fileshare.defaultReadMeText,
                 blob,
-                true);
+                true,
+                false,
+                null);
             delay(500).then(() => {
                 closeModal();
             });

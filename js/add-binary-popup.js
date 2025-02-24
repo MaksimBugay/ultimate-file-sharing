@@ -18,6 +18,7 @@ const passwordField = document.getElementById('passwordInput');
 const encryptFileContentCheckbox = document.getElementById('encryptFileContentCheckbox');
 const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckbox');
 const shareFromDeviceCheckbox = document.getElementById("shareFromDeviceCheckbox");
+const protectWithCaptchaCheckBox =document.getElementById("protectWithCaptchaCheckBox");
 const shareFromDeviceWarning = document.getElementById("shareFromDeviceWarning");
 const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
@@ -234,6 +235,7 @@ saveTextMessageBtn.addEventListener('click', async function () {
         await getReadMeText(),
         textBlob,
         !shareFromDeviceCheckbox.checked,
+        protectWithCaptchaCheckBox.checked,
         passwordField.value.trim());
     delay(500).then(() => {
         closeModal();
@@ -314,6 +316,7 @@ pastArea.addEventListener('paste', async function (event) {
                 await getReadMeText(),
                 blob,
                 !shareFromDeviceCheckbox.checked,
+                protectWithCaptchaCheckBox.checked,
                 passwordField.value.trim());
             delay(500).then(() => {
                 closeModal();
@@ -461,6 +464,7 @@ async function processListOfFiles(files) {
                 await getReadMeText(),
                 zipBlob,
                 !shareFromDeviceCheckbox.checked,
+                protectWithCaptchaCheckBox.checked,
                 passwordField.value.trim());
         }
     } else {
@@ -504,6 +508,7 @@ async function addFileToRegistry(file) {
         file,
         await getReadMeText(),
         !shareFromDeviceCheckbox.checked,
+        protectWithCaptchaCheckBox.checked,
         passwordField.value.trim()
     );
 }
@@ -564,9 +569,9 @@ async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mi
         let result;
         const readMeText = await getReadMeText();
         if (passwordField.value) {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, passwordField.value, encryptionContract);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, passwordField.value, encryptionContract, false, false);
         } else {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, null, null);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, null, null, false, false);
         }
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             tmpManifest = result.body;
