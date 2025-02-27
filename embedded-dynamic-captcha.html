@@ -45,7 +45,8 @@
 
         const isValid = await validateHumanToken(pageId, token);
         if (isValid) {
-            alert(token);
+            console.log(`"${pageId}", "${token}"`);
+            alert(`"${pageId}", "${token}"`);
         }
         location.reload();
     }

@@ -249,7 +249,8 @@ async function manifestToJsonObjectWithProtectedAttributes(manifest) {
         privateUrlSuffix: manifest.privateUrlSuffix,
         encryptionContract: encryptionContractStr,
         passwordHash: passwordHash,
-        deviceSecret: Fileshare.deviceSecret
+        deviceSecret: Fileshare.deviceSecret,
+        forHuman: manifest.forHuman
     };
 }
 
