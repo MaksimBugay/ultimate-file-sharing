@@ -1,8 +1,8 @@
 const serverUrl = 'https://secure.fileshare.ovh';
 const urlParams = new URLSearchParams(window.location.search);
-//https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=cd1030e5-8c6e-4a4f-a14e-79eb2f4e44fb
 let workspaceId = null;
 let binaryId = null;
+let humanOnly = false;
 
 if (urlParams.get('w')) {
     workspaceId = urlParams.get('w');
@@ -12,12 +12,18 @@ if (urlParams.get('id')) {
     binaryId = urlParams.get('id');
 }
 
+if (urlParams.get('human-only')) {
+    humanOnly = true;
+}
+
 let manifest = null;
 let openInBrowserFlag = false;
 let contentSize = 0;
 
 const workspaceIdLabel = document.getElementById('workspaceIdLabel');
 const contentPreviewContainer = document.getElementById('contentPreviewContainer');
+const captchaFrame = document.getElementById("captchaFrame");
+const previewBox = document.getElementById("previewBox");
 
 function showErrorMessage(errorText) {
     contentPreviewContainer.remove();
@@ -27,26 +33,73 @@ function showErrorMessage(errorText) {
 
 workspaceIdLabel.textContent = `Workspace ID: ${workspaceId}`;
 
-prepareBinaryDownloading(workspaceId, binaryId).then((userActionRequired) => {
-    if (!userActionRequired) {
-        return;
+if (humanOnly) {
+    previewBox.style.display = "none";
+
+    const pageId = uuid.v4().toString();
+
+    PushcaClient.onHumanTokenHandler = async function (token) {
+        PushcaClient.stopWebSocket();
+        delay(1000);
+        captchaFrame.remove();
+        previewBox.style.display = "block";
+
+        downloadPublicBinary(workspaceId, binaryId, pageId, token);
     }
-    downloadBtn.addEventListener('click', function () {
-        savePublicBinaryAsFile(manifest);
-    });
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            event.stopPropagation();
-            if ('downloadBtn' === event.target.id) {
-                savePublicBinaryAsFile(manifest);
-            }
+
+    captchaFrame.src = `https://secure.fileshare.ovh/dynamic-captcha-min.html?page-id=${pageId}`;
+    openWsConnection();
+
+    async function openWsConnection() {
+        if (!PushcaClient.isOpen()) {
+            const pClient = new ClientFilter(
+                "SecureFileShare",
+                "dynamic-captcha",
+                pageId,
+                "CAPTCHA_CLIENT"
+            );
+            await PushcaClient.openWsConnection(
+                'wss://secure.fileshare.ovh:31085',
+                pClient,
+                function (clientObj) {
+                    return new ClientFilter(
+                        clientObj.workSpaceId,
+                        clientObj.accountId,
+                        clientObj.deviceId,
+                        clientObj.applicationId
+                    );
+                }
+            );
         }
+    }
+} else {
+    captchaFrame.remove();
+    previewBox.style.display = "block";
+    downloadPublicBinary(workspaceId, binaryId, null, null);
+}
+
+function downloadPublicBinary() {
+    prepareBinaryDownloading(workspaceId, binaryId).then((userActionRequired) => {
+        if (!userActionRequired) {
+            return;
+        }
+        downloadBtn.addEventListener('click', function () {
+            savePublicBinaryAsFile(manifest);
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                event.stopPropagation();
+                if ('downloadBtn' === event.target.id) {
+                    savePublicBinaryAsFile(manifest);
+                }
+            }
+        });
     });
-});
+}
 
 //======================================== Implementations =============================================================
-async function prepareBinaryDownloading(workspaceId, binaryId) {
+async function prepareBinaryDownloading(workspaceId, binaryId, pageId, humanToken) {
     let userActionRequired = false;
 
     if ((!workspaceId) || (!binaryId)) {
@@ -64,7 +117,7 @@ async function prepareBinaryDownloading(workspaceId, binaryId) {
         }
     }
 
-    manifest = await downloadPublicBinaryManifest(workspaceId, binaryId);
+    manifest = await downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken);
 
     contentSize = manifest.datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
     if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
@@ -145,17 +198,33 @@ async function fetchPublicBinaryDescription(workspaceId, binaryId) {
     }
 }
 
-async function downloadPublicBinaryManifest(workspaceId, binaryId) {
-    const response = await fetch(serverUrl + `/binary/m/${workspaceId}/${binaryId}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
+async function downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken) {
+    const url = serverUrl + "/binary/m/public"; // Ensure this is your actual API URL
+
+    const requestData = {
+        workspaceId: workspaceId,
+        binaryId: binaryId,
+        pageId: pageId,
+        humanToken: humanToken
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
-    });
-    if (!response.ok) {
-        console.error('Failed download public binary manifest attempt ' + response.statusText);
-        showErrorMessage('Failed download public binary attempt ' + response.statusText);
-        return null;
+
+        return await response.json();
+
+    } catch (error) {
+        console.error("Error during fetching binary manifest:", error);
+        throw error; // Rethrow error to handle it in the calling function
     }
-    return response.json();
 }
