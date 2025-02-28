@@ -78,8 +78,8 @@ if (humanOnly) {
     downloadPublicBinary(workspaceId, binaryId, null, null);
 }
 
-function downloadPublicBinary() {
-    prepareBinaryDownloading(workspaceId, binaryId).then((userActionRequired) => {
+function downloadPublicBinary(workspaceId, binaryId, pageId, humanToken) {
+    prepareBinaryDownloading(workspaceId, binaryId, pageId, humanToken).then((userActionRequired) => {
         if (!userActionRequired) {
             return;
         }
