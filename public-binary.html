@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <link rel="canonical" href="https://secure.fileshare.ovh/public-binary.html" />
+    <link rel="canonical" href="https://secure.fileshare.ovh/public-binary.html"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure FileShare: Public content</title>
     <link rel="stylesheet" href="css/protected-binary.css">
@@ -33,11 +33,12 @@
     <div id="contentContainer" style="padding: 3px;background-color: white;display: none;">
         <img id="contentImage" class="media-content-container" src="images/how-to-medium.png"
              alt="Open image in browser">
-        <embed id="pdfViewer" type="application/pdf" class="pdf-content-container" />
+        <embed id="pdfViewer" type="application/pdf" class="pdf-content-container"/>
         <video id="contentVideoPlayer" controls width="600" class="media-content-container">
             Your browser does not support the video tag.
         </video>
-        <div id="contentTextContainer" class="media-content-container" style="padding: 20px; background-color: transparent; display: none">
+        <div id="contentTextContainer" class="media-content-container"
+             style="padding: 20px; background-color: transparent; display: none">
             <div id="contentText"
                  class="text-message-memo"
                  aria-label="text message data"
@@ -50,9 +51,11 @@
         </div>
     </div>
     <div id="contentPreviewContainer" class="login-container">
-        <iframe id="captchaFrame" width="420px" height="680px"
-                style="border: none; margin: 0 0 0 0; padding: 0 0 0 0; border-radius: 12px">
-        </iframe>
+        <div style="transform: scale(0.8)">
+            <iframe id="captchaFrame" width="370px" height="680px"
+                    style="border: none; margin: 0 0 0 0; padding: 0 0 0 0; border-radius: 12px">
+            </iframe>
+        </div>
         <div id="previewBox" class="login-box">
             <h2>Content details</h2>
             <div class="input-group">
@@ -72,7 +75,8 @@
                 ></div>
             </div>
             <div class="input-group">
-                <label id="ownerSignatureLabel" style="font-weight: bold;font-size: 14px; color: lightseagreen; display: none">Owner
+                <label id="ownerSignatureLabel"
+                       style="font-weight: bold;font-size: 14px; color: lightseagreen; display: none">Owner
                     signature: </label>
             </div>
             <div class="input-group" style="margin-bottom: 5px">
