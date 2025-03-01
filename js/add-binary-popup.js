@@ -15,10 +15,12 @@ const closeButton = document.getElementById("addBinaryPopupCloseBtn");
 
 const fileInput = document.getElementById('fileInput');
 const passwordField = document.getElementById('passwordInput');
+const passwordInputContainer = document.getElementById('passwordInputContainer');
 const encryptFileContentCheckbox = document.getElementById('encryptFileContentCheckbox');
 const createZipArchiveCheckbox = document.getElementById('createZipArchiveCheckbox');
 const shareFromDeviceCheckbox = document.getElementById("shareFromDeviceCheckbox");
 const protectWithCaptchaCheckBox =document.getElementById("protectWithCaptchaCheckBox");
+const captchaContainer = document.getElementById('captchaContainer');
 const shareFromDeviceWarning = document.getElementById("shareFromDeviceWarning");
 const zipArchiveNameField = document.getElementById('zipArchiveName');
 const selectFileOrDirectoryContainer = document.getElementById('selectFileOrDirectoryContainer');
@@ -48,9 +50,12 @@ function passwordFieldWasChangedHandler() {
     if (passwordField.value.trim() !== '') {
         encryptFileContentCheckbox.checked = false;
         encryptFileContentCheckbox.parentElement.style.display = 'none'; // Show checkbox
+        protectWithCaptchaCheckBox.checked = false;
+        captchaContainer.style.display = 'none';
     } else {
         encryptFileContentCheckbox.checked = false;
         encryptFileContentCheckbox.parentElement.style.display = 'none'; // Hide checkbox
+        captchaContainer.style.display = 'block';
     }
 }
 
@@ -287,6 +292,8 @@ function closeModal() {
     mmProgressBarContainer.style.display = 'none';
     textMessageMemo.innerHTML = '';
     textMessageContainer.style.display = 'none';
+    protectWithCaptchaCheckBox.checked = false;
+    passwordInputContainer.style.display = 'block';
 }
 
 function resetFileInputElement() {
@@ -360,6 +367,16 @@ function shareFromDeviceStateWasChanged() {
         shareFromDeviceWarning.style.display = 'block';
     } else {
         shareFromDeviceWarning.style.display = 'none';
+    }
+}
+
+protectWithCaptchaCheckBox.addEventListener('change', protectWithCaptchaStateWasChanged);
+
+function protectWithCaptchaStateWasChanged() {
+    if (protectWithCaptchaCheckBox.checked) {
+        passwordInputContainer.style.display = 'none';
+    } else {
+        passwordInputContainer.style.display = 'block';
     }
 }
 

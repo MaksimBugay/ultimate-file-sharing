@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <title>Secure FileShare</title>
-    <link rel="canonical" href="https://secure.fileshare.ovh" />
+    <link rel="canonical" href="https://secure.fileshare.ovh"/>
     <meta charset="UTF-8">
     <meta name="description"
           content="Secure FileShare offers a seamless and secure way to share and transfer files, ensuring complete anonymity and no restrictions. Share directly from your device or through the cloud, with advanced encryption and password protection to keep your files safe and private.">
@@ -351,7 +351,8 @@
             </li>
             <li class="nav-item">
                 <span>
-                    <a href="https://secure.fileshare.ovh/file-transfer.html" class="nav-link" id="directFileTransferButton"
+                    <a href="https://secure.fileshare.ovh/file-transfer.html" class="nav-link"
+                       id="directFileTransferButton"
                        target="_blank" rel="noopener noreferrer">
                         <img src="images/file_transfer.png" alt="Direct file transfer"
                              class="custom-button-img"> Try Direct file transfer
@@ -413,7 +414,7 @@
 
 <div id="addBinaryPopup" class="file-share-modal">
     <div class="file-share-modal-content">
-        <div id="popup-content" style="align-items: center;">
+        <div id="popup-content" style="align-items: center">
             <span id="addBinaryPopupCloseBtn" class="close">&times;</span>
             <div id="mainModalHeader" class="file-share-header">Prepare content</div>
             <div id="mmProgressBarContainer" style="display: none; width: 100%">
@@ -444,25 +445,25 @@
                         Share from device, without upload to cloud
                     </label>
                 </div>
-                <div class="option-container">
-                    <label>
-                        <input type="checkbox" id="protectWithCaptchaCheckBox"/>
-                        Protect with strong CAPTCHA
-                    </label>
-                </div>
                 <fieldset class="file-share-fieldset">
                     <legend class="file-share-legend">Protect with</legend>
                     <br>
-                    <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password + end-to-end
-                        encryption (optional)</label>
-                    <input type="text" id="passwordInput"
-                           placeholder="Enter strong password to protect your content"/>
+                    <div id="passwordInputContainer">
+                        <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password + end-to-end
+                            encryption (optional)</label>
+                        <input type="text" id="passwordInput"
+                               placeholder="Enter strong password to protect your content"/>
+                    </div>
                     <div style="">
                         <label style="display: none">
                             <input type="checkbox" id="encryptFileContentCheckbox"/>
                             Encrypt file content (optional)
                         </label>
                     </div>
+                    <label id="captchaContainer">
+                        <input type="checkbox" id="protectWithCaptchaCheckBox"/>
+                        Strong CAPTCHA
+                    </label>
                 </fieldset>
             </div>
             <div id="transferGroupContainer">
@@ -476,7 +477,8 @@
                                 Virtual host
                             </label>
                             <label style="margin-left: 10px">
-                                <input id="groupAsTransferTargetChoice" type="radio" name="transferTargetChoice" value="group">
+                                <input id="groupAsTransferTargetChoice" type="radio" name="transferTargetChoice"
+                                       value="group">
                                 Transfer group
                             </label>
                         </div>
@@ -501,7 +503,8 @@
                                         style="margin-top: -5px">
                                     Generate secure values
                                 </button>
-                                <label for="transferGroupName" style="margin-bottom: 0;padding-bottom: 0">Name</label>
+                                <label for="transferGroupName"
+                                       style="margin-bottom: 0;padding-bottom: 0">Name</label>
                                 <input type="text" id="transferGroupName"
                                        placeholder="Provide a name of your transfer group"/>
                                 <br>
@@ -511,8 +514,10 @@
                                        placeholder="Choose a strong password to protect your transfer"/>
                                 <div class="button-container">
                                     <button id="joinTransferGroupBtn" type="button" class="action-btn">Join</button>
-                                    <button id="leaveTransferGroupBtn" type="button" class="action-btn">Leave</button>
-                                    <button id="copyJoinTransferGroupLinkBtn" type="button" class="action-btn">Copy join
+                                    <button id="leaveTransferGroupBtn" type="button" class="action-btn">Leave
+                                    </button>
+                                    <button id="copyJoinTransferGroupLinkBtn" type="button" class="action-btn">Copy
+                                        join
                                         link
                                     </button>
                                 </div>
@@ -538,7 +543,8 @@
                     <br>
                     <label for="recordedVideoName" style="margin-bottom: 0;padding-bottom: 0">Provide a name for
                         recording</label>
-                    <input type="text" id="recordedVideoName" placeholder="Customize the name of the recorded video"/>
+                    <input type="text" id="recordedVideoName"
+                           placeholder="Customize the name of the recorded video"/>
                     <div id="video-recorder-sub-container" class="video-container">
                         <!-- Video Player (always displayed without controls initially) -->
                         <video id="videoPlayer" style="height: 200px">

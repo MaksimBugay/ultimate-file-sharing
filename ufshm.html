@@ -440,25 +440,25 @@
                         Share from device, without upload to cloud
                     </label>
                 </div>
-                <div class="option-container">
-                    <label>
-                        <input type="checkbox" id="protectWithCaptchaCheckBox"/>
-                        Protect with strong CAPTCHA
-                    </label>
-                </div>
                 <fieldset class="file-share-fieldset">
                     <legend class="file-share-legend">Protect with</legend>
                     <br>
-                    <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password + end-to-end
-                        encryption (optional)</label>
-                    <input type="text" id="passwordInput"
-                           placeholder="Enter strong password to protect your content"/>
+                    <div id="passwordInputContainer">
+                        <label for="passwordInput" style="margin-bottom: 0;padding-bottom: 0">Password + end-to-end
+                            encryption (optional)</label>
+                        <input type="text" id="passwordInput"
+                               placeholder="Enter strong password to protect your content"/>
+                    </div>
                     <div style="">
                         <label style="display: none">
                             <input type="checkbox" id="encryptFileContentCheckbox"/>
                             Encrypt file content (optional)
                         </label>
                     </div>
+                    <label id="captchaContainer">
+                        <input type="checkbox" id="protectWithCaptchaCheckBox"/>
+                        Strong CAPTCHA
+                    </label>
                 </fieldset>
             </div>
             <div id="transferGroupContainer">
