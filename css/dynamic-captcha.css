@@ -1,8 +1,26 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+
+.brand-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 40px;
+    text-transform: uppercase;
+    background: linear-gradient(45deg, #ff00ff, #006fff, #ff9900);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0px 0px 20px rgba(255, 0, 255, 0.6);
+    animation: pulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes pulse {
+    0% { text-shadow: 0px 0px 20px rgba(255, 0, 255, 0.6); }
+    100% { text-shadow: 0px 0px 35px rgba(255, 0, 255, 1); }
+}
+
 h2 {
     text-align: center;
-    margin-bottom: 5px;
     color: darkblue;
+    margin: 0;
 }
 
 .main-container {
@@ -56,6 +74,7 @@ h2 {
     max-height: 80dvh;
     min-height: 100px;
     margin-top: 5px;
+    margin-bottom: 5px;
     overflow-y: auto;
     border-radius: 12px;
 }
