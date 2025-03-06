@@ -1,0 +1,6 @@
+# npm install -g terser
+
+cd js
+
+terser fp.min.js common-utils.js callable-future.js uuid.min.js security-utils.js owner-signature.js pnotifications.js pushca-binary-hel
+per.js  -o pushca.min.js -c -m
