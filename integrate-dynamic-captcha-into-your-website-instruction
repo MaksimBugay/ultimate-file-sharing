@@ -48,7 +48,7 @@ async function openWsConnection() {
 }
 
 </script>
-4. user that function on your server to verify (page Id, human) token pairs
+4. use that function on your server to verify (page Id, human) token pairs
 async function validateHumanToken(pageId, token) {
     const url = 'https://secure.fileshare.ovh/pushca/dynamic-captcha/validate-human-token';
     const payload = {
