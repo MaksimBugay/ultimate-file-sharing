@@ -1,0 +1,80 @@
+1. add dependency
+<script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
+2. Add iframe element on your page
+<div style="transform: scale(0.8)">
+    <iframe id="captchaFrame" width="370px" height="690px"
+            style="border: none; margin: 0 0 0 0; padding: 0 0 0 0; border-radius: 12px">
+    </iframe>
+</div>
+3. Add script block
+<script>
+
+const pageId = uuid.v4().toString();
+
+PushcaClient.onHumanTokenHandler = async function (token) {
+    PushcaClient.stopWebSocket();
+    delay(1000);
+    captchaFrame.remove();
+    previewBox.style.display = "block";
+
+    //TODO
+    send pageId and token to your server along with some request
+}
+
+captchaFrame.src = `https://secure.fileshare.ovh/dynamic-captcha-min.html?page-id=${pageId}`;
+openWsConnection();
+
+async function openWsConnection() {
+    if (!PushcaClient.isOpen()) {
+        const pClient = new ClientFilter(
+            "SecureFileShare",
+            "dynamic-captcha",
+            pageId,
+            "CAPTCHA_CLIENT"
+        );
+        await PushcaClient.openWsConnection(
+            'wss://secure.fileshare.ovh:31085',
+            pClient,
+            function (clientObj) {
+                return new ClientFilter(
+                    clientObj.workSpaceId,
+                    clientObj.accountId,
+                    clientObj.deviceId,
+                    clientObj.applicationId
+                );
+            }
+        );
+    }
+}
+
+</script>
+4. user that function on your server to verify (page Id, human) token pairs
+async function validateHumanToken(pageId, token) {
+    const url = 'https://secure.fileshare.ovh/pushca/dynamic-captcha/validate-human-token';
+    const payload = {
+        pageId: pageId,
+        token: token
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST', // HTTP method
+            headers: {
+                'Content-Type': 'application/json' // Specify JSON content type
+            },
+            body: JSON.stringify(payload) // Convert the payload to JSON
+        });
+
+        if (response.ok) {
+            const isValid = await response.json(); // Parse the JSON response
+            console.log('Validation result:', isValid);
+            return 'true' === `${isValid}`;
+        } else {
+            console.error('Failed to validate human token. Status:', response.status);
+            return false;
+        }
+    } catch (error) {
+        console.error('Error occurred while validating human token:', error);
+        return false;
+    }
+}
