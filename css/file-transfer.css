@@ -29,7 +29,7 @@ h2 {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-image: url('../images/protected-binary.png');
+    background-image: url('../images/data-pipe.webp');
     background-size: 100% 100%; /* Make the background cover the entire page */
     background-repeat: no-repeat; /* Prevent the image from repeating */
     background-position: center center; /* Center the background image */
