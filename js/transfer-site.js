@@ -46,6 +46,11 @@ FileTransfer.reBindControls = function (force = false) {
             return;
         }
     }
+    if (document.getElementById("selectFilesContainer")) {
+        selectFilesBtn.style.display = 'block';
+        dropZone.style.display = 'block';
+        return;
+    }
     if (isMobile()) {
         dropZone.style.display = 'none';
         const deviceToArea = deviceToImage.getBoundingClientRect();
@@ -562,8 +567,11 @@ function performReceiverAliasLookup(subject, str) {
             dropZone.classList.remove('disabled-zone');
             destinationHint.style.display = 'none';
             scanQrCodeBtn.style.display = 'none';
-            document.querySelector('.fancy-input-container').classList.remove('fancy-input-container');
-
+            if (document.querySelector('.fancy-input-container')) {
+                document.querySelector('.fancy-input-container').classList.remove('fancy-input-container');
+            } else {
+                subject.style.marginRight = `55px`;
+            }
             FileTransfer.reBindControls(true);
             toolBarPasteArea.focus();
         }
