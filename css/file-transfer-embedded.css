@@ -104,8 +104,11 @@ h2 {
     justify-content: center; /* Horizontally center */
     align-items: center; /* Vertically center */
     text-align: center;
-    background-color: goldenrod;
     border: 0 none transparent;
+    background-image: url('https://secure.fileshare.ovh/images/encrypted-content.png');
+    background-size: 100% 100%; /* Make the background cover the entire page */
+    background-repeat: no-repeat; /* Prevent the image from repeating */
+    background-position: center center;
 }
 
 .tb-copy-past-memo {
