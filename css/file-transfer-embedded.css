@@ -29,7 +29,7 @@ h2 {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-image: url('../images/data-pipe.webp');
+    background-image: url('https://secure.fileshare.ovh/images/data-pipe.webp');
     background-size: 100% 100%; /* Make the background cover the entire page */
     background-repeat: no-repeat; /* Prevent the image from repeating */
     background-position: center center; /* Center the background image */
@@ -85,7 +85,7 @@ h2 {
 
 .fancy-button-view {
     display: block;
-    background: url('/images/arrow-down-icon-png.png') no-repeat center center;
+    background: url('https://secure.fileshare.ovh/images/arrow-down-icon-png.png') no-repeat center center;
     width: 200px;
     height: 200px;
     margin: 5px;
@@ -157,7 +157,7 @@ h2 {
 
     .fancy-button-view {
         display: block;
-        background: url('/images/arrow-down-icon-png-6.png') no-repeat center center;
+        background: url('https://secure.fileshare.ovh/images/arrow-down-icon-png-6.png') no-repeat center center;
         width: 75px;
         height: 75px;
         margin: 5px;
@@ -295,7 +295,7 @@ h2 {
     display: block;
     width: 200px;
     height: 100px;
-    background: url('/images/main-background.png') no-repeat center center;
+    background: url('https://secure.fileshare.ovh/images/main-background.png') no-repeat center center;
     background-size: contain;
     border: none;
     cursor: pointer;
@@ -316,7 +316,7 @@ h2 {
 }
 
 .select-files-button {
-    background: url('/images/open-file-main.png') no-repeat center center;
+    background: url('https://secure.fileshare.ovh/images/open-file-main.png') no-repeat center center;
     background-size: contain;
     border: none;
     cursor: pointer;
@@ -336,12 +336,12 @@ h2 {
 }
 
 .qr-code-button-img {
-    background: url('/images/qr-code.png') no-repeat center center;
+    background: url('https://secure.fileshare.ovh/images/qr-code.png') no-repeat center center;
     background-size: cover;
 }
 
 .scan-qr-code-button-img {
-    background: url('/images/scan-qr-code1.png') no-repeat center center;
+    background: url('https://secure.fileshare.ovh/images/scan-qr-code1.png') no-repeat center center;
 }
 
 .qr-code-button {
@@ -365,7 +365,7 @@ h2 {
 }
 
 .transfer-files-button {
-    background: url('/images/main-background.png') no-repeat center center;
+    background: url('https://secure.fileshare.ovh/images/main-background.png') no-repeat center center;
     background-size: contain;
     border: none;
     cursor: pointer;
@@ -408,7 +408,7 @@ h2 {
     box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.3), inset -2px -2px 5px rgba(255, 255, 255, 0.8);
     transition: box-shadow 0.3s;
 
-    background-image: url('../images/helicopter_landing_pod_sign.png');
+    background-image: url('https://secure.fileshare.ovh/images/helicopter_landing_pod_sign.png');
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center center;

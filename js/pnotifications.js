@@ -757,9 +757,9 @@ PushcaClient.isOpen = function () {
     return PushcaClient.ws.readyState === window.WebSocket.OPEN;
 }
 
-async function getAuthorizedWsUrl(baseUrl, clientObj) {
+async function getAuthorizedWsUrl(baseUrl, clientObj, apiKey) {
     const openConnectionRequest = new OpenConnectionRequest(
-        clientObj, isMobile(), null, null);
+        clientObj, isMobile(), null, apiKey);
     //console.log(`Sign-in attempt: ${JSON.stringify(openConnectionRequest)}`);
     const wsUrl = `${baseUrl}/sign-in/${encodeToBase64UrlSafe(JSON.stringify(openConnectionRequest))}`;
     console.log("Public sign-in url: " + wsUrl);
@@ -793,14 +793,15 @@ async function getAuthorizedWsUrl(baseUrl, clientObj) {
 
 PushcaClient.openWsConnection = async function (baseUrl, clientObj,
                                                 clientObjRefresher,
-                                                withoutRefresh) {
+                                                withoutRefresh,
+                                                apiKey = null) {
     PushcaClient.serverBaseUrl = baseUrl;
     PushcaClient.ClientObj = clientObj;
 
     if (!withoutRefresh) {
         initConnectionRecoveryInterval(baseUrl, clientObjRefresher);
     }
-    let result = await getAuthorizedWsUrl(baseUrl, clientObj);
+    let result = await getAuthorizedWsUrl(baseUrl, clientObj, apiKey);
     if (WaiterResponseType.ERROR === result.type) {
         console.error(`cannot open authorized ws connection: url ${PushcaClient.wsUrl}, caused by`);
         console.log(result.body);
