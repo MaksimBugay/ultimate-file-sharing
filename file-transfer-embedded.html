@@ -119,7 +119,7 @@
                 <span id="closeInfoBtn" class="close-btn" style="color: darkblue">&times;</span>
             </div>
         </div>
-        <div id="qrcode"></div>
+        <div id="qrcode" class="centered-container"></div>
         <p id="infoMsg" class="message-text"></p>
     </div>
 </div>
@@ -146,7 +146,8 @@
             <span style="display: none; flex-direction: row; margin-left: 5px">
                 <a href="https://www.youtube.com/watch?v=wiZbkBZiFag" class="nav-link" id="transferFileDemoButton"
                    target="_blank" rel="noopener noreferrer">
-                     <img src="https://secure.fileshare.ovh/images/youtube.png" alt="Transfer file" class="custom-button-img"
+                     <img src="https://secure.fileshare.ovh/images/youtube.png" alt="Transfer file"
+                          class="custom-button-img"
                           style="border-radius: 12px">
                      Demo
                 </a>
@@ -178,13 +179,15 @@
                         <button id="scanQrCodeBtn" class="qr-code-button scan-qr-code-button-img"
                                 title="Scan QR code"></button>
                     </div>
-                    <h1 id="destinationHint">$destinationHintString$</h1>
+                    <div style="margin-left: 15px">
+                        <h1 id="destinationHint">$destinationHintString$</h1>
+                    </div>
                 </fieldset>
             </div>
             <div id="selectFilesContainer">
                 <fieldset class="file-share-fieldset">
                     <legend class="file-share-legend">Select files and start transfer</legend>
-                    <div style="display: flex; margin-left: 20px;margin-top: 5px">
+                    <div id="selectFilesSubContainer" style="display: flex; margin-left: 20px;margin-top: 5px">
                         <div>
                             <div style="width: 100%; text-align: left; padding-left: 30px">
                                 <label id="selectFileLabel" for="fileInput" class="label-text">Browse</label>
@@ -201,8 +204,8 @@
                 </fieldset>
             </div>
             <div class="tb-copy-past" id="tbCopyPastMemo" style="transform: scale(0.7)">
-                    <textarea class="tb-copy-past-memo" id="toolBarPasteArea" rows="3" cols="10"
-                              spellcheck="false"></textarea>
+                    <textarea class="tb-copy-past-memo"
+                              id="toolBarPasteArea" rows="3" cols="10" spellcheck="false"></textarea>
             </div>
             <div id="progressBarContainer" style="display: none; width: 100%">
                 <progress id="uploadProgress" value="0" max="100" style="width: 100%"></progress>

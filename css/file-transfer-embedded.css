@@ -107,7 +107,6 @@ h2 {
 }
 
 .tb-copy-past-memo {
-    border: none;
     outline: none;
     resize: none;
     margin-top: 0;
@@ -117,11 +116,13 @@ h2 {
     font-size: 20pt;
     font-weight: bold;
     color: transparent;
+    border: none transparent;
     overflow: hidden; /* Completely hides both horizontal and vertical scrollbars */
 }
 
 .tb-copy-past-memo:focus {
     color: transparent;
+    border: none transparent;
 }
 
 @media (max-width: 768px) {
@@ -182,7 +183,8 @@ h2 {
     margin: 0;
     padding: 5px 5px 5px 5px;
     border-radius: 8px; /* Rounded corners for a softer appearance */
-    background: linear-gradient(145deg, #d8e9ff, #ffffff); /* Light gradient for a 3D effect */
+    /*background: linear-gradient(145deg, #d8e9ff, #ffffff);*/
+    background: linear-gradient(90deg, lightgoldenrodyellow, gold 90%);
     font-size: 10px;
     font-weight: bold;
     color: #006BFD;
@@ -347,6 +349,7 @@ h2 {
 .qr-code-button {
     background-size: contain;
     border: none;
+    border-radius: 5px;
     cursor: pointer;
     padding: 0;
     width: 40px;
@@ -400,7 +403,7 @@ h2 {
     font-weight: bold;
     font-size: 1rem;
     margin: 0;
-    padding: 25px;
+    padding: 15px;
     box-sizing: border-box; /* Ensure padding doesn't exceed container size */
 
     color: darkblue;

@@ -49,6 +49,8 @@ FileTransfer.reBindControls = function (force = false) {
     if (document.getElementById("selectFilesContainer")) {
         selectFilesBtn.style.display = 'block';
         dropZone.style.display = 'block';
+        receiverVirtualHost.style.cursor = "pointer";
+        ownerVirtualHost.style.cursor = "pointer";
         return;
     }
     if (isMobile()) {
@@ -178,7 +180,29 @@ function holdFocus(event) {
     }
 }
 
-document.addEventListener('mousemove', (event) => {
+
+if (document.getElementById('selectFilesSubContainer')) {
+    document.getElementById('selectFilesSubContainer').addEventListener(
+        'mousemove', function (event) {
+            if (!receiverVirtualHost.readOnly) {
+                return;
+            }
+            if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
+                return;
+            }
+            if (toolBarPasteArea) {
+                toolBarPasteArea.focus();
+            }
+        }
+    );
+}
+
+document.addEventListener('mousemove', containerWithCopyPastElementMouseMoveEventHandler);
+
+function containerWithCopyPastElementMouseMoveEventHandler(event) {
+    if (!hasParentWithIdOrClass(event.target, mainFlowContainer)) {
+        return;
+    }
     if (!receiverVirtualHost.readOnly) {
         return;
     }
@@ -188,7 +212,7 @@ document.addEventListener('mousemove', (event) => {
     if (toolBarPasteArea) {
         toolBarPasteArea.focus();
     }
-});
+}
 
 //==================================== Show owner QR code ==============================================================
 const ownerQrCodeBtn = document.getElementById('ownerQrCodeBtn');
