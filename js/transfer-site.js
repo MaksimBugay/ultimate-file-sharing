@@ -192,6 +192,7 @@ if (document.getElementById('selectFilesSubContainer')) {
             }
             if (toolBarPasteArea) {
                 toolBarPasteArea.focus();
+                toolBarPasteArea.style.border="0 none transparent";
             }
         }
     );

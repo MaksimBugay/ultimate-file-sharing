@@ -113,16 +113,14 @@ h2 {
     caret-color: transparent;
     background-color: transparent;
     width: 100%;
-    font-size: 20pt;
-    font-weight: bold;
     color: transparent;
-    border: none transparent;
+    border: 0 none transparent;
     overflow: hidden; /* Completely hides both horizontal and vertical scrollbars */
 }
 
 .tb-copy-past-memo:focus {
     color: transparent;
-    border: none transparent;
+    border: 0 none transparent;
 }
 
 @media (max-width: 768px) {
