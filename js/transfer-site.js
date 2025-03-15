@@ -585,11 +585,10 @@ function performReceiverAliasLookup(subject, str) {
             FileTransfer.isUpdatingProgrammatically = false;
             dropZone.classList.remove('disabled-zone');
             destinationHint.style.display = 'none';
-            scanQrCodeBtn.style.display = 'none';
+            //scanQrCodeBtn.style.display = 'none';
+            scanQrCodeBtn.classList.add('disabled-zone');
             if (document.querySelector('.fancy-input-container')) {
                 document.querySelector('.fancy-input-container').classList.remove('fancy-input-container');
-            } else {
-                subject.style.marginRight = `55px`;
             }
             FileTransfer.reBindControls(true);
             toolBarPasteArea.focus();
