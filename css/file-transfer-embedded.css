@@ -323,7 +323,7 @@ h2 {
 }
 
 .select-files-button {
-    background: url('https://secure.fileshare.ovh/images/open-file-main.png') no-repeat center center;
+    background: url('https://secure.fileshare.ovh/images/system-file-manager.svg') no-repeat center center;
     background-size: contain;
     border: none;
     cursor: pointer;
