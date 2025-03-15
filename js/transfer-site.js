@@ -172,8 +172,6 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
     }
 });
 
-receiverVirtualHost.addEventListener('blur', holdFocus);
-
 function holdFocus(event) {
     if (!event.target.readOnly) {
         event.target.focus();
@@ -192,7 +190,7 @@ if (document.getElementById('selectFilesSubContainer')) {
             }
             if (toolBarPasteArea) {
                 toolBarPasteArea.focus();
-                toolBarPasteArea.style.border="0 none transparent";
+                toolBarPasteArea.style.border = "0 none transparent";
             }
         }
     );
@@ -201,10 +199,11 @@ if (document.getElementById('selectFilesSubContainer')) {
 document.addEventListener('mousemove', containerWithCopyPastElementMouseMoveEventHandler);
 
 function containerWithCopyPastElementMouseMoveEventHandler(event) {
-    if (!hasParentWithIdOrClass(event.target, mainFlowContainer)) {
+    if (!hasParentWithIdOrClass(event.target, ['main-flow-container'])) {
         return;
     }
     if (!receiverVirtualHost.readOnly) {
+        receiverVirtualHost.focus();
         return;
     }
     if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
@@ -226,12 +225,10 @@ function isInfoDialogVisible() {
 
 function closeInfoDialog() {
     infoDialog.classList.remove('visible');
-    receiverVirtualHost.addEventListener('blur', holdFocus);
     receiverVirtualHost.focus();
 }
 
 function showInfoDialog() {
-    receiverVirtualHost.removeEventListener('blur', holdFocus);
     receiverVirtualHost.blur();
     infoDialog.classList.add('visible');
 }
@@ -293,12 +290,10 @@ function closeQrCodeScannerDialog() {
     stopQRScanner();
     qrCodeScannerDialog.classList.remove('visible');
 
-    receiverVirtualHost.addEventListener('blur', holdFocus);
     receiverVirtualHost.focus();
 }
 
 async function showQrCodeScannerDialog() {
-    receiverVirtualHost.removeEventListener('blur', holdFocus);
     receiverVirtualHost.blur();
     qrCodeScannerDialog.classList.add('visible');
     await startQRScanner();
@@ -551,7 +546,6 @@ selectFilesBtn.addEventListener('click', function () {
     fileInput.click();
 });
 
-receiverVirtualHost.focus();
 document.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
         if (errorDialog.classList.contains('visible')) {

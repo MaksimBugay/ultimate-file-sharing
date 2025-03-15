@@ -471,15 +471,21 @@ function downloadFile(blob, fileName) {
 //---------------------------------------------------------------------------------------
 
 function hasParentWithIdOrClass(element, idOrClassList) {
-    if (!element) {
+    if (!(element instanceof Element) || !Array.isArray(idOrClassList) || idOrClassList.length === 0) {
         return false;
     }
+
     for (let i = 0; i < idOrClassList.length; i++) {
-        const match = element.closest(`#${idOrClassList[i]}, .${idOrClassList[i]}`)
+        let match = element.closest(`#${idOrClassList[i]}`);
+        if (match) {
+            return true;
+        }
+        match = element.closest(`.${idOrClassList[i]}`);
         if (match) {
             return true;
         }
     }
+
     return false;
 }
 
