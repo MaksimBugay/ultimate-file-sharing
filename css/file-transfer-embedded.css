@@ -1,5 +1,5 @@
 
-h1 {
+.fancy-text {
     font-size: 1.0rem;
     font-weight: bold;
     background: linear-gradient(90deg, gold, coral 90%);
@@ -8,6 +8,7 @@ h1 {
     /*text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); */
     font-family: inherit;
     text-align: center;
+    margin-top: 15px;
 }
 
 h2 {
