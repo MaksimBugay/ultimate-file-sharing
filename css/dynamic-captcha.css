@@ -40,21 +40,22 @@ h2 {
 
 .captcha-container {
     width: auto;
-    min-width: 300px;
+    min-width: 350px;
     max-width: 90vw;
     max-width: 90dvw;
-    margin: 0 0 0 0;
+    margin: 2px;
     padding: 5px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    border-radius: 10px;
 }
 
 .captcha-box {
     width: 100%;
     background-color: lightskyblue;
-    margin: 15px;
+    margin: 0;
     padding: 10px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -77,6 +78,11 @@ h2 {
     margin-bottom: 5px;
     overflow-y: auto;
     border-radius: 12px;
+}
+
+.captcha-iframe {
+    width: 367px;
+    height: 630px
 }
 
 .input-group {
