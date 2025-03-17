@@ -11,7 +11,8 @@
     margin-top: 15px;
 }
 
-h2 {
+.dialog-title {
+    width: 100%;
     font-size: 1.0rem;
     font-weight: bold;
     background: linear-gradient(90deg, mediumblue, royalblue 90%);
@@ -37,6 +38,7 @@ h2 {
 }
 
 .centered-container {
+    width: auto;
     display: flex;
     flex-direction: row;
     justify-content: center;
