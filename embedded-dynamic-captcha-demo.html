@@ -5,23 +5,23 @@
     <link rel="canonical" href="https://secure.fileshare.ovh/dynamic-captcha.html"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure FileShare: Dynamic captcha</title>
-    <link rel="stylesheet" href="css/dynamic-captcha.css">
+    <link rel="stylesheet" href="https://secure.fileshare.ovh/css/dynamic-captcha.css">
 
-    <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://secure.fileshare.ovh/images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://secure.fileshare.ovh/images/file-sharing16.png">
 
     <!-- Open Graph meta tags -->
     <meta property="og:title" content="Secure FileShare: dynamic captcha">
     <meta property="og:description" content="Dynamic captcha demo">
-    <meta property="og:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
-    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary.html">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/not-a-robot.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/images/not-a-robot.png">
     <meta property="og:type" content="website">
 
     <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Secure FileShare: dynamic captcha">
     <meta name="twitter:description" content="Dynamic captcha demo">
-    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/not-a-robot.png">
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
 
@@ -33,6 +33,7 @@
 </div>
 </body>
 <script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
+<script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
 <script>
     const pageId = uuid.v4().toString();
 
@@ -40,11 +41,13 @@
         PushcaClient.stopWebSocket();
         document.getElementById("captchaFrame").remove();
 
-        const isValid = await validateHumanToken(pageId, token);
+        //TODO send pageId and token to your server along with some request
+        alert(`"${pageId}", "${token}"`);
+        /*const isValid = await validateHumanToken(pageId, token);
         if (isValid) {
             console.log(`"${pageId}", "${token}"`);
             alert(`"${pageId}", "${token}"`);
-        }
+        }*/
         location.reload();
     }
 
@@ -72,36 +75,6 @@
                 },
                 "cHVzaGNhLWRlbW86RFVIYzhCdnJSbWdpWUpLakkwSDc2cVUzaUljYVAyclE="//if you don't have a valid api key then just pass null
             );
-        }
-    }
-
-    async function validateHumanToken(pageId, token) {
-        const url = 'https://secure.fileshare.ovh/pushca/dynamic-captcha/validate-human-token';
-        const payload = {
-            pageId: pageId,
-            token: token
-        };
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST', // HTTP method
-                headers: {
-                    'Content-Type': 'application/json' // Specify JSON content type
-                },
-                body: JSON.stringify(payload) // Convert the payload to JSON
-            });
-
-            if (response.ok) {
-                const isValid = await response.json(); // Parse the JSON response
-                console.log('Validation result:', isValid);
-                return 'true' === `${isValid}`;
-            } else {
-                console.error('Failed to validate human token. Status:', response.status);
-                return false;
-            }
-        } catch (error) {
-            console.error('Error occurred while validating human token:', error);
-            return false;
         }
     }
 </script>
