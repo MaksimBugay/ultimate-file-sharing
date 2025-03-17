@@ -26,8 +26,10 @@
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
 
 <div class="main-container" style="flex-direction: column; height: 100vh">
-    <iframe id="captchaFrame" src="https://secure.fileshare.ovh/dynamic-captcha-min.html"
-            class="captcha-iframe"></iframe>
+    <div style="transform: scale(0.7);">
+        <iframe id="captchaFrame" src="https://secure.fileshare.ovh/dynamic-captcha-min.html"
+                class="captcha-iframe"></iframe>
+    </div>
 </div>
 </body>
 <script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
@@ -67,7 +69,8 @@
                         clientObj.deviceId,
                         clientObj.applicationId
                     );
-                }
+                },
+                "cHVzaGNhLWRlbW86RFVIYzhCdnJSbWdpWUpLakkwSDc2cVUzaUljYVAyclE="//if you don't have a valid api key then just pass null
             );
         }
     }

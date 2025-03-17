@@ -42,6 +42,11 @@ const displayCaptchaContainer = document.getElementById("displayCaptchaContainer
 const captchaImage = document.getElementById("captchaImage");
 const resultsContainer = document.getElementById("resultsContainer");
 const errorMessage = document.getElementById('errorMessage');
+const brandNameDiv = document.getElementById("brandNameDiv");
+
+brandNameDiv.addEventListener('click', function () {
+    window.open("https://sl-st.com", '_blank');
+});
 
 delay(60_000).then(() => {
     PushcaClient.stopWebSocket();
