@@ -216,6 +216,7 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
 
 //==================================== Show owner QR code ==============================================================
 const ownerQrCodeBtn = document.getElementById('ownerQrCodeBtn');
+const ownerQrCodeTitleBtn = document.getElementById("ownerQrCodeTitleBtn");
 const infoDialog = document.getElementById("infoDialog");
 const closeInfoBtn = document.getElementById("closeInfoBtn");
 
@@ -262,6 +263,15 @@ ownerQrCodeBtn.addEventListener('click', function () {
         showInfoMsg("Use our website on the sender's side to scan this code", ownerVirtualHost.value);
     }
 });
+
+if (ownerQrCodeTitleBtn) {
+    ownerQrCodeTitleBtn.addEventListener('click', function () {
+        if (ownerVirtualHost.value) {
+            ownerQrCodeBtn.blur();
+            showInfoMsg("Use our website on the sender's side to scan this code", ownerVirtualHost.value);
+        }
+    });
+}
 
 //====================================Scan QR code======================================================================
 const scanQrCodeBtn = document.getElementById('scanQrCodeBtn');
@@ -562,7 +572,7 @@ function setDeviceFromVirtualHost(alias) {
     const virtualHostNameTitle = document.getElementById('virtualHostNameTitle');
     if (virtualHostNameTitle) {
         virtualHostNameTitle.classList.add('embedded-link');
-        virtualHostNameTitle.textContent = virtualHostNameTitle.textContent + alias;
+        virtualHostNameTitle.textContent = alias;
     }
     ownerVirtualHost.value = alias;
     ownerVirtualHost.classList.add('embedded-link');
