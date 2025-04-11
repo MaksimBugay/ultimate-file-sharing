@@ -559,6 +559,11 @@ document.addEventListener("keydown", function (event) {
 });
 
 function setDeviceFromVirtualHost(alias) {
+    const virtualHostNameTitle = document.getElementById('virtualHostNameTitle');
+    if (virtualHostNameTitle) {
+        virtualHostNameTitle.classList.add('embedded-link');
+        virtualHostNameTitle.textContent = virtualHostNameTitle.textContent + alias;
+    }
     ownerVirtualHost.value = alias;
     ownerVirtualHost.classList.add('embedded-link');
 }
