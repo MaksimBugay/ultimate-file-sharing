@@ -23,7 +23,9 @@ const Command = Object.freeze({
     SEND_GATEWAY_RESPONSE: "SEND_GATEWAY_RESPONSE",
     SEND_GATEWAY_REQUEST: "SEND_GATEWAY_REQUEST",
     CONNECTION_ALIAS_LOOKUP: "CONNECTION_ALIAS_LOOKUP",
-    CAPTCHA_VERIFY: "CAPTCHA_VERIFY"
+    CAPTCHA_VERIFY: "CAPTCHA_VERIFY",
+    PUZZLE_CAPTCHA_GENERATE_AND_SEND: "PUZZLE_CAPTCHA_GENERATE_AND_SEND",
+    PUZZLE_CAPTCHA_VERIFY_SELECTED_OPTION: "PUZZLE_CAPTCHA_VERIFY_SELECTED_OPTION"
 });
 
 const MessageType = Object.freeze({
@@ -502,6 +504,7 @@ PushcaClient.onHumanTokenHandler = null;
 PushcaClient.onDataHandler = null;
 PushcaClient.onFileTransferChunkHandler = null;
 PushcaClient.onCaptchaSetHandler = null;
+PushcaClient.onPuzzleCaptchaSetHandler = null;
 PushcaClient.onUploadBinaryAppealHandler = null;
 PushcaClient.onBinaryManifestHandler = null;
 PushcaClient.onFinalizedBinaryHandler = null;
@@ -607,6 +610,10 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 } else if (BinaryType.CAPTCHA_SET === binaryWithHeader.binaryType) {
                     if (typeof PushcaClient.onCaptchaSetHandler === 'function') {
                         PushcaClient.onCaptchaSetHandler(binaryWithHeader);
+                    }
+                } else if (BinaryType.PUZZLE_CAPTCHA_SET === binaryWithHeader.binaryType) {
+                    if (typeof PushcaClient.onPuzzleCaptchaSetHandler === 'function') {
+                        PushcaClient.onPuzzleCaptchaSetHandler(binaryWithHeader);
                     }
                 } else {
                     console.warn(`Unassigned binary chunk was received: binaryId = ${binaryWithHeader.binaryId}, order = ${binaryWithHeader.order}`);
@@ -1351,6 +1358,33 @@ PushcaClient.CaptchaVerify = async function (captchaId, pageId, resultIndex, bac
     if (WaiterResponseType.ERROR === result.type) {
         console.error("Failed verify captcha attempt: " + result.body);
     }
+}
+
+PushcaClient.RequestPuzzleCaptcha = async function (captchaId, pieceSizeLength) {
+    let metaData = {};
+    metaData["captchaId"] = captchaId;
+    metaData["pieceSizeLength"] = pieceSizeLength;
+
+    let commandWithId = PushcaClient.buildCommandMessage(Command.PUZZLE_CAPTCHA_GENERATE_AND_SEND, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error("Failed request Puzzle captcha attempt: " + result.body);
+    }
+}
+
+PushcaClient.verifySelectedPieceOfPuzzleCaptcha = async function (captchaId, pageId, x, y) {
+    let metaData = {};
+    metaData['captchaId'] = captchaId;
+    metaData['pageId'] = pageId;
+    metaData['point'] = {x: x, y: y};
+
+    let commandWithId = PushcaClient.buildCommandMessage(Command.PUZZLE_CAPTCHA_VERIFY_SELECTED_OPTION, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId, 30_000)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error("Failed verify selected piece of puzzle captcha attempt: " + result.body);
+        return null;
+    }
+    return result.body;
 }
 
 window.addEventListener('beforeunload', function () {

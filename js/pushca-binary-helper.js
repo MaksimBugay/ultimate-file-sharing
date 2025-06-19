@@ -5,7 +5,8 @@ const BinaryType = Object.freeze({
     FILE_TRANSFER: 3,
     CACHE_BINARY: 4,
     PING: 5,
-    CAPTCHA_SET: 6
+    CAPTCHA_SET: 6,
+    PUZZLE_CAPTCHA_SET: 7
 });
 
 const DatagramState = Object.freeze({
