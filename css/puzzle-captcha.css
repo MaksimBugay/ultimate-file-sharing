@@ -1,0 +1,11 @@
+
+.selected-piece {
+    display: block; /* Removes any inline spacing */
+    margin: 0; /* Removes default margins */
+    padding: 0; /* Removes any padding */
+    border: none; /* Removes any border */
+    width: auto; /* Keeps the original width */
+    height: auto; /* Keeps the original height */
+    position: absolute;
+    z-index: 1000;
+}

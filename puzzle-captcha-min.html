@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure FileShare: Dynamic captcha</title>
     <link rel="stylesheet" href="css/dynamic-captcha.css">
+    <link rel="stylesheet" href="css/puzzle-captcha.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -32,6 +33,7 @@
         <div class="solve-hint-text">Find the shape</div>
         <div class="solve-hint-text">that exactly matches the top one</div>
         <canvas id="puzzleCaptchaArea"></canvas>
+        <img id="selectedCaptchaPiece" class="selected-piece" style="display: none" draggable="false" alt="Selected captcha piece">
     </div>
 </div>
 </body>
