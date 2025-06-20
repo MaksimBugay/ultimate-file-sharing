@@ -119,7 +119,7 @@ delay(600_000).then(() => {
 });
 
 PushcaClient.onOpenHandler = async function () {
-    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, 300);
+    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, 200);
 }
 
 PushcaClient.onHumanTokenHandler = function (token) {

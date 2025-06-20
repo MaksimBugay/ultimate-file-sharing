@@ -53,6 +53,8 @@ h2 {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    /*transform: scale(0.9);
+    transform-origin: top left;*/
 }
 
 .captcha-box {
