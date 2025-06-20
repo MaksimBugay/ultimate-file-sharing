@@ -88,9 +88,6 @@ function puzzleCaptchaPointerMove() {
     };
 }
 
-document.addEventListener('mousemove', puzzleCaptchaPointerMove());
-document.addEventListener('touchmove', puzzleCaptchaPointerMove());
-
 function puzzleCaptchaPointerUp() {
     return async function (event) {
         isDragging = false;
@@ -117,13 +114,20 @@ function puzzleCaptchaPointerUp() {
     };
 }
 
-document.addEventListener('mouseup', puzzleCaptchaPointerUp());
-document.addEventListener('touchend', puzzleCaptchaPointerUp());
-document.addEventListener('touchcancel', puzzleCaptchaPointerUp());
+if (isMobile()) {
+    document.addEventListener('touchmove', puzzleCaptchaPointerMove());
 
-document.addEventListener('touchmove', function (event) {
-    if (isDragging) event.preventDefault();
-}, {passive: false});
+    document.addEventListener('touchend', puzzleCaptchaPointerUp());
+    document.addEventListener('touchcancel', puzzleCaptchaPointerUp());
+
+    document.addEventListener('touchmove', function (event) {
+        if (isDragging) event.preventDefault();
+    }, {passive: false});
+} else {
+    document.addEventListener('mouseup', puzzleCaptchaPointerUp());
+
+    document.addEventListener('mousemove', puzzleCaptchaPointerMove());
+}
 
 function drawPiece(x, y) {
     const ctx = puzzleCaptchaArea.getContext('2d');
@@ -181,8 +185,11 @@ PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
             ctx.drawImage(img, 0, 0);
             URL.revokeObjectURL(blobUrl);
         };
-        puzzleCaptchaArea.addEventListener('mousedown', selectPuzzleCaptchaPiecePointerDown());
-        puzzleCaptchaArea.addEventListener('touchstart', selectPuzzleCaptchaPiecePointerDown());
+        if (isMobile()) {
+            puzzleCaptchaArea.addEventListener('touchstart', selectPuzzleCaptchaPiecePointerDown());
+        } else {
+            puzzleCaptchaArea.addEventListener('mousedown', selectPuzzleCaptchaPiecePointerDown());
+        }
         img.src = blobUrl;
         PuzzleCaptcha.loaded = true;
     }
