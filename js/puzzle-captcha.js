@@ -40,6 +40,11 @@ function getEventCoordinates(event) {
 }
 
 //document.body.style.touchAction = 'none';
+let pieceDisplayDeltaY = 50;
+let pieceDisplayDeltaX = 20;
+if (isMobile()) {
+    pieceDisplayDeltaY = 100;
+}
 let isDragging = false;
 let lastMoveTime = 0;
 
@@ -51,8 +56,8 @@ function puzzleCaptchaPointerDown() {
         if (PuzzleCaptcha.correctOptionWasSelected) {
             isDragging = true;
             selectedCaptchaPiece.style.display = 'block';
-            selectedCaptchaPiece.style.left = `${absX}px`;
-            selectedCaptchaPiece.style.top = `${absY}px`;
+            selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
+            selectedCaptchaPiece.style.top = `${absY - pieceDisplayDeltaY}px`;
             const rect = selectedCaptchaPiece.getBoundingClientRect();
             PuzzleCaptcha.pieceStartPoint = {x: rect.left, y: rect.top};
             PuzzleCaptcha.correctOptionWasSelected = false;
@@ -76,8 +81,8 @@ function puzzleCaptchaPointerMove() {
         const {x, y} = getEventCoordinates(event);
         const absX = x - 10;
         const absY = y - 10;
-        selectedCaptchaPiece.style.left = `${absX}px`;
-        selectedCaptchaPiece.style.top = `${absY}px`;
+        selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
+        selectedCaptchaPiece.style.top = `${absY - pieceDisplayDeltaY}px`;
 
         event.preventDefault(); // Prevent scrolling on mobile
     };
@@ -95,7 +100,9 @@ function puzzleCaptchaPointerUp() {
         const finalX = Math.round(PuzzleCaptcha.startPoint.x + (rect.left - PuzzleCaptcha.pieceStartPoint.x)) - 10;
         const finalY = Math.round(PuzzleCaptcha.startPoint.y + (rect.top - PuzzleCaptcha.pieceStartPoint.y)) - 10;
         console.log({x: finalX, y: finalY});
-        await PushcaClient.verifyPuzzleCaptcha(PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, finalX, finalY);
+        await PushcaClient.verifyPuzzleCaptcha(
+            PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, finalX - pieceDisplayDeltaX, finalY - pieceDisplayDeltaY
+        );
 
         //drawPiece(finalX, finalY);
 
@@ -140,7 +147,11 @@ delay(600_000).then(() => {
 });
 
 PushcaClient.onOpenHandler = async function () {
-    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, 200);
+    let pieceLength = 200;
+    if (isMobile()) {
+        pieceLength = 190;
+    }
+    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, pieceLength);
 }
 
 PushcaClient.onHumanTokenHandler = function (token) {
