@@ -29,13 +29,25 @@ const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
 const errorMessage = document.getElementById('errorMessage');
 const brandNameDiv = document.getElementById("brandNameDiv");
 
+function getEventCoordinates(event) {
+    if (event.touches && event.touches.length > 0) {
+        return {x: event.touches[0].pageX, y: event.touches[0].pageY};
+    } else if (event.changedTouches && event.changedTouches.length > 0) {
+        return {x: event.changedTouches[0].pageX, y: event.changedTouches[0].pageY};
+    } else {
+        return {x: event.pageX, y: event.pageY};
+    }
+}
+
+//document.body.style.touchAction = 'none';
 let isDragging = false;
 let lastMoveTime = 0;
 
 function puzzleCaptchaPointerDown() {
     return function (event) {
-        const absX = event.pageX - 10;
-        const absY = event.pageY - 10;
+        const {x, y} = getEventCoordinates(event);
+        const absX = x - 10;
+        const absY = y - 10;
         if (PuzzleCaptcha.correctOptionWasSelected) {
             isDragging = true;
             selectedCaptchaPiece.style.display = 'block';
@@ -44,12 +56,14 @@ function puzzleCaptchaPointerDown() {
             const rect = selectedCaptchaPiece.getBoundingClientRect();
             PuzzleCaptcha.pieceStartPoint = {x: rect.left, y: rect.top};
             PuzzleCaptcha.correctOptionWasSelected = false;
+
+            event.preventDefault(); // Prevent scrolling on mobile
         }
     };
 }
 
-document.addEventListener('mousedown', puzzleCaptchaPointerDown());
-document.addEventListener('touchstart', puzzleCaptchaPointerDown());
+//document.addEventListener('mousedown', puzzleCaptchaPointerDown());
+//document.addEventListener('touchstart', puzzleCaptchaPointerDown());
 
 function puzzleCaptchaPointerMove() {
     return function (event) {
@@ -59,10 +73,13 @@ function puzzleCaptchaPointerMove() {
         if (now - lastMoveTime < 100) return; // throttle: only every 100 ms
         lastMoveTime = now;
 
-        const absX = event.pageX - 10;
-        const absY = event.pageY - 10;
+        const {x, y} = getEventCoordinates(event);
+        const absX = x - 10;
+        const absY = y - 10;
         selectedCaptchaPiece.style.left = `${absX}px`;
         selectedCaptchaPiece.style.top = `${absY}px`;
+
+        event.preventDefault(); // Prevent scrolling on mobile
     };
 }
 
@@ -96,6 +113,10 @@ function puzzleCaptchaPointerUp() {
 document.addEventListener('mouseup', puzzleCaptchaPointerUp());
 document.addEventListener('touchend', puzzleCaptchaPointerUp());
 document.addEventListener('touchcancel', puzzleCaptchaPointerUp());
+
+document.addEventListener('touchmove', function (event) {
+    if (isDragging) event.preventDefault();
+}, {passive: false});
 
 function drawPiece(x, y) {
     const ctx = puzzleCaptchaArea.getContext('2d');
@@ -149,23 +170,38 @@ PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
             ctx.drawImage(img, 0, 0);
             URL.revokeObjectURL(blobUrl);
         };
-        puzzleCaptchaArea.addEventListener('mousedown', async function (event) {
-            const rect = this.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            PuzzleCaptcha.startPoint = {x: x, y: y}
-
-            const result = await PushcaClient.verifySelectedPieceOfPuzzleCaptcha(
-                PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, x, y
-            );
-            PuzzleCaptcha.correctOptionWasSelected = JSON.parse(result).body === 'true';
-            document.dispatchEvent(event);
-        });
+        puzzleCaptchaArea.addEventListener('mousedown', selectPuzzleCaptchaPiecePointerDown());
+        puzzleCaptchaArea.addEventListener('touchstart', selectPuzzleCaptchaPiecePointerDown());
         img.src = blobUrl;
         PuzzleCaptcha.loaded = true;
     }
 };
 
+function selectPuzzleCaptchaPiecePointerDown() {
+    return async function (event) {
+        const rect = this.getBoundingClientRect();
+        let x, y;
+        if (event.touches && event.touches.length > 0) {
+            // Mobile touch
+            x = event.touches[0].clientX - rect.left;
+            y = event.touches[0].clientY - rect.top;
+        } else {
+            // Desktop mouse
+            x = event.clientX - rect.left;
+            y = event.clientY - rect.top;
+        }
+        PuzzleCaptcha.startPoint = {x: x, y: y}
+
+        const result = await PushcaClient.verifySelectedPieceOfPuzzleCaptcha(
+            PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, x, y
+        );
+        PuzzleCaptcha.correctOptionWasSelected = JSON.parse(result).body === 'true';
+
+        event.preventDefault();
+
+        puzzleCaptchaPointerDown()(event);
+    };
+}
 
 openWsConnection();
 
