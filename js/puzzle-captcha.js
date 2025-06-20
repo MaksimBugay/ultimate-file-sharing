@@ -12,7 +12,6 @@ PuzzleCaptcha.loaded = false;
 PuzzleCaptcha.correctOptionWasSelected = false;
 PuzzleCaptcha.startPoint = {x: 0, y: 0};
 PuzzleCaptcha.pieceStartPoint = {x: 0, y: 0}
-PuzzleCaptcha.pieceCurrentPoint = {x: 0, y: 0}
 
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('page-id')) {
@@ -32,42 +31,81 @@ const brandNameDiv = document.getElementById("brandNameDiv");
 
 let isDragging = false;
 let lastMoveTime = 0;
-document.addEventListener('mousedown', function (event) {
-    const absX = event.pageX - 10;
-    const absY = event.pageY - 10;
-    if (PuzzleCaptcha.correctOptionWasSelected) {
-        isDragging = true;
-        selectedCaptchaPiece.style.display = 'block';
+
+function puzzleCaptchaPointerDown() {
+    return function (event) {
+        const absX = event.pageX - 10;
+        const absY = event.pageY - 10;
+        if (PuzzleCaptcha.correctOptionWasSelected) {
+            isDragging = true;
+            selectedCaptchaPiece.style.display = 'block';
+            selectedCaptchaPiece.style.left = `${absX}px`;
+            selectedCaptchaPiece.style.top = `${absY}px`;
+            const rect = selectedCaptchaPiece.getBoundingClientRect();
+            PuzzleCaptcha.pieceStartPoint = {x: rect.left, y: rect.top};
+            PuzzleCaptcha.correctOptionWasSelected = false;
+        }
+    };
+}
+
+document.addEventListener('mousedown', puzzleCaptchaPointerDown());
+document.addEventListener('touchstart', puzzleCaptchaPointerDown());
+
+function puzzleCaptchaPointerMove() {
+    return function (event) {
+        if (!isDragging) return;
+
+        const now = Date.now();
+        if (now - lastMoveTime < 100) return; // throttle: only every 100 ms
+        lastMoveTime = now;
+
+        const absX = event.pageX - 10;
+        const absY = event.pageY - 10;
         selectedCaptchaPiece.style.left = `${absX}px`;
         selectedCaptchaPiece.style.top = `${absY}px`;
-        PuzzleCaptcha.pieceStartPoint = {x: absX, y: absY};
-        PuzzleCaptcha.correctOptionWasSelected = false;
-    }
-});
+    };
+}
 
-document.addEventListener('mousemove', function (event) {
-    if (!isDragging) return;
+document.addEventListener('mousemove', puzzleCaptchaPointerMove());
+document.addEventListener('touchmove', puzzleCaptchaPointerMove());
 
-    const now = Date.now();
-    if (now - lastMoveTime < 100) return; // throttle: only every 100 ms
-    lastMoveTime = now;
+function puzzleCaptchaPointerUp() {
+    return async function (event) {
+        isDragging = false;
 
-    const absX = event.pageX - 10;
-    const absY = event.pageY - 10;
-    selectedCaptchaPiece.style.left = `${absX}px`;
-    selectedCaptchaPiece.style.top = `${absY}px`;
-    PuzzleCaptcha.pieceCurrentPoint = {x: absX, y: absY};
-});
-document.addEventListener('mouseup', function (event) {
-    isDragging = false;
-    selectedCaptchaPiece.style.display = `none`;
+        const rect = selectedCaptchaPiece.getBoundingClientRect();
+        selectedCaptchaPiece.style.display = `none`;
+        const finalX = Math.round(PuzzleCaptcha.startPoint.x + (rect.left - PuzzleCaptcha.pieceStartPoint.x)) - 10;
+        const finalY = Math.round(PuzzleCaptcha.startPoint.y + (rect.top - PuzzleCaptcha.pieceStartPoint.y)) - 10;
+        console.log({x: finalX, y: finalY});
+        await PushcaClient.verifyPuzzleCaptcha(PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, finalX, finalY);
 
-    const rect = selectedCaptchaPiece.getBoundingClientRect();
-    const finalX = PuzzleCaptcha.startPoint.x + (PuzzleCaptcha.pieceCurrentPoint.x - PuzzleCaptcha.pieceStartPoint.x);
-    const finalY = PuzzleCaptcha.startPoint.y + (PuzzleCaptcha.pieceCurrentPoint.y - PuzzleCaptcha.pieceStartPoint.y);
-    console.log(`x = ${finalX}; y = ${finalY}`);
-    //TODO just verify point now
-});
+        //drawPiece(finalX, finalY);
+
+        await delay(2000);
+
+        if (PushcaClient.isOpen()) {
+            PushcaClient.stopWebSocket();
+            displayCaptchaContainer.style.display = 'none';
+            errorMessage.textContent = `You can try better next time!`;
+            errorMessage.style.display = 'block';
+        }
+    };
+}
+
+document.addEventListener('mouseup', puzzleCaptchaPointerUp());
+document.addEventListener('touchend', puzzleCaptchaPointerUp());
+document.addEventListener('touchcancel', puzzleCaptchaPointerUp());
+
+function drawPiece(x, y) {
+    const ctx = puzzleCaptchaArea.getContext('2d');
+    const img = new Image();
+    img.onload = function () {
+        // Draw image at exact size
+        ctx.drawImage(img, x, y);
+    };
+    img.src = selectedCaptchaPiece.src;
+}
 
 brandNameDiv.addEventListener('click', function () {
     window.open("https://sl-st.com", '_blank');
@@ -81,7 +119,7 @@ delay(600_000).then(() => {
 });
 
 PushcaClient.onOpenHandler = async function () {
-    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, 200);
+    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, 300);
 }
 
 PushcaClient.onHumanTokenHandler = function (token) {
@@ -116,13 +154,11 @@ PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
             PuzzleCaptcha.startPoint = {x: x, y: y}
-            console.log(`Canvas coordinates: x=${Math.round(x)}, y=${Math.round(y)}`);
 
             const result = await PushcaClient.verifySelectedPieceOfPuzzleCaptcha(
                 PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, x, y
             );
             PuzzleCaptcha.correctOptionWasSelected = JSON.parse(result).body === 'true';
-            console.log(result);
             document.dispatchEvent(event);
         });
         img.src = blobUrl;

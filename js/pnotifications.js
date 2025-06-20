@@ -25,7 +25,8 @@ const Command = Object.freeze({
     CONNECTION_ALIAS_LOOKUP: "CONNECTION_ALIAS_LOOKUP",
     CAPTCHA_VERIFY: "CAPTCHA_VERIFY",
     PUZZLE_CAPTCHA_GENERATE_AND_SEND: "PUZZLE_CAPTCHA_GENERATE_AND_SEND",
-    PUZZLE_CAPTCHA_VERIFY_SELECTED_OPTION: "PUZZLE_CAPTCHA_VERIFY_SELECTED_OPTION"
+    PUZZLE_CAPTCHA_VERIFY_SELECTED_OPTION: "PUZZLE_CAPTCHA_VERIFY_SELECTED_OPTION",
+    PUZZLE_CAPTCHA_VERIFY: "PUZZLE_CAPTCHA_VERIFY"
 });
 
 const MessageType = Object.freeze({
@@ -1385,6 +1386,20 @@ PushcaClient.verifySelectedPieceOfPuzzleCaptcha = async function (captchaId, pag
         return null;
     }
     return result.body;
+}
+
+PushcaClient.verifyPuzzleCaptcha = async function (captchaId, pageId, x, y) {
+    let metaData = {};
+    metaData['captchaId'] = captchaId;
+    metaData['pageId'] = pageId;
+    metaData['point'] = {x: x, y: y};
+
+    let commandWithId = PushcaClient.buildCommandMessage(Command.PUZZLE_CAPTCHA_VERIFY, metaData);
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId, 30_000)
+    if (WaiterResponseType.ERROR === result.type) {
+        console.error("Failed verify selected piece of puzzle captcha attempt: " + result.body);
+        return null;
+    }
 }
 
 window.addEventListener('beforeunload', function () {
