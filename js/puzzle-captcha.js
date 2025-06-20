@@ -39,10 +39,10 @@ function getEventCoordinates(event) {
     }
 }
 
-//document.body.style.touchAction = 'none';
 let pieceDisplayDeltaY = 50;
 let pieceDisplayDeltaX = 20;
 if (isMobile()) {
+    document.body.style.touchAction = 'none';
     pieceDisplayDeltaY = 100;
 }
 let isDragging = false;
@@ -153,7 +153,7 @@ delay(600_000).then(() => {
 PushcaClient.onOpenHandler = async function () {
     let pieceLength = 200;
     if (isMobile()) {
-        pieceLength = 190;
+        pieceLength = 180;
     }
     await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, pieceLength);
 }
