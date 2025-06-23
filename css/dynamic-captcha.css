@@ -92,6 +92,13 @@ h2 {
     border-radius: 10px;
 }
 
+.puzzle-captcha-iframe {
+    width: 550px;
+    height: 700px;
+    border: none;
+    border-radius: 10px;
+}
+
 .input-group {
     width: 100%;
     max-width: 470px;

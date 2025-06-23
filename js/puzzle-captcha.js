@@ -342,7 +342,9 @@ PushcaClient.onHumanTokenHandler = function (token) {
     PushcaClient.stopWebSocket();
     displayCaptchaContainer.style.display = 'none';
     errorMessage.textContent = `Congratulations! You've successfully proven your humanity and unlocked your unique human token. Amazing job!`;
-    errorMessage.style.display = 'block';
+    if (!PuzzleCaptcha.embedded) {
+        errorMessage.style.display = 'block';
+    }
 
     delay(1500).then(() => {
         location.reload();
