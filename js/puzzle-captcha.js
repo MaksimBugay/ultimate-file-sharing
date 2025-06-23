@@ -1,5 +1,4 @@
 //PuzzleCaptchaSetBinaries
-
 const PuzzleCaptcha = {}
 PuzzleCaptcha.serverUrl = 'https://secure.fileshare.ovh';
 PuzzleCaptcha.wsUrl = 'wss://secure.fileshare.ovh:31085';
@@ -12,166 +11,353 @@ PuzzleCaptcha.loaded = false;
 PuzzleCaptcha.correctOptionWasSelected = false;
 PuzzleCaptcha.startPoint = {x: 0, y: 0};
 PuzzleCaptcha.pieceStartPoint = {x: 0, y: 0}
-
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('page-id')) {
     PuzzleCaptcha.pageId = urlParams.get('page-id');
     PuzzleCaptcha.embedded = true;
 }
-
 if (urlParams.get('backend-url')) {
     PuzzleCaptcha.backendUrl = urlParams.get('backend-url');
 }
-
+if (urlParams.get('piece-length')) {
+    PuzzleCaptcha.pieceLength = urlParams.get('piece-length');
+} else {
+    PuzzleCaptcha.pieceLength = 200;
+    if (isMobile()) {
+        PuzzleCaptcha.pieceLength = 180;
+    }
+}
 const displayCaptchaContainer = document.getElementById("displayCaptchaContainer");
 const puzzleCaptchaArea = document.getElementById("puzzleCaptchaArea");
 const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
 const errorMessage = document.getElementById('errorMessage');
 const brandNameDiv = document.getElementById("brandNameDiv");
 
+// Add CSS styles for iOS/macOS compatibility
+function addCompatibilityStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        #puzzleCaptchaArea, #selectedCaptchaPiece {
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body.dragging {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            -webkit-overflow-scrolling: touch;
+        }
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Improved mobile detection
+function isMobile() {
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+        (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) ||
+        window.innerWidth <= 500;
+}
+
+// Fixed coordinate calculation for iOS/macOS
 function getEventCoordinates(event) {
+    let clientX, clientY;
+
     if (event.touches && event.touches.length > 0) {
-        return {x: event.touches[0].pageX, y: event.touches[0].pageY};
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
     } else if (event.changedTouches && event.changedTouches.length > 0) {
-        return {x: event.changedTouches[0].pageX, y: event.changedTouches[0].pageY};
+        clientX = event.changedTouches[0].clientX;
+        clientY = event.changedTouches[0].clientY;
     } else {
-        return {x: event.pageX, y: event.pageY};
+        clientX = event.clientX || event.pageX;
+        clientY = event.clientY || event.pageY;
     }
+
+    return {x: clientX, y: clientY};
 }
 
 let pieceDisplayDeltaY = 50;
 let pieceDisplayDeltaX = 20;
-if (isMobile()) {
-    document.body.style.touchAction = 'none';
-    pieceDisplayDeltaY = 100;
-}
 let isDragging = false;
 let lastMoveTime = 0;
 
+// Initialize mobile-specific settings
+function initializeMobileSettings() {
+    if (isMobile()) {
+        document.body.style.touchAction = 'none';
+        document.body.style.userSelect = 'none';
+        document.body.style.webkitUserSelect = 'none';
+        document.body.style.webkitTouchCallout = 'none';
+        pieceDisplayDeltaY = 100;
+
+        // Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // Prevent pinch zoom
+        document.addEventListener('touchstart', function (event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        }, {passive: false});
+
+        document.addEventListener('gesturestart', function (event) {
+            event.preventDefault();
+        }, {passive: false});
+    }
+}
+
 function puzzleCaptchaPointerDown() {
     return function (event) {
-        const {x, y} = getEventCoordinates(event);
-        const absX = x - 10;
-        const absY = y - 10;
         if (PuzzleCaptcha.correctOptionWasSelected) {
             isDragging = true;
+            document.body.classList.add('dragging');
+
+            const {x, y} = getEventCoordinates(event);
+            const absX = x - 10;
+            const absY = y - 10;
+
             selectedCaptchaPiece.style.display = 'block';
             selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
             selectedCaptchaPiece.style.top = `${absY - pieceDisplayDeltaY}px`;
+            selectedCaptchaPiece.style.pointerEvents = 'none'; // Prevent interference
+
             const rect = selectedCaptchaPiece.getBoundingClientRect();
             PuzzleCaptcha.pieceStartPoint = {x: rect.left, y: rect.top};
             PuzzleCaptcha.correctOptionWasSelected = false;
-
-            event.preventDefault(); // Prevent scrolling on mobile
+            event.preventDefault();
+            event.stopPropagation();
         }
     };
 }
 
-//document.addEventListener('mousedown', puzzleCaptchaPointerDown());
-//document.addEventListener('touchstart', puzzleCaptchaPointerDown());
-
 function puzzleCaptchaPointerMove() {
     return function (event) {
         if (!isDragging) return;
-
         const now = Date.now();
-        if (now - lastMoveTime < 100) return; // throttle: only every 100 ms
+        if (now - lastMoveTime < 16) return; // ~60fps throttling
         lastMoveTime = now;
-
         const {x, y} = getEventCoordinates(event);
         const absX = x - 10;
         const absY = y - 10;
-        selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
-        selectedCaptchaPiece.style.top = `${absY - pieceDisplayDeltaY}px`;
 
-        event.preventDefault(); // Prevent scrolling on mobile
+        requestAnimationFrame(() => {
+            selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
+            selectedCaptchaPiece.style.top = `${absY - pieceDisplayDeltaY}px`;
+        });
+        event.preventDefault();
+        event.stopPropagation();
     };
 }
 
 function puzzleCaptchaPointerUp() {
     return async function (event) {
-        isDragging = false;
+        if (!isDragging) return;
 
+        isDragging = false;
+        document.body.classList.remove('dragging');
         const rect = selectedCaptchaPiece.getBoundingClientRect();
-        selectedCaptchaPiece.style.display = `none`;
+        selectedCaptchaPiece.style.display = 'none';
+        selectedCaptchaPiece.style.pointerEvents = 'auto';
+
         const finalX = Math.round(PuzzleCaptcha.startPoint.x + (rect.left - PuzzleCaptcha.pieceStartPoint.x)) - 10;
         const finalY = Math.round(PuzzleCaptcha.startPoint.y + (rect.top - PuzzleCaptcha.pieceStartPoint.y)) - 10;
         console.log({x: finalX, y: finalY});
-        await PushcaClient.verifyPuzzleCaptcha(
-            PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, finalX - pieceDisplayDeltaX, finalY - pieceDisplayDeltaY
-        );
 
-        //drawPiece(finalX, finalY);
-
-        await delay(2000);
-
-        if (PushcaClient.isOpen()) {
-            PushcaClient.stopWebSocket();
-            displayCaptchaContainer.style.display = 'none';
-            errorMessage.textContent = `You can try better next time!`;
-            errorMessage.style.display = 'block';
+        try {
+            await PushcaClient.verifyPuzzleCaptcha(
+                PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, finalX - pieceDisplayDeltaX, finalY - pieceDisplayDeltaY
+            );
+        } catch (error) {
+            console.error('Verification error:', error);
         }
+        await delay(2000);
+        if (PushcaClient.isOpen()) {
+            reloadOnFail();
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
     };
 }
 
-if (isMobile()) {
-    document.addEventListener('touchmove', puzzleCaptchaPointerMove());
+// Setup event listeners with proper options for iOS
+function setupEventListeners() {
+    const passiveOptions = {passive: false}; // Non-passive for preventDefault to work
 
-    document.addEventListener('touchend', puzzleCaptchaPointerUp());
-    document.addEventListener('touchcancel', puzzleCaptchaPointerUp());
+    if (isMobile()) {
+        // Touch events for mobile
+        document.addEventListener('touchstart', puzzleCaptchaPointerDown(), passiveOptions);
+        document.addEventListener('touchmove', puzzleCaptchaPointerMove(), passiveOptions);
+        document.addEventListener('touchend', puzzleCaptchaPointerUp(), passiveOptions);
+        document.addEventListener('touchcancel', puzzleCaptchaPointerUp(), passiveOptions);
+    } else {
+        // Mouse events for desktop
+        document.addEventListener('mousedown', puzzleCaptchaPointerDown());
+        document.addEventListener('mousemove', puzzleCaptchaPointerMove());
+        document.addEventListener('mouseup', puzzleCaptchaPointerUp());
+    }
 
-    document.addEventListener('touchmove', function (event) {
-        if (isDragging) event.preventDefault();
-    }, {passive: false});
-} else {
-    document.addEventListener('mouseup', puzzleCaptchaPointerUp());
+    // Prevent context menu on long press (iOS)
+    document.addEventListener('contextmenu', function (event) {
+        if (isDragging) {
+            event.preventDefault();
+        }
+    });
 
-    document.addEventListener('mousemove', puzzleCaptchaPointerMove());
+    // Prevent text selection during drag
+    document.addEventListener('selectstart', function (event) {
+        if (isDragging) {
+            event.preventDefault();
+        }
+    });
+
+    // Prevent drag image on desktop
+    document.addEventListener('dragstart', function (event) {
+        event.preventDefault();
+    });
 }
 
 function drawPiece(x, y) {
     const ctx = puzzleCaptchaArea.getContext('2d');
     const img = new Image();
     img.onload = function () {
-        // Draw image at exact size
         ctx.drawImage(img, x, y);
     };
     img.src = selectedCaptchaPiece.src;
 }
 
-brandNameDiv.addEventListener('click', function () {
-    window.open("https://sl-st.com", '_blank');
-});
+// Fixed canvas touch handling
+function selectPuzzleCaptchaPiecePointerDown() {
+    return async function (event) {
+        const rect = this.getBoundingClientRect();
+        const scale = window.devicePixelRatio || 1;
 
-delay(600_000).then(() => {
+        let x, y;
+        if (event.touches && event.touches.length > 0) {
+            // Mobile touch - use getBoundingClientRect for accurate positioning
+            const touch = event.touches[0];
+            x = touch.clientX - rect.left;
+            y = touch.clientY - rect.top;
+        } else {
+            // Desktop mouse
+            x = event.clientX - rect.left;
+            y = event.clientY - rect.top;
+        }
+
+        // Account for canvas scaling and device pixel ratio
+        const canvasScale = {
+            x: this.width / rect.width,
+            y: this.height / rect.height
+        };
+
+        x = x * canvasScale.x;
+        y = y * canvasScale.y;
+
+        PuzzleCaptcha.startPoint = {x: x, y: y};
+        console.log(PuzzleCaptcha.startPoint);
+        try {
+            const result = await PushcaClient.verifySelectedPieceOfPuzzleCaptcha(
+                PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, x, y
+            );
+            PuzzleCaptcha.correctOptionWasSelected = JSON.parse(result).body === 'true';
+        } catch (error) {
+            console.error('Verification error:', error);
+            PuzzleCaptcha.correctOptionWasSelected = false;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        if (PuzzleCaptcha.correctOptionWasSelected) {
+            puzzleCaptchaPointerDown()(event);
+        } else {
+            reloadOnFail();
+        }
+    };
+}
+
+// Initialize everything
+function initializePuzzleCaptcha() {
+    addCompatibilityStyles();
+    initializeMobileSettings();
+    setupEventListeners();
+
+    // Brand name click handler
+    if (brandNameDiv) {
+        brandNameDiv.addEventListener('click', function () {
+            window.open("https://sl-st.com", '_blank');
+        });
+    }
+
+    // Timeout handler
+    delay(60_000).then(() => {
+        reloadOnFail();
+    });
+}
+
+function reloadOnFail() {
     PushcaClient.stopWebSocket();
     displayCaptchaContainer.style.display = 'none';
     errorMessage.textContent = `You can try better next time!`;
     errorMessage.style.display = 'block';
-});
-
-PushcaClient.onOpenHandler = async function () {
-    let pieceLength = 200;
-    if (isMobile()) {
-        pieceLength = 180;
-    }
-    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, pieceLength);
+    delay(1500).then(() => {
+        location.reload();
+    })
 }
 
+// WebSocket handlers
+PushcaClient.onOpenHandler = async function () {
+    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, PuzzleCaptcha.pieceLength);
+
+    while (!PuzzleCaptcha.loaded) {
+        await delay(100);
+    }
+    await delay(300);
+
+    if (!isFullyVisible(displayCaptchaContainer)) {
+        if (PuzzleCaptcha.pieceLength !== 140) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('piece-length', '140');
+            window.location.href = url.toString();
+        }
+    }
+}
 PushcaClient.onHumanTokenHandler = function (token) {
     PushcaClient.stopWebSocket();
     displayCaptchaContainer.style.display = 'none';
     errorMessage.textContent = `Congratulations! You've successfully proven your humanity and unlocked your unique human token. Amazing job!`;
     errorMessage.style.display = 'block';
+
+    delay(1500).then(() => {
+        location.reload();
+    });
 }
 PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
     const puzzleCaptchaData = binaryWithHeader.payload;
     const blob = new Blob([puzzleCaptchaData], {type: 'image/png'});
     const blobUrl = URL.createObjectURL(blob);
-
     if (PuzzleCaptcha.loaded) {
         selectedCaptchaPiece.src = blobUrl;
         selectedCaptchaPiece.onload = function () {
+            URL.revokeObjectURL(blobUrl);
+        };
+        selectedCaptchaPiece.onerror = function () {
             URL.revokeObjectURL(blobUrl);
         };
     } else {
@@ -181,50 +367,35 @@ PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
             // Set canvas size to exact image dimensions
             puzzleCaptchaArea.width = img.naturalWidth;
             puzzleCaptchaArea.height = img.naturalHeight;
+
+            // Set CSS dimensions for proper scaling
+            const maxWidth = Math.min(window.innerWidth * 0.9, img.naturalWidth);
+            const scale = maxWidth / img.naturalWidth;
+            puzzleCaptchaArea.style.width = `${img.naturalWidth * scale}px`;
+            puzzleCaptchaArea.style.height = `${img.naturalHeight * scale}px`;
+
             // Draw image at exact size
             ctx.drawImage(img, 0, 0);
             URL.revokeObjectURL(blobUrl);
+
+            // Add event listener after image is loaded
+            if (isMobile()) {
+                puzzleCaptchaArea.addEventListener('touchstart', selectPuzzleCaptchaPiecePointerDown(), {passive: false});
+            } else {
+                puzzleCaptchaArea.addEventListener('mousedown', selectPuzzleCaptchaPiecePointerDown());
+            }
+
+            PuzzleCaptcha.loaded = true;
         };
-        if (isMobile()) {
-            puzzleCaptchaArea.addEventListener('touchstart', selectPuzzleCaptchaPiecePointerDown());
-        } else {
-            puzzleCaptchaArea.addEventListener('mousedown', selectPuzzleCaptchaPiecePointerDown());
-        }
+        img.onerror = function () {
+            URL.revokeObjectURL(blobUrl);
+            console.error('Failed to load puzzle image');
+        };
         img.src = blobUrl;
-        PuzzleCaptcha.loaded = true;
     }
 };
 
-function selectPuzzleCaptchaPiecePointerDown() {
-    return async function (event) {
-        const rect = this.getBoundingClientRect();
-        let x, y;
-        if (event.touches && event.touches.length > 0) {
-            // Mobile touch
-            x = event.touches[0].clientX - rect.left;
-            y = event.touches[0].clientY - rect.top;
-        } else {
-            // Desktop mouse
-            x = event.clientX - rect.left;
-            y = event.clientY - rect.top;
-        }
-        PuzzleCaptcha.startPoint = {x: x, y: y}
-
-        const result = await PushcaClient.verifySelectedPieceOfPuzzleCaptcha(
-            PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, x, y
-        );
-        PuzzleCaptcha.correctOptionWasSelected = JSON.parse(result).body === 'true';
-
-        event.preventDefault();
-
-        puzzleCaptchaPointerDown()(event);
-    };
-}
-
-openWsConnection();
-
-//================================== Web socket connection =============================================================
-
+// WebSocket connection
 async function openWsConnection() {
     if (!PushcaClient.isOpen()) {
         const pClient = new ClientFilter(
@@ -248,4 +419,29 @@ async function openWsConnection() {
     }
 }
 
-//======================================================================================================================
+// Helper function for delay
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePuzzleCaptcha);
+} else {
+    initializePuzzleCaptcha();
+}
+// Start WebSocket connection
+openWsConnection();
+
+
+
+
+
+
+
+
+
+
+
+
+

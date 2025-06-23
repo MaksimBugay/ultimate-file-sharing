@@ -583,3 +583,278 @@ function releaseWakeLock(propertiesHolder) {
 }
 
 //======================================================================================================================
+
+//=============================Element visibility on screen=============================================================
+/**
+ * Helper function to calculate element visibility data
+ * @param {HTMLElement} element - The DOM element to check
+ * @returns {Object} - Object containing visibility data
+ */
+function calculateVisibilityData(element) {
+    if (!element || !element.getBoundingClientRect) {
+        return null;
+    }
+
+    // Get element's bounding rectangle
+    const rect = element.getBoundingClientRect();
+
+    // Get viewport dimensions with cross-browser compatibility
+    const viewportWidth = Math.max(
+        document.documentElement.clientWidth || 0,
+        window.innerWidth || 0
+    );
+
+    const viewportHeight = Math.max(
+        document.documentElement.clientHeight || 0,
+        window.innerHeight || 0
+    );
+
+    // Calculate visible area
+    const visibleLeft = Math.max(0, rect.left);
+    const visibleTop = Math.max(0, rect.top);
+    const visibleRight = Math.min(viewportWidth, rect.right);
+    const visibleBottom = Math.min(viewportHeight, rect.bottom);
+
+    // Calculate visible dimensions
+    const visibleWidth = Math.max(0, visibleRight - visibleLeft);
+    const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+    // Calculate element dimensions
+    const elementWidth = rect.width || rect.right - rect.left;
+    const elementHeight = rect.height || rect.bottom - rect.top;
+
+    // Handle edge cases
+    if (elementWidth <= 0 || elementHeight <= 0) {
+        return {
+            rect: rect,
+            visibilityRatio: 0,
+            visibilityPercentage: 0,
+            isVisible: false,
+            viewportWidth: viewportWidth,
+            viewportHeight: viewportHeight
+        };
+    }
+
+    // Calculate visibility ratio
+    const visibleArea = visibleWidth * visibleHeight;
+    const totalArea = elementWidth * elementHeight;
+    const visibilityRatio = visibleArea / totalArea;
+
+    return {
+        rect: rect,
+        visibilityRatio: visibilityRatio,
+        visibilityPercentage: Math.round(visibilityRatio * 100),
+        isVisible: visibilityRatio > 0,
+        viewportWidth: viewportWidth,
+        viewportHeight: viewportHeight
+    };
+}
+/**
+ * Checks if an HTML element is fully visible within the viewport
+ * Works across all browsers including mobile and tablets
+ *
+ * @param {HTMLElement} element - The DOM element to check
+ * @param {Object} options - Optional configuration object
+ * @param {number} options.threshold - Percentage of element that must be visible (0-1, default: 1 for fully visible)
+ * @param {number} options.rootMargin - Margin around the viewport in pixels (default: 0)
+ * @returns {boolean} - True if element is fully (or threshold) visible, false otherwise
+ */
+function isElementFullyVisible(element, options) {
+    // Handle undefined or null options
+    if (!options) {
+        options = {};
+    }
+
+    // Set defaults for undefined properties
+    const threshold = (typeof options.threshold === 'number') ? options.threshold : 1;
+    const rootMargin = (typeof options.rootMargin === 'number') ? options.rootMargin : 0;
+
+    // Get visibility data using helper function
+    const visibilityData = calculateVisibilityData(element);
+
+    // Validate input
+    if (!visibilityData) {
+        console.warn('Invalid element provided to isElementFullyVisible');
+        return false;
+    }
+
+    // Apply root margin if specified
+    if (rootMargin !== 0) {
+        const adjustedRect = {
+            top: visibilityData.rect.top + rootMargin,
+            left: visibilityData.rect.left + rootMargin,
+            bottom: visibilityData.rect.bottom - rootMargin,
+            right: visibilityData.rect.right - rootMargin
+        };
+
+        return (
+            adjustedRect.top >= 0 &&
+            adjustedRect.left >= 0 &&
+            adjustedRect.bottom <= visibilityData.viewportHeight &&
+            adjustedRect.right <= visibilityData.viewportWidth
+        ) && visibilityData.visibilityRatio >= threshold;
+    }
+
+    // Standard visibility check
+    return visibilityData.visibilityRatio >= threshold;
+}
+/**
+ * Alternative implementation using Intersection Observer API for better performance
+ * (Modern browsers only - falls back to the above function for older browsers)
+ *
+ * @param {HTMLElement} element - The DOM element to check
+ * @param {Function} callback - Callback function that receives visibility status
+ * @param {Object} options - Optional configuration object
+ * @param {number} options.threshold - Percentage of element that must be visible (0-1, default: 1)
+ * @param {string} options.rootMargin - Margin around the viewport (CSS-style string, default: '0px')
+ * @returns {IntersectionObserver|null} - Observer instance or null if not supported
+ */
+function observeElementVisibility(element, callback, options) {
+    // Handle undefined or null options
+    if (!options) {
+        options = {};
+    }
+    // Check if Intersection Observer is supported
+    if (!window.IntersectionObserver) {
+        // Fallback for older browsers
+        console.warn('IntersectionObserver not supported, using fallback method');
+        const checkVisibility = function() {
+            const isVisible = isElementFullyVisible(element, options);
+            callback(isVisible, element);
+        };
+
+        // Set up polling fallback
+        const intervalId = setInterval(checkVisibility, 100);
+        checkVisibility(); // Initial check
+
+        return {
+            disconnect: function() { clearInterval(intervalId); },
+            unobserve: function() { clearInterval(intervalId); }
+        };
+    }
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            const isFullyVisible = entry.intersectionRatio >= (options.threshold || 1);
+            callback(isFullyVisible, entry.target, entry);
+        });
+    }, {
+        threshold: options.threshold || 1,
+        rootMargin: options.rootMargin || '0px'
+    });
+
+    observer.observe(element);
+    return observer;
+}
+/**
+ * Simple one-shot check function - most commonly used
+ *
+ * @param {HTMLElement|string} element - DOM element or CSS selector
+ * @returns {boolean} - True if element is fully visible
+ */
+function isFullyVisible(element) {
+    // Handle string selector
+    if (typeof element === 'string') {
+        element = document.querySelector(element);
+    }
+
+    return isElementFullyVisible(element);
+}
+/**
+ * Check if element is partially visible (any part visible)
+ *
+ * @param {HTMLElement|string} element - DOM element or CSS selector
+ * @returns {boolean} - True if any part of element is visible
+ */
+function isPartiallyVisible(element) {
+    // Handle string selector
+    if (typeof element === 'string') {
+        element = document.querySelector(element);
+    }
+
+    return isElementFullyVisible(element, { threshold: 0 });
+}
+/**
+ * Get visibility percentage of an element
+ *
+ * @param {HTMLElement|string} element - DOM element or CSS selector
+ * @returns {number} - Visibility percentage (0-100)
+ */
+function getVisibilityPercentage(element) {
+    // Handle string selector
+    if (typeof element === 'string') {
+        element = document.querySelector(element);
+    }
+
+    // Get visibility data using helper function
+    const visibilityData = calculateVisibilityData(element);
+
+    if (!visibilityData) {
+        return 0;
+    }
+
+    return visibilityData.visibilityPercentage;
+}
+/**
+ * Get detailed visibility information about an element
+ *
+ * @param {HTMLElement|string} element - DOM element or CSS selector
+ * @returns {Object|null} - Detailed visibility data object or null if invalid element
+ */
+function getVisibilityInfo(element) {
+    // Handle string selector
+    if (typeof element === 'string') {
+        element = document.querySelector(element);
+    }
+
+    // Get visibility data using helper function
+    return calculateVisibilityData(element);
+}
+// Example usage:
+/*
+// Basic usage
+const myDiv = document.getElementById('myDiv');
+if (isFullyVisible(myDiv)) {
+    console.log('Div is fully visible!');
+}
+// Using CSS selector
+if (isFullyVisible('#myDiv')) {
+    console.log('Div is fully visible!');
+}
+// Check partial visibility
+if (isPartiallyVisible('#myDiv')) {
+    console.log('Div is at least partially visible!');
+}
+// Get visibility percentage
+const visibilityPercent = getVisibilityPercentage('#myDiv');
+console.log('Div is ' + visibilityPercent + '% visible');
+// Get detailed visibility information
+const visibilityInfo = getVisibilityInfo('#myDiv');
+if (visibilityInfo) {
+    console.log('Visibility ratio:', visibilityInfo.visibilityRatio);
+    console.log('Visibility percentage:', visibilityInfo.visibilityPercentage);
+    console.log('Element rect:', visibilityInfo.rect);
+    console.log('Viewport size:', visibilityInfo.viewportWidth + 'x' + visibilityInfo.viewportHeight);
+}
+// Advanced usage with options
+const isVisible = isElementFullyVisible(myDiv, {
+    threshold: 0.8, // 80% of element must be visible
+    rootMargin: 10  // 10px margin around viewport
+});
+// Using Intersection Observer for performance (modern browsers)
+const observer = observeElementVisibility(myDiv, function(isVisible, element) {
+    if (isVisible) {
+        console.log('Element became fully visible!');
+        element.classList.add('visible');
+    } else {
+        console.log('Element is no longer fully visible');
+        element.classList.remove('visible');
+    }
+}, {
+    threshold: 1.0, // Must be 100% visible
+    rootMargin: '0px'
+});
+// Clean up observer when done
+// observer.disconnect();
+*/
+//======================================================================================================================
