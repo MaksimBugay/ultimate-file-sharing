@@ -22,10 +22,7 @@ if (urlParams.get('backend-url')) {
 if (urlParams.get('piece-length')) {
     PuzzleCaptcha.pieceLength = urlParams.get('piece-length');
 } else {
-    PuzzleCaptcha.pieceLength = 200;
-    if (isMobile()) {
-        PuzzleCaptcha.pieceLength = 180;
-    }
+    PuzzleCaptcha.pieceLength = 180;
 }
 const displayCaptchaContainer = document.getElementById("displayCaptchaContainer");
 const puzzleCaptchaArea = document.getElementById("puzzleCaptchaArea");
