@@ -47,7 +47,7 @@ if (humanOnly) {
         downloadPublicBinary(workspaceId, binaryId, pageId, token);
     }
 
-    captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=100`;
+    captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180`;
     openWsConnection();
 
     async function openWsConnection() {
