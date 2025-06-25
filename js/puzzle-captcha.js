@@ -40,11 +40,23 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     const puzzleCaptchaDemo = document.getElementById('puzzleCaptchaDemo');
     const captchaHint = document.getElementById('captchaHint');
-    if (puzzleCaptchaDemo) {
+    let noVideoError = true;
+    puzzleCaptchaDemo.addEventListener('error', function (e) {
+        //console.warn("🚫 Video failed to load. Fallback content may be visible.");
+        noVideoError = false;
+    });
+
+    puzzleCaptchaDemo.querySelector('source').addEventListener('error', function () {
+        //console.warn("⚠️ Source failed to load.");
+        noVideoError = false;
+    });
+
+    await delay(1000);
+
+    if (noVideoError) {
         if (PuzzleCaptcha.showTask) {
             puzzleCaptchaDemo.addEventListener('play', function () {
                 //console.log('▶️ Video has started playing.');
-                brandNameDiv.style.display = 'none';
                 if (captchaHint) {
                     captchaHint.remove();
                 }
@@ -60,16 +72,19 @@ window.addEventListener("DOMContentLoaded", async function () {
                 captchaHint.remove();
             }
             puzzleCaptchaDemo.remove();
+            brandNameDiv.style.display = 'flex';
             await openWsConnection();
         }
     } else {
+        puzzleCaptchaDemo.remove();
         if (captchaHint) {
+            captchaHint.style.display = 'flex';
             if (PuzzleCaptcha.showTask) {
                 await delay(3000);
             }
             captchaHint.remove();
-            await openWsConnection();
         }
+        await openWsConnection();
     }
 });
 
