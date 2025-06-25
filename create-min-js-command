@@ -6,3 +6,8 @@ terser fp.min.js common-utils.js callable-future.js uuid.min.js security-utils.j
 
 
 terser fp.min.js detect.min.js client.min.js uuid.min.js qrcode.min.js jsQR.js purify.min.js device-secret.js common-utils.js callable-future.js pnotifications.js pushca-binary-helper.js security-utils.js gateway-server.js transfer-commons.js localization.js transfer-site.js -o pushca.file-transfer.min.js -c -m
+
+terser uuid.min.js common-utils.js callable-future.js security-utils.js pnotifications.js pushca-binary-helper.js puzzle-captcha.js -o puzzle.captcha.min.js -c -m
+
+--with obfuscation
+terser uuid.min.js common-utils.js callable-future.js security-utils.js pnotifications.js pushca-binary-helper.js puzzle-captcha.js -o puzzle.captcha.min.js -c "passes=3,drop_console=true,drop_debugger=true" -m "toplevel=true,keep_fnames=false,keep_classnames=false" --toplevel

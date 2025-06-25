@@ -25,25 +25,32 @@
     <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
 </head>
 <body style="padding: 0;margin: 0;">
-<p id="errorMessage"
-   style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
+<p id="errorMessage" class="captcha-message"></p>
 <div id="displayCaptchaContainer" class="captcha-container">
     <div id="previewBox" class="captcha-box">
         <div id="brandNameDiv" class="brand-name">DynoCAP</div>
-        <div class="solve-hint-text">Find the shape</div>
-        <div class="solve-hint-text">that exactly matches the top one</div>
+        <div id="captchaHint" class="captcha-hint">
+            Task: Find the shape in the bottom section that matches the shape at the top.<br>
+            Drag it onto the top shape until they fully overlap.
+        </div>
+        <video id="puzzleCaptchaDemo" controls autoplay muted playsinline class="captcha-demo-video">
+            <source src="https://secure.fileshare.ovh/videos/Secure-FileShare-Puzzle-captcha.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
         <canvas id="puzzleCaptchaArea"></canvas>
-        <img id="selectedCaptchaPiece" class="selected-piece" style="display: none" draggable="false" alt="Selected captcha piece">
+        <img id="selectedCaptchaPiece" class="selected-piece" style="display: none" draggable="false"
+             alt="Selected captcha piece">
     </div>
 </div>
 </body>
-<script src="js/common-utils.js"></script>
+<script src="js/puzzle.captcha.min.js?v=<?= time(); ?>"></script>
+<!--<script src="js/common-utils.js"></script>
 <script src="js/callable-future.js?v=<?= time(); ?>"></script>
 <script src="js/uuid.min.js"></script>
 <script src="js/security-utils.js"></script>
 <script src="js/pnotifications.js?v=<?= time(); ?>"></script>
 <script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
-<script src="js/puzzle-captcha.js?v=<?= time(); ?>"></script>
+<script src="js/puzzle-captcha.js?v=<?= time(); ?>"></script>-->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];

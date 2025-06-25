@@ -24,11 +24,54 @@ if (urlParams.get('piece-length')) {
 } else {
     PuzzleCaptcha.pieceLength = 180;
 }
+if (urlParams.get('hide-task')) {
+    PuzzleCaptcha.showTask = urlParams.get('hide-task') !== 'true';
+} else {
+    PuzzleCaptcha.showTask = true;
+}
 const displayCaptchaContainer = document.getElementById("displayCaptchaContainer");
 const puzzleCaptchaArea = document.getElementById("puzzleCaptchaArea");
 const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
 const errorMessage = document.getElementById('errorMessage');
 const brandNameDiv = document.getElementById("brandNameDiv");
+
+window.addEventListener("DOMContentLoaded", async function () {
+    brandNameDiv.title = "Task: Find the shape in the bottom section that exactly matches the shape at the top.\nInstructions: Drag the matching shape onto the top shape until it fully overlaps (100% alignment).";
+
+    const puzzleCaptchaDemo = document.getElementById('puzzleCaptchaDemo');
+    const captchaHint = document.getElementById('captchaHint');
+    if (puzzleCaptchaDemo) {
+        if (PuzzleCaptcha.showTask) {
+            puzzleCaptchaDemo.addEventListener('play', function () {
+                //console.log('▶️ Video has started playing.');
+                brandNameDiv.style.display = 'none';
+                if (captchaHint) {
+                    captchaHint.remove();
+                }
+            });
+            puzzleCaptchaDemo.addEventListener('ended', async function () {
+                //console.log('🎬 Video has finished playing.');
+                puzzleCaptchaDemo.remove();
+                brandNameDiv.style.display = 'flex';
+                await openWsConnection();
+            });
+        } else {
+            if (captchaHint) {
+                captchaHint.remove();
+            }
+            puzzleCaptchaDemo.remove();
+            await openWsConnection();
+        }
+    } else {
+        if (captchaHint) {
+            if (PuzzleCaptcha.showTask) {
+                await delay(3000);
+            }
+            captchaHint.remove();
+            await openWsConnection();
+        }
+    }
+});
 
 // Add CSS styles for iOS/macOS compatibility
 function addCompatibilityStyles() {
@@ -168,10 +211,10 @@ function puzzleCaptchaPointerMove() {
 
 function puzzleCaptchaPointerUp() {
     return async function (event) {
-        if (!event.isTrusted) return;
         if (!isDragging) return;
-
         isDragging = false;
+        if (!event.isTrusted) return;
+
         document.body.classList.remove('dragging');
         const rect = selectedCaptchaPiece.getBoundingClientRect();
         selectedCaptchaPiece.style.display = 'none';
@@ -257,7 +300,6 @@ function drawPiece(x, y) {
 function selectPuzzleCaptchaPiecePointerDown() {
     return async function (event) {
         const rect = this.getBoundingClientRect();
-        const scale = window.devicePixelRatio || 1;
 
         let x, y;
         if (event.touches && event.touches.length > 0) {
@@ -326,8 +368,10 @@ function reloadOnFail() {
     errorMessage.textContent = `You can try better next time!`;
     errorMessage.style.display = 'block';
     delay(1500).then(() => {
-        location.reload();
-    })
+        const url = new URL(window.location.href);
+        url.searchParams.set('hide-task', 'true');
+        window.location.href = url.toString();
+    });
 }
 
 // WebSocket handlers
@@ -350,7 +394,7 @@ PushcaClient.onOpenHandler = async function () {
 PushcaClient.onHumanTokenHandler = function (token) {
     PushcaClient.stopWebSocket();
     displayCaptchaContainer.style.display = 'none';
-    errorMessage.textContent = `Congratulations! You've successfully proven your humanity and unlocked your unique human token. Amazing job!`;
+    errorMessage.textContent = `Congratulations! You've successfully proven your humanity and unlocked your unique human token ${token}. Amazing job!`;
     if (!PuzzleCaptcha.embedded) {
         errorMessage.style.display = 'block';
     }
@@ -441,8 +485,6 @@ if (document.readyState === 'loading') {
 } else {
     initializePuzzleCaptcha();
 }
-// Start WebSocket connection
-openWsConnection();
 
 
 
