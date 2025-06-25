@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <link rel="canonical" href="https://secure.fileshare.ovh/dynamic-captcha.html"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Secure FileShare: Dynamic captcha</title>
+    <title>Secure FileShare: Puzzle captcha</title>
     <link rel="stylesheet" href="https://secure.fileshare.ovh/css/dynamic-captcha.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="https://secure.fileshare.ovh/images/file-sharing32.png">
@@ -25,10 +25,9 @@
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
 
-<div class="main-container" style="flex-direction: column; height: 100vh">
-    <div style="transform: scale(0.7);">
-        <iframe id="captchaFrame" src="https://secure.fileshare.ovh/dynamic-captcha-min.html"
-                class="captcha-iframe"></iframe>
+<div class="main-container" style="flex-direction: column; height: 100vh;">
+    <div style="transform: scale(1.0);">
+        <iframe id="captchaFrame" class="puzzle-captcha-iframe"></iframe>
     </div>
 </div>
 </body>
@@ -42,7 +41,7 @@
         document.getElementById("captchaFrame").remove();
 
         //TODO send pageId and token to your server along with some request
-        alert(`"${pageId}", "${token}"`);
+        alert(`Human token was received for page with id = ${pageId}: ${token}`);
         /*const isValid = await validateHumanToken(pageId, token);
         if (isValid) {
             console.log(`"${pageId}", "${token}"`);
@@ -51,7 +50,8 @@
         location.reload();
     }
 
-    document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/dynamic-captcha-min.html?page-id=${pageId}`;
+    //document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=160&skip-demo=true`;
+    document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=160`;
     openWsConnection();
 
     async function openWsConnection() {
