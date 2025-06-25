@@ -123,6 +123,7 @@ function initializeMobileSettings() {
 
 function puzzleCaptchaPointerDown() {
     return function (event) {
+        if (!event.isTrusted) return;
         if (PuzzleCaptcha.correctOptionWasSelected) {
             isDragging = true;
             document.body.classList.add('dragging');
@@ -147,6 +148,7 @@ function puzzleCaptchaPointerDown() {
 
 function puzzleCaptchaPointerMove() {
     return function (event) {
+        if (!event.isTrusted) return;
         if (!isDragging) return;
         const now = Date.now();
         if (now - lastMoveTime < 16) return; // ~60fps throttling
@@ -166,6 +168,7 @@ function puzzleCaptchaPointerMove() {
 
 function puzzleCaptchaPointerUp() {
     return async function (event) {
+        if (!event.isTrusted) return;
         if (!isDragging) return;
 
         isDragging = false;
@@ -199,18 +202,27 @@ function puzzleCaptchaPointerUp() {
 function setupEventListeners() {
     const passiveOptions = {passive: false}; // Non-passive for preventDefault to work
 
-    if (isMobile()) {
-        // Touch events for mobile
-        document.addEventListener('touchstart', puzzleCaptchaPointerDown(), passiveOptions);
-        document.addEventListener('touchmove', puzzleCaptchaPointerMove(), passiveOptions);
-        document.addEventListener('touchend', puzzleCaptchaPointerUp(), passiveOptions);
-        document.addEventListener('touchcancel', puzzleCaptchaPointerUp(), passiveOptions);
-    } else {
-        // Mouse events for desktop
-        document.addEventListener('mousedown', puzzleCaptchaPointerDown());
-        document.addEventListener('mousemove', puzzleCaptchaPointerMove());
-        document.addEventListener('mouseup', puzzleCaptchaPointerUp());
-    }
+    // Touch events for mobile
+    document.addEventListener('touchstart', function (event) {
+        event.preventDefault();
+        puzzleCaptchaPointerDown()(event);
+    }, passiveOptions);
+    document.addEventListener('touchmove', function (event) {
+        event.preventDefault();
+        puzzleCaptchaPointerMove()(event);
+    }, passiveOptions);
+    document.addEventListener('touchend', async function (event) {
+        event.preventDefault();
+        await puzzleCaptchaPointerUp()(event);
+    }, passiveOptions);
+    document.addEventListener('touchcancel', async function (event) {
+        event.preventDefault();
+        await puzzleCaptchaPointerUp()(event);
+    }, passiveOptions);
+    // Mouse events for desktop
+    document.addEventListener('mousedown', puzzleCaptchaPointerDown());
+    document.addEventListener('mousemove', puzzleCaptchaPointerMove());
+    document.addEventListener('mouseup', puzzleCaptchaPointerUp());
 
     // Prevent context menu on long press (iOS)
     document.addEventListener('contextmenu', function (event) {
