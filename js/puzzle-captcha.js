@@ -29,6 +29,11 @@ if (urlParams.get('hide-task')) {
 } else {
     PuzzleCaptcha.showTask = true;
 }
+if (urlParams.get('skip-demo')) {
+    PuzzleCaptcha.skipDemo = urlParams.get('skip-demo') === 'true';
+} else {
+    PuzzleCaptcha.skipDemo = false;
+}
 const displayCaptchaContainer = document.getElementById("displayCaptchaContainer");
 const puzzleCaptchaArea = document.getElementById("puzzleCaptchaArea");
 const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
@@ -53,7 +58,7 @@ window.addEventListener("DOMContentLoaded", async function () {
 
     await delay(1000);
 
-    if (noVideoError) {
+    if (noVideoError && (!PuzzleCaptcha.skipDemo)) {
         if (PuzzleCaptcha.showTask) {
             puzzleCaptchaDemo.addEventListener('play', function () {
                 //console.log('▶️ Video has started playing.');
@@ -84,6 +89,7 @@ window.addEventListener("DOMContentLoaded", async function () {
             }
             captchaHint.remove();
         }
+        brandNameDiv.style.display = 'flex';
         await openWsConnection();
     }
 });
