@@ -40,58 +40,66 @@ const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
 const errorMessage = document.getElementById('errorMessage');
 const brandNameDiv = document.getElementById("brandNameDiv");
 
+async function removeTaskElementsAndStart(captchaHint, puzzleCaptchaDemo) {
+    if (captchaHint) {
+        captchaHint.remove();
+    }
+    puzzleCaptchaDemo.remove();
+    brandNameDiv.style.display = 'flex';
+    await openWsConnection();
+}
+
 window.addEventListener("DOMContentLoaded", async function () {
     brandNameDiv.title = "Task: Find the shape in the bottom section that exactly matches the shape at the top.\nInstructions: Drag the matching shape onto the top shape until it fully overlaps (100% alignment).";
 
     const puzzleCaptchaDemo = document.getElementById('puzzleCaptchaDemo');
     const captchaHint = document.getElementById('captchaHint');
-    let noVideoError = true;
-    puzzleCaptchaDemo.addEventListener('error', function (e) {
-        //console.warn("🚫 Video failed to load. Fallback content may be visible.");
-        noVideoError = false;
-    });
 
-    puzzleCaptchaDemo.querySelector('source').addEventListener('error', function () {
-        //console.warn("⚠️ Source failed to load.");
-        noVideoError = false;
-    });
+    if (!PuzzleCaptcha.showTask) {
+        await removeTaskElementsAndStart(captchaHint, puzzleCaptchaDemo);
+        return;
+    }
 
-    await delay(1000);
-
-    if (noVideoError && (!PuzzleCaptcha.skipDemo)) {
-        if (PuzzleCaptcha.showTask) {
-            puzzleCaptchaDemo.addEventListener('play', function () {
-                //console.log('▶️ Video has started playing.');
-                if (captchaHint) {
-                    captchaHint.remove();
-                }
-            });
-            puzzleCaptchaDemo.addEventListener('ended', async function () {
-                //console.log('🎬 Video has finished playing.');
-                puzzleCaptchaDemo.remove();
-                brandNameDiv.style.display = 'flex';
-                await openWsConnection();
-            });
-        } else {
-            if (captchaHint) {
-                captchaHint.remove();
-            }
-            puzzleCaptchaDemo.remove();
-            brandNameDiv.style.display = 'flex';
-            await openWsConnection();
-        }
-    } else {
+    if (PuzzleCaptcha.skipDemo) {
         puzzleCaptchaDemo.remove();
         if (captchaHint) {
             captchaHint.style.display = 'flex';
-            if (PuzzleCaptcha.showTask) {
-                await delay(3000);
-            }
+            await delay(3000);
             captchaHint.remove();
         }
         brandNameDiv.style.display = 'flex';
         await openWsConnection();
+        return;
     }
+
+    if (captchaHint) {
+        captchaHint.style.display = 'none';
+    }
+
+    puzzleCaptchaDemo.addEventListener('error', function (e) {
+        //console.warn("🚫 Video failed to load. Fallback content may be visible.");
+        removeTaskElementsAndStart(captchaHint, puzzleCaptchaDemo);
+    });
+
+    puzzleCaptchaDemo.querySelector('source').addEventListener('error', function () {
+        //console.warn("⚠️ Source failed to load.");
+        removeTaskElementsAndStart(captchaHint, puzzleCaptchaDemo);
+    });
+
+    puzzleCaptchaDemo.addEventListener('play', function () {
+        //console.log('▶️ Video has started playing.');
+        if (captchaHint) {
+            captchaHint.remove();
+        }
+    });
+    puzzleCaptchaDemo.addEventListener('ended', async function () {
+        //console.log('🎬 Video has finished playing.');
+        puzzleCaptchaDemo.remove();
+        brandNameDiv.style.display = 'flex';
+        await openWsConnection();
+    });
+
+    puzzleCaptchaDemo.style.display = "flex";
 });
 
 // Add CSS styles for iOS/macOS compatibility
