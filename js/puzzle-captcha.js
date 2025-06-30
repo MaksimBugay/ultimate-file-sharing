@@ -76,6 +76,8 @@ window.addEventListener("DOMContentLoaded", async function () {
         captchaHint.style.display = 'none';
     }
 
+    puzzleCaptchaDemo.style.display = "flex";
+
     puzzleCaptchaDemo.addEventListener('error', function (e) {
         //console.warn("🚫 Video failed to load. Fallback content may be visible.");
         removeTaskElementsAndStart(captchaHint, puzzleCaptchaDemo);
@@ -98,8 +100,6 @@ window.addEventListener("DOMContentLoaded", async function () {
         brandNameDiv.style.display = 'flex';
         await openWsConnection();
     });
-
-    puzzleCaptchaDemo.style.display = "flex";
 });
 
 // Add CSS styles for iOS/macOS compatibility
