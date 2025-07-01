@@ -139,8 +139,9 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
     event.stopPropagation();
     event.preventDefault();
 
+    let textItems = null;
+
     for (let item of clipboardItems) {
-        // Check if the clipboard item is a file (binary data)
         if (item.kind === 'file') {
             const blob = item.getAsFile();
             console.log('item.getAsFile');
@@ -153,24 +154,48 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
                 ownerVirtualHost.value,
                 FileTransfer
             );
+            showInfoMsg("File was successfully transferred: " + name);
         } else if (item.kind === 'string') {
-            const mimeType = 'text/plain';
-            const name = `text-message-${new Date().getTime()}.txt`;
-            item.getAsString((pasteText) => {
-                const text = DOMPurify.sanitize(pasteText);
-                if (isNotEmpty(text)) {
-                    const textBlob = new Blob([text], {type: mimeType});
-                    TransferFileHelper.transferBlobToVirtualHostBase(
-                        textBlob, name, textBlob.type,
-                        receiverVirtualHost.value,
-                        ownerVirtualHost.value,
-                        FileTransfer
-                    );
-                }
-            });
+            if (textItems) {
+                textItems = textItems + " " + await readTextFromClipboardItem(item);
+            } else {
+                textItems = await readTextFromClipboardItem(item);
+            }
+        }
+    }
+
+    if (textItems) {
+        const mimeType = 'text/plain';
+        const name = `text-message-${new Date().getTime()}.txt`;
+        const text = DOMPurify.sanitize(textItems);
+        if (isNotEmpty(text)) {
+            const textBlob = new Blob([text], {type: mimeType});
+            await TransferFileHelper.transferBlobToVirtualHostBase(
+                textBlob, name, textBlob.type,
+                receiverVirtualHost.value,
+                ownerVirtualHost.value,
+                FileTransfer
+            );
+            showInfoMsg("File was successfully transferred: " + name);
         }
     }
 });
+
+async function readTextFromClipboardItem(item) {
+    const getClipboardTextItemResult = await CallableFuture.callAsynchronously(
+        2000, null, function (waiterId) {
+            item.getAsString(function (pasteText) {
+                    CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, pasteText);
+                }
+            );
+        });
+    if (WaiterResponseType.SUCCESS === getClipboardTextItemResult.type) {
+        return getClipboardTextItemResult.body;
+    } else {
+        console.warn("Failed attempt to get text from clipboard item");
+        return null;
+    }
+}
 
 function holdFocus(event) {
     if (!event.target.readOnly) {

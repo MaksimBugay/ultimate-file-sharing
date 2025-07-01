@@ -92,6 +92,7 @@ function hideDownloadProgress() {
 
 function showAcceptFileTransferDialog() {
     acceptFileTransferDialog.classList.add('visible');
+    acceptFileTransferBtn.focus();
 }
 
 function isAcceptFileTransferDialogVisible() {
