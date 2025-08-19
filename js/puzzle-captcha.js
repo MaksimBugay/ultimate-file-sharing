@@ -49,6 +49,17 @@ async function removeTaskElementsAndStart(captchaHint, puzzleCaptchaDemo) {
     await openWsConnection();
 }
 
+async function showCaptchaHintAndStart(puzzleCaptchaDemo, captchaHint) {
+    puzzleCaptchaDemo.remove();
+    if (captchaHint) {
+        captchaHint.style.display = 'flex';
+        await delay(3000);
+        captchaHint.remove();
+    }
+    brandNameDiv.style.display = 'flex';
+    await openWsConnection();
+}
+
 window.addEventListener("DOMContentLoaded", async function () {
     brandNameDiv.title = "Task: Find the shape in the bottom section that exactly matches the shape at the top.\nInstructions: Drag the matching shape onto the top shape until it fully overlaps (100% alignment).";
 
@@ -61,14 +72,7 @@ window.addEventListener("DOMContentLoaded", async function () {
     }
 
     if (PuzzleCaptcha.skipDemo) {
-        puzzleCaptchaDemo.remove();
-        if (captchaHint) {
-            captchaHint.style.display = 'flex';
-            await delay(3000);
-            captchaHint.remove();
-        }
-        brandNameDiv.style.display = 'flex';
-        await openWsConnection();
+        await showCaptchaHintAndStart(puzzleCaptchaDemo, captchaHint);
         return;
     }
 
@@ -94,12 +98,20 @@ window.addEventListener("DOMContentLoaded", async function () {
             captchaHint.remove();
         }
     });
+    let videoWasFinished = false;
     puzzleCaptchaDemo.addEventListener('ended', async function () {
         //console.log('🎬 Video has finished playing.');
         puzzleCaptchaDemo.remove();
         brandNameDiv.style.display = 'flex';
         await openWsConnection();
+        videoWasFinished = true;
     });
+
+    await delay(17000);
+
+    if (!videoWasFinished) {
+        await showCaptchaHintAndStart(puzzleCaptchaDemo, captchaHint);
+    }
 });
 
 // Add CSS styles for iOS/macOS compatibility
