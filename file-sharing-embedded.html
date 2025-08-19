@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="canonical" href="https://secure.fileshare.ovh/file-sharing-embedded.html"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ultimate file sharing</title>
+    <link rel="stylesheet" href="css/consent-dialog.css">
+    <link rel="stylesheet" href="css/file-transfer-embedded.css">
+    <link rel="stylesheet" href="css/file-sharing-embedded.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Ultimate file sharing">
+    <meta property="og:description" content="Ultimate file sharing with powerful security features">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Ultimate file sharing">
+    <meta name="twitter:description" content="Ultimate file sharing with powerful security features">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+</head>
+<body style="padding: 0;margin: 0;">
+<div id="errorDialog" class="consent-dialog" style="z-index: 10050">
+    <div class="error-content">
+        <div class="error-caption">
+            <div class="dialog-title">Error</div>
+            <div class="close-btn-container">
+                <span id="closeErrorBtn" class="close-btn">&times;</span>
+            </div>
+        </div>
+        <div class="error-text centered-container">
+            <p id="errorMsg" class="message-text"></p>
+        </div>
+    </div>
+</div>
+
+<div id="languageDropdown" class="dropdown" style="position: absolute; right: 15px; top: 30px; display: none">
+    <button id="dropdownButton" class="dropdown-button">Select Language</button>
+    <ul id="dropdownList" class="dropdown-list"></ul>
+</div>
+
+<div style="transform: scale(0.9)">
+    <div id="mainFlowContainer" class="main-flow-container">
+        <div class="device-container container-max-width" style="min-width: 400px">
+            <span style="display: none; flex-direction: row; margin-left: 5px">
+                <img id="howToButton" src="images/help.png" alt="How to" class="help-button" title="Documentation">
+            </span>
+            <div id="transOwnerContainer">
+                <fieldset class="file-share-fieldset">
+                    <legend class="file-share-legend">Description/Read-Me</legend>
+                    <div id="readMeTextMemo"
+                         class="read-me-text-memo"
+                         aria-label="provide information about content"
+                         contenteditable="true"
+                         spellcheck="true"
+                         data-lexical-editor="true"
+                         role="textbox"
+                    >Default description
+                    </div>
+                </fieldset>
+            </div>
+            <div id="transReceiverContainer">
+                <fieldset class="file-share-fieldset">
+                    <legend class="file-share-legend">
+                        Protect with
+                    </legend>
+                    <div id="selectProtectionTypeContainer" class="centered-container">
+                        <div style="font-size: 14px">
+                            <label>
+                                <input type="radio" name="protectWithPasswordChoice" value="pPassword"
+                                       id="protectWithPasswordChoice">
+                                Password
+                            </label>
+                            <label style="margin-left: 10px">
+                                <input id="protectWithCaptchaChoice" type="radio" name="protectWithCaptchaChoice"
+                                       value="pCaptcha">
+                                Strong captcha
+                            </label>
+                        </div>
+                    </div>
+                    <div id="passwordInputContainer" class="hidden-element">
+                        <label for="passwordInput"></label>
+                        <input class="fancy-password-input" type="text" id="passwordInput"
+                               placeholder="Enter password to protect your content"/>
+                    </div>
+                </fieldset>
+            </div>
+
+            <div id="selectFilesContainer">
+                <fieldset class="file-share-fieldset centered-container">
+                    <legend class="file-share-legend">Select files</legend>
+                    <div id="selectFilesSubContainer" style="display: flex;margin-top: 5px">
+                        <div>
+                            <div style="width: 100%; text-align: left; padding-left: 30px">
+                                <label id="selectFileLabel" for="fileInput" class="label-text">Browse</label>
+                            </div>
+                            <button id="selectFilesBtn" class="select-files-button select-files-button-size"
+                                    style="margin-left: 15px"></button>
+                        </div>
+                        <span class="or-sign label-text">OR</span>
+                        <div id="dropZone" class="drop-zone multi-line-text disabled-zone">
+                            Drag and Drop your files here / press Ctrl + V to paste from buffer
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" style="display:none" multiple>
+                </fieldset>
+            </div>
+            <div class="tb-copy-past" id="tbCopyPastMemo">
+                    <textarea class="tb-copy-past-memo"
+                              id="toolBarPasteArea" rows="1" cols="100" spellcheck="false"></textarea>
+            </div>
+            <div id="progressBarContainer" style="display: none; width: 100%">
+                <progress id="uploadProgress" value="0" max="100" style="width: 100%"></progress>
+                <span id="uploadProgressPercentage">0%</span>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+
+<script src="https://secure.fileshare.ovh/js/pushca.file-transfer.min.js?v=<?= time(); ?>"></script>
+<script src="js/file-sharing.embedded.js?v=<?= time(); ?>"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-W6XK68E4CF');
+</script>
+</html>
