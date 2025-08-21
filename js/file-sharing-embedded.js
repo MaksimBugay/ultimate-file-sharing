@@ -293,9 +293,9 @@ FileSharing.saveContentInCloud = async function (name, type, size, inReadMeText,
 
 function extractAndSharePublicUrl(newManifest) {
     delay(1000).then(() => {
-        const publicUr = newManifest.getPublicUrl(Fileshare.workSpaceId, isWorkspaceIdExposed());
+        const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
         copyTextToClipboard(publicUr);
-        showInfoMsg(`Public url was copied to clipboard`, publicUr, newManifest.name);
+        showInfoMsg(`Public url was copied to clipboard`, publicUr);
     });
 }
 
@@ -303,6 +303,7 @@ function extractAndSharePublicUrl(newManifest) {
 
 //=========================================Dialogs======================================================================
 
+const infoDialog = document.getElementById("infoDialog");
 const infoMsg = document.getElementById("infoMsg");
 
 function showInfoMsg(msg, url = null) {
@@ -321,6 +322,10 @@ function showInfoMsg(msg, url = null) {
         });
     }
     showInfoDialog();
+}
+
+function showInfoDialog() {
+    infoDialog.classList.add('visible');
 }
 
 const errorDialog = document.getElementById("errorDialog");
@@ -348,6 +353,7 @@ function openBrowserDataBase() {
 FingerprintJS.load().then(fp => {
     fp.get().then(result => {
         FileSharing.deviceFpId = result.visitorId;
+        FileSharing.workSpaceId = FileSharing.deviceFpId;
         openWsConnection(result.visitorId);
         openBrowserDataBase();
         FileSharing.pingIntervalId = window.setInterval(function () {
