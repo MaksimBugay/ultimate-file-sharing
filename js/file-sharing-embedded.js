@@ -196,6 +196,9 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
     if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
         return;
     }
+    if (event.target.id === "passwordInput") {
+        return;
+    }
     if (toolBarPasteArea) {
         toolBarPasteArea.focus();
     }
@@ -264,7 +267,8 @@ FileSharing.saveContentInCloud = async function (name, type, size, inReadMeText,
         password,
         encryptionContract,
         true,
-        forHuman
+        forHuman,
+        FileSharing.workSpaceId
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${name}`, null);

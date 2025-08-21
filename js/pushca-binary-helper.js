@@ -340,7 +340,9 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
     return binaryManifest;
 }
 
-async function createBinaryManifest(id, name, mimeType, readMeText, password, encryptionContract, cachedInCloud, forHuman) {
+async function createBinaryManifest(id, name, mimeType, readMeText, password, encryptionContract, cachedInCloud, forHuman,
+                                    inWorkSpaceId
+) {
     if (!PushcaClient.ClientObj) {
         return new WaiterResponse(WaiterResponseType.ERROR, "Owner connection is absent");
     }
@@ -372,8 +374,9 @@ async function createBinaryManifest(id, name, mimeType, readMeText, password, en
         return new WaiterResponse(WaiterResponseType.SUCCESS, binaryManifest);
     }
 
+    const workSpaceId = inWorkSpaceId ? inWorkSpaceId : Fileshare.workSpaceId;
     return await CallableFuture.callAsynchronously(2000, null, function (waiteId) {
-        createPrivateUrlSuffix(Fileshare.workSpaceId, id).then(privateUrlSuffix => {
+        createPrivateUrlSuffix(workSpaceId, id).then(privateUrlSuffix => {
             const binaryManifest = new BinaryManifest(
                 id,
                 name,
