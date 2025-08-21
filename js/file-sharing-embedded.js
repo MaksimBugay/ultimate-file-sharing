@@ -29,10 +29,23 @@ FileSharing.progressBarWidget = new ProgressBarWidget(
 
 FileSharing.defaultReadMeText = "Default description";
 
-async function processSelectedFiles(files) {
+async function shareContent(processContentFunction) {
     fileTransferProgressBtn.style.display = 'block';
     selectFilesBtn.disabled = true;
     dropZone.disabled = true;
+
+    if (typeof processContentFunction === 'function') {
+        await processContentFunction();
+    }
+
+    FileSharing.extraProgressHandler = null;
+    fileTransferProgressBtn.style.display = 'none';
+    fileInput.value = "";
+    selectFilesBtn.disabled = false;
+    dropZone.disabled = false;
+}
+
+async function processSelectedFiles(files) {
     let i = 0;
     FileSharing.extraProgressHandler = function () {
         i += 1;
@@ -54,8 +67,6 @@ async function processSelectedFiles(files) {
             (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null
         );
     }
-    FileSharing.extraProgressHandler = null;
-    fileTransferProgressBtn.style.display = 'none';
 }
 
 function setProtectionTypeChoice(choiceName) {
@@ -223,7 +234,9 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInput.addEventListener('change', async function (event) {
         if (event.target.files && fileInput.value && event.target.files.length > 0) {
             const files = event.target.files;
-            await processSelectedFiles(files);
+            await shareContent(
+                () => processSelectedFiles(files)
+            )
         }
     });
     document.addEventListener("keydown", function (event) {
