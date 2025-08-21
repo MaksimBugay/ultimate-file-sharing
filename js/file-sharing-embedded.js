@@ -13,6 +13,7 @@ const passwordInputContainer = document.getElementById("passwordInputContainer")
 const passwordInput = document.getElementById("passwordInput");
 const selectFilesBtn = document.getElementById('selectFilesBtn');
 const fileTransferProgressBtn = document.getElementById('fileTransferProgressBtn');
+const readMeTextMemo = document.getElementById("readMeTextMemo");
 const fileInput = document.getElementById('fileInput');
 fileInput.removeAttribute('webkitdirectory');
 fileInput.setAttribute('multiple', '');
@@ -222,6 +223,15 @@ document.addEventListener('DOMContentLoaded', function () {
             await processSelectedFiles(files);
         }
     });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            if (isErrorDialogVisible()) {
+                closeErrorDialog();
+            } else if (isInfoDialogVisible()) {
+                closeInfoDialog();
+            }
+        }
+    });
     initEventsForCopyPasteArea();
 });
 
@@ -305,6 +315,23 @@ function extractAndSharePublicUrl(newManifest) {
 
 const infoDialog = document.getElementById("infoDialog");
 const infoMsg = document.getElementById("infoMsg");
+const closeInfoBtn = document.getElementById("closeInfoBtn");
+
+function isInfoDialogVisible() {
+    return infoDialog.classList.contains('visible');
+}
+
+function closeInfoDialog() {
+    infoDialog.classList.remove('visible');
+}
+
+function showInfoDialog() {
+    infoDialog.classList.add('visible');
+}
+
+closeInfoBtn.addEventListener('click', function () {
+    closeInfoDialog();
+});
 
 function showInfoMsg(msg, url = null) {
     infoMsg.textContent = msg;
@@ -324,10 +351,6 @@ function showInfoMsg(msg, url = null) {
     showInfoDialog();
 }
 
-function showInfoDialog() {
-    infoDialog.classList.add('visible');
-}
-
 const errorDialog = document.getElementById("errorDialog");
 const errorMsg = document.getElementById("errorMsg");
 const closeErrorBtn = document.getElementById("closeErrorBtn");
@@ -336,6 +359,21 @@ function showErrorMsg(msg, afterCloseHandler) {
     errorMsg.textContent = msg;
     FileSharing.afterErrorMsgClosedHandler = afterCloseHandler;
     errorDialog.classList.add('visible');
+}
+
+closeErrorBtn.addEventListener('click', function () {
+    closeErrorDialog();
+});
+
+function isErrorDialogVisible() {
+    return errorDialog.classList.contains('visible');
+}
+
+function closeErrorDialog() {
+    errorDialog.classList.remove('visible');
+    if (typeof FileSharing.afterErrorMsgClosedHandler === 'function') {
+        FileTransfer.afterErrorMsgClosedHandler();
+    }
 }
 
 //======================================================================================================================
