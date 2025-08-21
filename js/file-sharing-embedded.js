@@ -371,7 +371,7 @@ PushcaClient.onCloseHandler = function (ws, event) {
 };
 
 async function openWsConnection(deviceFpId) {
-    FileSharing.deviceSecret = getDeviceSecret();
+    FileSharing.deviceSecret = await getDeviceSecret();
     if (!PushcaClient.isOpen()) {
         FileSharing.sessionId = uuid.v4().toString();
         FileSharing.deviceFpHash = await calculateSha256(stringToArrayBuffer(deviceFpId));
