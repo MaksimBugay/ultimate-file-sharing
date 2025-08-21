@@ -61,7 +61,7 @@ SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCl
         async function (manifest, storeInCloud, encryptionContract) {
             return await readFileSequentially(file, async function (inOrder, arrayBuffer) {
                 return await processBinaryChunk(manifest, inOrder, arrayBuffer, storeInCloud, encryptionContract);
-            }, `Failed share file attempt: ${file.name}`);
+            }, `Failed file sharing attempt: ${file.name}`);
         },
         storeInCloud,
         forHuman,

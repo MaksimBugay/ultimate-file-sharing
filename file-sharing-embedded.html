@@ -40,6 +40,19 @@
     </div>
 </div>
 
+<div id="infoDialog" class="consent-dialog">
+    <div class="info-content">
+        <div class="info-caption">
+            <div class="dialog-title">Info</div>
+            <div class="close-btn-container">
+                <span id="closeInfoBtn" class="close-btn" style="color: darkblue">&times;</span>
+            </div>
+        </div>
+        <div id="qrcode" class="centered-container"></div>
+        <p id="infoMsg" class="message-text"></p>
+    </div>
+</div>
+
 <div id="languageDropdown" class="dropdown" style="position: absolute; right: 15px; top: 30px; display: none">
     <button id="dropdownButton" class="dropdown-button">Select Language</button>
     <ul id="dropdownList" class="dropdown-list"></ul>
@@ -129,8 +142,6 @@
 </div>
 </body>
 
-<script src="js/file-sharing.embedded.js?v=<?= time(); ?>"></script>
-
 <script src="js/fp.min.js?v=<?= time(); ?>"></script>
 <script src="js/detect.min.js?v=<?= time(); ?>"></script>
 <script src="js/client.min.js?v=<?= time(); ?>"></script>
@@ -145,6 +156,11 @@
 <script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
 <script src="js/security-utils.js?v=<?= time(); ?>"></script>
 <script src="js/gateway-server.js?v=<?= time(); ?>"></script>
+<script src="js/binary-chunks-db.js?v=<?= time(); ?>"></script>
+
+<script src="js/file-sharing-commons.js?v=<?= time(); ?>"></script>
+<script src="js/file-sharing-embedded.js?v=<?= time(); ?>"></script>
+
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];
