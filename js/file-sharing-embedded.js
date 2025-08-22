@@ -33,6 +33,7 @@ async function shareContent(processContentFunction) {
     fileTransferProgressBtn.style.display = 'block';
     selectFilesBtn.disabled = true;
     dropZone.disabled = true;
+    dropZone.classList.add('disabled-zone');
 
     if (typeof processContentFunction === 'function') {
         await processContentFunction();
@@ -60,6 +61,7 @@ async function afterAllCleanup(binaryId, withPageRefresh) {
     fileInput.value = "";
     selectFilesBtn.disabled = false;
     dropZone.disabled = false;
+    dropZone.classList.remove('disabled-zone');
 
     if (withPageRefresh) {
         window.location.assign(window.location.href);
@@ -118,6 +120,43 @@ function getProtectionAttributes() {
     }
 }
 
+//=================================Drop zone============================================================================
+const dropZone = document.getElementById('dropZone');
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+function initDropZone(dzElement) {
+// Prevent default behavior for drag and drop events (to prevent opening the file in the browser)
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dzElement.addEventListener(eventName, preventDefaults, false);
+    });
+
+// Add visual feedback for when file is being dragged over the drop zone
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dzElement.addEventListener(eventName, () => dzElement.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dzElement.addEventListener(eventName, () => dzElement.classList.remove('dragover'), false);
+    });
+}
+
+initDropZone(dropZone);
+
+dropZone.addEventListener('drop', async function (event) {
+    await shareContent(
+        () => processSelectedFiles(event.dataTransfer.files)
+    )
+    delay(500).then(() => {
+        event.dataTransfer.clearData();
+    });
+});
+
+//======================================================================================================================
+
 //=================================Copy/Paste area======================================================================
 function initEventsForCopyPasteArea() {
     if (document.getElementById('selectFilesSubContainer')) {
@@ -141,56 +180,60 @@ function initEventsForCopyPasteArea() {
 
         event.stopPropagation();
         event.preventDefault();
-        selectFilesBtn.disabled = true;
-        dropZone.disabled = true;
 
-        let textItems = null;
-        const protectionAttributes = getProtectionAttributes();
-        const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
-        const binaryPassword = (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null;
-
-        for (let item of clipboardItems) {
-            if (item.kind === 'file') {
-                const blob = item.getAsFile();
-                //console.log(blob);
-                const mimeType = blob.type;
-                const name = getCopyPastName(mimeType, blob.name);
-                console.log(name);
-                await FileSharing.saveBlobInCloud(
-                    name,
-                    blob.type,
-                    await getReadMeText(),
-                    blob,
-                    forHuman,
-                    binaryPassword
-                );
-            } else if (item.kind === 'string') {
-                if (textItems) {
-                    textItems = textItems + " " + await readTextFromClipboardItem(item);
-                } else {
-                    textItems = await readTextFromClipboardItem(item);
-                }
-            }
-        }
-
-        if (textItems) {
-            const mimeType = 'text/plain';
-            const name = `text-message-${new Date().getTime()}.txt`;
-            const text = DOMPurify.sanitize(textItems);
-            if (isNotEmpty(text)) {
-                console.log(name);
-                const textBlob = new Blob([text], {type: mimeType});
-                await FileSharing.saveBlobInCloud(
-                    name,
-                    textBlob.type,
-                    await getReadMeText(),
-                    textBlob,
-                    forHuman,
-                    binaryPassword
-                );
-            }
-        }
+        await shareContent(
+            () => processClipboardItems(clipboardItems)
+        );
     });
+}
+
+async function processClipboardItems(clipboardItems) {
+    let textItems = null;
+    const protectionAttributes = getProtectionAttributes();
+    const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
+    const binaryPassword = (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null;
+
+    for (let item of clipboardItems) {
+        if (item.kind === 'file') {
+            const blob = item.getAsFile();
+            //console.log(blob);
+            const mimeType = blob.type;
+            const name = getCopyPastName(mimeType, blob.name);
+            console.log(name);
+            await FileSharing.saveBlobInCloud(
+                name,
+                blob.type,
+                await getReadMeText(),
+                blob,
+                forHuman,
+                binaryPassword
+            );
+        } else if (item.kind === 'string') {
+            if (textItems) {
+                textItems = textItems + " " + await readTextFromClipboardItem(item);
+            } else {
+                textItems = await readTextFromClipboardItem(item);
+            }
+        }
+    }
+
+    if (textItems) {
+        const mimeType = 'text/plain';
+        const name = `text-message-${new Date().getTime()}.txt`;
+        const text = DOMPurify.sanitize(textItems);
+        if (isNotEmpty(text)) {
+            console.log(name);
+            const textBlob = new Blob([text], {type: mimeType});
+            await FileSharing.saveBlobInCloud(
+                name,
+                textBlob.type,
+                await getReadMeText(),
+                textBlob,
+                forHuman,
+                binaryPassword
+            );
+        }
+    }
 }
 
 function hasFileExtension(fileName) {
