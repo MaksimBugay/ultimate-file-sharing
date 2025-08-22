@@ -38,11 +38,32 @@ async function shareContent(processContentFunction) {
         await processContentFunction();
     }
 
+    await afterAllCleanup(null, false);
+}
+
+async function afterAllCleanup(binaryId, withPageRefresh) {
+    if (binaryId) {
+        removeBinary(binaryId, function () {
+            console.debug(`Binary with id ${binaryId} was completely removed from DB`);
+        });
+        const result = await PushcaClient.sendDeleteBinaryAppeal(binaryId, FileSharing.deviceSecret);
+        const responseObject = JSON.parse(result);
+        if (responseObject.body !== 'true') {
+            console.log(result);
+            if (responseObject.error) {
+                showErrorMsg(responseObject.error, null);
+            }
+        }
+    }
     FileSharing.extraProgressHandler = null;
     fileTransferProgressBtn.style.display = 'none';
     fileInput.value = "";
     selectFilesBtn.disabled = false;
     dropZone.disabled = false;
+
+    if (withPageRefresh) {
+        window.location.assign(window.location.href);
+    }
 }
 
 async function processSelectedFiles(files) {
@@ -284,21 +305,25 @@ FileSharing.saveContentInCloud = async function (name, type, size, inReadMeText,
         FileSharing.workSpaceId
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
-        showErrorMsg(`Cannot create manifest for file ${name}`, null);
+        showErrorMsg(
+            `Cannot create manifest for file ${name}`,
+            () => afterAllCleanup(null, true)
+        );
         return false;
     }
     const manifest = createManifestResult.body;
     const saveResult = await saveBinaryManifestToDatabase(manifest);
     if (WaiterResponseType.ERROR === saveResult.type) {
-        showErrorMsg(saveResult.body.body, null);
+        showErrorMsg(
+            saveResult.body.body,
+            () => afterAllCleanup(manifest.id, true)
+        );
         return false;
     }
     const processFileResult = await splitAndStoreProcessor(manifest, true, encryptionContract);
 
     if (!processFileResult) {
-        removeBinary(binaryId, function () {
-            console.log(`Binary with id ${binaryId} was completely removed from DB`);
-        });
+        afterAllCleanup(binaryId, true);
         return false;
     }
     const cacheInCloudResult = await cacheBinaryManifestInCloud(manifest);
@@ -307,11 +332,10 @@ FileSharing.saveContentInCloud = async function (name, type, size, inReadMeText,
     }
     const result = await saveBinaryManifestToDatabase(manifest);
     if (WaiterResponseType.ERROR === result.type) {
-        showErrorMsg(result.body.body, function () {
-            removeBinary(binaryId, function () {
-                console.log(`Binary with id ${binaryId} was completely removed from DB`);
-            });
-        });
+        showErrorMsg(
+            result.body.body,
+            () => afterAllCleanup(manifest.id, true)
+        );
         return false;
     }
     extractAndSharePublicUrl(manifest);
@@ -323,6 +347,9 @@ function extractAndSharePublicUrl(newManifest) {
         const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
         copyTextToClipboard(publicUr);
         showInfoMsg(`Public url was copied to clipboard`, publicUr);
+        removeBinary(newManifest.id, function () {
+            console.debug(`Binary with id ${newManifest.id} was completely removed from DB`);
+        });
     });
 }
 
@@ -389,7 +416,8 @@ function isErrorDialogVisible() {
 function closeErrorDialog() {
     errorDialog.classList.remove('visible');
     if (typeof FileSharing.afterErrorMsgClosedHandler === 'function') {
-        FileTransfer.afterErrorMsgClosedHandler();
+        FileSharing.afterErrorMsgClosedHandler();
+        FileSharing.afterErrorMsgClosedHandler = null;
     }
 }
 
