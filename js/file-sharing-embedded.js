@@ -145,6 +145,9 @@ function initEventsForCopyPasteArea() {
         dropZone.disabled = true;
 
         let textItems = null;
+        const protectionAttributes = getProtectionAttributes();
+        const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
+        const binaryPassword = (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null;
 
         for (let item of clipboardItems) {
             if (item.kind === 'file') {
@@ -153,12 +156,14 @@ function initEventsForCopyPasteArea() {
                 const mimeType = blob.type;
                 const name = getCopyPastName(mimeType, blob.name);
                 console.log(name);
-                /*await TransferFileHelper.transferBlobToVirtualHostBase(
-                    blob, name, blob.type,
-                    receiverVirtualHost.value,
-                    ownerVirtualHost.value,
-                    FileTransfer
-                );*/
+                await FileSharing.saveBlobInCloud(
+                    name,
+                    blob.type,
+                    await getReadMeText(),
+                    blob,
+                    forHuman,
+                    binaryPassword
+                );
             } else if (item.kind === 'string') {
                 if (textItems) {
                     textItems = textItems + " " + await readTextFromClipboardItem(item);
@@ -175,12 +180,14 @@ function initEventsForCopyPasteArea() {
             if (isNotEmpty(text)) {
                 console.log(name);
                 const textBlob = new Blob([text], {type: mimeType});
-                /*await TransferFileHelper.transferBlobToVirtualHostBase(
-                    textBlob, name, textBlob.type,
-                    receiverVirtualHost.value,
-                    ownerVirtualHost.value,
-                    FileTransfer
-                );*/
+                await FileSharing.saveBlobInCloud(
+                    name,
+                    textBlob.type,
+                    await getReadMeText(),
+                    textBlob,
+                    forHuman,
+                    binaryPassword
+                );
             }
         }
     });
@@ -274,7 +281,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
 //==================================File sharing implementation=========================================================
 FileSharing.saveFileInCloud = async function (file, readMeText, forHuman, password) {
+    const binaryId = uuid.v4().toString();
     return await FileSharing.saveContentInCloud(
+        binaryId,
         file.name, file.type, file.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
             return await readFileSequentially(file, async function (inOrder, arrayBuffer) {
@@ -286,12 +295,53 @@ FileSharing.saveFileInCloud = async function (file, readMeText, forHuman, passwo
     );
 }
 
-FileSharing.saveContentInCloud = async function (name, type, size, inReadMeText, splitAndStoreProcessor, forHuman, password) {
+FileSharing.saveBlobInCloud = async function (name, type, readMeText, blob, forHuman, password) {
+    const binaryId = uuid.v4().toString();
+    return await FileSharing.saveContentInCloud(
+        binaryId,
+        name, type, blob.size, readMeText,
+        async function (manifest, storeInCloud, encryptionContract) {
+            const chunks = await blobToArrayBuffers(blob, MemoryBlock.MB);
+            let pipeWasBroken = false;
+            await executeWithShowProgressBar(async function (progressBarWidget) {
+                for (let i = 0; i < chunks.length; i++) {
+                    const processChunkResult = await processBinaryChunk(
+                        manifest,
+                        i + 1,
+                        chunks[i],
+                        true,
+                        encryptionContract
+                    );
+                    const progress = Math.round(((i + 1) / chunks.length) * 100);
+                    progressBarWidget.setProgress(progress);
+                    if (typeof FileSharing.extraProgressHandler === 'function') {
+                        FileSharing.extraProgressHandler();
+                    }
+                    if (!processChunkResult) {
+                        showErrorMsg(
+                            `Failed share file attempt: ${name}`,
+                            function () {
+                                afterAllCleanup(binaryId, true);
+                            }
+                        );
+                        pipeWasBroken = true;
+                        return;
+                    }
+                }
+            }, FileSharing);
+            chunks.length = 0;
+            return !pipeWasBroken;
+        },
+        forHuman,
+        password
+    );
+}
+
+FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inReadMeText, splitAndStoreProcessor, forHuman, password) {
     let readMeText = inReadMeText ? inReadMeText : '';
     if (FileSharing.defaultReadMeText === inReadMeText) {
         readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
     }
-    const binaryId = uuid.v4().toString();
     const encryptionContract = password ? await generateEncryptionContract() : null;
     const createManifestResult = await createBinaryManifest(
         binaryId,
