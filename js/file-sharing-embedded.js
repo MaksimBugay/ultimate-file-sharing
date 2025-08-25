@@ -431,18 +431,26 @@ FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inR
         );
         return false;
     }
-    extractAndSharePublicUrl(manifest);
+    const dialogId = uuid.v4().toString();
+    const dialogResult = await CallableFuture.callAsynchronously(
+        300_000,
+        dialogId,
+        () => {
+            extractAndSharePublicUrl(manifest, dialogId);
+        }
+    );
+    if (WaiterResponseType.SUCCESS !== dialogResult.type) {
+        console.warn("Failed attempt to register close modal window event");
+    }
     return true;
 }
 
-function extractAndSharePublicUrl(newManifest) {
-    delay(1000).then(() => {
-        const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
-        copyTextToClipboard(publicUr);
-        showInfoMsg(`Public url was copied to clipboard`, publicUr);
-        removeBinary(newManifest.id, function () {
-            console.debug(`Binary with id ${newManifest.id} was completely removed from DB`);
-        });
+function extractAndSharePublicUrl(newManifest, dialogId) {
+    const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
+    copyTextToClipboard(publicUr);
+    showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUr);
+    removeBinary(newManifest.id, function () {
+        console.debug(`Binary with id ${newManifest.id} was completely removed from DB`);
     });
 }
 
@@ -460,6 +468,10 @@ function isInfoDialogVisible() {
 
 function closeInfoDialog() {
     infoDialog.classList.remove('visible');
+    if (FileSharing.actveInfoMsgId) {
+        CallableFuture.releaseWaiterIfExistsWithSuccess(FileSharing.actveInfoMsgId, "closed");
+        FileSharing.actveInfoMsgId = null;
+    }
 }
 
 function showInfoDialog() {
@@ -470,7 +482,8 @@ closeInfoBtn.addEventListener('click', function () {
     closeInfoDialog();
 });
 
-function showInfoMsg(msg, url = null) {
+function showInfoMsg(dialogId, msg, url = null) {
+    FileSharing.actveInfoMsgId = dialogId;
     infoMsg.textContent = msg;
     const qrCodeContainer = document.getElementById('qrcode');
     if (url && qrCodeContainer) {
