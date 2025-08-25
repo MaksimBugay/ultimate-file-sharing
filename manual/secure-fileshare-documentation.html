@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure File Share - Comprehensive User Manual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border-radius: 15px 15px 0 0;
+            margin: -20px -20px 40px -20px;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .website-link {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            margin-top: 15px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .website-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #4CAF50;
+        }
+        
+        .toc h2 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .toc ul {
+            list-style: none;
+        }
+        
+        .toc li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .toc li:last-child {
+            border-bottom: none;
+        }
+        
+        .toc a {
+            color: #495057;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .toc a:hover {
+            color: #4CAF50;
+        }
+        
+        .section {
+            margin: 40px 0;
+            padding: 30px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            color: #4CAF50;
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4CAF50;
+        }
+        
+        .section h3 {
+            color: #333;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+            padding-left: 20px;
+            border-left: 4px solid #81C784;
+        }
+        
+        .section h4 {
+            color: #2E7D32;
+            font-size: 1.3em;
+            margin: 25px 0 15px 0;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #E8F5E8, #F1F8E9);
+            border-radius: 8px;
+            border-left: 5px solid #4CAF50;
+            font-weight: bold;
+        }
+        
+        .section p, .section li {
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+        
+        .security-feature {
+            background: linear-gradient(135deg, #E8F5E8, #F1F8E9);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #4CAF50;
+            position: relative;
+        }
+        
+        .security-feature::before {
+            content: "🔒";
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 2em;
+        }
+        
+        .security-feature h4 {
+            color: #2E7D32;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #FF9800;
+            position: relative;
+        }
+        
+        .warning-box::before {
+            content: "⚠️";
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5em;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #2196F3;
+            position: relative;
+        }
+        
+        .info-box::before {
+            content: "ℹ️";
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.5em;
+        }
+        
+        .step-list {
+            counter-reset: step-counter;
+        }
+        
+        .step-list li {
+            counter-increment: step-counter;
+            position: relative;
+            padding-left: 60px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 20px 20px 20px 60px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4CAF50;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, #f0f4f8, #e2e8f0);
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: #4CAF50;
+        }
+        
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .code-snippet {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        .interface-mockup {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+        }
+        
+        .interface-mockup::before {
+            content: "Website Interface";
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: white;
+            padding: 0 10px;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .ui-element {
+            display: inline-block;
+            margin: 10px;
+            padding: 8px 15px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        
+        .checkbox-demo {
+            display: inline-block;
+            margin: 5px 10px;
+        }
+        
+        .checkbox-demo input[type="checkbox"] {
+            margin-right: 8px;
+            transform: scale(1.2);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: #343a40;
+            color: white;
+            border-radius: 0 0 15px 15px;
+            margin: 40px -20px -20px -20px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Secure File Share</h1>
+            <p>Comprehensive User Manual & Documentation</p>
+            <a href="https://secure.fileshare.ovh/file-sharing-embedded.html" target="_blank" class="website-link">
+                🌐 Visit Secure File Share Website
+            </a>
+        </header>
+
+        <div class="toc">
+            <h2>📋 Table of Contents</h2>
+            <ul>
+                <li><a href="#overview">1. Overview</a></li>
+                <li><a href="#getting-started">2. Getting Started</a></li>
+                <li><a href="#interface">3. User Interface Guide</a></li>
+                <li><a href="#security-features">4. Security Features</a></li>
+                <li><a href="#uploading">5. Uploading Files</a></li>
+                <li><a href="#accessing">6. Accessing Shared Files</a></li>
+                <li><a href="#best-practices">7. Best Practices</a></li>
+                <li><a href="#troubleshooting">8. Troubleshooting</a></li>
+                <li><a href="#technical-specs">9. Technical Specifications</a></li>
+            </ul>
+        </div>
+
+        <section id="overview" class="section">
+            <h2>🎯 Overview</h2>
+            <p>Secure File Share is an intuitive and simple web-based platform designed for secure file sharing with advanced encryption and protection features. The service emphasizes user privacy and security through two primary protection mechanisms:</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">🔐</span>
+                    <h3>End-to-End Encryption</h3>
+                    <p>Activated when you set a password, ensuring your files are encrypted before transmission and can only be decrypted by recipients with the correct password.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🤖</span>
+                    <h3>AI-Resistant CAPTCHA</h3>
+                    <p>Strong CAPTCHA protection designed to resist automated AI-based attacks, ensuring only human users can access your shared files.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🌐</span>
+                    <h3>Web-Based Access</h3>
+                    <p>No software installation required. Access the service from any modern web browser on any device.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📱</span>
+                    <h3>Cross-Platform</h3>
+                    <p>Works seamlessly on desktop computers, tablets, and mobile devices with responsive design.</p>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <strong>Important:</strong> You must choose either password protection OR CAPTCHA protection - you cannot enable both simultaneously. Choose the security method that best fits your needs.
+            </div>
+
+            <div class="info-box">
+                <strong>Key Benefits:</strong>
+                <ul>
+                    <li>No registration or account creation required</li>
+                    <li>Simple drag-and-drop interface</li>
+                    <li>Multiple security options for different needs</li>
+                    <li>Instant file sharing with unique links</li>
+                    <li>Clipboard integration for easy file pasting</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="getting-started" class="section">
+            <h2>🚀 Getting Started</h2>
+            
+            <h3>System Requirements</h3>
+            <ul>
+                <li><strong>Browser:</strong> Any modern web browser (Chrome, Firefox, Safari, Edge)</li>
+                <li><strong>Internet:</strong> Stable internet connection</li>
+                <li><strong>JavaScript:</strong> Must be enabled</li>
+                <li><strong>Clipboard Access:</strong> Optional, for enhanced functionality</li>
+            </ul>
+
+            <h3>Quick Start Guide</h3>
+            <ol class="step-list">
+                <li>
+                    <strong>Navigate to the Website</strong><br>
+                    Open your web browser and go to: <br>
+                    <div class="code-snippet">https://secure.fileshare.ovh/file-sharing-embedded.html</div>
+                </li>
+                <li>
+                    <strong>Grant Clipboard Access (Optional)</strong><br>
+                    When prompted, allow clipboard access for enhanced functionality like pasting files directly from your clipboard using Ctrl+V.
+                </li>
+                <li>
+                    <strong>Configure Security First</strong><br>
+                    Choose either password protection OR CAPTCHA protection (not both). This must be done before selecting files.
+                </li>
+                <li>
+                    <strong>Select Files (Final Step)</strong><br>
+                    Either click "Browse" to select files, drag and drop them into the designated area, or paste with Ctrl+V. <strong>Upload starts automatically once files are selected!</strong>
+                </li>
+                <li>
+                    <strong>Share the Generated Link</strong><br>
+                    After automatic upload completes, share the generated link securely with your recipients.
+                </li>
+            </ol>
+        </section>
+
+        <section id="interface" class="section">
+            <h2>🖥️ User Interface Guide</h2>
+            
+            <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef;">
+                <h3 style="margin-bottom: 20px; color: #495057;">Actual Website Interface</h3>
+                <img src="https://secure.fileshare.ovh/images/file-sharing-embedded-screen.png" 
+                     alt="Secure File Share Interface Screenshot" 
+                     style="max-width: 100%; height: auto; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);" />
+                <p style="margin-top: 15px; color: #6c757d; font-style: italic;">
+                    Actual interface showing Description field, Protection options (Password/Strong captcha), and File selection area with drag & drop functionality
+                </p>
+            </div>
+
+            <h3>Interface Components Explained</h3>
+            <p>Referring to the actual interface screenshot above, here are the key components:</p>
+            
+            <h4>1. Description Field</h4>
+            <p>At the top of the interface:</p>
+            <ul>
+                <li><strong>Description/Read-Me:</strong> Optional field for adding file descriptions</li>
+                <li><strong>Default Description:</strong> Pre-filled description that can be modified</li>
+            </ul>
+
+            <h4>2. Protection Options</h4>
+            <p>Two mutually exclusive radio buttons allow you to choose ONE security feature:</p>
+            <ul>
+                <li><strong>Password:</strong> Enables end-to-end encryption with password protection</li>
+                <li><strong>Strong captcha:</strong> Adds AI-resistant CAPTCHA verification</li>
+            </ul>
+            <div class="warning-box">
+                <strong>Important:</strong> You can only select ONE protection method - either password OR CAPTCHA, not both.
+            </div>
+
+            <h4>3. File Selection Area</h4>
+            <p>The main area of the interface provides multiple ways to select files:</p>
+            <ul>
+                <li><strong>Browse Button:</strong> Click to open a file browser dialog</li>
+                <li><strong>Drag & Drop Zone:</strong> Simply drag files from your computer into this area</li>
+                <li><strong>Keyboard Shortcut:</strong> Press Ctrl+V to paste files from your clipboard</li>
+            </ul>
+
+            <h4>4. Upload Progress</h4>
+            <p>A progress bar shows the upload status, starting at 0% and updating in real-time during file transfer.</p>
+        </section>
+
+        <section id="security-features" class="section">
+            <h2>🛡️ Security Features</h2>
+            
+            <p>Secure File Share provides two robust security mechanisms to protect your shared files. Understanding these features is crucial for making informed decisions about your file sharing security.</p>
+
+            <div class="security-feature">
+                <h4>🔐 End-to-End Encryption (Password Protection)</h4>
+                <p><strong>How it works:</strong> When you enable password protection by checking the "Password" option, the system implements end-to-end encryption for your files.</p>
+                
+                <div class="info-box">
+                    <strong>Technical Details:</strong>
+                    <ul>
+                        <li>Files are encrypted on your device before upload</li>
+                        <li>Encryption keys are derived from your password</li>
+                        <li>Server never has access to your unencrypted files</li>
+                        <li>Only users with the correct password can decrypt files</li>
+                        <li>Uses industry-standard encryption algorithms</li>
+                    </ul>
+                </div>
+
+                <p><strong>When to use:</strong></p>
+                <ul>
+                    <li>Sharing sensitive documents or personal files</li>
+                    <li>Business documents requiring confidentiality</li>
+                    <li>Any situation where you want maximum privacy</li>
+                    <li>When sharing with untrusted networks or recipients</li>
+                </ul>
+
+                <div class="warning-box">
+                    <strong>Important:</strong> If you forget the password, your files cannot be recovered. The service cannot decrypt your files without the password you set.
+                </div>
+            </div>
+
+            <div class="security-feature">
+                <h4>🤖 AI-Resistant CAPTCHA Protection</h4>
+                <p><strong>How it works:</strong> The "Strong captcha" option implements advanced CAPTCHA technology specifically designed to resist automated attacks, including those powered by artificial intelligence.</p>
+                
+                <div class="info-box">
+                    <strong>CAPTCHA Features:</strong>
+                    <ul>
+                        <li>Advanced pattern recognition challenges</li>
+                        <li>Dynamic difficulty adjustment</li>
+                        <li>Resistant to AI-based solving attempts</li>
+                        <li>Human-friendly but bot-resistant design</li>
+                        <li>Multiple challenge types for enhanced security</li>
+                    </ul>
+                </div>
+
+                <p><strong>When to use:</strong></p>
+                <ul>
+                    <li>Preventing automated bot access to your files</li>
+                    <li>Adding an extra layer of access control</li>
+                    <li>Protecting against brute force access attempts</li>
+                    <li>When sharing links in public or semi-public forums</li>
+                </ul>
+            </div>
+
+            <h3>🔄 Choosing Your Security Method</h3>
+            <p>You must choose between password protection OR CAPTCHA protection - both cannot be enabled simultaneously. Consider which method best fits your needs:</p>
+            <ul>
+                <li><strong>Password Protection:</strong> Best for sensitive files requiring encryption and when you can securely share passwords</li>
+                <li><strong>CAPTCHA Protection:</strong> Best for preventing automated access while keeping the sharing process simpler</li>
+            </ul>
+        </section>
+
+        <section id="uploading" class="section">
+            <h2>📤 Uploading and Sharing Files</h2>
+            
+            <h3>Step-by-Step Upload Process</h3>
+            <div class="warning-box">
+                <strong>Critical:</strong> Configure all settings BEFORE selecting files! Upload starts automatically once files are selected.
+            </div>
+            <ol class="step-list">
+                <li>
+                    <strong>Configure Security Settings</strong><br>
+                    Choose your protection option (select only ONE):
+                    <ul>
+                        <li>Check "Password" if you want end-to-end encryption</li>
+                        <li>Check "Strong captcha" if you want AI-resistant access control</li>
+                        <li><strong>Important:</strong> You cannot enable both - choose either password OR CAPTCHA</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Set Password (if password protection chosen)</strong><br>
+                    If you checked the password option:
+                    <ul>
+                        <li>Enter a strong password in the password field</li>
+                        <li>Remember this password - it cannot be recovered if lost</li>
+                        <li>Consider using a combination of letters, numbers, and symbols</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Add Description (optional)</strong><br>
+                    Modify the default description or add your own to help recipients understand the content.
+                </li>
+                <li>
+                    <strong>Select Files (FINAL STEP - Upload Starts Automatically!)</strong><br>
+                    Once you've configured everything above, choose your files:
+                    <ul>
+                        <li>Click the "Browse" button and select files from the dialog</li>
+                        <li>Drag files from your computer and drop them onto the upload area</li>
+                        <li>Use Ctrl+V to paste files from your clipboard (if clipboard access is granted)</li>
+                    </ul>
+                    <strong>⚠️ Upload begins immediately after file selection!</strong>
+                </li>
+                <li>
+                    <strong>Monitor Upload Progress</strong><br>
+                    Watch the progress bar as it updates from 0% to 100% during the automatic upload process.
+                </li>
+                <li>
+                    <strong>Receive Share Link</strong><br>
+                    Once upload is complete, you'll receive a unique sharing link. This link is what you'll share with your recipients.
+                </li>
+            </ol>
+
+            <h3>📋 Sharing Best Practices</h3>
+            <div class="warning-box">
+                <strong>Security Reminder:</strong> The sharing link provides access to your files. Protect it like you would protect the files themselves.
+            </div>
+
+            <ul>
+                <li><strong>Secure Transmission:</strong> Share links through secure channels (encrypted messaging, secure email)</li>
+                <li><strong>Separate Password Sharing:</strong> If using password protection, share the password through a different communication channel</li>
+                <li><strong>Limited Distribution:</strong> Only share the link with intended recipients</li>
+                <li><strong>Time Sensitivity:</strong> Share links promptly and inform recipients of any expiration dates</li>
+            </ul>
+        </section>
+
+        <section id="accessing" class="section">
+            <h2>📥 Accessing Shared Files</h2>
+            
+            <h3>For Recipients: How to Download Files</h3>
+            <ol class="step-list">
+                <li>
+                    <strong>Open the Shared Link</strong><br>
+                    Click on the link provided by the file sender. This will open the download page in your web browser.
+                </li>
+                <li>
+                    <strong>Complete CAPTCHA (if required)</strong><br>
+                    If the sender enabled CAPTCHA protection:
+                    <ul>
+                        <li>You'll see a CAPTCHA challenge on the page</li>
+                        <li>Follow the instructions to complete the challenge</li>
+                        <li>The challenge is designed to be human-friendly but resist automated access</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Enter Password (if required)</strong><br>
+                    If the files are password-protected:
+                    <ul>
+                        <li>Enter the password provided by the sender</li>
+                        <li>The password is case-sensitive, so enter it exactly as provided</li>
+                        <li>Contact the sender if you're having trouble with the password</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Download Files</strong><br>
+                    After passing security checks:
+                    <ul>
+                        <li>You'll see the list of shared files</li>
+                        <li>Click on individual files to download them</li>
+                        <li>Or use the "Download All" option if available</li>
+                    </ul>
+                </li>
+            </ol>
+
+            <h3>🔍 Troubleshooting Access Issues</h3>
+            <div class="info-box">
+                <strong>Common Issues and Solutions:</strong>
+                <ul>
+                    <li><strong>CAPTCHA not loading:</strong> Refresh the page and ensure JavaScript is enabled</li>
+                    <li><strong>Password not working:</strong> Check for typos, caps lock, or extra spaces</li>
+                    <li><strong>Link not working:</strong> Verify the complete URL was copied and pasted</li>
+                    <li><strong>Download not starting:</strong> Check browser popup blockers and download settings</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="best-practices" class="section">
+            <h2>✅ Best Practices</h2>
+            
+            <h3>🔐 Security Best Practices</h3>
+            <ul>
+                <li><strong>Choose Security Method First:</strong> Decide on password protection OR CAPTCHA before starting the upload process</li>
+                <li><strong>Use Strong Passwords:</strong> When enabling password protection, choose passwords with at least 12 characters including uppercase, lowercase, numbers, and symbols</li>
+                <li><strong>Unique Passwords:</strong> Don't reuse passwords from other accounts or previous file shares</li>
+                <li><strong>Secure Communication:</strong> Share passwords through secure, separate channels from the file link</li>
+                <li><strong>Recipient Verification:</strong> Confirm recipient identity before sharing sensitive files</li>
+                <li><strong>Regular Cleanup:</strong> Delete old shared links when they're no longer needed</li>
+            </ul>
+
+            <h3>📁 File Management Best Practices</h3>
+            <ul>
+                <li><strong>File Organization:</strong> Group related files together before sharing</li>
+                <li><strong>Clear Naming:</strong> Use descriptive file names to help recipients understand content</li>
+                <li><strong>File Size Consideration:</strong> Be mindful of upload limits and recipient download capabilities</li>
+                <li><strong>Format Compatibility:</strong> Ensure file formats are compatible with recipients' systems</li>
+                <li><strong>Virus Scanning:</strong> Scan files for malware before sharing</li>
+            </ul>
+
+            <h3>🌐 Network and Browser Best Practices</h3>
+            <ul>
+                <li><strong>Secure Networks:</strong> Avoid uploading sensitive files on public Wi-Fi networks</li>
+                <li><strong>Updated Browsers:</strong> Use the latest version of your web browser for best security</li>
+                <li><strong>Clear Cache:</strong> Clear browser cache after handling sensitive files</li>
+                <li><strong>HTTPS Verification:</strong> Always verify the site uses HTTPS (secure connection)</li>
+                <li><strong>Bookmark Official Site:</strong> Use bookmarks to avoid phishing sites</li>
+            </ul>
+
+            <h3>🤝 Communication Best Practices</h3>
+            <ul>
+                <li><strong>Clear Instructions:</strong> Provide clear instructions to recipients about accessing files</li>
+                <li><strong>Availability Notice:</strong> Inform recipients of any time limits or access restrictions</li>
+                <li><strong>Support Information:</strong> Provide contact information in case recipients need help</li>
+                <li><strong>Confirmation Requests:</strong> Ask recipients to confirm successful download</li>
+                <li><strong>Follow-up:</strong> Follow up if you don't receive confirmation within expected timeframe</li>
+            </ul>
+        </section>
+
+        <section id="troubleshooting" class="section">
+            <h2>🔧 Troubleshooting</h2>
+            
+            <h3>📤 Upload Issues</h3>
+            <div class="warning-box">
+                <strong>Problem:</strong> Files won't upload or upload fails
+                <br><strong>Solutions:</strong>
+                <ul>
+                    <li>Check your internet connection stability</li>
+                    <li>Verify file size doesn't exceed limits</li>
+                    <li>Try uploading fewer files at once</li>
+                    <li>Refresh the page and try again</li>
+                    <li>Clear browser cache and cookies</li>
+                    <li>Try a different browser</li>
+                </ul>
+            </div>
+
+            <h3>🔐 Security Feature Issues</h3>
+            <div class="warning-box">
+                <strong>Problem:</strong> Password protection not working
+                <br><strong>Solutions:</strong>
+                <ul>
+                    <li>Ensure password contains no leading/trailing spaces</li>
+                    <li>Verify password was entered correctly during upload</li>
+                    <li>Check that password meets minimum requirements</li>
+                    <li>Try uploading again with a different password</li>
+                </ul>
+            </div>
+
+            <div class="warning-box">
+                <strong>Problem:</strong> CAPTCHA not displaying or not working
+                <br><strong>Solutions:</strong>
+                <ul>
+                    <li>Enable JavaScript in your browser</li>
+                    <li>Disable ad blockers temporarily</li>
+                    <li>Check firewall settings</li>
+                    <li>Try a different browser or incognito mode</li>
+                    <li>Clear browser cache and cookies</li>
+                </ul>
+            </div>
+
+            <h3>📥 Download Issues</h3>
+            <div class="warning-box">
+                <strong>Problem:</strong> Can't download files
+                <br><strong>Solutions:</strong>
+                <ul>
+                    <li>Check browser popup blocker settings</li>
+                    <li>Verify download folder permissions</li>
+                    <li>Try right-clicking and "Save As"</li>
+                    <li>Disable browser extensions temporarily</li>
+                    <li>Check available disk space</li>
+                </ul>
+            </div>
+
+            <h3>🌐 Browser Compatibility Issues</h3>
+            <div class="info-box">
+                <strong>Supported Browsers:</strong>
+                <ul>
+                    <li>Chrome 80+ (recommended)</li>
+                    <li>Firefox 75+</li>
+                    <li>Safari 13+</li>
+                    <li>Edge 80+</li>
+                    <li>Opera 70+</li>
+                </ul>
+            </div>
+
+            <h3>📱 Mobile Device Issues</h3>
+            <div class="warning-box">
+                <strong>Problem:</strong> Issues on mobile devices
+                <br><strong>Solutions:</strong>
+                <ul>
+                    <li>Use the device's default browser</li>
+                    <li>Ensure sufficient storage space</li>
+                    <li>Check mobile data/Wi-Fi connection</li>
+                    <li>Try desktop mode in browser settings</li>
+                    <li>Update browser to latest version</li>
+                </ul>
+            </div>
+
+            <h3>🆘 Getting Additional Help</h3>
+            <p>If you continue experiencing issues after trying these solutions:</p>
+            <ul>
+                <li>Note the exact error message if any appears</li>
+                <li>Record which browser and version you're using</li>
+                <li>Document the steps you took before the problem occurred</li>
+                <li>Try the same action on a different device or network</li>
+                <li>Contact the service provider with detailed information</li>
+            </ul>
+        </section>
+
+        <section id="technical-specs" class="section">
+            <h2>⚙️ Technical Specifications</h2>
+            
+            <h3>🔒 Encryption Details</h3>
+            <div class="info-box">
+                <strong>Encryption Standards:</strong>
+                <ul>
+                    <li>AES-256 encryption for file content</li>
+                    <li>PBKDF2 for key derivation from passwords</li>
+                    <li>Secure random salt generation</li>
+                    <li>Client-side encryption before upload</li>
+                    <li>Zero-knowledge architecture</li>
+                </ul>
+            </div>
+
+            <h3>📊 File Limitations</h3>
+            <ul>
+                <li><strong>Maximum file size:</strong> Varies by server configuration</li>
+                <li><strong>Supported file types:</strong> All file types supported</li>
+                <li><strong>Multiple files:</strong> Yes, batch upload supported</li>
+                <li><strong>File name length:</strong> Up to 255 characters</li>
+                <li><strong>Special characters:</strong> Most Unicode characters supported</li>
+            </ul>
+
+            <h3>🌐 Network Requirements</h3>
+            <ul>
+                <li><strong>Connection:</strong> Stable internet connection required</li>
+                <li><strong>Protocol:</strong> HTTPS/TLS 1.2 or higher</li>
+                <li><strong>Ports:</strong> Standard HTTPS port 443</li>
+                <li><strong>Bandwidth:</strong> Varies based on file size</li>
+                <li><strong>Timeout:</strong> Extended timeout for large files</li>
+            </ul>
+
+            <h3>💾 Storage and Retention</h3>
+            <ul>
+                <li><strong>Storage duration:</strong> Depends on service terms</li>
+                <li><strong>File availability:</strong> Immediate after upload</li>
+                <li><strong>Backup policy:</strong> Check service provider documentation</li>
+                <li><strong>Geographic location:</strong> EU-based servers (OVH)</li>
+                <li><strong>Data residency:</strong> Files stored according to privacy policy</li>
+            </ul>
+
+            <h3>🔐 Privacy and Security</h3>
+            <ul>
+                <li><strong>Data collection:</strong> Minimal metadata collection</li>
+                <li><strong>Logging:</strong> Access logs for security purposes</li>
+                <li><strong>Third-party access:</strong> No unauthorized access</li>
+                <li><strong>Compliance:</strong> GDPR compliant</li>
+                <li><strong>Audit:</strong> Regular security audits</li>
+            </ul>
+
+            <h3>🔧 API and Integration</h3>
+            <div class="info-box">
+                <strong>Developer Information:</strong>
+                <ul>
+                    <li>RESTful API available for integration</li>
+                    <li>Webhook support for notifications</li>
+                    <li>SDK available for popular programming languages</li>
+                    <li>Embedded widget support</li>
+                    <li>Custom branding options</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer>
+            <p>
+                <strong>Secure File Share Documentation</strong><br>
+                For the latest updates and support, visit: 
+                <a href="https://secure.fileshare.ovh/file-sharing-embedded.html" target="_blank" style="color: #81C784;">
+                    secure.fileshare.ovh
+                </a>
+            </p>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                This documentation covers the comprehensive usage of the Secure File Share platform.<br>
+                Remember: Your security is our priority. Always use strong passwords and keep them secure.
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
