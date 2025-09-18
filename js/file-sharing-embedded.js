@@ -447,7 +447,7 @@ FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inR
 
 function extractAndSharePublicUrl(newManifest, dialogId) {
     const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
-    copyTextToClipboard(publicUr);
+    //copyTextToClipboard(publicUr);
     showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUr);
     removeBinary(newManifest.id, function () {
         console.debug(`Binary with id ${newManifest.id} was completely removed from DB`);
@@ -472,6 +472,10 @@ function closeInfoDialog() {
         CallableFuture.releaseWaiterIfExistsWithSuccess(FileSharing.actveInfoMsgId, "closed");
         FileSharing.actveInfoMsgId = null;
     }
+    if (FileSharing.activeInfoUrl) {
+        copyTextToClipboard(FileSharing.activeInfoUrl);
+        FileSharing.activeInfoUrl = null;
+    }
 }
 
 function showInfoDialog() {
@@ -484,6 +488,7 @@ closeInfoBtn.addEventListener('click', function () {
 
 function showInfoMsg(dialogId, msg, url = null) {
     FileSharing.actveInfoMsgId = dialogId;
+    FileSharing.activeInfoUrl = url;
     infoMsg.textContent = msg;
     const qrCodeContainer = document.getElementById('qrcode');
     if (url && qrCodeContainer) {
