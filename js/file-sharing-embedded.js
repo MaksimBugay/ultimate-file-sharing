@@ -6,6 +6,7 @@ const ProtectionType = Object.freeze({
 FileSharing = {}
 FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
+FileSharing.thumbnailWorkspaceId = "thumbnail";
 
 const protectWithPasswordChoice = document.getElementById("protectWithPasswordChoice");
 const protectWithCaptchaChoice = document.getElementById("protectWithCaptchaChoice");
@@ -325,6 +326,25 @@ document.addEventListener('DOMContentLoaded', function () {
 //==================================File sharing implementation=========================================================
 FileSharing.saveFileInCloud = async function (file, readMeText, forHuman, password) {
     const binaryId = uuid.v4().toString();
+    //generate and save thumbnail here
+    const thumbnailBlob = await createImageThumbnail(
+        file,
+        300,
+        null,
+        'image/jpeg',
+        1
+    );
+    await FileSharing.saveBlobWithIdInCloud(
+        binaryId,
+        FileSharing.thumbnailWorkspaceId,
+        `thumbnail-${file.name}`,
+        file.type,
+        FileSharing.defaultReadMeText,
+        thumbnailBlob,
+        false,
+        null
+    );
+    console.log(`https://secure.fileshare.ovh/binary/thumbnail/57780494-654d-499a-b3d7-b078254a3377`);
     return await FileSharing.saveContentInCloud(
         binaryId,
         file.name, file.type, file.size, readMeText,
@@ -339,9 +359,22 @@ FileSharing.saveFileInCloud = async function (file, readMeText, forHuman, passwo
 }
 
 FileSharing.saveBlobInCloud = async function (name, type, readMeText, blob, forHuman, password) {
-    const binaryId = uuid.v4().toString();
-    return await FileSharing.saveContentInCloud(
+    return await FileSharing.saveBlobWithIdInCloud(
+        uuid.v4().toString(),
+        FileSharing.workSpaceId,
+        name,
+        type,
+        readMeText,
+        blob,
+        forHuman,
+        password
+    )
+}
+
+FileSharing.saveBlobWithIdInCloud = async function (binaryId, workSpaceId, name, type, readMeText, blob, forHuman, password) {
+    return await FileSharing.saveContentWithWorkSpaceIdInCloud(
         binaryId,
+        workSpaceId,
         name, type, blob.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
             const chunks = await blobToArrayBuffers(blob, MemoryBlock.MB);
@@ -381,6 +414,20 @@ FileSharing.saveBlobInCloud = async function (name, type, readMeText, blob, forH
 }
 
 FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inReadMeText, splitAndStoreProcessor, forHuman, password) {
+    return await FileSharing.saveContentWithWorkSpaceIdInCloud(
+        binaryId,
+        FileSharing.workSpaceId,
+        name,
+        type,
+        size,
+        inReadMeText,
+        splitAndStoreProcessor,
+        forHuman,
+        password
+    );
+}
+
+FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSpaceId, name, type, size, inReadMeText, splitAndStoreProcessor, forHuman, password) {
     let readMeText = inReadMeText ? inReadMeText : '';
     if (FileSharing.defaultReadMeText === inReadMeText) {
         readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
@@ -395,7 +442,7 @@ FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inR
         encryptionContract,
         true,
         forHuman,
-        FileSharing.workSpaceId
+        workSpaceId
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(
@@ -430,6 +477,9 @@ FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inR
             () => afterAllCleanup(manifest.id, true)
         );
         return false;
+    }
+    if (FileSharing.thumbnailWorkspaceId === workSpaceId) {
+        return true;
     }
     const dialogId = uuid.v4().toString();
     const dialogResult = await CallableFuture.callAsynchronously(
