@@ -41,10 +41,20 @@ FileSharing = {}
 FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileSharing.thumbnailWorkspaceId = "thumbnail";
+FileSharing.thumbnailNameSpace = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 FileSharing.thumbnailBackgroundImage = null;
 imageUrlToBlob("../images/text-background.png")
     .then(blob => FileSharing.thumbnailBackgroundImage = blob)
     .catch(err => console.error(err));
+
+function buildThumbnailName(binaryId) {
+    return `thumbnail-${binaryId}.png`;
+}
+
+function buildThumbnailId(binaryId) {
+    const thumbnailName = buildThumbnailName(binaryId);
+    return uuid.v5(thumbnailName, FileSharing.thumbnailNameSpace);
+}
 
 const protectWithPasswordChoice = document.getElementById("protectWithPasswordChoice");
 const protectWithCaptchaChoice = document.getElementById("protectWithCaptchaChoice");
@@ -369,7 +379,8 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
         readMeText = `name = ${file.name}; size = ${Math.round(file.size / MemoryBlock.MB)} Mb; content-type = ${file.type}`;
     }
     //generate and save thumbnail here
-    const thumbnailId = uuid.v4().toString();
+    const thumbnailName = buildThumbnailName(binaryId);
+    const thumbnailId = buildThumbnailId(binaryId);
     let thumbnailBlob;
     try {
         if (isImageFile(file)) {
@@ -403,7 +414,7 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
     await FileSharing.saveBlobWithIdInCloud(
         thumbnailId,
         FileSharing.thumbnailWorkspaceId,
-        `thumbnail-${thumbnailId}.png`,
+        thumbnailName,
         'image/png',
         FileSharing.defaultReadMeText,
         thumbnailBlob,
@@ -563,8 +574,9 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
 
 function extractAndSharePublicUrl(newManifest, dialogId) {
     const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
-    //copyTextToClipboard(publicUr);
-    showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUr);
+    const publicUrlWithThumbnail = `${publicUr}&tn=${buildThumbnailId(newManifest.id)}`;
+    //copyTextToClipboard(publicUrlWithThumbnail);
+    showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail);
     removeBinary(newManifest.id, function () {
         console.debug(`Binary with id ${newManifest.id} was completely removed from DB`);
     });
