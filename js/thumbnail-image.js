@@ -193,7 +193,7 @@ async function createImageThumbnailWithPreview(file, maxWidth, maxHeight, output
  */
 async function getImageMetadata(file) {
     return new Promise((resolve, reject) => {
-        if (!file || !file.type.startsWith('image/')) {
+        if (!isImageFile(file)) {
             reject(new Error('Invalid file: must be an image file'));
             return;
         }

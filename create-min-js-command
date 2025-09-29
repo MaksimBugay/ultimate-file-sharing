@@ -14,4 +14,4 @@ terser uuid.min.js common-utils.js callable-future.js security-utils.js pnotific
 
 
 --file sharing widget with obfuscation
-terser thumbnail-utils.js thumbnail-image.js thumbnail-video.js fp.min.js detect.min.js client.min.js uuid.min.js qrcode.min.js jsQR.js purify.min.js device-secret.js common-utils.js callable-future.js pnotifications.js pushca-binary-helper.js security-utils.js gateway-server.js binary-chunks-db.js consent-dialog.js file-sharing-commons.js file-sharing-embedded.js -o file.sharing.min.js -c "passes=3,drop_console=true,drop_debugger=true" -m "toplevel=true,keep_fnames=false,keep_classnames=false" --toplevel
+terser fp.min.js detect.min.js client.min.js uuid.min.js qrcode.min.js jsQR.js purify.min.js device-secret.js common-utils.js thumbnail-utils.js thumbnail-image.js thumbnail-video.js thumbnail-text.js callable-future.js pnotifications.js pushca-binary-helper.js security-utils.js gateway-server.js binary-chunks-db.js consent-dialog.js file-sharing-commons.js file-sharing-embedded.js -o file.sharing.min.js -c "passes=3,drop_console=true,drop_debugger=true" -m "toplevel=true,keep_fnames=false,keep_classnames=false" --toplevel

@@ -550,6 +550,7 @@ function getCountryFlagImage(langCode) {
         ? `<img src="${baseFlagUrl}/${countryCode}.svg" alt="${langCode}" class="flag">`
         : `<span class="flag">🏳️</span>`;
 }
+
 //======================================================================================================================
 
 //=================================prevent screen lock on mobile========================================================
@@ -649,6 +650,7 @@ function calculateVisibilityData(element) {
         viewportHeight: viewportHeight
     };
 }
+
 /**
  * Checks if an HTML element is fully visible within the viewport
  * Works across all browsers including mobile and tablets
@@ -698,6 +700,7 @@ function isElementFullyVisible(element, options) {
     // Standard visibility check
     return visibilityData.visibilityRatio >= threshold;
 }
+
 /**
  * Alternative implementation using Intersection Observer API for better performance
  * (Modern browsers only - falls back to the above function for older browsers)
@@ -718,7 +721,7 @@ function observeElementVisibility(element, callback, options) {
     if (!window.IntersectionObserver) {
         // Fallback for older browsers
         console.warn('IntersectionObserver not supported, using fallback method');
-        const checkVisibility = function() {
+        const checkVisibility = function () {
             const isVisible = isElementFullyVisible(element, options);
             callback(isVisible, element);
         };
@@ -728,13 +731,17 @@ function observeElementVisibility(element, callback, options) {
         checkVisibility(); // Initial check
 
         return {
-            disconnect: function() { clearInterval(intervalId); },
-            unobserve: function() { clearInterval(intervalId); }
+            disconnect: function () {
+                clearInterval(intervalId);
+            },
+            unobserve: function () {
+                clearInterval(intervalId);
+            }
         };
     }
 
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
+    const observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
             const isFullyVisible = entry.intersectionRatio >= (options.threshold || 1);
             callback(isFullyVisible, entry.target, entry);
         });
@@ -746,6 +753,7 @@ function observeElementVisibility(element, callback, options) {
     observer.observe(element);
     return observer;
 }
+
 /**
  * Simple one-shot check function - most commonly used
  *
@@ -760,6 +768,7 @@ function isFullyVisible(element) {
 
     return isElementFullyVisible(element);
 }
+
 /**
  * Check if element is partially visible (any part visible)
  *
@@ -772,8 +781,9 @@ function isPartiallyVisible(element) {
         element = document.querySelector(element);
     }
 
-    return isElementFullyVisible(element, { threshold: 0 });
+    return isElementFullyVisible(element, {threshold: 0});
 }
+
 /**
  * Get visibility percentage of an element
  *
@@ -795,6 +805,7 @@ function getVisibilityPercentage(element) {
 
     return visibilityData.visibilityPercentage;
 }
+
 /**
  * Get detailed visibility information about an element
  *
@@ -810,6 +821,7 @@ function getVisibilityInfo(element) {
     // Get visibility data using helper function
     return calculateVisibilityData(element);
 }
+
 // Example usage:
 /*
 // Basic usage
@@ -857,4 +869,23 @@ const observer = observeElementVisibility(myDiv, function(isVisible, element) {
 // Clean up observer when done
 // observer.disconnect();
 */
+//======================================================================================================================
+
+//==============================mime types==============================================================================
+function isImageContentType(contentType) {
+    return contentType && (contentType.startsWith('image'));
+}
+
+function isVideoContentType(contentType) {
+    return contentType && (contentType.startsWith('video'));
+}
+
+function isImageFile(file) {
+    return file && (file instanceof File) && isImageContentType(file.type);
+}
+
+function isVideoFile(file) {
+    return file && (file instanceof File) && isVideoContentType(file.type);
+}
+
 //======================================================================================================================

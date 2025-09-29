@@ -478,7 +478,7 @@ class VideoThumbnailGenerator {
 async function createVideoThumbnail(file, maxWidth, maxHeight, timeOffset = 1, outputFormat = 'image/jpeg', quality = 0.8) {
     // Direct implementation without external dependencies
     return new Promise((resolve, reject) => {
-        if (!file || !(file instanceof File) || !file.type.startsWith('video/')) {
+        if (!isVideoFile(file)) {
             reject(new Error('Invalid file: must be a video file'));
             return;
         }
