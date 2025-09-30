@@ -46,39 +46,58 @@
  * @returns {Promise<Blob>} Promise resolving to thumbnail blob
  */
 async function createImageThumbnail(file, maxWidth, maxHeight, outputFormat = 'image/jpeg', quality = 0.8) {
+    return await createImageThumbnailFromSource(
+        file,
+        file.type,
+        maxWidth,
+        maxHeight,
+        outputFormat,
+        quality
+    );
+}
+
+async function createImageThumbnailFromSource(source, type, maxWidth, maxHeight, outputFormat = 'image/jpeg', quality = 0.8) {
     // Direct implementation without external dependencies
     return new Promise((resolve, reject) => {
-        if (!file || !(file instanceof File) || !file.type.startsWith('image/')) {
-            reject(new Error('Invalid file: must be an image file'));
+        if (!isImageContentType(type)) {
+            reject(new Error('Invalid source: must be an image'));
             return;
         }
 
         // Allow null/undefined for one dimension - will be calculated from aspect ratio
-        if ((maxWidth !== null && maxWidth !== undefined && maxWidth <= 0) || 
+        if ((maxWidth !== null && maxWidth !== undefined && maxWidth <= 0) ||
             (maxHeight !== null && maxHeight !== undefined && maxHeight <= 0)) {
             reject(new Error('Provided dimensions must be positive numbers'));
             return;
         }
 
         // At least one dimension must be provided
-        if ((maxWidth === null || maxWidth === undefined) && 
+        if ((maxWidth === null || maxWidth === undefined) &&
             (maxHeight === null || maxHeight === undefined)) {
             reject(new Error('At least one dimension (width or height) must be provided'));
             return;
         }
 
         const img = new Image();
-        
-        img.onload = function() {
+
+        let imageUrl = null;
+
+        const cleanup = () => {
+            if (imageUrl) {
+                URL.revokeObjectURL(imageUrl);
+            }
+        };
+
+        img.onload = function () {
             try {
                 // Calculate dimensions based on provided constraints and aspect ratio
                 const originalWidth = img.width;
                 const originalHeight = img.height;
                 const aspectRatio = originalWidth / originalHeight;
-                
+
                 let newWidth, newHeight;
-                
-                if (maxWidth !== null && maxWidth !== undefined && 
+
+                if (maxWidth !== null && maxWidth !== undefined &&
                     maxHeight !== null && maxHeight !== undefined) {
                     // Both dimensions provided - fit within bounds maintaining aspect ratio
                     if (maxWidth / maxHeight > aspectRatio) {
@@ -101,7 +120,7 @@ async function createImageThumbnail(file, maxWidth, maxHeight, outputFormat = 'i
                 // Create canvas and draw resized image
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                
+
                 canvas.width = newWidth;
                 canvas.height = newHeight;
 
@@ -126,22 +145,18 @@ async function createImageThumbnail(file, maxWidth, maxHeight, outputFormat = 'i
                 );
             } catch (error) {
                 reject(new Error(`Failed to process image: ${error.message}`));
+            } finally {
+                cleanup();
             }
         };
 
-        img.onerror = function() {
+        img.onerror = function () {
+            cleanup();
             reject(new Error('Failed to load image'));
         };
 
-        // Load the image from file
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            img.src = e.target.result;
-        };
-        reader.onerror = function() {
-            reject(new Error('Failed to read file'));
-        };
-        reader.readAsDataURL(file);
+        imageUrl = URL.createObjectURL(source);
+        img.src = imageUrl;
     });
 }
 
@@ -168,10 +183,10 @@ async function createSquareImageThumbnail(file, size, outputFormat = 'image/jpeg
  */
 async function createImageThumbnailWithPreview(file, maxWidth, maxHeight, outputFormat = 'image/jpeg', quality = 0.8) {
     const blob = await createImageThumbnail(file, maxWidth, maxHeight, outputFormat, quality);
-    
+
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             resolve({
                 blob: blob,
                 dataUrl: e.target.result,
@@ -179,7 +194,7 @@ async function createImageThumbnailWithPreview(file, maxWidth, maxHeight, output
                 type: blob.type
             });
         };
-        reader.onerror = function() {
+        reader.onerror = function () {
             reject(new Error('Failed to create data URL from blob'));
         };
         reader.readAsDataURL(blob);
@@ -223,8 +238,8 @@ async function getImageMetadata(file) {
             reject(new Error('Failed to load image metadata'));
         };
 
-        img.addEventListener('load', handleLoad, { once: true });
-        img.addEventListener('error', handleError, { once: true });
+        img.addEventListener('load', handleLoad, {once: true});
+        img.addEventListener('error', handleError, {once: true});
 
         try {
             img.src = URL.createObjectURL(file);
@@ -249,7 +264,7 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         createImageThumbnail,
-        createSquareImageThumbnail, 
+        createSquareImageThumbnail,
         createImageThumbnailWithPreview,
         getImageMetadata
     };
@@ -257,25 +272,25 @@ if (typeof module !== 'undefined' && module.exports) {
 
 /**
  * Example usage:
- * 
+ *
  * // Class-based approach with configuration
  * const generator = new ImageThumbnailGenerator({
  *     timeout: 15000,
  *     enablePerformanceMonitoring: true
  * });
- * 
+ *
  * const result = await generator.createThumbnailWithDetails(file, {
  *     maxWidth: 300,
  *     maxHeight: 200,
  *     outputFormat: 'image/webp',
  *     quality: 0.9
  * });
- * 
+ *
  * // Functional approach - different dimension options
  * const blob1 = await createImageThumbnail(file, 200, 200, 'image/jpeg', 0.8); // Both dimensions
  * const blob2 = await createImageThumbnail(file, 200, null, 'image/jpeg', 0.8); // Width only, height calculated
  * const blob3 = await createImageThumbnail(file, null, 150, 'image/jpeg', 0.8); // Height only, width calculated
- * 
+ *
  * // Multiple sizes
  * const thumbnails = await generator.createMultipleThumbnails(file, [
  *     { width: 100, height: 100 },

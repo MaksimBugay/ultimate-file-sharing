@@ -372,28 +372,24 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 //==================================File sharing implementation=========================================================
-FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password) {
-    const binaryId = uuid.v4().toString();
-    let readMeText = inReadMeText ? inReadMeText : '';
-    if (FileSharing.defaultReadMeText === inReadMeText) {
-        readMeText = `name = ${file.name}; size = ${Math.round(file.size / MemoryBlock.MB)} Mb; content-type = ${file.type}`;
-    }
-    //generate and save thumbnail here
+FileSharing.buildAndSaveThumbnail = async function (binaryId, source, type, readMeText) {
     const thumbnailName = buildThumbnailName(binaryId);
     const thumbnailId = buildThumbnailId(binaryId);
     let thumbnailBlob;
     try {
-        if (isImageFile(file)) {
-            thumbnailBlob = await createImageThumbnail(
-                file,
+        if (isImageContentType(type)) {
+            thumbnailBlob = await createImageThumbnailFromSource(
+                source,
+                type,
                 300,
                 null,
                 'image/png',
                 0.8
             );
-        } else if (isVideoFile(file)) {
-            thumbnailBlob = await createVideoThumbnail(
-                file,
+        } else if (isVideoContentType(type)) {
+            thumbnailBlob = await createVideoThumbnailFromSource(
+                source,
+                type,
                 300,
                 null,
                 2,
@@ -422,6 +418,21 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
         null
     );
     //alert(`https://secure.fileshare.ovh/binary/${FileSharing.thumbnailWorkspaceId}/${thumbnailId}`);
+}
+
+FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password) {
+    const binaryId = uuid.v4().toString();
+    let readMeText = inReadMeText ? inReadMeText : '';
+    if (FileSharing.defaultReadMeText === inReadMeText) {
+        readMeText = `name = ${file.name}; size = ${Math.round(file.size / MemoryBlock.MB)} Mb; content-type = ${file.type}`;
+    }
+    //generate and save thumbnail here
+    await FileSharing.buildAndSaveThumbnail(
+        binaryId,
+        file,
+        file.type,
+        readMeText
+    );
     return await FileSharing.saveContentInCloud(
         binaryId,
         file.name, file.type, file.size, readMeText,

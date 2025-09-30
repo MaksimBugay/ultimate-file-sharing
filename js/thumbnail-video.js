@@ -476,10 +476,21 @@ class VideoThumbnailGenerator {
  * @returns {Promise<Blob>} Promise resolving to thumbnail blob
  */
 async function createVideoThumbnail(file, maxWidth, maxHeight, timeOffset = 1, outputFormat = 'image/jpeg', quality = 0.8) {
+    return await createVideoThumbnailFromSource(
+        file,
+        file.type,
+        maxWidth,
+        maxHeight,
+        timeOffset,
+        outputFormat,
+        quality
+    );
+}
+async function createVideoThumbnailFromSource(source, type, maxWidth, maxHeight, timeOffset = 1, outputFormat = 'image/jpeg', quality = 0.8) {
     // Direct implementation without external dependencies
     return new Promise((resolve, reject) => {
-        if (!isVideoFile(file)) {
-            reject(new Error('Invalid file: must be a video file'));
+        if (!isVideoContentType(type)) {
+            reject(new Error('Invalid source: must be a video'));
             return;
         }
 
@@ -604,7 +615,7 @@ async function createVideoThumbnail(file, maxWidth, maxHeight, timeOffset = 1, o
 
         // Load the video from file
         try {
-            videoUrl = URL.createObjectURL(file);
+            videoUrl = URL.createObjectURL(source);
             video.src = videoUrl;
             video.load();
         } catch (error) {
