@@ -446,9 +446,21 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
     );
 }
 
-FileSharing.saveBlobInCloud = async function (name, type, readMeText, blob, forHuman, password) {
+FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, forHuman, password) {
+    const binaryId = uuid.v4().toString();
+    let readMeText = inReadMeText ? inReadMeText : '';
+    if (FileSharing.defaultReadMeText === inReadMeText) {
+        readMeText = `name = ${name}; size = ${Math.round(blob.size / MemoryBlock.MB)} Mb; content-type = ${type}`;
+    }
+    //generate and save thumbnail here
+    await FileSharing.buildAndSaveThumbnail(
+        binaryId,
+        blob,
+        type,
+        readMeText
+    );
     return await FileSharing.saveBlobWithIdInCloud(
-        uuid.v4().toString(),
+        binaryId,
         FileSharing.workSpaceId,
         name,
         type,
