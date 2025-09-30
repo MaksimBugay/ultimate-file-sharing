@@ -597,7 +597,8 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
 
 function extractAndSharePublicUrl(newManifest, dialogId) {
     const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
-    const publicUrlWithThumbnail = `${publicUr}&tn=${buildThumbnailId(newManifest.id)}`;
+    const publicUrlWithThumbnail = `${publicUr}&tn=${buildThumbnailId(newManifest.id)}`
+        .replace("public-binary", "public-binary-ex");
     //copyTextToClipboard(publicUrlWithThumbnail);
     showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail);
     removeBinary(newManifest.id, function () {

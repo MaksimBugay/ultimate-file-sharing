@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure FileShare: Public content</title>
+    <link rel="stylesheet" href="css/protected-binary.css">
+    <link rel="stylesheet" href="css/dynamic-captcha.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Secure FileShare: public content">
+    <meta property="og:description" content="Shared content with public access">
+    <meta property="og:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
+    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Secure FileShare: public content">
+    <meta name="twitter:description" content="Shared content with public access">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
+</head>
+<body style="background-color: #006BFD;padding: 0;margin: 0;">
+<iframe src="html/header.html" width="100%" height="93px"
+        style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
+<div class="main-container">
+    <p id="errorMessage"
+       style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
+
+    <div id="contentContainer" style="padding: 3px;background-color: white;display: none;">
+        <img id="contentImage" class="media-content-container" src="images/how-to-medium.png"
+             alt="Open image in browser">
+        <embed id="pdfViewer" type="application/pdf" class="pdf-content-container"/>
+        <video id="contentVideoPlayer" controls width="600" class="media-content-container">
+            Your browser does not support the video tag.
+        </video>
+        <div id="contentTextContainer" class="media-content-container"
+             style="padding: 20px; background-color: transparent; display: none">
+            <div id="contentText"
+                 class="text-message-memo"
+                 aria-label="text message data"
+                 contenteditable="true"
+                 spellcheck="true"
+                 data-lexical-editor="true"
+                 role="textbox"
+                 style="font-size: 14px"
+            ></div>
+        </div>
+    </div>
+    <div id="contentPreviewContainer" class="login-container">
+        <div style="margin-top: 50px; transform: scale(1.0);">
+            <iframe id="captchaFrame" class="puzzle-captcha-iframe"></iframe>
+        </div>
+        <div id="previewBox" class="login-box">
+            <h2>Content details</h2>
+            <div class="input-group">
+                <label id="workspaceIdLabel" style="font-weight: bold;font-size: 14px">Workspace ID: </label>
+            </div>
+            <div class="input-group">
+                <label id="readMeLabel" style="font-weight: bold;font-size: 14px">Read me: </label>
+            </div>
+            <div class="input-group">
+                <div id="readMeTextMemo"
+                     class="read-me-text-memo"
+                     aria-label="provide information about content"
+                     contenteditable="false"
+                     spellcheck="true"
+                     data-lexical-editor="true"
+                     role="textbox"
+                ></div>
+            </div>
+            <div class="input-group">
+                <label id="ownerSignatureLabel"
+                       style="font-weight: bold;font-size: 14px; color: lightseagreen; display: none">Owner
+                    signature: </label>
+            </div>
+            <div class="input-group" style="margin-bottom: 5px">
+                <button id="downloadBtn">
+                    <span id="buttonText">Download</span>
+                </button>
+            </div>
+            <div id="progressBarContainer" style="display: none">
+                <progress id="downloadProgress" value="0" max="100" style="width: 100%"></progress>
+                <span id="progressPercentage">0%</span>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<!--<script src="js/fp.min.js"></script>
+<script src="js/common-utils.js"></script>
+<script src="js/callable-future.js?v=<?= time(); ?>"></script>
+<script src="js/uuid.min.js"></script>
+<script src="js/security-utils.js"></script>
+<script src="js/owner-signature.js?v=<?= time(); ?>"></script>
+<script src="js/pnotifications.js?v=<?= time(); ?>"></script>
+<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>-->
+<script src="js/pushca.min.js?v=<?= time(); ?>"></script>
+<script src="js/shared-binary.js?v=<?= time(); ?>"></script>
+<script src="js/public-binary.js?v=<?= time(); ?>"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-W6XK68E4CF');
+</script>
+</html>
