@@ -615,7 +615,7 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     return true;
 }
 
-function buildPublicUrl(manifest){
+function buildPublicUrl(manifest) {
     const publicUr = manifest.getPublicUrl(FileSharing.workSpaceId, true);
 
     removeBinary(manifest.id, function () {
@@ -625,6 +625,7 @@ function buildPublicUrl(manifest){
     return `${publicUr}&tn=${buildThumbnailId(manifest.id)}`
         .replace("public-binary", "public-binary-ex");
 }
+
 function extractAndSharePublicUrl(newManifest, dialogId) {
     const publicUrlWithThumbnail = buildPublicUrl(newManifest);
     //copyTextToClipboard(publicUrlWithThumbnail);
