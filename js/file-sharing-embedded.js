@@ -46,6 +46,17 @@ FileSharing.thumbnailBackgroundImage = null;
 imageUrlToBlob("../images/text-background.png")
     .then(blob => FileSharing.thumbnailBackgroundImage = blob)
     .catch(err => console.error(err));
+FileSharing.parentClient = null;
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('page-id')) {
+    const pageId = urlParams.get('page-id');
+    FileSharing.parentClient = new ClientFilter(
+        "SecureFileShare",
+        "file-sharing-embedded",
+        pageId,
+        "FILE-SHARING-CHROME-EXTENSION"
+    );
+}
 
 function buildThumbnailName(binaryId) {
     return `thumbnail-${binaryId}.png`;
@@ -580,6 +591,14 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     }
     if (name.startsWith('thumbnail')) {
         return true;
+    } else if (FileSharing.parentClient) {
+        await PushcaClient.sendMessageWithAcknowledge(
+            uuid.v4().toString(),
+            FileSharing.parentClient,
+            false,
+            buildPublicUrl(manifest)
+        );
+        window.close();
     }
     const dialogId = uuid.v4().toString();
     const dialogResult = await CallableFuture.callAsynchronously(
@@ -595,10 +614,13 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     return true;
 }
 
-function extractAndSharePublicUrl(newManifest, dialogId) {
-    const publicUr = newManifest.getPublicUrl(FileSharing.workSpaceId, true);
-    const publicUrlWithThumbnail = `${publicUr}&tn=${buildThumbnailId(newManifest.id)}`
+function buildPublicUrl(manifest){
+    const publicUr = manifest.getPublicUrl(FileSharing.workSpaceId, true);
+    return `${publicUr}&tn=${buildThumbnailId(manifest.id)}`
         .replace("public-binary", "public-binary-ex");
+}
+function extractAndSharePublicUrl(newManifest, dialogId) {
+    const publicUrlWithThumbnail = buildPublicUrl(newManifest);
     //copyTextToClipboard(publicUrlWithThumbnail);
     showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail);
     removeBinary(newManifest.id, function () {
