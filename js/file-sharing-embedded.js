@@ -598,6 +598,7 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
             false,
             buildPublicUrl(manifest)
         );
+        await delay(500);
         window.close();
     }
     const dialogId = uuid.v4().toString();
@@ -616,6 +617,11 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
 
 function buildPublicUrl(manifest){
     const publicUr = manifest.getPublicUrl(FileSharing.workSpaceId, true);
+
+    removeBinary(manifest.id, function () {
+        console.debug(`Binary with id ${manifest.id} was completely removed from DB`);
+    });
+
     return `${publicUr}&tn=${buildThumbnailId(manifest.id)}`
         .replace("public-binary", "public-binary-ex");
 }
@@ -623,9 +629,6 @@ function extractAndSharePublicUrl(newManifest, dialogId) {
     const publicUrlWithThumbnail = buildPublicUrl(newManifest);
     //copyTextToClipboard(publicUrlWithThumbnail);
     showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail);
-    removeBinary(newManifest.id, function () {
-        console.debug(`Binary with id ${newManifest.id} was completely removed from DB`);
-    });
 }
 
 //======================================================================================================================
