@@ -607,7 +607,7 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
             false,
             url
         );
-        await delay(200);
+        await delay(1000);
         window.close();
     }
     const dialogId = uuid.v4().toString();
