@@ -633,18 +633,18 @@ async function getFinalProtectedUrl(url) {
 }
 
 async function buildPublicUrl(manifest) {
-    const publicUr = manifest.getPublicUrl(FileSharing.workSpaceId, true);
+    const publicUrWithoutThumbnail = manifest.getPublicUrl(FileSharing.workSpaceId, true);
 
     removeBinary(manifest.id, function () {
         console.debug(`Binary with id ${manifest.id} was completely removed from DB`);
     });
 
+    const publicUrl = `${publicUrWithoutThumbnail}&tn=${buildThumbnailId(manifest.id)}`;
     if (manifest.password) {
-        return await getFinalProtectedUrl(publicUr);
+        return await getFinalProtectedUrl(publicUrl);
     }
 
-    return `${publicUr}&tn=${buildThumbnailId(manifest.id)}`
-        .replace("public-binary", "public-binary-ex");
+    return publicUrl.replace("public-binary", "public-binary-ex");
 }
 
 async function extractAndSharePublicUrl(newManifest, dialogId) {
