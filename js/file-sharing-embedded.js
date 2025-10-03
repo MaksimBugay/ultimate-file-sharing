@@ -599,29 +599,33 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     }
     if (name.startsWith('thumbnail')) {
         return true;
-    } else if (FileSharing.parentClient) {
-        const url = await buildPublicUrl(manifest);
+    }
+    const urlWithThumbnail = await buildPublicUrl(manifest);
+    if (FileSharing.parentClient) {
         await PushcaClient.sendMessageWithAcknowledge(
             uuid.v4().toString(),
             FileSharing.parentClient,
             false,
-            url
+            urlWithThumbnail
         );
-        await delay(1000);
-        window.close();
-    }
-    const dialogId = uuid.v4().toString();
-    const dialogResult = await CallableFuture.callAsynchronously(
-        300_000,
-        dialogId,
-        () => {
-            extractAndSharePublicUrl(manifest, dialogId);
+        delay(100).then(() => {
+            window.close();
+        });
+        return true;
+    } else {
+        const dialogId = uuid.v4().toString();
+        const dialogResult = await CallableFuture.callAsynchronously(
+            300_000,
+            dialogId,
+            () => {
+                sharePublicUrlViaInfoMessage(urlWithThumbnail, dialogId);
+            }
+        );
+        if (WaiterResponseType.SUCCESS !== dialogResult.type) {
+            console.warn("Failed attempt to register close modal window event");
         }
-    );
-    if (WaiterResponseType.SUCCESS !== dialogResult.type) {
-        console.warn("Failed attempt to register close modal window event");
+        return true;
     }
-    return true;
 }
 
 async function getFinalProtectedUrl(url) {
@@ -633,12 +637,26 @@ async function getFinalProtectedUrl(url) {
     return response.url;
 }
 
-async function buildPublicUrl(manifest) {
-    const publicUrWithoutThumbnail = manifest.getPublicUrl(FileSharing.workSpaceId, true);
+async function removeLocalBinary(manifest) {
+    const result = await CallableFuture.callAsynchronously(
+        1000, null, function (waiterId) {
+            removeBinary(manifest.id, function () {
+                console.debug(`Binary with id ${manifest.id} was completely removed from DB`);
+                CallableFuture.releaseWaiterIfExistsWithSuccess(waiterId, manifest.id);
+            });
+        });
+    if (WaiterResponseType.SUCCESS === result.type) {
+        return true;
+    } else {
+        console.warn(`Failed attempt to remove local binary with id ${manifest.id}`);
+        return false;
+    }
+}
 
-    removeBinary(manifest.id, function () {
-        console.debug(`Binary with id ${manifest.id} was completely removed from DB`);
-    });
+async function buildPublicUrl(manifest) {
+    await removeLocalBinary(manifest);
+
+    const publicUrWithoutThumbnail = manifest.getPublicUrl(FileSharing.workSpaceId, true);
 
     const publicUrl = `${publicUrWithoutThumbnail}&tn=${buildThumbnailId(manifest.id)}`;
     if (manifest.password) {
@@ -648,8 +666,7 @@ async function buildPublicUrl(manifest) {
     return publicUrl.replace("public-binary", "public-binary-ex");
 }
 
-async function extractAndSharePublicUrl(newManifest, dialogId) {
-    const publicUrlWithThumbnail = await buildPublicUrl(newManifest);
+async function sharePublicUrlViaInfoMessage(publicUrlWithThumbnail, dialogId) {
     //copyTextToClipboard(publicUrlWithThumbnail);
     showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail);
 }
