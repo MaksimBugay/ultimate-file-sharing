@@ -219,9 +219,10 @@ dropZone.addEventListener('drop', async function (event) {
 
 //=================================Copy/Paste area======================================================================
 
-function passwordInputIsActive(){
+function passwordInputIsActive() {
     return document.activeElement.id === passwordInput.id;
 }
+
 function initEventsForCopyPasteArea() {
     if (document.getElementById('selectFilesSubContainer')) {
         document.getElementById('selectFilesSubContainer').addEventListener(
@@ -603,9 +604,9 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
             uuid.v4().toString(),
             FileSharing.parentClient,
             false,
-            buildPublicUrl(manifest)
+            await buildPublicUrl(manifest)
         );
-        await delay(500);
+        await delay(200);
         window.close();
     }
     const dialogId = uuid.v4().toString();
@@ -622,19 +623,32 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     return true;
 }
 
-function buildPublicUrl(manifest) {
+async function getFinalProtectedUrl(url) {
+    const response = await fetch(url, {
+        method: "GET",
+        redirect: "follow" // default, but explicit here
+    });
+
+    return response.url;
+}
+
+async function buildPublicUrl(manifest) {
     const publicUr = manifest.getPublicUrl(FileSharing.workSpaceId, true);
 
     removeBinary(manifest.id, function () {
         console.debug(`Binary with id ${manifest.id} was completely removed from DB`);
     });
 
+    if (manifest.password) {
+        return await getFinalProtectedUrl(publicUr);
+    }
+
     return `${publicUr}&tn=${buildThumbnailId(manifest.id)}`
         .replace("public-binary", "public-binary-ex");
 }
 
-function extractAndSharePublicUrl(newManifest, dialogId) {
-    const publicUrlWithThumbnail = buildPublicUrl(newManifest);
+async function extractAndSharePublicUrl(newManifest, dialogId) {
+    const publicUrlWithThumbnail = await buildPublicUrl(newManifest);
     //copyTextToClipboard(publicUrlWithThumbnail);
     showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail);
 }
