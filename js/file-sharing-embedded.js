@@ -600,11 +600,12 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     if (name.startsWith('thumbnail')) {
         return true;
     } else if (FileSharing.parentClient) {
+        const url = await buildPublicUrl(manifest);
         await PushcaClient.sendMessageWithAcknowledge(
             uuid.v4().toString(),
             FileSharing.parentClient,
             false,
-            await buildPublicUrl(manifest)
+            url
         );
         await delay(200);
         window.close();
