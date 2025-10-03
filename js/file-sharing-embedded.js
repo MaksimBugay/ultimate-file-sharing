@@ -218,10 +218,17 @@ dropZone.addEventListener('drop', async function (event) {
 //======================================================================================================================
 
 //=================================Copy/Paste area======================================================================
+
+function passwordInputIsActive(){
+    return document.activeElement.id === passwordInput.id;
+}
 function initEventsForCopyPasteArea() {
     if (document.getElementById('selectFilesSubContainer')) {
         document.getElementById('selectFilesSubContainer').addEventListener(
             'mousemove', function () {
+                if (passwordInputIsActive()) {
+                    return;
+                }
                 if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
                     return;
                 }
@@ -338,7 +345,7 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
     if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
         return;
     }
-    if (event.target.id === "passwordInput") {
+    if (passwordInputIsActive()) {
         return;
     }
     if (toolBarPasteArea) {
