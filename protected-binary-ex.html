@@ -2,26 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="canonical" href="https://secure.fileshare.ovh/protected-binary.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Secure FileShare: Public content</title>
+    <title>Secure FileShare: Protected content</title>
     <link rel="stylesheet" href="css/protected-binary.css">
-    <link rel="stylesheet" href="css/dynamic-captcha.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
 
     <!-- Open Graph meta tags -->
     <meta property="og:title" content="Secure FileShare">
-    <meta property="og:description" content="public content">
+    <meta property="og:description" content="protected content">
     <meta property="og:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
-    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary-ex.html?w=<!--# echo var='arg_w' -->&id=<!--# echo var='arg_id' -->&tn=<!--# echo var='arg_tn' -->">
+    <meta property="og:url" content="https://secure.fileshare.ovh/protected-binary-ex.html?suffix=<!--# echo var='arg_suffix' -->&workspace=<!--# echo var='arg_workspace' -->&tn=<!--# echo var='arg_tn' -->">
     <meta property="og:type" content="website">
-    <meta property="fb:app_id" content="61569366542948">
 
     <!-- Twitter Card meta tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Secure FileShare">
-    <meta name="twitter:description" content="public content">
+    <meta name="twitter:description" content="protected content">
     <meta name="twitter:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
@@ -34,12 +33,11 @@
     <div id="contentContainer" style="padding: 3px;background-color: white;display: none;">
         <img id="contentImage" class="media-content-container" src="images/how-to-medium.png"
              alt="Open image in browser">
-        <embed id="pdfViewer" type="application/pdf" class="pdf-content-container"/>
+        <embed id="pdfViewer" type="application/pdf" class="pdf-content-container" width="100%" height="100%" />
         <video id="contentVideoPlayer" controls width="600" class="media-content-container">
             Your browser does not support the video tag.
         </video>
-        <div id="contentTextContainer" class="media-content-container"
-             style="padding: 20px; background-color: transparent; display: none">
+        <div id="contentTextContainer" class="media-content-container" style="padding: 20px; background-color: transparent; display: none">
             <div id="contentText"
                  class="text-message-memo"
                  aria-label="text message data"
@@ -51,18 +49,9 @@
             ></div>
         </div>
     </div>
-    <div id="contentPreviewContainer" class="login-container">
-        <div style="margin-top: 50px; transform: scale(1.0);">
-            <iframe id="captchaFrame" class="puzzle-captcha-iframe"></iframe>
-        </div>
-        <div id="previewBox" class="login-box">
-            <h2>Content details</h2>
-            <div class="input-group">
-                <label id="workspaceIdLabel" style="font-weight: bold;font-size: 14px">Workspace ID: </label>
-            </div>
-            <div class="input-group">
-                <label id="readMeLabel" style="font-weight: bold;font-size: 14px">Read me: </label>
-            </div>
+    <div class="login-container">
+        <div id="loginBox" class="login-box">
+            <h2>Credentials</h2>
             <div class="input-group">
                 <div id="readMeTextMemo"
                      class="read-me-text-memo"
@@ -74,9 +63,28 @@
                 ></div>
             </div>
             <div class="input-group">
-                <label id="ownerSignatureLabel"
-                       style="font-weight: bold;font-size: 14px; color: lightseagreen; display: none">Owner
+                <label id="ownerSignatureLabel" style="font-weight: bold;font-size: 14px; color: lightseagreen">Owner
                     signature: </label>
+            </div>
+            <div class="input-group">
+                <label for="workSpaceId" style="font-weight: bold;font-size: 14px">Workspace ID </label>
+                <input type="text" id="workSpaceId" name="workspace-id" required>
+            </div>
+            <div class="input-group">
+                <label for="password" style="font-weight: bold;font-size: 14px">Password</label>
+                <div class="password-container">
+                    <input type="password" id="password" name="password" required>
+                    <button type="button" id="togglePassword" class="toggle-password"></button>
+                </div>
+            </div>
+            <div class="input-group">
+                <input type="checkbox" id="reuseCredentialsCheckbox"/>
+                Use for all content from that owner
+            </div>
+            <input type="checkbox" id="openInBrowserCheckbox" checked style="display: none"/>
+            <div id="pastCredentialsContainer" class="memo-container">
+            <textarea id="pastCredentials" rows="2" cols="30"
+                      placeholder="Past string with credentials received from owner here or enter workspace ID and password manually"></textarea>
             </div>
             <div class="input-group" style="margin-bottom: 5px">
                 <button id="downloadBtn">
@@ -91,17 +99,18 @@
     </div>
 </div>
 </body>
-<!--<script src="js/fp.min.js"></script>
+<script src="js/fp.min.js"></script>
 <script src="js/common-utils.js"></script>
 <script src="js/callable-future.js?v=<?= time(); ?>"></script>
 <script src="js/uuid.min.js"></script>
 <script src="js/security-utils.js"></script>
 <script src="js/owner-signature.js?v=<?= time(); ?>"></script>
+<script src="js/credentials-db.js?v=<?= time(); ?>"></script>
 <script src="js/pnotifications.js?v=<?= time(); ?>"></script>
-<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>-->
-<script src="js/pushca.min.js?v=<?= time(); ?>"></script>
+<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
 <script src="js/shared-binary.js?v=<?= time(); ?>"></script>
-<script src="js/public-binary.js?v=<?= time(); ?>"></script>
+<script src="js/protected-binary-commons.js?v=<?= time(); ?>"></script>
+<script src="js/protected-binary-ws.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];
