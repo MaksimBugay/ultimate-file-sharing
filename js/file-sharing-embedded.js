@@ -629,7 +629,7 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
 }
 
 async function getFinalProtectedUrl(url) {
-    await delay(500);
+    await delay(1000);
     const response = await fetch(url, {
         method: "GET",
         redirect: "follow" // default, but explicit here
