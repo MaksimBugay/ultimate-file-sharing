@@ -602,33 +602,34 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     }
     const urlWithThumbnail = await buildPublicUrl(manifest);
     if (FileSharing.parentClient) {
-        await PushcaClient.sendMessageWithAcknowledge(
+        PushcaClient.sendMessageWithAcknowledge(
             uuid.v4().toString(),
             FileSharing.parentClient,
             false,
             urlWithThumbnail
         );
+    }
+    const dialogId = uuid.v4().toString();
+    const dialogResult = await CallableFuture.callAsynchronously(
+        300_000,
+        dialogId,
+        () => {
+            sharePublicUrlViaInfoMessage(urlWithThumbnail, dialogId);
+        }
+    );
+    if (WaiterResponseType.SUCCESS !== dialogResult.type) {
+        console.warn("Failed attempt to register close modal window event");
+    }
+    if (FileSharing.parentClient) {
         delay(100).then(() => {
             window.close();
         });
-        return true;
-    } else {
-        const dialogId = uuid.v4().toString();
-        const dialogResult = await CallableFuture.callAsynchronously(
-            300_000,
-            dialogId,
-            () => {
-                sharePublicUrlViaInfoMessage(urlWithThumbnail, dialogId);
-            }
-        );
-        if (WaiterResponseType.SUCCESS !== dialogResult.type) {
-            console.warn("Failed attempt to register close modal window event");
-        }
-        return true;
     }
+    return true;
 }
 
 async function getFinalProtectedUrl(url) {
+    await delay(500);
     const response = await fetch(url, {
         method: "GET",
         redirect: "follow" // default, but explicit here
