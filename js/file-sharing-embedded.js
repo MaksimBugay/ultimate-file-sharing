@@ -223,11 +223,15 @@ function passwordInputIsActive() {
     return document.activeElement.id === passwordInput.id;
 }
 
+function readMeMemoIsActive(){
+    return document.activeElement.id === readMeTextMemo.id;
+}
+
 function initEventsForCopyPasteArea() {
     if (document.getElementById('selectFilesSubContainer')) {
         document.getElementById('selectFilesSubContainer').addEventListener(
             'mousemove', function () {
-                if (passwordInputIsActive()) {
+                if (passwordInputIsActive() || readMeMemoIsActive()) {
                     return;
                 }
                 if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
@@ -346,7 +350,7 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
     if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
         return;
     }
-    if (passwordInputIsActive()) {
+    if (passwordInputIsActive() || readMeMemoIsActive()) {
         return;
     }
     if (toolBarPasteArea) {
