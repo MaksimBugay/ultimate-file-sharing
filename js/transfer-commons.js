@@ -529,7 +529,7 @@ async function readFileSequentiallyBase(file, chunkHandler, errorMsg, properties
                 pipeWasBroken = true;
                 console.log('Failed file chunk transfer attempt.');
                 showErrorMsg(
-                    errorMsg,
+                    `${errorMsg} [read file issue]`,
                     function () {
                         progressBarWidget.reset();
                         afterTransferDoneHandler();
