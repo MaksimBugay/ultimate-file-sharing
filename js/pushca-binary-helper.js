@@ -101,7 +101,7 @@ class BinaryManifest {
             downloadUrl = `${serverUrl}/binary/${this.getPrivateUrlShortSuffix()}${workspaceIdSuffix}`;
         } else {
             //downloadUrl = `${serverUrl}/binary/${workSpaceId}/${this.id}`;
-            downloadUrl = `${serverUrl}/public-binary.html?w=${workSpaceId}&id=${this.id}`;
+            downloadUrl = `${serverUrl}/public-binary-ex.html?w=${workSpaceId}&id=${this.id}&tn=${buildThumbnailId(this.id)}`;
             if (this.forHuman){
                 downloadUrl = `${downloadUrl}&human-only=true`;
             }

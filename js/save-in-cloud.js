@@ -1,5 +1,18 @@
 SaveInCloudHelper = {}
 SaveInCloudHelper.blockSize = MemoryBlock.MB;
+SaveInCloudHelper.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspaceId, thumbnailName, type, thumbnailBlob) {
+    await SaveInCloudHelper.cacheBlobWithIdAndWorkspaceInCloud(
+        thumbnailId,
+        thumbnailWorkspaceId,
+        thumbnailName,
+        type,
+        Fileshare.defaultReadMeText,
+        thumbnailBlob,
+        true,
+        false,
+        null
+    )
+}
 
 async function cacheBinaryManifestInCloud(binaryManifest) {
     const manifestObject = await manifestToJsonObjectWithProtectedAttributes(binaryManifest);
@@ -15,9 +28,32 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
 }
 
 SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blob, storeInCloud, forHuman, password) {
-    //TODO create thumbnail here
+    const binaryId = uuid.v4().toString();
+    //create thumbnail
+    await ThumbnailGenerator.buildAndSaveThumbnail(
+        binaryId,
+        blob,
+        name,
+        type,
+        readMeText,
+        SaveInCloudHelper.saveInCloudProcessor
+    );
+    return await SaveInCloudHelper.cacheBlobWithIdAndWorkspaceInCloud(
+        binaryId,
+        Fileshare.workSpaceId,
+        name,
+        type,
+        readMeText,
+        blob,
+        storeInCloud,
+        forHuman,
+        password
+    );
+}
+
+SaveInCloudHelper.cacheBlobWithIdAndWorkspaceInCloud = async function (binaryId, workSpaceId, name, type, readMeText, blob, storeInCloud, forHuman, password) {
     return await SaveInCloudHelper.cacheContentInCloud(
-        name, type, blob.size, readMeText,
+        binaryId, workSpaceId, name, type, blob.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
             const chunks = await blobToArrayBuffers(blob, MemoryBlock.MB);
             let pipeWasBroken = false;
@@ -57,9 +93,18 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blo
 }
 
 SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCloud, forHuman, password) {
-    //TODO create thumbnail here
+    const binaryId = uuid.v4().toString();
+    //create thumbnail
+    await ThumbnailGenerator.buildAndSaveThumbnail(
+        binaryId,
+        file,
+        file.name,
+        file.type,
+        readMeText,
+        SaveInCloudHelper.saveInCloudProcessor
+    );
     return await SaveInCloudHelper.cacheContentInCloud(
-        file.name, file.type, file.size, readMeText,
+        binaryId, Fileshare.workSpaceId, file.name, file.type, file.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
             return await readFileSequentially(file, async function (inOrder, arrayBuffer) {
                 return await processBinaryChunk(manifest, inOrder, arrayBuffer, storeInCloud, encryptionContract);
@@ -70,12 +115,11 @@ SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCl
         password
     );
 }
-SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, inReadMeText, splitAndStoreProcessor, storeInCloud, forHuman, password) {
+SaveInCloudHelper.cacheContentInCloud = async function (binaryId, workspaceId, name, type, size, inReadMeText, splitAndStoreProcessor, storeInCloud, forHuman, password) {
     let readMeText = inReadMeText ? inReadMeText/*.substring(0, 1500)*/ : '';
-    if (Fileshare.defaultReadMeText === inReadMeText){
+    if (Fileshare.defaultReadMeText === inReadMeText) {
         readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
     }
-    const binaryId = uuid.v4().toString();
     const encryptionContract = password ? await generateEncryptionContract() : null;
     const createManifestResult = await createBinaryManifest(
         binaryId,
@@ -85,7 +129,8 @@ SaveInCloudHelper.cacheContentInCloud = async function (name, type, size, inRead
         password,
         encryptionContract,
         storeInCloud,
-        forHuman
+        forHuman,
+        workspaceId
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${name}`, null);

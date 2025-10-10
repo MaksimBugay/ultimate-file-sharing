@@ -582,7 +582,10 @@ async function buildPublicUrl(manifest) {
 
     const publicUrWithoutThumbnail = manifest.getPublicUrl(FileSharing.workSpaceId, true);
 
-    const publicUrl = `${publicUrWithoutThumbnail}&tn=${buildThumbnailId(manifest.id)}`;
+    let publicUrl = publicUrWithoutThumbnail;
+    if (!publicUrWithoutThumbnail.includes('tn=')) {
+        publicUrl = `${publicUrWithoutThumbnail}&tn=${buildThumbnailId(manifest.id)}`;
+    }
     if (manifest.password) {
         return await getFinalProtectedUrl(publicUrl);
     }
