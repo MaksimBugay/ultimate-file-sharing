@@ -186,17 +186,26 @@ async function processBinaryChunk(manifest, inOrder, inArrayBuffer, storeInCloud
         manifest.appendDatagram(datagram);
     } else {
         console.log(`Cannot append binary chunk: name ${manifest.name}, order ${order}`);
+        if (isMobile()) {
+            alert("1. ${result.body}");
+        }
         return false;
     }
     if (storeInCloud) {
         result = await PushcaClient.cacheBinaryChunkInCloud(manifest.id, order, arrayBuffer);
         if (WaiterResponseType.ERROR === result.type) {
+            if (isMobile()) {
+                alert("2. ${result.body}");
+            }
             return false;
         }
     } else {
         const blob = new Blob([arrayBuffer], {type: manifest.type});
         result = await saveBinaryChunkToDatabase(manifest.id, order, blob);
         if (WaiterResponseType.ERROR === result.type) {
+            if (isMobile()) {
+                alert(`3. ${result.body}`);
+            }
             return false;
         }
     }
