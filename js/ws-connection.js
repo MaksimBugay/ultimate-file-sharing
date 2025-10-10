@@ -1146,15 +1146,17 @@ function addManifestToManagerGrid(newManifest) {
     FileManager.gridApi.applyTransaction({
         add: [newManifest]
     });
-    updateTotalSize()
-    delay(1000).then(() => {
-        const publicUr = newManifest.getPublicUrl(Fileshare.workSpaceId, isWorkspaceIdExposed());
-        const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
-        const rowNode = FileManager.gridApi.getRowNode(rowIndex);
-        rowNode.setSelected(true, true);
-        copyTextToClipboard(publicUr);
-        showInfoMsg(`Public url was copied to clipboard`, publicUr, newManifest.name);
-    });
+    updateTotalSize();
+    if (!newManifest.name.startsWith('thumbnail')) {
+        delay(1000).then(() => {
+            const publicUr = newManifest.getPublicUrl(Fileshare.workSpaceId, isWorkspaceIdExposed());
+            const rowIndex = FileManager.manifests.findIndex(manifest => manifest.id === newManifest.id);
+            const rowNode = FileManager.gridApi.getRowNode(rowIndex);
+            rowNode.setSelected(true, true);
+            copyTextToClipboard(publicUr);
+            showInfoMsg(`Public url was copied to clipboard`, publicUr, newManifest.name);
+        });
+    }
 }
 
 async function showNativeShareDialog(vText, vUrl) {
