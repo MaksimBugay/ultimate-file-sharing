@@ -3,50 +3,22 @@ const ProtectionType = Object.freeze({
     CAPTCHA: 'pCaptcha'
 });
 
-async function imageUrlToBlob(url) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous"; // allow cross-origin if CORS headers are set
-        img.style.display = "none"; // hide the element
-        document.body.appendChild(img);
-
-        img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-
-            canvas.toBlob((blob) => {
-                document.body.removeChild(img); // clean up
-                if (blob) {
-                    resolve(blob);
-                } else {
-                    reject(new Error("Failed to create Blob"));
-                }
-            }, "image/png"); // or "image/jpeg"
-        };
-
-        img.onerror = () => {
-            document.body.removeChild(img);
-            reject(new Error("Failed to load image"));
-        };
-
-        img.src = url;
-    });
-}
-
 FileSharing = {}
 FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
-FileSharing.thumbnailWorkspaceId = "thumbnail";
-FileSharing.thumbnailNameSpace = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
-FileSharing.thumbnailBackgroundImage = null;
-imageUrlToBlob("../images/text-background.png")
-    .then(blob => FileSharing.thumbnailBackgroundImage = blob)
-    .catch(err => console.error(err));
 FileSharing.parentClient = null;
+FileSharing.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspaceId, thumbnailName, type, thumbnailBlob) {
+    await FileSharing.saveBlobWithIdInCloud(
+        thumbnailId,
+        thumbnailWorkspaceId,
+        thumbnailName,
+        type,
+        FileSharing.defaultReadMeText,
+        thumbnailBlob,
+        false,
+        null
+    )
+}
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('page-id')) {
     const pageId = urlParams.get('page-id');
@@ -56,15 +28,6 @@ if (urlParams.get('page-id')) {
         pageId,
         "FILE-SHARING-CHROME-EXTENSION"
     );
-}
-
-function buildThumbnailName(binaryId) {
-    return `thumbnail-${binaryId}.png`;
-}
-
-function buildThumbnailId(binaryId) {
-    const thumbnailName = buildThumbnailName(binaryId);
-    return uuid.v5(thumbnailName, FileSharing.thumbnailNameSpace);
 }
 
 const protectWithPasswordChoice = document.getElementById("protectWithPasswordChoice");
@@ -223,7 +186,7 @@ function passwordInputIsActive() {
     return document.activeElement.id === passwordInput.id;
 }
 
-function readMeMemoIsActive(){
+function readMeMemoIsActive() {
     return document.activeElement.id === readMeTextMemo.id;
 }
 
@@ -395,54 +358,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 //==================================File sharing implementation=========================================================
-FileSharing.buildAndSaveThumbnail = async function (binaryId, source, type, readMeText) {
-    const thumbnailName = buildThumbnailName(binaryId);
-    const thumbnailId = buildThumbnailId(binaryId);
-    let thumbnailBlob;
-    try {
-        if (isImageContentType(type)) {
-            thumbnailBlob = await createImageThumbnailFromSource(
-                source,
-                type,
-                300,
-                null,
-                'image/png',
-                0.8
-            );
-        } else if (isVideoContentType(type)) {
-            thumbnailBlob = await createVideoThumbnailFromSource(
-                source,
-                type,
-                300,
-                null,
-                2,
-                'image/png',
-                0.8
-            );
-        }
-    } catch (err) {
-        console.error(`Cannot create thumbnail for file ${file.name}: ${err.message}`);
-        //alert(`Cannot create thumbnail for file ${file.name}: ${err.message}`);
-    }
-    if (!thumbnailBlob) {
-        thumbnailBlob = await createDefaultTextThumbnail(
-            readMeText,
-            FileSharing.thumbnailBackgroundImage
-        );
-    }
-    await FileSharing.saveBlobWithIdInCloud(
-        thumbnailId,
-        FileSharing.thumbnailWorkspaceId,
-        thumbnailName,
-        'image/png',
-        FileSharing.defaultReadMeText,
-        thumbnailBlob,
-        false,
-        null
-    );
-    //alert(`https://secure.fileshare.ovh/binary/${FileSharing.thumbnailWorkspaceId}/${thumbnailId}`);
-}
-
 FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password) {
     const binaryId = uuid.v4().toString();
     let readMeText = inReadMeText ? inReadMeText : '';
@@ -450,11 +365,13 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
         readMeText = `name = ${file.name}; size = ${Math.round(file.size / MemoryBlock.MB)} Mb; content-type = ${file.type}`;
     }
     //generate and save thumbnail here
-    await FileSharing.buildAndSaveThumbnail(
+    await ThumbnailGenerator.buildAndSaveThumbnail(
         binaryId,
         file,
+        file.name,
         file.type,
-        readMeText
+        readMeText,
+        FileSharing.saveInCloudProcessor
     );
     return await FileSharing.saveContentInCloud(
         binaryId,
@@ -476,11 +393,13 @@ FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, fo
         readMeText = `name = ${name}; size = ${Math.round(blob.size / MemoryBlock.MB)} Mb; content-type = ${type}`;
     }
     //generate and save thumbnail here
-    await FileSharing.buildAndSaveThumbnail(
+    await ThumbnailGenerator.buildAndSaveThumbnail(
         binaryId,
         blob,
+        name,
         type,
-        readMeText
+        readMeText,
+        FileSharing.saveInCloudProcessor
     );
     return await FileSharing.saveBlobWithIdInCloud(
         binaryId,

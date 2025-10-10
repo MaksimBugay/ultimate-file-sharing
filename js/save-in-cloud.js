@@ -15,6 +15,7 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
 }
 
 SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blob, storeInCloud, forHuman, password) {
+    //TODO create thumbnail here
     return await SaveInCloudHelper.cacheContentInCloud(
         name, type, blob.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
@@ -56,6 +57,7 @@ SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blo
 }
 
 SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCloud, forHuman, password) {
+    //TODO create thumbnail here
     return await SaveInCloudHelper.cacheContentInCloud(
         file.name, file.type, file.size, readMeText,
         async function (manifest, storeInCloud, encryptionContract) {
