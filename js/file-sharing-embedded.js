@@ -590,7 +590,7 @@ async function buildPublicUrl(manifest) {
         return await getFinalProtectedUrl(publicUrl);
     }
 
-    return publicUrl.replace("public-binary", "public-binary-ex");
+    return publicUrl.replace("public-binary.html", "public-binary-ex.html");
 }
 
 async function sharePublicUrlViaInfoMessage(publicUrlWithThumbnail, dialogId) {
