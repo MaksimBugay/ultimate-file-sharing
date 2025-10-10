@@ -92,14 +92,15 @@ ThumbnailGenerator.buildAndSaveThumbnail = async function (
             ThumbnailGenerator.thumbnailBackgroundImage
         );
     }
-    if (typeof saveInCloudProcessor === 'function')
-    await saveInCloudProcessor(
-        thumbnailId,
-        ThumbnailGenerator.thumbnailWorkspaceId,
-        thumbnailName,
-        'image/png',
-        thumbnailBlob
-    );
+    if (typeof saveInCloudProcessor === 'function') {
+        await saveInCloudProcessor(
+            thumbnailId,
+            ThumbnailGenerator.thumbnailWorkspaceId,
+            thumbnailName,
+            'image/png',
+            thumbnailBlob
+        );
+    }
     //alert(`https://secure.fileshare.ovh/binary/${ThumbnailGenerator.thumbnailWorkspaceId}/${thumbnailId}`);
 }
 

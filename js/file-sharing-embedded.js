@@ -505,7 +505,7 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     const processFileResult = await splitAndStoreProcessor(manifest, true, encryptionContract);
 
     if (!processFileResult) {
-        afterAllCleanup(binaryId, true);
+        await afterAllCleanup(binaryId, true);
         return false;
     }
     const cacheInCloudResult = await cacheBinaryManifestInCloud(manifest);

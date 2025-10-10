@@ -1324,7 +1324,7 @@ PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuf
         }, true
     );
     if (WaiterResponseType.ERROR === result.type) {
-        const err = `Failed cache in cloud  chunk of binary with id ${binaryId} and order = ${order} attempt: ${result.body}`;
+        const err = `Failed cache in cloud  chunk of binary with id ${binaryId} and order = ${order} attempt: ${result.body.body}`;
         console.log(err);
         if (isMobile()) {
             alert(err);
