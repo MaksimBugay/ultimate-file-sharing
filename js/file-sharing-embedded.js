@@ -375,7 +375,7 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
     );
     return await FileSharing.saveContentInCloud(
         binaryId,
-        file.name, file.type, file.size, readMeText,
+        file.name, file.type, file.size, inReadMeText,
         async function (manifest, storeInCloud, encryptionContract) {
             return await readFileSequentially(file, async function (inOrder, arrayBuffer) {
                 return await processBinaryChunk(manifest, inOrder, arrayBuffer, storeInCloud, encryptionContract);
@@ -406,7 +406,7 @@ FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, fo
         FileSharing.workSpaceId,
         name,
         type,
-        readMeText,
+        inReadMeText,
         blob,
         forHuman,
         password

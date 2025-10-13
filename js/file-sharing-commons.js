@@ -1,16 +1,18 @@
-
 FileSharingHelper = {}
 FileSharingHelper.blockSize = MemoryBlock.MB;
 
 //=======================================Prepare read-me text===========================================================
+function isPureText(str) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(str, 'text/html');
+    return doc.body.textContent === str;
+}
 async function getReadMeText() {
-    //return DOMPurify.sanitize(readMeTextMemo.innerHTML);
-    const readMeText = DOMPurify.sanitize(readMeTextMemo.innerHTML);
-    //const readMeText = readMeTextMemo.innerHTML;
-    if (readMeTextMemo.innerHTML === readMeTextMemo.innerText) {
-        return readMeText;
+    if (isPureText(readMeTextMemo.innerText)) {
+        return readMeTextMemo.innerText;
     } else {
-        return await saveInnerHTMLAsBase64(readMeTextMemo.innerHTML);
+        const readMeText = DOMPurify.sanitize(readMeTextMemo.innerHTML);
+        return await saveInnerHTMLAsBase64(readMeText);
     }
 }
 
@@ -26,7 +28,7 @@ async function saveInnerHTMLAsBase64(innerHTML) {
         const response = await fetch(url); // Wait for the response
         const arrayBuffer = await response.arrayBuffer();
         // Convert ArrayBuffer to Base64
-        return arrayBufferToBase64(arrayBuffer);
+        return arrayBufferToUrlSafeBase64(arrayBuffer);
     } catch (error) {
         console.error('Error converting HTML to base64:', error);
         return null;
@@ -105,6 +107,7 @@ async function manifestToJsonObjectWithProtectedAttributes(manifest) {
         forHuman: manifest.forHuman
     };
 }
+
 function afterTransferDoneHandler() {
     progressBarContainer.style.display = 'none';
 }

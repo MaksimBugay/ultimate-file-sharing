@@ -203,7 +203,7 @@ async function saveInnerHTMLAsBase64(innerHTML) {
         const response = await fetch(url); // Wait for the response
         const arrayBuffer = await response.arrayBuffer();
         // Convert ArrayBuffer to Base64
-        return arrayBufferToBase64(arrayBuffer);
+        return arrayBufferToUrlSafeBase64(arrayBuffer);
     } catch (error) {
         console.error('Error converting HTML to base64:', error);
         return null;

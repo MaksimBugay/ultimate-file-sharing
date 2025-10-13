@@ -44,24 +44,20 @@ function showDownloadProgress() {
     downloadBtn.style.display = 'none';
 }
 
-function restoreInnerHTMLFromBase64(base64String) {
+function restoreInnerHTMLFromBase64(inBase64String) {
     try {
+        let base64String = inBase64String;
         // Step 1: Fix URL-safe Base64
         base64String = fixBase64ForDecoding(base64String);
 
         // Step 2: Pad the Base64 string
         base64String = padBase64String(base64String);
 
-        // Step 3: Decode the Base64 string
-        //return atob(base64String);
-        const binaryString = atob(base64String);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        // Decode bytes to text using UTF-8
+        const arrayBuffer = urlSafeBase64ToArrayBuffer(base64String);
+
+        // Decode array buffer to text using UTF-8
         const decoder = new TextDecoder('utf-8');
-        return decoder.decode(bytes);
+        return decoder.decode(arrayBuffer);
     } catch (error) {
         console.error("Error decoding Base64 string:", error);
         return "";
