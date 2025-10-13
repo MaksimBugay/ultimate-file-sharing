@@ -2,8 +2,8 @@
 
 cd js
 
+#pushca.min.js
 terser fp.min.js common-utils.js callable-future.js uuid.min.js security-utils.js owner-signature.js pnotifications.js pushca-binary-helper.js  -o pushca.min.js -c -m
-
 
 terser fp.min.js detect.min.js client.min.js uuid.min.js qrcode.min.js jsQR.js purify.min.js device-secret.js common-utils.js callable-future.js pnotifications.js pushca-binary-helper.js security-utils.js gateway-server.js transfer-commons.js localization.js transfer-site.js -o pushca.file-transfer.min.js -c -m
 
