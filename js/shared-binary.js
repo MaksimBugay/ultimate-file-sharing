@@ -150,7 +150,7 @@ async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, 
         return false;
     }
 
-    await openWsConnection();
+    await openWsConnection(manifest.id);
 
     if (!PushcaClient.isOpen()) {
         showErrorMessage("Download channel is broken");
@@ -178,7 +178,7 @@ async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, 
         progressBar.value = percentComplete;
         progressPercentage.textContent = `${percentComplete}%`;
     }
-    PushcaClient.stopWebSocket();
+    PushcaClient.stopWebSocket(true);
 
     if (typeof afterFinishedHandler === 'function') {
         await afterFinishedHandler();
@@ -189,10 +189,10 @@ async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, 
 
 //================================== Web socket connection =============================================================
 
-async function openWsConnection() {
+async function openWsConnection(binaryId) {
     if (!PushcaClient.isOpen()) {
         const pClient = new ClientFilter(
-            "SecureFileShare",
+            `SecureFileShare_${binaryId}`,
             "anonymous-sharing",
             uuid.v4().toString(),
             "download-binary-ws-page"

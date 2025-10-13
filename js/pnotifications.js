@@ -748,7 +748,8 @@ function cleanRefreshBrokenConnectionInterval() {
     }
 }
 
-PushcaClient.stopWebSocket = function () {
+PushcaClient.stopWebSocket = function (permanently = false) {
+    PushcaClient.permanentlyStopped = permanently;
     cleanRefreshBrokenConnectionInterval();
     if (PushcaClient.ws
         && (PushcaClient.ws.readyState !== window.WebSocket.CLOSING)
@@ -839,6 +840,9 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
 
 function initConnectionRecoveryInterval(baseUrl) {
     cleanRefreshBrokenConnectionInterval();
+    if (PushcaClient.permanentlyStopped) {
+        return;
+    }
     delay(5000).then(() => {
         PushcaClient.refreshBrokenConnectionIntervalId = window.setInterval(function () {
             if ((!PushcaClient.ws) || (PushcaClient.ws.readyState !== window.WebSocket.OPEN)) {
