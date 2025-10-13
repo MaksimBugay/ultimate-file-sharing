@@ -8,13 +8,13 @@ function isPureText(str) {
     return doc.body.textContent === str;
 }
 async function getReadMeText() {
-    return readMeTextMemo.innerText;
-    /*if (isPureText(readMeTextMemo.innerText)) {
+    //return readMeTextMemo.innerText;
+    if (isPureText(readMeTextMemo.innerText)) {
         return readMeTextMemo.innerText;
     } else {
         const readMeText = DOMPurify.sanitize(readMeTextMemo.innerHTML);
         return await saveInnerHTMLAsBase64(readMeText);
-    }*/
+    }
 }
 
 async function saveInnerHTMLAsBase64(innerHTML) {

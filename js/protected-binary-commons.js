@@ -40,7 +40,7 @@ if (suffixParts.length > 1) {
                 if (isBase64(readMeText)) {
                     readMeTextMemo.innerHTML = restoreInnerHTMLFromBase64(readMeText);
                 } else {
-                    readMeTextMemo.innerHTML = readMeText;
+                    readMeTextMemo.innerText = readMeText;
                 }
             }
         });

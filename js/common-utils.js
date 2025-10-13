@@ -39,13 +39,20 @@ function isStringPresentNumber(value) {
     return /^-?\d+$/.test(value.trim());
 }
 
-function isBase64(string) {
-    try {
-        atob(string);
-        return true;
-    } catch (e) {
+function isBase64(str) {
+    if (typeof str !== 'string' || str.length === 0) {
         return false;
     }
+
+    // URL-safe variant support
+    const normalized = str.replace(/[-_]/g, '');
+
+    // Base64 must be multiple of 4 chars and only valid characters
+    if (normalized.length % 4 !== 0) return false;
+
+    // Validate allowed Base64 characters
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    return base64Regex.test(normalized);
 }
 
 function generateStrongPassword(length = 12) {

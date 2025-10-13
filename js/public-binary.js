@@ -113,7 +113,7 @@ async function prepareBinaryDownloading(workspaceId, binaryId, pageId, humanToke
         if (isBase64(readMeText)) {
             readMeTextMemo.innerHTML = restoreInnerHTMLFromBase64(readMeText);
         } else {
-            readMeTextMemo.innerHTML = readMeText;
+            readMeTextMemo.innerText = readMeText;
         }
     }
 
