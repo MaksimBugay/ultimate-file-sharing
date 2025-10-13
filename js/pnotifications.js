@@ -748,8 +748,7 @@ function cleanRefreshBrokenConnectionInterval() {
     }
 }
 
-PushcaClient.stopWebSocket = function (permanently = false) {
-    PushcaClient.permanentlyStopped = permanently;
+PushcaClient.stopWebSocket = function () {
     cleanRefreshBrokenConnectionInterval();
     if (PushcaClient.ws
         && (PushcaClient.ws.readyState !== window.WebSocket.CLOSING)
@@ -757,6 +756,11 @@ PushcaClient.stopWebSocket = function (permanently = false) {
     ) {
         PushcaClient.ws.close(3000, "Stop websocket connection");
     }
+}
+
+PushcaClient.stopWebSocketPermanently = function () {
+    PushcaClient.permanentlyStopped = true;
+    PushcaClient.stopWebSocket();
 }
 
 PushcaClient.isOpen = function () {
@@ -804,6 +808,9 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
                                                 clientObjRefresher,
                                                 withoutRefresh,
                                                 apiKey = null) {
+    if (PushcaClient.permanentlyStopped) {
+        return;
+    }
     PushcaClient.serverBaseUrl = baseUrl;
     PushcaClient.ClientObj = clientObj;
     PushcaClient.clientObjRefresher = clientObjRefresher;
@@ -845,9 +852,12 @@ function initConnectionRecoveryInterval(baseUrl) {
     }
     delay(5000).then(() => {
         PushcaClient.refreshBrokenConnectionIntervalId = window.setInterval(function () {
+            if (PushcaClient.permanentlyStopped) {
+                return;
+            }
             if ((!PushcaClient.ws) || (PushcaClient.ws.readyState !== window.WebSocket.OPEN)) {
                 PushcaClient.restoreWsConnection(baseUrl).then(() => {
-                    console.log("Ws connection was successfully restored");
+                    console.log(`Ws connection was successfully restored [${PushcaClient.permanentlyStopped}]`);
                 });
             } else {
                 //expired binaries cleanup

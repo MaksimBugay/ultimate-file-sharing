@@ -178,7 +178,7 @@ async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, 
         progressBar.value = percentComplete;
         progressPercentage.textContent = `${percentComplete}%`;
     }
-    PushcaClient.stopWebSocket(true);
+    PushcaClient.stopWebSocketPermanently();
 
     if (typeof afterFinishedHandler === 'function') {
         await afterFinishedHandler();
