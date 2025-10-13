@@ -805,9 +805,10 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
                                                 apiKey = null) {
     PushcaClient.serverBaseUrl = baseUrl;
     PushcaClient.ClientObj = clientObj;
+    PushcaClient.clientObjRefresher = clientObjRefresher;
 
     if (!withoutRefresh) {
-        initConnectionRecoveryInterval(baseUrl, clientObjRefresher);
+        initConnectionRecoveryInterval(baseUrl);
     }
     let result = await getAuthorizedWsUrl(baseUrl, clientObj, apiKey);
     if (WaiterResponseType.ERROR === result.type) {
@@ -836,35 +837,14 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
     });
 }
 
-function initConnectionRecoveryInterval(baseUrl, clientObjRefresher) {
+function initConnectionRecoveryInterval(baseUrl) {
     cleanRefreshBrokenConnectionInterval();
     delay(5000).then(() => {
         PushcaClient.refreshBrokenConnectionIntervalId = window.setInterval(function () {
             if ((!PushcaClient.ws) || (PushcaClient.ws.readyState !== window.WebSocket.OPEN)) {
-                if (PushcaClient.ClientObj) {
-                    let d = 100;
-                    if (PushcaClient.ws
-                        && (PushcaClient.ws.readyState !== window.WebSocket.CLOSING)
-                        && (PushcaClient.ws.readyState !== window.WebSocket.CLOSED)
-                    ) {
-                        PushcaClient.ws.close(3000, "Close broken connection before recovery");
-                        d = 2000;
-                    }
-                    delay(d).then(() => {
-                        let refreshedClientObj;
-                        if (typeof clientObjRefresher === 'function') {
-                            refreshedClientObj = clientObjRefresher(PushcaClient.ClientObj);
-                        } else {
-                            refreshedClientObj = refreshClientObj(PushcaClient.ClientObj);
-                        }
-                        PushcaClient.openWsConnection(
-                            baseUrl,
-                            refreshedClientObj,
-                            clientObjRefresher,
-                            true
-                        );
-                    });
-                }
+                PushcaClient.restoreWsConnection(baseUrl).then(() => {
+                    console.log("Ws connection was successfully restored");
+                });
             } else {
                 //expired binaries cleanup
                 BinaryWaitingHall.forEach((manifest, id) => {
@@ -876,6 +856,35 @@ function initConnectionRecoveryInterval(baseUrl, clientObjRefresher) {
             }
         }, 5000);
     });
+}
+
+PushcaClient.restoreWsConnection = async function (baseUrl) {
+    if ((!PushcaClient.ws) || (PushcaClient.ws.readyState !== window.WebSocket.OPEN)) {
+        if (PushcaClient.ClientObj) {
+            let d = 100;
+            if (PushcaClient.ws
+                && (PushcaClient.ws.readyState !== window.WebSocket.CLOSING)
+                && (PushcaClient.ws.readyState !== window.WebSocket.CLOSED)
+            ) {
+                PushcaClient.ws.close(3000, "Close broken connection before recovery");
+                d = 2000;
+            }
+
+            await delay(d);
+            let refreshedClientObj;
+            if (typeof PushcaClient.clientObjRefresher === 'function') {
+                refreshedClientObj = PushcaClient.clientObjRefresher(PushcaClient.ClientObj);
+            } else {
+                refreshedClientObj = refreshClientObj(PushcaClient.ClientObj);
+            }
+            await PushcaClient.openWsConnection(
+                baseUrl,
+                refreshedClientObj,
+                PushcaClient.clientObjRefresher,
+                true
+            );
+        }
+    }
 }
 
 function refreshClientObj(clientObj) {
@@ -1299,10 +1308,21 @@ PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode
 }
 
 PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuffer) {
-    if (isEmpty(PushcaClient.ws)) {
+    if (!PushcaClient.isOpen()) {
+        await PushcaClient.restoreWsConnection();
+    }
+
+    for (let numberOfCheckAttempts = 0;
+         (numberOfCheckAttempts < 300) && (!PushcaClient.isOpen());
+         numberOfCheckAttempts++) {
+        await delay(100);
+    }
+
+    if (!PushcaClient.isOpen()) {
         return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
     }
-    if ((PushcaClient.ws.readyState !== window.WebSocket.OPEN) || PushcaClient.uploadBinaryLimitWasReached) {
+
+    if (PushcaClient.uploadBinaryLimitWasReached) {
         const errorMsg = `WebSocket is not open. State: ${PushcaClient.ws.readyState}`;
         console.error(errorMsg);
         return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
