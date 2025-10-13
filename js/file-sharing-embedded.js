@@ -360,17 +360,13 @@ document.addEventListener('DOMContentLoaded', function () {
 //==================================File sharing implementation=========================================================
 FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password) {
     const binaryId = uuid.v4().toString();
-    let readMeText = inReadMeText ? inReadMeText : '';
-    if (FileSharing.defaultReadMeText === inReadMeText) {
-        readMeText = `name = ${file.name}; size = ${Math.round(file.size / MemoryBlock.MB)} Mb; content-type = ${file.type}`;
-    }
     //generate and save thumbnail here
     await ThumbnailGenerator.buildAndSaveThumbnail(
         binaryId,
         file,
         file.name,
         file.type,
-        readMeText,
+        `name = ${file.name}; size = ${Math.round(file.size / MemoryBlock.MB)} Mb; content-type = ${file.type}`,
         FileSharing.saveInCloudProcessor
     );
     return await FileSharing.saveContentInCloud(
@@ -388,17 +384,13 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
 
 FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, forHuman, password) {
     const binaryId = uuid.v4().toString();
-    let readMeText = inReadMeText ? inReadMeText : '';
-    if (FileSharing.defaultReadMeText === inReadMeText) {
-        readMeText = `name = ${name}; size = ${Math.round(blob.size / MemoryBlock.MB)} Mb; content-type = ${type}`;
-    }
     //generate and save thumbnail here
     await ThumbnailGenerator.buildAndSaveThumbnail(
         binaryId,
         blob,
         name,
         type,
-        readMeText,
+        `name = ${name}; size = ${Math.round(blob.size / MemoryBlock.MB)} Mb; content-type = ${type}`,
         FileSharing.saveInCloudProcessor
     );
     return await FileSharing.saveBlobWithIdInCloud(

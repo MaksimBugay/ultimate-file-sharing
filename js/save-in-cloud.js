@@ -30,16 +30,12 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
 SaveInCloudHelper.cacheBlobInCloud = async function (name, type, readMeText, blob, storeInCloud, forHuman, password) {
     const binaryId = uuid.v4().toString();
     //create thumbnail
-    let tnReadMeText = readMeText;
-    if (Fileshare.defaultReadMeText === readMeText) {
-        tnReadMeText = `name = ${name}; size = ${Math.round((blob.size / MemoryBlock.MB) * 100) / 100} Mb; content-type = ${type}`;
-    }
     await ThumbnailGenerator.buildAndSaveThumbnail(
         binaryId,
         blob,
         name,
         type,
-        tnReadMeText,
+        `name = ${name}; size = ${Math.round((blob.size / MemoryBlock.MB) * 100) / 100} Mb; content-type = ${type}`,
         SaveInCloudHelper.saveInCloudProcessor
     );
     return await SaveInCloudHelper.cacheBlobWithIdAndWorkspaceInCloud(
@@ -99,16 +95,12 @@ SaveInCloudHelper.cacheBlobWithIdAndWorkspaceInCloud = async function (binaryId,
 SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCloud, forHuman, password) {
     const binaryId = uuid.v4().toString();
     //create thumbnail
-    let tnReadMeText = readMeText;
-    if (Fileshare.defaultReadMeText === readMeText) {
-        tnReadMeText = `name = ${file.name}; size = ${Math.round((file.size / MemoryBlock.MB) * 100) / 100} Mb; content-type = ${file.type}`;
-    }
     await ThumbnailGenerator.buildAndSaveThumbnail(
         binaryId,
         file,
         file.name,
         file.type,
-        tnReadMeText,
+        `name = ${file.name}; size = ${Math.round((file.size / MemoryBlock.MB) * 100) / 100} Mb; content-type = ${file.type}`,
         SaveInCloudHelper.saveInCloudProcessor
     );
     return await SaveInCloudHelper.cacheContentInCloud(
