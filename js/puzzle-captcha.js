@@ -274,7 +274,7 @@ function puzzleCaptchaPointerUp() {
         }
         await delay(2000);
         if (PushcaClient.isOpen()) {
-            reloadOnFail();
+            reloadOnFail(true);
         }
 
         event.preventDefault();
@@ -379,7 +379,7 @@ function selectPuzzleCaptchaPiecePointerDown() {
         if (PuzzleCaptcha.correctOptionWasSelected) {
             puzzleCaptchaPointerDown()(event);
         } else {
-            reloadOnFail();
+            reloadOnFail(true);
         }
     };
 }
@@ -399,15 +399,17 @@ function initializePuzzleCaptcha() {
 
     // Timeout handler
     delay(60_000).then(() => {
-        reloadOnFail();
+        reloadOnFail(true);
     });
 }
 
-function reloadOnFail() {
+function reloadOnFail(showError) {
     PushcaClient.stopWebSocket();
-    displayCaptchaContainer.style.display = 'none';
-    errorMessage.textContent = `You can try better next time!`;
-    errorMessage.style.display = 'block';
+    if (showError) {
+        displayCaptchaContainer.style.display = 'none';
+        errorMessage.textContent = `You can try better next time!`;
+        errorMessage.style.display = 'block';
+    }
     delay(1500).then(() => {
         const url = new URL(window.location.href);
         url.searchParams.set('hide-task', 'true');
@@ -419,8 +421,13 @@ function reloadOnFail() {
 PushcaClient.onOpenHandler = async function () {
     await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, PuzzleCaptcha.pieceLength);
 
+    let numberOfAttempt = 0;
     while (!PuzzleCaptcha.loaded) {
         await delay(100);
+        numberOfAttempt++;
+        if (numberOfAttempt > 50) {
+            reloadOnFail(false);
+        }
     }
     await delay(300);
 

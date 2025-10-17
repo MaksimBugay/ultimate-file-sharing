@@ -8,6 +8,7 @@ terser fp.min.js common-utils.js callable-future.js uuid.min.js security-utils.j
 #pushca.file-transfer.min.js
 terser fp.min.js detect.min.js client.min.js uuid.min.js qrcode.min.js jsQR.js purify.min.js device-secret.js common-utils.js callable-future.js pnotifications.js pushca-binary-helper.js security-utils.js gateway-server.js transfer-commons.js localization.js transfer-site.js -o pushca.file-transfer.min.js -c -m
 
+#puzzle.captcha.min.js
 terser uuid.min.js common-utils.js callable-future.js security-utils.js pnotifications.js pushca-binary-helper.js puzzle-captcha.js -o puzzle.captcha.min.js -c -m
 
 --with obfuscation
