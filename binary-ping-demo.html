@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Binary ping</title>
+</head>
+<body>
+
+</body>
+
+<script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
+<script>
+
+    PushcaClient.onOpenHandler = async function () {
+        console.log(`Connected to Pushca: device id ${PushcaClient.ClientObj.deviceId}`);
+    }
+
+    FingerprintJS.load().then(fp => {
+        fp.get().then(result => {
+            openWsConnection(result.visitorId);
+        });
+    });
+
+    async function openWsConnection(deviceId) {
+        if (!PushcaClient.isOpen()) {
+            const pClient = new ClientFilter(
+                "WsBackend",
+                uuid.v4().toString(),
+                deviceId,
+                "SERVER_PING"
+            );
+            await PushcaClient.openWsConnection(
+                'wss://secure.fileshare.ovh:31085',
+                pClient,
+                function (clientObj) {
+                    return new ClientFilter(
+                        clientObj.workSpaceId,
+                        clientObj.accountId,
+                        clientObj.deviceId,
+                        clientObj.applicationId
+                    );
+                },
+                null
+            );
+        }
+    }
+
+    delay(5000).then(() => {
+        PushcaClient.stopWebSocketPermanently();
+    })
+</script>
+</html>
