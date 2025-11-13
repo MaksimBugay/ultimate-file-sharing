@@ -25,69 +25,30 @@
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
 
-<div id="mainContainer" class="embedded-similarity-challenge-container" style="margin-top: 15px;margin-left: 5px;">
-    <iframe id="captchaFrame" class="similarity-captcha-iframe"
-            style="padding: 0;margin: 0; width: 620px;height: 1280px;"></iframe>
-</div>
+<div id="mainContainer"></div>
 </body>
 <script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
+<script src="js/embedded-similarity-captcha.js?v=<?= time(); ?>"></script>
 <script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const captchaFrame = document.getElementById("captchaFrame");
-        const mainContainer = document.getElementById("mainContainer");
-        mainContainer.style.transformOrigin = "top left";
-        let scaleK = 1;
-        if (mainContainer && captchaFrame) {
-            while (!isElementFullyVisible(captchaFrame)) {
-                scaleK = scaleK - 0.1 * (isMobile() ? 1.7 : 1);
-                mainContainer.style.transform = `scale(${scaleK})`;
+        const pageId = uuid.v4().toString();
+        const captchaContainer = document.getElementById('mainContainer');
+        if (!captchaContainer) return;
+
+        addVisualSimilarityChallenge(
+            captchaContainer,
+            pageId,
+            function (token) {
+                alert(`Human token was received for page with id = ${pageId}: ${token}`);
+                /*const isValid = await validateHumanToken(pageId, token);
+                if (isValid) {
+                    console.log(`"${pageId}", "${token}"`);
+                    alert(`"${pageId}", "${token}"`);
+                }*/
+                location.reload();
             }
-        }
+        );
     });
-
-    const pageId = uuid.v4().toString();
-
-    PushcaClient.onHumanTokenHandler = async function (token) {
-        PushcaClient.stopWebSocket();
-        document.getElementById("captchaFrame").remove();
-
-        //TODO send pageId and token to your server along with some request
-        alert(`Human token was received for page with id = ${pageId}: ${token}`);
-        /*const isValid = await validateHumanToken(pageId, token);
-        if (isValid) {
-            console.log(`"${pageId}", "${token}"`);
-            alert(`"${pageId}", "${token}"`);
-        }*/
-        location.reload();
-    }
-
-    //document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=160&skip-demo=true`;
-    document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
-    openWsConnection();
-
-    async function openWsConnection() {
-        if (!PushcaClient.isOpen()) {
-            const pClient = new ClientFilter(
-                "SecureFileShare",
-                "dynamic-captcha",
-                pageId,
-                "CAPTCHA_CLIENT"
-            );
-            await PushcaClient.openWsConnection(
-                'wss://secure.fileshare.ovh:31085',
-                pClient,
-                function (clientObj) {
-                    return new ClientFilter(
-                        clientObj.workSpaceId,
-                        clientObj.accountId,
-                        clientObj.deviceId,
-                        clientObj.applicationId
-                    );
-                },
-                "cHVzaGNhLWRlbW86RFVIYzhCdnJSbWdpWUpLakkwSDc2cVUzaUljYVAyclE="//if you don't have a valid api key then just pass null
-            );
-        }
-    }
 </script>
 </html>
