@@ -122,8 +122,14 @@ function getEventCoordinates(event) {
     return {x: clientX, y: clientY};
 }
 
-let pieceDisplayDeltaY = 50;
-let pieceDisplayDeltaX = 20;
+
+let pieceDisplayDeltaX = 100;
+let pieceDisplayDeltaY = 100;
+if (isMobile()) {
+    pieceDisplayDeltaX = 200;
+    pieceDisplayDeltaY = 200;
+}
+
 let isDragging = false;
 let lastMoveTime = 0;
 
@@ -167,8 +173,8 @@ function puzzleCaptchaPointerDown() {
             document.body.classList.add('dragging');
 
             const {x, y} = getEventCoordinates(event);
-            const absX = x - 10;
-            const absY = y - 10;
+            const absX = x;
+            const absY = y;
 
             selectedCaptchaPiece.style.display = 'block';
             selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
@@ -192,8 +198,8 @@ function puzzleCaptchaPointerMove() {
         if (now - lastMoveTime < 16) return; // ~60fps throttling
         lastMoveTime = now;
         const {x, y} = getEventCoordinates(event);
-        const absX = x - 10;
-        const absY = y - 10;
+        const absX = x;
+        const absY = y;
 
         requestAnimationFrame(() => {
             selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
@@ -215,8 +221,8 @@ function puzzleCaptchaPointerUp() {
         selectedCaptchaPiece.style.display = 'none';
         selectedCaptchaPiece.style.pointerEvents = 'auto';
 
-        const finalX = Math.round(PuzzleCaptcha.startPoint.x + (rect.left - PuzzleCaptcha.pieceStartPoint.x)) - 10;
-        const finalY = Math.round(PuzzleCaptcha.startPoint.y + (rect.top - PuzzleCaptcha.pieceStartPoint.y)) - 10;
+        const finalX = Math.round(PuzzleCaptcha.startPoint.x + (rect.left - PuzzleCaptcha.pieceStartPoint.x));
+        const finalY = Math.round(PuzzleCaptcha.startPoint.y + (rect.top - PuzzleCaptcha.pieceStartPoint.y));
         console.log({x: finalX, y: finalY});
 
         try {
@@ -377,6 +383,7 @@ PushcaClient.onOpenHandler = async function () {
     await delay(300);
 }
 PushcaClient.onHumanTokenHandler = function (token) {
+    console.log(`Human token was received: ${token}`)
     PushcaClient.stopWebSocket();
     puzzleCaptchaArea.style.display = 'none';
     errorMessage.style.color = "green";
