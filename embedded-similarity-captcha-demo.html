@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <link rel="canonical" href="https://secure.fileshare.ovh/dynamic-captcha.html"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Secure FileShare: Puzzle captcha</title>
+    <title>Secure FileShare: Visual similarity challenge</title>
     <link rel="stylesheet" href="https://secure.fileshare.ovh/css/dynamic-captcha.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="https://secure.fileshare.ovh/images/file-sharing32.png">
@@ -25,9 +25,9 @@
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
 
-<div id="mainContainer" class="main-container" style="margin-top: 15px; flex-direction: column; height: auto; width: auto; transform: scale(1.0)">
+<div id="mainContainer" class="embedded-similarity-challenge-container" style="margin-top: 15px;margin-left: 5px;">
     <iframe id="captchaFrame" class="similarity-captcha-iframe"
-            style="padding: 0;margin: 0; width: 620px;height: 1280px"></iframe>
+            style="padding: 0;margin: 0; width: 620px;height: 1280px;"></iframe>
 </div>
 </body>
 <script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
@@ -35,20 +35,13 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const captchaFrame = document.getElementById("captchaFrame");
-        if (captchaFrame) {
-            if (!isFullyVisible(captchaFrame)) {
-                const mainContainer = document.getElementById("mainContainer");
-                if (mainContainer) {
-                    // Compute scale ratio based on visible viewport height
-                    const baseHeight = 1280;
-                    const scale = (window.innerHeight - 50) / baseHeight - 0.15;
-
-                    // Clamp scale so it doesn’t get too small or too big (optional)
-                    const finalScale = Math.min(Math.max(scale, 0.3), 1);
-
-                    mainContainer.style.transform = `scale(${finalScale})`;
-                    mainContainer.style.transformOrigin = "top center";
-                }
+        const mainContainer = document.getElementById("mainContainer");
+        mainContainer.style.transformOrigin = "top left";
+        let scaleK = 1;
+        if (mainContainer && captchaFrame) {
+            while (!isElementFullyVisible(captchaFrame)) {
+                scaleK = scaleK - 0.1 * (isMobile() ? 1.7 : 1);
+                mainContainer.style.transform = `scale(${scaleK})`;
             }
         }
     });
