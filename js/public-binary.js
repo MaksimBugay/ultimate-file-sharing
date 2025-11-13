@@ -57,7 +57,7 @@ if (humanOnly) {
     }
 
     if (captchaContainer) {
-        await addVisualSimilarityChallenge(
+        addVisualSimilarityChallenge(
             captchaContainer,
             pageId,
             humanTokenConsumer()
