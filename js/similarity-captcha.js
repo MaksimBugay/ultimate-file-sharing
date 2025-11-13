@@ -47,7 +47,7 @@ async function showCaptchaHintAndStart(captchaHint) {
     brandNameDiv.style.display = 'flex';
     if (captchaHint) {
         captchaHint.style.display = 'flex';
-        await delay(1000);
+        await delay(5000);
         captchaHint.remove();
     }
     await openWsConnection();
