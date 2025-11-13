@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="canonical" href="https://secure.fileshare.ovh/dynamic-captcha.html"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Secure FileShare: Dynamic captcha</title>
+    <link rel="stylesheet" href="css/dynamic-captcha.css">
+    <link rel="stylesheet" href="css/puzzle-captcha.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Secure FileShare: dynamic captcha">
+    <meta property="og:description" content="Dynamic captcha demo">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary.html">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Secure FileShare: dynamic captcha">
+    <meta name="twitter:description" content="Dynamic captcha demo">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
+</head>
+<body style="padding: 0;margin: 0; width: 600px; height: 1280px; background-color: lightcyan;">
+<div id="previewBox" class="similarity-captcha-box">
+    <div id="brandNameDiv" class="brand-name" style="display: none">DynoCAP</div>
+    <p id="errorMessage" class="similarity-captcha-message"></p>
+    <div id="captchaHint" class="captcha-hint" style="display: none">
+        Task: find matching shapes and drag one onto its pair to align them.
+    </div>
+    <canvas id="puzzleCaptchaArea"></canvas>
+    <img id="selectedCaptchaPiece" class="selected-piece" style="display: none" draggable="false"
+         alt="Selected captcha piece">
+</div>
+</body>
+<!--<script src="js/similarity.captcha.min.js?v=<?= time(); ?>"></script>-->
+<script src="js/common-utils.js"></script>
+<script src="js/callable-future.js?v=<?= time(); ?>"></script>
+<script src="js/uuid.min.js"></script>
+<script src="js/security-utils.js"></script>
+<script src="js/pnotifications.js?v=<?= time(); ?>"></script>
+<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
+<script src="js/similarity-captcha.js?v=<?= time(); ?>"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+
+    function gtag() {
+        dataLayer.push(arguments);
+    }
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-W6XK68E4CF');
+</script>
+</html>

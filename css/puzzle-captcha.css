@@ -32,6 +32,13 @@
     margin-left: 150px;
 }
 
+.similarity-captcha-message {
+    color: red;
+    font-size: 20px;
+    font-weight: bold;
+    display: none;
+}
+
 .captcha-demo-video {
     margin-top: 50px;
     width: 420px;

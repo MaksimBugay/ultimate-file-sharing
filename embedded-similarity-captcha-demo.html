@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="canonical" href="https://secure.fileshare.ovh/dynamic-captcha.html"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure FileShare: Puzzle captcha</title>
+    <link rel="stylesheet" href="https://secure.fileshare.ovh/css/dynamic-captcha.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="https://secure.fileshare.ovh/images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://secure.fileshare.ovh/images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Secure FileShare: dynamic captcha">
+    <meta property="og:description" content="Dynamic captcha demo">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/not-a-robot.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/images/not-a-robot.png">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Secure FileShare: dynamic captcha">
+    <meta name="twitter:description" content="Dynamic captcha demo">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/not-a-robot.png">
+</head>
+<body style="background-color: #006BFD;padding: 0;margin: 0;">
+
+<div id="mainContainer" class="main-container" style="margin-top: 15px; flex-direction: column; height: auto; width: auto; transform: scale(1.0)">
+    <iframe id="captchaFrame" class="similarity-captcha-iframe"
+            style="padding: 0;margin: 0; width: 620px;height: 1280px"></iframe>
+</div>
+</body>
+<script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
+<script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const captchaFrame = document.getElementById("captchaFrame");
+        if (captchaFrame) {
+            if (!isFullyVisible(captchaFrame)) {
+                const mainContainer = document.getElementById("mainContainer");
+                if (mainContainer) {
+                    // Compute scale ratio based on visible viewport height
+                    const baseHeight = 1280;
+                    const scale = (window.innerHeight - 50) / baseHeight - 0.15;
+
+                    // Clamp scale so it doesn’t get too small or too big (optional)
+                    const finalScale = Math.min(Math.max(scale, 0.3), 1);
+
+                    mainContainer.style.transform = `scale(${finalScale})`;
+                    mainContainer.style.transformOrigin = "top center";
+                }
+            }
+        }
+    });
+
+    const pageId = uuid.v4().toString();
+
+    PushcaClient.onHumanTokenHandler = async function (token) {
+        PushcaClient.stopWebSocket();
+        document.getElementById("captchaFrame").remove();
+
+        //TODO send pageId and token to your server along with some request
+        alert(`Human token was received for page with id = ${pageId}: ${token}`);
+        /*const isValid = await validateHumanToken(pageId, token);
+        if (isValid) {
+            console.log(`"${pageId}", "${token}"`);
+            alert(`"${pageId}", "${token}"`);
+        }*/
+        location.reload();
+    }
+
+    //document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=160&skip-demo=true`;
+    document.getElementById("captchaFrame").src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
+    openWsConnection();
+
+    async function openWsConnection() {
+        if (!PushcaClient.isOpen()) {
+            const pClient = new ClientFilter(
+                "SecureFileShare",
+                "dynamic-captcha",
+                pageId,
+                "CAPTCHA_CLIENT"
+            );
+            await PushcaClient.openWsConnection(
+                'wss://secure.fileshare.ovh:31085',
+                pClient,
+                function (clientObj) {
+                    return new ClientFilter(
+                        clientObj.workSpaceId,
+                        clientObj.accountId,
+                        clientObj.deviceId,
+                        clientObj.applicationId
+                    );
+                },
+                "cHVzaGNhLWRlbW86RFVIYzhCdnJSbWdpWUpLakkwSDc2cVUzaUljYVAyclE="//if you don't have a valid api key then just pass null
+            );
+        }
+    }
+</script>
+</html>
