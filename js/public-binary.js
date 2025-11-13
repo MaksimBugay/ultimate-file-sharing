@@ -23,7 +23,17 @@ let contentSize = 0;
 const workspaceIdLabel = document.getElementById('workspaceIdLabel');
 const contentPreviewContainer = document.getElementById('contentPreviewContainer');
 const captchaFrame = document.getElementById("captchaFrame");
+const captchaContainer = document.getElementById("captchaContainer");
 const previewBox = document.getElementById("previewBox");
+
+function removeCaptcha() {
+    if (captchaFrame) {
+        captchaFrame.remove();
+    }
+    if (captchaContainer) {
+        captchaContainer.remove();
+    }
+}
 
 function showErrorMessage(errorText) {
     contentPreviewContainer.remove();
@@ -37,43 +47,53 @@ if (humanOnly) {
     previewBox.style.display = "none";
 
     const pageId = uuid.v4().toString();
-
-    PushcaClient.onHumanTokenHandler = async function (token) {
+    const humanTokenConsumer = async function (token) {
         PushcaClient.stopWebSocket();
         delay(1000);
-        captchaFrame.remove();
+        removeCaptcha();
         previewBox.style.display = "block";
 
         downloadPublicBinary(workspaceId, binaryId, pageId, token);
     }
 
-    captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180&skip-demo=false`;
-    openWsConnection();
+    if (captchaContainer) {
+        await addVisualSimilarityChallenge(
+            captchaContainer,
+            pageId,
+            humanTokenConsumer()
+        );
+    } else {
 
-    async function openWsConnection() {
-        if (!PushcaClient.isOpen()) {
-            const pClient = new ClientFilter(
-                "SecureFileShare",
-                "dynamic-captcha",
-                pageId,
-                "CAPTCHA_CLIENT"
-            );
-            await PushcaClient.openWsConnection(
-                'wss://secure.fileshare.ovh:31085',
-                pClient,
-                function (clientObj) {
-                    return new ClientFilter(
-                        clientObj.workSpaceId,
-                        clientObj.accountId,
-                        clientObj.deviceId,
-                        clientObj.applicationId
-                    );
-                }
-            );
+        PushcaClient.onHumanTokenHandler = humanTokenConsumer;
+
+        captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180&skip-demo=false`;
+        openWsConnection();
+
+        async function openWsConnection() {
+            if (!PushcaClient.isOpen()) {
+                const pClient = new ClientFilter(
+                    "SecureFileShare",
+                    "dynamic-captcha",
+                    pageId,
+                    "CAPTCHA_CLIENT"
+                );
+                await PushcaClient.openWsConnection(
+                    'wss://secure.fileshare.ovh:31085',
+                    pClient,
+                    function (clientObj) {
+                        return new ClientFilter(
+                            clientObj.workSpaceId,
+                            clientObj.accountId,
+                            clientObj.deviceId,
+                            clientObj.applicationId
+                        );
+                    }
+                );
+            }
         }
     }
 } else {
-    captchaFrame.remove();
+    removeCaptcha();
     previewBox.style.display = "block";
     downloadPublicBinary(workspaceId, binaryId, null, null);
 }
