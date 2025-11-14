@@ -43,21 +43,17 @@ function showErrorMessage(errorText) {
 
 workspaceIdLabel.textContent = `Workspace ID: ${workspaceId}`;
 
-if (humanOnly) {
-    previewBox.style.display = "none";
+document.addEventListener('DOMContentLoaded', function () {
+    if (humanOnly) {
+        const pageId = uuid.v4().toString();
+        PushcaClient.onHumanTokenHandler = async function (token) {
+            PushcaClient.stopWebSocket();
+            delay(1000);
+            removeCaptcha();
+            previewBox.style.display = "block";
 
-    const pageId = uuid.v4().toString();
-    const humanTokenConsumer = async function (token) {
-        PushcaClient.stopWebSocket();
-        delay(1000);
-        removeCaptcha();
-        previewBox.style.display = "block";
-
-        downloadPublicBinary(workspaceId, binaryId, pageId, token);
-    }
-
-    if (captchaContainer) {
-        PushcaClient.onHumanTokenHandler = humanTokenConsumer;
+            downloadPublicBinary(workspaceId, binaryId, pageId, token);
+        };
 
         //captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180&skip-demo=false`;
         captchaFrame.src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
@@ -92,12 +88,12 @@ if (humanOnly) {
                 );
             }
         }
+    } else {
+        removeCaptcha();
+        previewBox.style.display = "block";
+        downloadPublicBinary(workspaceId, binaryId, null, null);
     }
-} else {
-    removeCaptcha();
-    previewBox.style.display = "block";
-    downloadPublicBinary(workspaceId, binaryId, null, null);
-}
+});
 
 function downloadPublicBinary(workspaceId, binaryId, pageId, humanToken) {
     prepareBinaryDownloading(workspaceId, binaryId, pageId, humanToken).then((userActionRequired) => {
