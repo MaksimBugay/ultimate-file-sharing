@@ -23,7 +23,7 @@ async function addVisualSimilarityChallenge(captchaContainer, pageId, humanToken
     captchaContainer.style.transformOrigin = "top left";
     let scaleK = 1;
     if (captchaContainer && captchaFrame) {
-        while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0)) {
+        while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.4)) {
             scaleK = scaleK - 0.1 * (isMobile() ? 2.3 : 1);
             captchaContainer.style.transform = `scale(${scaleK})`;
         }

@@ -12,14 +12,25 @@
 
 .captcha-hint {
     background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    font-size: 18px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     text-align: center;
     align-content: center;
     max-width: 90%;
     margin: 0 auto;
+
+    color: white;
+    font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+    font-size: clamp(21px, 2.1vw, 32px);
+    font-weight: 500;
+    line-height: 1.4;
+
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+
+    transition: opacity 0.25s ease;
+    opacity: 1;
 }
 
 .captcha-message {
