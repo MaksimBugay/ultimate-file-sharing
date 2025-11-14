@@ -57,16 +57,17 @@ if (humanOnly) {
     }
 
     if (captchaContainer) {
-        addVisualSimilarityChallenge(
-            captchaContainer,
-            pageId,
-            humanTokenConsumer()
-        );
-    } else {
-
         PushcaClient.onHumanTokenHandler = humanTokenConsumer;
 
-        captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180&skip-demo=false`;
+        //captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180&skip-demo=false`;
+        captchaFrame.src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
+        captchaFrame.style.width = '620px';
+        captchaFrame.style.height = '1280px';
+        let scaleK = 1;
+        while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.4)) {
+            scaleK = scaleK - 0.1 * (isMobile() ? 1.7 : 1);
+            captchaContainer.style.transform = `scale(${scaleK})`;
+        }
         openWsConnection();
 
         async function openWsConnection() {

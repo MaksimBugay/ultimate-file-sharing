@@ -25,9 +25,8 @@
     <meta name="twitter:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
-<!--<iframe src="html/header.html" width="100%" height="93px"
-        style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>-->
-<div id="captchaContainer" class="main-container"></div>
+<iframe src="html/header.html" width="100%" height="93px"
+        style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
 <div class="main-container">
     <p id="errorMessage"
        style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
@@ -53,8 +52,8 @@
         </div>
     </div>
     <div id="contentPreviewContainer" class="login-container">
-        <div style="margin-top: 50px; transform: scale(1.0);">
-            <iframe id="captchaFrame" class="puzzle-captcha-iframe"></iframe>
+        <div id="captchaContainer" style="margin-top: 50px; transform: scale(1.0);">
+            <iframe id="captchaFrame" class="similarity-captcha-iframe"></iframe>
         </div>
         <div id="previewBox" class="login-box">
             <h2>Content details</h2>
@@ -103,7 +102,6 @@
 <script src="js/pushca.min.js?v=<?= time(); ?>"></script>
 <script src="js/shared-binary.js?v=<?= time(); ?>"></script>
 <script src="js/public-binary.js?v=<?= time(); ?>"></script>
-<script src="js/embedded-similarity-captcha.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];
