@@ -18,7 +18,7 @@
     text-align: center;
     align-content: center;
     max-width: 90%;
-    margin: 0 auto;
+    margin: 50px auto 0;
 
     color: white;
     font-family: "Inter", "Segoe UI", Roboto, sans-serif;
@@ -31,6 +31,9 @@
 
     transition: opacity 0.25s ease;
     opacity: 1;
+
+    position: absolute;
+    z-index: 999;
 }
 
 .captcha-message {
@@ -48,6 +51,9 @@
     font-size: 20px;
     font-weight: bold;
     display: none;
+    top: 50px;
+    position: absolute;
+    z-index: 1000;
 }
 
 .captcha-demo-video {
