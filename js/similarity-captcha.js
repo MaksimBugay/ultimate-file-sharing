@@ -1,1070 +1,521 @@
-// ============================================================================
-// CONFIGURATION & CONSTANTS
-// ============================================================================
-
-const CaptchaConfig = {
-    // Server Configuration
-    SERVER_URL: 'https://secure.fileshare.ovh',
-    WS_URL: 'wss://secure.fileshare.ovh:31085',
-    BRAND_URL: 'https://sl-st.com',
-
-    // Application Settings
-    WORKSPACE_ID: 'SecureFileShare',
-    ACCOUNT_ID: 'dynamic-captcha',
-    APP_ID: 'PUZZLE_CAPTCHA_APP',
-
-    // Timing Constants (ms)
-    HINT_DISPLAY_DURATION: 2000,
-    RELOAD_DELAY: 1500,
-    VERIFICATION_DELAY: 2000,
-    STATE_UPDATE_DELAY: 10,
-    LOAD_CHECK_INTERVAL: 100,
-    CAPTCHA_TIMEOUT: 600000,
-    IMAGE_LOAD_DELAY: 300,
-    DOUBLE_TAP_THRESHOLD: 300,
-
-    // Loading Attempts
-    MAX_LOAD_ATTEMPTS: 50,
-
-    // Piece Configuration
-    MIN_PIECE_LENGTH: 300,
-    DEFAULT_PIECE_LENGTH: 300,
-
-    // Display Offsets
-    DESKTOP_PIECE_OFFSET_X: 100,
-    DESKTOP_PIECE_OFFSET_Y: 100,
-    MOBILE_PIECE_OFFSET_X: 200,
-    MOBILE_PIECE_OFFSET_Y: 200,
-    IOS_PIECE_OFFSET_X: 80,
-    IOS_PIECE_OFFSET_Y: 80,
-
-    // Performance
-    THROTTLE_FPS: 60,
-    THROTTLE_MS: 16, // ~60fps
-
-    // Device Detection
-    MOBILE_WIDTH_THRESHOLD: 500,
-    MOBILE_TOUCH_POINTS: 1,
-
-    // Pointer IDs
-    MOUSE_POINTER_ID: 1,
-
-    // DOM Element IDs
-    DOM_IDS: {
-        CANVAS: 'puzzleCaptchaArea',
-        PIECE: 'selectedCaptchaPiece',
-        ERROR: 'errorMessage',
-        BRAND: 'brandNameDiv',
-        HINT: 'captchaHint'
-    },
-
-    // Messages
-    MESSAGES: {
-        TASK_HINT: 'Task: find matching shapes and drag one onto its pair to align them.',
-        ERROR: 'You can try better next time!',
-        SUCCESS: 'Your Human token was assigned. Amazing job!',
-        WRONG_PIECE: 'Wrong piece selected, reloading'
+//PuzzleCaptchaSetBinaries
+const PuzzleCaptcha = {}
+PuzzleCaptcha.solvingAttempt = 1;
+PuzzleCaptcha.serverUrl = 'https://secure.fileshare.ovh';
+PuzzleCaptcha.wsUrl = 'wss://secure.fileshare.ovh:31085';
+PuzzleCaptcha.captchaId = uuid.v4().toString();
+PuzzleCaptcha.pageId = uuid.v4().toString();
+PuzzleCaptcha.backendUrl = null;
+PuzzleCaptcha.blocked = false;
+PuzzleCaptcha.embedded = false;
+PuzzleCaptcha.loaded = false;
+PuzzleCaptcha.correctOptionWasSelected = false;
+PuzzleCaptcha.startPoint = {x: 0, y: 0};
+PuzzleCaptcha.pieceStartPoint = {x: 0, y: 0}
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('page-id')) {
+    PuzzleCaptcha.pageId = urlParams.get('page-id');
+    PuzzleCaptcha.embedded = true;
+}
+if (urlParams.get('backend-url')) {
+    PuzzleCaptcha.backendUrl = urlParams.get('backend-url');
+}
+if (urlParams.get('piece-length')) {
+    PuzzleCaptcha.pieceLength = urlParams.get('piece-length');
+    if (PuzzleCaptcha.pieceLength < 300) {
+        PuzzleCaptcha.pieceLength = 300;
     }
-};
+} else {
+    PuzzleCaptcha.pieceLength = 300;
+}
+PuzzleCaptcha.showTask = true;
+PuzzleCaptcha.skipDemo = true;
 
-// ============================================================================
-// UTILITY CLASSES
-// ============================================================================
+const puzzleCaptchaArea = document.getElementById("puzzleCaptchaArea");
+const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
+const errorMessage = document.getElementById('errorMessage');
+const brandNameDiv = document.getElementById("brandNameDiv");
 
-/**
- * Device detection and environment utilities
- */
-class DeviceDetector {
-    static isMobile() {
-        return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
-            (navigator.maxTouchPoints && navigator.maxTouchPoints > CaptchaConfig.MOBILE_TOUCH_POINTS) ||
-            window.innerWidth <= CaptchaConfig.MOBILE_WIDTH_THRESHOLD;
+async function removeTaskElementsAndStart(captchaHint) {
+    if (captchaHint) {
+        captchaHint.remove();
+    }
+    brandNameDiv.style.display = 'flex';
+    await openWsConnection();
+}
+
+async function showCaptchaHintAndStart(captchaHint) {
+    brandNameDiv.style.display = 'flex';
+    await openWsConnection();
+    if (captchaHint) {
+        delay(1000).then(() => {
+            captchaHint.style.display = 'flex';
+            delay(5000).then(() => {
+                captchaHint.style.display = 'none';
+            });
+        });
+    }
+}
+
+window.addEventListener("DOMContentLoaded", async function () {
+    brandNameDiv.title = "Task: find matching shapes and drag one onto its pair to align them.";
+
+    const captchaHint = document.getElementById('captchaHint');
+
+    if (!PuzzleCaptcha.showTask) {
+        await removeTaskElementsAndStart(captchaHint);
+        return;
     }
 
-    static isIOS() {
-        return /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-            (navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform));
+    if (PuzzleCaptcha.skipDemo) {
+        await showCaptchaHintAndStart(captchaHint);
     }
+});
 
-    static getEventCoordinates(event) {
-        let clientX, clientY;
-
-        if (event.touches && event.touches.length > 0) {
-            clientX = event.touches[0].clientX;
-            clientY = event.touches[0].clientY;
-        } else if (event.changedTouches && event.changedTouches.length > 0) {
-            clientX = event.changedTouches[0].clientX;
-            clientY = event.changedTouches[0].clientY;
-        } else {
-            clientX = event.clientX || event.pageX;
-            clientY = event.clientY || event.pageY;
+// Add CSS styles for iOS/macOS compatibility
+function addCompatibilityStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        #puzzleCaptchaArea, #selectedCaptchaPiece {
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
-
-        return {x: clientX, y: clientY};
-    }
-
-    static createSyntheticPointerEvent(type, mouseEvent) {
-        return new PointerEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            isPrimary: true,
-            pointerId: CaptchaConfig.MOUSE_POINTER_ID,
-            pointerType: 'mouse',
-            clientX: mouseEvent.clientX,
-            clientY: mouseEvent.clientY,
-            isTrusted: mouseEvent.isTrusted
-        });
-    }
-
-    static createSyntheticPointerEventFromTouch(type, touchEvent) {
-        const touch = touchEvent.touches ? touchEvent.touches[0] : touchEvent.changedTouches[0];
-        return new PointerEvent(type, {
-            bubbles: true,
-            cancelable: true,
-            isPrimary: true,
-            pointerId: touch.identifier + 2,
-            pointerType: 'touch',
-            clientX: touch.clientX,
-            clientY: touch.clientY,
-            isTrusted: touchEvent.isTrusted
-        });
-    }
-}
-
-/**
- * Simple promise-based delay utility
- */
-class TimeUtils {
-    static delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-}
-
-/**
- * URL parameter parser
- */
-class URLParamParser {
-    constructor() {
-        this.params = new URLSearchParams(window.location.search);
-    }
-
-    get(key) {
-        return this.params.get(key);
-    }
-
-    has(key) {
-        return this.params.has(key);
-    }
-
-    getInt(key, defaultValue) {
-        const value = this.params.get(key);
-        return value ? parseInt(value, 10) : defaultValue;
-    }
-}
-
-// ============================================================================
-// STATE MANAGEMENT
-// ============================================================================
-
-/**
- * Manages the application state
- * Single Responsibility: State management only
- */
-class CaptchaState {
-    constructor(urlParser) {
-        this.captchaId = uuid.v4().toString();
-        this.pageId = urlParser.get('page-id') || uuid.v4().toString();
-        this.backendUrl = urlParser.get('backend-url');
-        this.embedded = urlParser.has('page-id');
-
-        const pieceLengthParam = urlParser.getInt('piece-length', CaptchaConfig.DEFAULT_PIECE_LENGTH);
-        this.pieceLength = Math.max(pieceLengthParam, CaptchaConfig.MIN_PIECE_LENGTH);
-
-        this.showTask = true;
-        this.skipDemo = true;
-        this.loaded = false;
-        this.blocked = false;
-        this.isVerifying = false;
-        this.correctOptionWasSelected = false;
-
-        this.startPoint = {x: 0, y: 0};
-        this.pieceStartPoint = {x: 0, y: 0};
-    }
-
-    markLoaded() {
-        this.loaded = true;
-    }
-
-    setStartPoint(x, y) {
-        this.startPoint = {x, y};
-    }
-
-    setPieceStartPoint(x, y) {
-        this.pieceStartPoint = {x, y};
-    }
-
-    setVerifying(isVerifying) {
-        this.isVerifying = isVerifying;
-    }
-
-    setCorrectOptionSelected(isCorrect) {
-        this.correctOptionWasSelected = isCorrect;
-    }
-
-    reset() {
-        this.correctOptionWasSelected = false;
-        this.isVerifying = false;
-    }
-}
-
-/**
- * Manages drag state
- * Single Responsibility: Drag state only
- */
-class DragState {
-    constructor() {
-        this.isDragging = false;
-        this.activePointerId = null;
-        this.lastMoveTime = 0;
-
-        // iOS needs smaller offset for better visibility
-        if (DeviceDetector.isIOS()) {
-            this.pieceOffsetX = CaptchaConfig.IOS_PIECE_OFFSET_X;
-            this.pieceOffsetY = CaptchaConfig.IOS_PIECE_OFFSET_Y;
-        } else if (DeviceDetector.isMobile()) {
-            this.pieceOffsetX = CaptchaConfig.MOBILE_PIECE_OFFSET_X;
-            this.pieceOffsetY = CaptchaConfig.MOBILE_PIECE_OFFSET_Y;
-        } else {
-            this.pieceOffsetX = CaptchaConfig.DESKTOP_PIECE_OFFSET_X;
-            this.pieceOffsetY = CaptchaConfig.DESKTOP_PIECE_OFFSET_Y;
+        body.dragging {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            -webkit-overflow-scrolling: touch;
         }
-    }
-
-    startDrag(pointerId) {
-        this.isDragging = true;
-        this.activePointerId = pointerId;
-    }
-
-    endDrag() {
-        this.isDragging = false;
-        this.activePointerId = null;
-    }
-
-    shouldThrottle() {
-        const now = Date.now();
-        if (now - this.lastMoveTime < CaptchaConfig.THROTTLE_MS) {
-            return true;
+        * {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
-        this.lastMoveTime = now;
-        return false;
-    }
-
-    isActivePointer(pointerId) {
-        return pointerId === this.activePointerId;
-    }
+    `;
+    document.head.appendChild(style);
 }
 
-// ============================================================================
-// UI MANAGEMENT
-// ============================================================================
-
-/**
- * Manages UI updates and DOM manipulation
- * Single Responsibility: UI operations
- */
-class UIManager {
-    constructor(elements) {
-        this.canvas = elements.canvas;
-        this.piece = elements.piece;
-        this.errorMsg = elements.errorMsg;
-        this.brand = elements.brand;
-    }
-
-    showPiece(x, y, offsetX, offsetY) {
-        this.piece.style.display = 'block';
-        this.piece.style.left = `${x - offsetX}px`;
-        this.piece.style.top = `${y - offsetY}px`;
-        this.piece.style.pointerEvents = 'none';
-    }
-
-    hidePiece() {
-        this.piece.style.display = 'none';
-        this.piece.style.pointerEvents = 'none';
-    }
-
-    updatePiecePosition(x, y, offsetX, offsetY) {
-        requestAnimationFrame(() => {
-            this.piece.style.left = `${x - offsetX}px`;
-            this.piece.style.top = `${y - offsetY}px`;
-        });
-    }
-
-    updatePiecePositionDirect(x, y, offsetX, offsetY) {
-        // Direct update without requestAnimationFrame for iOS responsiveness
-        this.piece.style.left = `${x - offsetX}px`;
-        this.piece.style.top = `${y - offsetY}px`;
-    }
-
-    addDraggingClass() {
-        document.body.classList.add('dragging');
-    }
-
-    removeDraggingClass() {
-        document.body.classList.remove('dragging');
-    }
-
-    hideCanvas() {
-        this.canvas.style.display = 'none';
-    }
-
-    showError(message, color = null) {
-        if (color) {
-            this.errorMsg.style.color = color;
-        }
-        this.errorMsg.textContent = message;
-        this.errorMsg.style.display = 'block';
-    }
-
-    showBrand() {
-        this.brand.style.display = 'flex';
-    }
-
-    getPieceRect() {
-        return this.piece.getBoundingClientRect();
-    }
-
-    loadPieceImage(blobUrl) {
-        return new Promise((resolve, reject) => {
-            this.piece.src = blobUrl;
-            this.piece.onload = () => {
-                URL.revokeObjectURL(blobUrl);
-                resolve();
-            };
-            this.piece.onerror = () => {
-                URL.revokeObjectURL(blobUrl);
-                reject(new Error('Failed to load piece image'));
-            };
-        });
-    }
-
-    loadCanvasImage(blobUrl) {
-        const ctx = this.canvas.getContext('2d');
-        const img = new Image();
-
-        return new Promise((resolve, reject) => {
-            img.onload = () => {
-                this.canvas.width = img.naturalWidth;
-                this.canvas.height = img.naturalHeight;
-                this.canvas.style.width = `${img.naturalWidth}px`;
-                this.canvas.style.height = `${img.naturalHeight}px`;
-                ctx.drawImage(img, 0, 0);
-                URL.revokeObjectURL(blobUrl);
-                resolve();
-            };
-            img.onerror = () => {
-                URL.revokeObjectURL(blobUrl);
-                reject(new Error('Failed to load canvas image'));
-            };
-            img.src = blobUrl;
-        });
-    }
-
-    getCanvasRelativeCoordinates(clientX, clientY) {
-        const rect = this.canvas.getBoundingClientRect();
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
-    }
+// Improved mobile detection
+function isMobile() {
+    return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+        (navigator.maxTouchPoints && navigator.maxTouchPoints > 1) ||
+        window.innerWidth <= 500;
 }
 
-/**
- * Manages CSS styles injection
- * Single Responsibility: Style management
- */
-class StyleManager {
-    static injectCompatibilityStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            #${CaptchaConfig.DOM_IDS.CANVAS} {
-                touch-action: none;
-                -webkit-user-select: none;
-                user-select: none;
-                -webkit-touch-callout: none;
-                -webkit-tap-highlight-color: transparent;
-            }
-            #${CaptchaConfig.DOM_IDS.PIECE} {
-                touch-action: manipulation;
-                -webkit-user-select: none;
-                user-select: none;
-                -webkit-touch-callout: none;
-                -webkit-tap-highlight-color: transparent;
-                pointer-events: none;
-            }
-            body.dragging {
-                overflow: hidden;
-                -webkit-overflow-scrolling: auto;
-            }
-            * {
-                -webkit-touch-callout: none;
-                -webkit-user-select: none;
-                -khtml-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
-                user-select: none;
-            }
-        `;
-        document.head.appendChild(style);
+// Fixed coordinate calculation for iOS/macOS
+function getEventCoordinates(event) {
+    let clientX, clientY;
+
+    if (event.touches && event.touches.length > 0) {
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
+    } else if (event.changedTouches && event.changedTouches.length > 0) {
+        clientX = event.changedTouches[0].clientX;
+        clientY = event.changedTouches[0].clientY;
+    } else {
+        clientX = event.clientX || event.pageX;
+        clientY = event.clientY || event.pageY;
     }
 
-    static initializeMobileSettings() {
-        if (!DeviceDetector.isMobile()) return;
+    return {x: clientX, y: clientY};
+}
 
+
+let pieceDisplayDeltaX = 100;
+let pieceDisplayDeltaY = 100;
+if (isMobile()) {
+    pieceDisplayDeltaX = 200;
+    pieceDisplayDeltaY = 200;
+}
+
+let isDragging = false;
+let lastMoveTime = 0;
+
+// Initialize mobile-specific settings
+function initializeMobileSettings() {
+    if (isMobile()) {
         document.body.style.touchAction = 'none';
         document.body.style.userSelect = 'none';
         document.body.style.webkitUserSelect = 'none';
         document.body.style.webkitTouchCallout = 'none';
+        pieceDisplayDeltaY = 100;
 
         // Prevent zoom on double tap
         let lastTouchEnd = 0;
-        document.addEventListener('touchend', (event) => {
-            const now = Date.now();
-            if (now - lastTouchEnd <= CaptchaConfig.DOUBLE_TAP_THRESHOLD) {
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
                 event.preventDefault();
             }
             lastTouchEnd = now;
         }, false);
 
         // Prevent pinch zoom
-        document.addEventListener('touchstart', (event) => {
+        document.addEventListener('touchstart', function (event) {
             if (event.touches.length > 1) {
                 event.preventDefault();
             }
         }, {passive: false});
 
-        document.addEventListener('gesturestart', (event) => {
+        document.addEventListener('gesturestart', function (event) {
             event.preventDefault();
         }, {passive: false});
     }
 }
 
-// ============================================================================
-// DRAG CONTROLLER
-// ============================================================================
+function puzzleCaptchaPointerDown() {
+    return function (event) {
+        if (!event.isTrusted) return;
+        if (PuzzleCaptcha.correctOptionWasSelected) {
+            isDragging = true;
+            document.body.classList.add('dragging');
 
-/**
- * Controls drag and drop logic
- * Single Responsibility: Drag operations
- */
-class DragController {
-    constructor(captchaState, dragState, uiManager, verificationCallback) {
-        this.captchaState = captchaState;
-        this.dragState = dragState;
-        this.ui = uiManager;
-        this.verificationCallback = verificationCallback;
-        this.targetElement = null; // Store element for pointer capture
-    }
+            const {x, y} = getEventCoordinates(event);
+            const absX = x;
+            const absY = y;
 
-    handlePointerDown(event, targetElement = null) {
-        // Validate event
-        if (event.isPrimary === false || !event.isTrusted || this.dragState.isDragging) {
-            return;
+            selectedCaptchaPiece.style.display = 'block';
+            selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
+            selectedCaptchaPiece.style.top = `${absY - pieceDisplayDeltaY}px`;
+            selectedCaptchaPiece.style.pointerEvents = 'none'; // Prevent interference
+
+            const rect = selectedCaptchaPiece.getBoundingClientRect();
+            PuzzleCaptcha.pieceStartPoint = {x: rect.left, y: rect.top};
+            PuzzleCaptcha.correctOptionWasSelected = false;
+            event.preventDefault();
+            event.stopPropagation();
         }
+    };
+}
 
-        // Check if correct option was selected
-        if (!this.captchaState.correctOptionWasSelected) {
-            return;
-        }
+function puzzleCaptchaPointerMove() {
+    return function (event) {
+        if (!event.isTrusted) return;
+        if (!isDragging) return;
+        const now = Date.now();
+        if (now - lastMoveTime < 16) return; // ~60fps throttling
+        lastMoveTime = now;
+        const {x, y} = getEventCoordinates(event);
+        const absX = x;
+        const absY = y;
 
-        // Start drag
-        this.dragState.startDrag(event.pointerId);
-        this.ui.addDraggingClass();
-        this.targetElement = targetElement;
-
-        // CRITICAL FOR iOS: Set pointer capture
-        if (targetElement && targetElement.setPointerCapture) {
-            try {
-                targetElement.setPointerCapture(event.pointerId);
-                console.log('Pointer captured:', event.pointerId);
-            } catch (e) {
-                console.warn('Could not capture pointer:', e);
-            }
-        }
-
-        const {x, y} = DeviceDetector.getEventCoordinates(event);
-        this.ui.showPiece(x, y, this.dragState.pieceOffsetX, this.dragState.pieceOffsetY);
-
-        const rect = this.ui.getPieceRect();
-        this.captchaState.setPieceStartPoint(rect.left, rect.top);
-        this.captchaState.setCorrectOptionSelected(false);
-
+        requestAnimationFrame(() => {
+            selectedCaptchaPiece.style.left = `${absX - pieceDisplayDeltaX}px`;
+            selectedCaptchaPiece.style.top = `${absY - pieceDisplayDeltaY}px`;
+        });
         event.preventDefault();
         event.stopPropagation();
-    }
+    };
+}
 
-    handlePointerMove(event) {
-        // Validate
-        if (!this.dragState.isActivePointer(event.pointerId) ||
-            !event.isTrusted ||
-            !this.dragState.isDragging) {
-            return;
-        }
+function puzzleCaptchaPointerUp() {
+    return async function (event) {
+        if (!isDragging) return;
+        isDragging = false;
+        if (!event.isTrusted) return;
 
-        // iOS needs immediate updates, desktop can throttle
-        const isTouch = event.pointerType === 'touch' || DeviceDetector.isMobile();
-        if (!isTouch && this.dragState.shouldThrottle()) {
-            return;
-        }
+        document.body.classList.remove('dragging');
+        const rect = selectedCaptchaPiece.getBoundingClientRect();
+        selectedCaptchaPiece.style.display = 'none';
+        selectedCaptchaPiece.style.pointerEvents = 'auto';
 
-        const {x, y} = DeviceDetector.getEventCoordinates(event);
-        // Direct update for touch (no requestAnimationFrame delay)
-        this.ui.updatePiecePositionDirect(x, y, this.dragState.pieceOffsetX, this.dragState.pieceOffsetY);
-
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    handlePointerUp(event) {
-        // Validate
-        if (!this.dragState.isActivePointer(event.pointerId) ||
-            !this.dragState.isDragging ||
-            !event.isTrusted) {
-            return;
-        }
-
-        // Release pointer capture
-        if (this.targetElement && this.targetElement.releasePointerCapture) {
-            try {
-                this.targetElement.releasePointerCapture(event.pointerId);
-                console.log('Pointer released:', event.pointerId);
-            } catch (e) {
-                // Already released or not captured
-            }
-        }
-
-        this.dragState.endDrag();
-        this.ui.removeDraggingClass();
-
-        const rect = this.ui.getPieceRect();
-        this.ui.hidePiece();
-
-        const finalX = Math.round(this.captchaState.startPoint.x +
-            (rect.left - this.captchaState.pieceStartPoint.x));
-        const finalY = Math.round(this.captchaState.startPoint.y +
-            (rect.top - this.captchaState.pieceStartPoint.y));
-
-        console.log('Drag completed at:', {x: finalX, y: finalY});
-
-        // Verify asynchronously
-        this.verifyDragPosition(finalX, finalY);
-
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    async verifyDragPosition(finalX, finalY) {
-        await TimeUtils.delay(CaptchaConfig.STATE_UPDATE_DELAY);
+        const finalX = Math.round(PuzzleCaptcha.startPoint.x + (rect.left - PuzzleCaptcha.pieceStartPoint.x));
+        const finalY = Math.round(PuzzleCaptcha.startPoint.y + (rect.top - PuzzleCaptcha.pieceStartPoint.y));
+        console.log({x: finalX, y: finalY});
 
         try {
-            await this.verificationCallback(
-                finalX - this.dragState.pieceOffsetX,
-                finalY - this.dragState.pieceOffsetY
+            await PushcaClient.verifyPuzzleCaptcha(
+                PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, finalX - pieceDisplayDeltaX, finalY - pieceDisplayDeltaY
             );
         } catch (error) {
             console.error('Verification error:', error);
         }
-    }
-
-    handleTouchCancel() {
-        if (!this.dragState.isDragging) return;
-
-        // Release pointer capture if active
-        if (this.targetElement && this.targetElement.releasePointerCapture && this.dragState.activePointerId) {
-            try {
-                this.targetElement.releasePointerCapture(this.dragState.activePointerId);
-            } catch (e) {
-                // Already released
-            }
+        await delay(2000);
+        if (PushcaClient.isOpen()) {
+            reloadOnFail(true);
         }
 
-        this.dragState.endDrag();
-        this.ui.removeDraggingClass();
-        this.ui.hidePiece();
-    }
+        event.preventDefault();
+        event.stopPropagation();
+    };
 }
 
-// ============================================================================
-// CANVAS INTERACTION CONTROLLER
-// ============================================================================
+// Setup event listeners with proper options
 
-/**
- * Handles canvas piece selection
- * Single Responsibility: Canvas interaction logic
- */
-class CanvasInteractionController {
-    constructor(captchaState, dragState, uiManager, dragController, verificationCallback, failureCallback) {
-        this.captchaState = captchaState;
-        this.dragState = dragState;
-        this.ui = uiManager;
-        this.dragController = dragController;
-        this.verificationCallback = verificationCallback;
-        this.failureCallback = failureCallback;
-    }
-
-    createClickHandler() {
-        return async (event) => {
-            // Prevent concurrent verifications
-            if (this.captchaState.isVerifying || this.dragState.isDragging || !event.isPrimary) {
-                return;
-            }
-
-            this.captchaState.setVerifying(true);
-
-            try {
-                const {x: clientX, y: clientY} = DeviceDetector.getEventCoordinates(event);
-                const {x, y} = this.ui.getCanvasRelativeCoordinates(clientX, clientY);
-
-                this.captchaState.setStartPoint(x, y);
-                console.log('Canvas click detected at:', {x, y});
-
-                const isCorrect = await this.verificationCallback(x, y);
-                this.captchaState.setCorrectOptionSelected(isCorrect);
-
-                console.log('Verification result:', isCorrect);
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                if (isCorrect) {
-                    // Create synthetic pointer event to start drag
-                    const pointerEvent = new PointerEvent('pointerdown', {
-                        bubbles: true,
-                        cancelable: true,
-                        isPrimary: true,
-                        pointerId: event.pointerId || (event.touches ? event.touches[0].identifier : CaptchaConfig.MOUSE_POINTER_ID),
-                        pointerType: event.pointerType || (event.touches ? 'touch' : 'mouse'),
-                        clientX: clientX,
-                        clientY: clientY,
-                        isTrusted: event.isTrusted
-                    });
-                    // Pass canvas element for pointer capture
-                    this.dragController.handlePointerDown(pointerEvent, event.target || this.ui.canvas);
-                } else {
-                    console.log(CaptchaConfig.MESSAGES.WRONG_PIECE);
-                    this.failureCallback(true);
-                }
-            } catch (error) {
-                console.error('Piece selection error:', error);
-                this.captchaState.setCorrectOptionSelected(false);
-                this.failureCallback(true);
-            } finally {
-                this.captchaState.setVerifying(false);
-            }
-        };
-    }
+function supportsMouseEvents() {
+    return 'onmousedown' in window &&
+        'onmousemove' in window &&
+        'onmouseup' in window;
 }
 
-// ============================================================================
-// EVENT COORDINATOR
-// ============================================================================
+function hasMousePointer() {
+    return matchMedia("(pointer: fine)").matches;
+}
 
-/**
- * Coordinates all event listeners
- * Single Responsibility: Event delegation and coordination
- */
-class EventCoordinator {
-    constructor(dragController) {
-        this.dragController = dragController;
-        this.passiveOptions = {passive: false};
-    }
+function isDesktopMouseAvailable() {
+    return supportsMouseEvents() && hasMousePointer();
+}
 
-    setupPointerEvents() {
-        // Skip pointer events on iOS - use touch events instead
-        if (DeviceDetector.isIOS()) {
-            console.log('iOS detected - using touch events instead of pointer events');
-            return;
-        }
+function setupEventListeners() {
+    const passiveOptions = {passive: false}; // Non-passive for preventDefault to work
 
-        document.addEventListener('pointerdown',
-            (e) => this.dragController.handlePointerDown(e, e.target), this.passiveOptions);
-        document.addEventListener('pointermove',
-            (e) => this.dragController.handlePointerMove(e), this.passiveOptions);
-        document.addEventListener('pointerup',
-            (e) => this.dragController.handlePointerUp(e), this.passiveOptions);
-        document.addEventListener('pointercancel',
-            (e) => this.dragController.handlePointerUp(e), this.passiveOptions);
-    }
-
-    setupTouchFallbacks(dragState) {
-        // On iOS, use touch events directly instead of pointer events
-        const isIOS = DeviceDetector.isIOS();
-
-        document.addEventListener('touchstart', (event) => {
-            if (isIOS && this.dragController.captchaState.correctOptionWasSelected) {
-                // Convert to pointer event for iOS
-                const pointerEvent = DeviceDetector.createSyntheticPointerEventFromTouch('pointerdown', event);
-                this.dragController.handlePointerDown(pointerEvent, event.target);
-                event.preventDefault();
-                return;
-            }
-
-            // Fallback for non-iOS devices
-            if (this.dragController.captchaState.correctOptionWasSelected && event.isPrimary !== false) {
-                event.preventDefault();
-            }
-        }, this.passiveOptions);
-
-        document.addEventListener('touchmove', (event) => {
-            if (isIOS && dragState.isDragging) {
-                const pointerEvent = DeviceDetector.createSyntheticPointerEventFromTouch('pointermove', event);
-                this.dragController.handlePointerMove(pointerEvent);
-                event.preventDefault();
-                return;
-            }
-
-            if (dragState.isDragging) {
-                event.preventDefault();
-            }
-        }, this.passiveOptions);
-
-        document.addEventListener('touchend', (event) => {
-            if (isIOS && dragState.isDragging) {
-                const pointerEvent = DeviceDetector.createSyntheticPointerEventFromTouch('pointerup', event);
-                this.dragController.handlePointerUp(pointerEvent);
-                event.preventDefault();
-                return;
-            }
-
-            if (dragState.isDragging) {
-                event.preventDefault();
-            }
-        }, this.passiveOptions);
-
-        document.addEventListener('touchcancel', (event) => {
-            if (dragState.isDragging) {
-                this.dragController.handleTouchCancel();
-                event.preventDefault();
-            }
-        }, this.passiveOptions);
-    }
-
-    setupMouseFallbacks(dragState) {
-        document.addEventListener('mousedown', (event) => {
-            const pointerEvent = DeviceDetector.createSyntheticPointerEvent('pointerdown', event);
-            this.dragController.handlePointerDown(pointerEvent, event.target);
-        }, this.passiveOptions);
-
-        document.addEventListener('mousemove', (event) => {
-            if (!dragState.isDragging) return;
-            const pointerEvent = DeviceDetector.createSyntheticPointerEvent('pointermove', event);
-            this.dragController.handlePointerMove(pointerEvent);
-        }, this.passiveOptions);
-
-        document.addEventListener('mouseup', (event) => {
-            if (!dragState.isDragging) return;
-            const pointerEvent = DeviceDetector.createSyntheticPointerEvent('pointerup', event);
-            this.dragController.handlePointerUp(pointerEvent);
-        }, this.passiveOptions);
-    }
-
-    setupPreventionHandlers(dragState) {
-        // Prevent context menu on long press
-        document.addEventListener('contextmenu', (event) => {
-            if (dragState.isDragging) {
-                event.preventDefault();
-            }
-        });
-
-        // Prevent text selection during drag
-        document.addEventListener('selectstart', (event) => {
-            if (dragState.isDragging) {
-                event.preventDefault();
-            }
-        });
-
-        // Prevent drag image on desktop
-        document.addEventListener('dragstart', (event) => {
+    if (isDesktopMouseAvailable()) {
+        // Mouse events for desktop
+        document.addEventListener('mousedown', puzzleCaptchaPointerDown());
+        document.addEventListener('mousemove', puzzleCaptchaPointerMove());
+        document.addEventListener('mouseup', puzzleCaptchaPointerUp());
+    } else {
+        // Touch events for mobile
+        document.addEventListener('touchstart', function (event) {
             event.preventDefault();
-        });
+            puzzleCaptchaPointerDown()(event);
+        }, passiveOptions);
+        document.addEventListener('touchmove', function (event) {
+            event.preventDefault();
+            puzzleCaptchaPointerMove()(event);
+        }, passiveOptions);
+        document.addEventListener('touchend', async function (event) {
+            event.preventDefault();
+            await puzzleCaptchaPointerUp()(event);
+        }, passiveOptions);
+        document.addEventListener('touchcancel', async function (event) {
+            event.preventDefault();
+            await puzzleCaptchaPointerUp()(event);
+        }, passiveOptions);
     }
 
-    setupAllEventListeners(dragState) {
-        this.setupPointerEvents();
-        this.setupTouchFallbacks(dragState);
-        this.setupMouseFallbacks(dragState);
-        this.setupPreventionHandlers(dragState);
-    }
+    // Prevent context menu on long press (iOS)
+    document.addEventListener('contextmenu', function (event) {
+        if (isDragging) {
+            event.preventDefault();
+        }
+    });
+
+    // Prevent text selection during drag
+    document.addEventListener('selectstart', function (event) {
+        if (isDragging) {
+            event.preventDefault();
+        }
+    });
+
+    // Prevent drag image on desktop
+    document.addEventListener('dragstart', function (event) {
+        event.preventDefault();
+    });
 }
 
-// ============================================================================
-// WEBSOCKET ADAPTER
-// ============================================================================
-
-/**
- * Adapts WebSocket client for captcha operations
- * Single Responsibility: WebSocket communication
- */
-class WebSocketAdapter {
-    constructor(captchaState, wsClient) {
-        this.state = captchaState;
-        this.client = wsClient;
-    }
-
-    async verifyPieceSelection(x, y) {
-        const result = await this.client.verifySelectedPieceOfPuzzleCaptcha(
-            this.state.captchaId,
-            this.state.pageId,
-            x,
-            y
-        );
-        return JSON.parse(result).body === 'true';
-    }
-
-    async verifyDragPosition(x, y) {
-        await this.client.verifyPuzzleCaptcha(
-            this.state.captchaId,
-            this.state.pageId,
-            x,
-            y
-        );
-    }
-
-    async requestPuzzle() {
-        await this.client.RequestPuzzleCaptcha(
-            this.state.captchaId,
-            this.state.pieceLength
-        );
-    }
-
-    isOpen() {
-        return this.client.isOpen();
-    }
-
-    stop() {
-        this.client.stopWebSocket();
-    }
-
-    async connect() {
-        if (this.isOpen()) return;
-
-        const clientFilter = new ClientFilter(
-            CaptchaConfig.WORKSPACE_ID,
-            CaptchaConfig.ACCOUNT_ID,
-            this.state.embedded ? uuid.v4().toString() : this.state.pageId,
-            CaptchaConfig.APP_ID
-        );
-
-        await this.client.openWsConnection(
-            CaptchaConfig.WS_URL,
-            clientFilter,
-            (clientObj) => new ClientFilter(
-                clientObj.workSpaceId,
-                clientObj.accountId,
-                clientObj.deviceId,
-                clientObj.applicationId
-            )
-        );
-    }
+function drawPiece(x, y) {
+    const ctx = puzzleCaptchaArea.getContext('2d');
+    const img = new Image();
+    img.onload = function () {
+        ctx.drawImage(img, x, y);
+    };
+    img.src = selectedCaptchaPiece.src;
 }
 
-// ============================================================================
-// APPLICATION ORCHESTRATOR
-// ============================================================================
+// Fixed canvas touch handling
+function selectPuzzleCaptchaPiecePointerDown() {
+    return async function (event) {
+        const rect = this.getBoundingClientRect();
 
-/**
- * Main application class that orchestrates all components
- * Single Responsibility: Application lifecycle and coordination
- */
-class PuzzleCaptchaApp {
-    constructor() {
-        // Initialize DOM elements
-        this.elements = {
-            canvas: document.getElementById(CaptchaConfig.DOM_IDS.CANVAS),
-            piece: document.getElementById(CaptchaConfig.DOM_IDS.PIECE),
-            errorMsg: document.getElementById(CaptchaConfig.DOM_IDS.ERROR),
-            brand: document.getElementById(CaptchaConfig.DOM_IDS.BRAND)
-        };
-
-        // Initialize components
-        this.urlParser = new URLParamParser();
-        this.captchaState = new CaptchaState(this.urlParser);
-        this.dragState = new DragState();
-        this.uiManager = new UIManager(this.elements);
-        this.wsAdapter = new WebSocketAdapter(this.captchaState, PushcaClient);
-
-        // Create controllers
-        this.dragController = new DragController(
-            this.captchaState,
-            this.dragState,
-            this.uiManager,
-            (x, y) => this.handleDragVerification(x, y)
-        );
-
-        this.canvasController = new CanvasInteractionController(
-            this.captchaState,
-            this.dragState,
-            this.uiManager,
-            this.dragController,
-            (x, y) => this.wsAdapter.verifyPieceSelection(x, y),
-            (showError) => this.reloadOnFail(showError)
-        );
-
-        this.eventCoordinator = new EventCoordinator(this.dragController);
-
-        // Setup WebSocket handlers
-        this.setupWebSocketHandlers();
-    }
-
-    async initialize() {
-        // Inject styles
-        StyleManager.injectCompatibilityStyles();
-        StyleManager.initializeMobileSettings();
-
-        // Setup events
-        this.eventCoordinator.setupAllEventListeners(this.dragState);
-
-        // Setup brand click
-        if (this.elements.brand) {
-            this.elements.brand.addEventListener('click', () => {
-                window.open(CaptchaConfig.BRAND_URL, '_blank');
-            });
+        let x, y;
+        if (event.touches && event.touches.length > 0) {
+            // Mobile touch - use getBoundingClientRect for accurate positioning
+            const touch = event.touches[0];
+            x = touch.clientX - rect.left;
+            y = touch.clientY - rect.top;
+        } else {
+            // Desktop mouse
+            x = event.clientX - rect.left;
+            y = event.clientY - rect.top;
         }
 
-        // Setup timeout
-        TimeUtils.delay(CaptchaConfig.CAPTCHA_TIMEOUT).then(() => {
-            this.reloadOnFail(true);
-        });
-    }
-
-    async handleDragVerification(x, y) {
-        await this.wsAdapter.verifyDragPosition(x, y);
-        await TimeUtils.delay(CaptchaConfig.VERIFICATION_DELAY);
-
-        if (this.wsAdapter.isOpen()) {
-            this.reloadOnFail(true);
+        PuzzleCaptcha.startPoint = {x: x, y: y};
+        console.log(PuzzleCaptcha.startPoint);
+        try {
+            const result = await PushcaClient.verifySelectedPieceOfPuzzleCaptcha(
+                PuzzleCaptcha.captchaId, PuzzleCaptcha.pageId, x, y
+            );
+            PuzzleCaptcha.correctOptionWasSelected = JSON.parse(result).body === 'true';
+        } catch (error) {
+            console.error('Verification error:', error);
+            PuzzleCaptcha.correctOptionWasSelected = false;
         }
-    }
-
-    reloadOnFail(showError) {
-        this.wsAdapter.stop();
-
-        if (showError) {
-            this.uiManager.hideCanvas();
-            this.uiManager.showError(CaptchaConfig.MESSAGES.ERROR);
-        }
-
-        TimeUtils.delay(CaptchaConfig.RELOAD_DELAY).then(() => {
-            const url = new URL(window.location.href);
-            url.searchParams.set('hide-task', 'true');
-            window.location.href = url.toString();
-        });
-    }
-
-    setupWebSocketHandlers() {
-        // On WebSocket open
-        PushcaClient.onOpenHandler = async () => {
-            await this.wsAdapter.requestPuzzle();
-
-            let attempts = 0;
-            while (!this.captchaState.loaded) {
-                await TimeUtils.delay(CaptchaConfig.LOAD_CHECK_INTERVAL);
-                attempts++;
-                if (attempts > CaptchaConfig.MAX_LOAD_ATTEMPTS) {
-                    this.reloadOnFail(false);
-                    return;
-                }
-            }
-
-            await TimeUtils.delay(CaptchaConfig.IMAGE_LOAD_DELAY);
-        };
-
-        // On token received
-        PushcaClient.onHumanTokenHandler = (token) => {
-            console.log(`Human token received: ${token}`);
-            this.wsAdapter.stop();
-            this.uiManager.hideCanvas();
-            this.uiManager.showError(CaptchaConfig.MESSAGES.SUCCESS, 'green');
-
-            if (!this.captchaState.embedded) {
-                // Error message shown for non-embedded mode
-            }
-
-            TimeUtils.delay(CaptchaConfig.RELOAD_DELAY).then(() => {
-                location.reload();
-            });
-        };
-
-        // On puzzle data received
-        PushcaClient.onPuzzleCaptchaSetHandler = async (binaryWithHeader) => {
-            const blob = new Blob([binaryWithHeader.payload], {type: 'image/png'});
-            const blobUrl = URL.createObjectURL(blob);
-
-            if (this.captchaState.loaded) {
-                // Load piece image
-                await this.uiManager.loadPieceImage(blobUrl);
+        event.preventDefault();
+        event.stopPropagation();
+        if (PuzzleCaptcha.correctOptionWasSelected) {
+            puzzleCaptchaPointerDown()(event);
+        } else {
+            if (PuzzleCaptcha.solvingAttempt < 2) {
+                PuzzleCaptcha.solvingAttempt = PuzzleCaptcha.solvingAttempt + 1;
+                errorMessage.textContent = `Selected shape has no sibling, one attempt left`;
+                errorMessage.style.display = 'block';
+                delay(3000).then(() => errorMessage.style.display = 'none');
             } else {
-                // Load canvas image
-                await this.uiManager.loadCanvasImage(blobUrl);
-
-                // Setup canvas click handler
-                const clickHandler = this.canvasController.createClickHandler();
-                this.elements.canvas.addEventListener('pointerdown', clickHandler, {passive: false});
-                this.elements.canvas.addEventListener('touchstart', clickHandler, {passive: false});
-                this.elements.canvas.addEventListener('mousedown', clickHandler, {passive: false});
-
-                this.captchaState.markLoaded();
-                console.log('Puzzle image loaded successfully');
+                reloadOnFail(true);
             }
+        }
+    };
+}
+
+// Initialize everything
+function initializePuzzleCaptcha() {
+    addCompatibilityStyles();
+    initializeMobileSettings();
+    setupEventListeners();
+
+    // Brand name click handler
+    if (brandNameDiv) {
+        brandNameDiv.addEventListener('click', function () {
+            window.open("https://sl-st.com", '_blank');
+        });
+    }
+
+    // Timeout handler
+    delay(60_000).then(() => {
+        reloadOnFail(true);
+    });
+}
+
+function reloadOnFail(showError) {
+    PushcaClient.stopWebSocket();
+    if (showError) {
+        errorMessage.textContent = `You can try better next time!`;
+        errorMessage.style.display = 'block';
+    }
+    delay(1500).then(() => {
+        puzzleCaptchaArea.style.display = 'none';
+        const url = new URL(window.location.href);
+        url.searchParams.set('hide-task', 'true');
+        window.location.href = url.toString();
+    });
+}
+
+// WebSocket handlers
+PushcaClient.onOpenHandler = async function () {
+    await PushcaClient.RequestPuzzleCaptcha(PuzzleCaptcha.captchaId, PuzzleCaptcha.pieceLength);
+
+    let numberOfAttempt = 0;
+    while (!PuzzleCaptcha.loaded) {
+        await delay(100);
+        numberOfAttempt++;
+        if (numberOfAttempt > 50) {
+            reloadOnFail(false);
+        }
+    }
+    await delay(300);
+}
+PushcaClient.onHumanTokenHandler = function (token) {
+    console.log(`Human token was received: ${token}`)
+    PushcaClient.stopWebSocket();
+    puzzleCaptchaArea.style.display = 'none';
+    errorMessage.style.color = "green";
+    errorMessage.textContent = `Your Human token was assigned. Amazing job!`;
+    if (!PuzzleCaptcha.embedded) {
+        errorMessage.style.display = 'block';
+    }
+
+    delay(1500).then(() => {
+        location.reload();
+    });
+}
+PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
+    const puzzleCaptchaData = binaryWithHeader.payload;
+    const blob = new Blob([puzzleCaptchaData], {type: 'image/png'});
+    const blobUrl = URL.createObjectURL(blob);
+    //downloadFile(blob, "similarity_challenge_grid.png");
+    if (PuzzleCaptcha.loaded) {
+        selectedCaptchaPiece.src = blobUrl;
+        selectedCaptchaPiece.onload = function () {
+            URL.revokeObjectURL(blobUrl);
         };
-    }
+        selectedCaptchaPiece.onerror = function () {
+            URL.revokeObjectURL(blobUrl);
+        };
+    } else {
+        const ctx = puzzleCaptchaArea.getContext('2d');
+        const img = new Image();
+        img.onload = function () {
+            // Set canvas size to exact image dimensions
+            puzzleCaptchaArea.width = img.naturalWidth;
+            puzzleCaptchaArea.height = img.naturalHeight;
 
-    async start() {
-        this.elements.brand.title = CaptchaConfig.MESSAGES.TASK_HINT;
+            puzzleCaptchaArea.style.width = `${img.naturalWidth}px`;
+            puzzleCaptchaArea.style.height = `${img.naturalHeight}px`;
 
-        const hintElement = document.getElementById(CaptchaConfig.DOM_IDS.HINT);
+            // Draw image at exact size
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(blobUrl);
 
-        if (!this.captchaState.showTask) {
-            if (hintElement) hintElement.remove();
-            this.uiManager.showBrand();
-            await this.wsAdapter.connect();
-            return;
-        }
-
-        if (this.captchaState.skipDemo) {
-            this.uiManager.showBrand();
-            if (hintElement) {
-                hintElement.style.display = 'flex';
-                await TimeUtils.delay(CaptchaConfig.HINT_DISPLAY_DURATION);
-                hintElement.remove();
+            // Add event listener after image is loaded
+            if (isMobile()) {
+                puzzleCaptchaArea.addEventListener('touchstart', selectPuzzleCaptchaPiecePointerDown(), {passive: false});
+            } else {
+                puzzleCaptchaArea.addEventListener('mousedown', selectPuzzleCaptchaPiecePointerDown());
             }
-            await this.wsAdapter.connect();
-        }
+
+            PuzzleCaptcha.loaded = true;
+            //alert(`${rect.width} : ${rect.height} [${this.width} : ${this.height}]`);
+            //610x1280
+        };
+        img.onerror = function () {
+            URL.revokeObjectURL(blobUrl);
+            console.error('Failed to load puzzle image');
+        };
+        img.src = blobUrl;
+    }
+};
+
+// WebSocket connection
+async function openWsConnection() {
+    if (!PushcaClient.isOpen()) {
+        const pClient = new ClientFilter(
+            "SecureFileShare",
+            "dynamic-captcha",
+            PuzzleCaptcha.embedded ? uuid.v4().toString() : PuzzleCaptcha.pageId,
+            "PUZZLE_CAPTCHA_APP"
+        );
+        await PushcaClient.openWsConnection(
+            PuzzleCaptcha.wsUrl,
+            pClient,
+            function (clientObj) {
+                return new ClientFilter(
+                    clientObj.workSpaceId,
+                    clientObj.accountId,
+                    clientObj.deviceId,
+                    clientObj.applicationId
+                );
+            }
+        );
     }
 }
 
-// ============================================================================
-// APPLICATION BOOTSTRAP
-// ============================================================================
-
-// Create and initialize application
-let captchaApp;
-
-function initializeApplication() {
-    captchaApp = new PuzzleCaptchaApp();
-    captchaApp.initialize();
+// Helper function for delay
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Start when DOM is ready
+// Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApplication);
+    document.addEventListener('DOMContentLoaded', initializePuzzleCaptcha);
 } else {
-    initializeApplication();
+    initializePuzzleCaptcha();
 }
 
-// Start application flow when DOM content is loaded
-window.addEventListener("DOMContentLoaded", async () => {
-    if (captchaApp) {
-        await captchaApp.start();
-    }
-});
+
+
+
+
+
+
+
+
+
+
 
