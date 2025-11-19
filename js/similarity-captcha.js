@@ -1,5 +1,6 @@
 //PuzzleCaptchaSetBinaries
 const PuzzleCaptcha = {}
+PuzzleCaptcha.initiated = false;
 PuzzleCaptcha.solvingAttempt = 1;
 PuzzleCaptcha.serverUrl = 'https://secure.fileshare.ovh';
 PuzzleCaptcha.wsUrl = 'wss://secure.fileshare.ovh:31085';
@@ -35,40 +36,82 @@ const puzzleCaptchaArea = document.getElementById("puzzleCaptchaArea");
 const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
 const errorMessage = document.getElementById('errorMessage');
 const brandNameDiv = document.getElementById("brandNameDiv");
+const showTaskBtn = document.getElementById("showTaskBtn");
+const viewDemoBtn = document.getElementById("viewDemoBtn");
+const captchaHint = document.getElementById('captchaHint');
+const captchaCaptionContainer = document.getElementById("captchaCaptionContainer");
 
-async function removeTaskElementsAndStart(captchaHint) {
+function showTask() {
+    delay(500).then(() => {
+        captchaHint.style.display = 'flex';
+        delay(5000).then(() => {
+            captchaHint.style.display = 'none';
+        });
+    });
+}
+
+showTaskBtn.addEventListener("click", function () {
+    showTask();
+});
+
+showTaskBtn.addEventListener(
+    "touchstart",
+    function (event) {
+        event.preventDefault();
+        showTask();
+    },
+    {passive: false}
+);
+
+function viewDemo() {
+    delay(300).then(() => {
+        window.open(
+            "https://secure.fileshare.ovh/videos/similarity-captcha-demo.mp4",
+            "_blank"
+        );
+    });
+}
+
+viewDemoBtn.addEventListener("click", function () {
+    viewDemo();
+});
+
+viewDemoBtn.addEventListener(
+    "touchstart",
+    function (event) {
+        event.preventDefault();
+        viewDemo();
+    },
+    {passive: false}
+);
+
+async function removeTaskElementsAndStart() {
     if (captchaHint) {
-        captchaHint.remove();
+        captchaHint.style.display = "none";
     }
-    brandNameDiv.style.display = 'flex';
+    captchaCaptionContainer.style.display = 'flex';
     await openWsConnection();
 }
 
-async function showCaptchaHintAndStart(captchaHint) {
-    brandNameDiv.style.display = 'flex';
+async function showCaptchaHintAndStart() {
     await openWsConnection();
-    if (captchaHint) {
-        delay(1000).then(() => {
-            captchaHint.style.display = 'flex';
-            delay(5000).then(() => {
-                captchaHint.style.display = 'none';
-            });
-        });
+    captchaCaptionContainer.style.display = 'flex';
+    if (captchaHint && (!PuzzleCaptcha.initiated)) {
+        showTask();
+        PuzzleCaptcha.initiated = true;
     }
 }
 
 window.addEventListener("DOMContentLoaded", async function () {
     brandNameDiv.title = "Task: find matching shapes and drag one onto its pair to align them.";
 
-    const captchaHint = document.getElementById('captchaHint');
-
     if (!PuzzleCaptcha.showTask) {
-        await removeTaskElementsAndStart(captchaHint);
+        await removeTaskElementsAndStart();
         return;
     }
 
     if (PuzzleCaptcha.skipDemo) {
-        await showCaptchaHintAndStart(captchaHint);
+        await showCaptchaHintAndStart();
     }
 });
 

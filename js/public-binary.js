@@ -57,8 +57,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         //captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180&skip-demo=false`;
         captchaFrame.src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
-        captchaFrame.style.width = '620px';
-        captchaFrame.style.height = '1280px';
+        if (isMobile()) {
+            captchaFrame.style.width = '610px';
+            captchaFrame.style.height = '1265px';
+        } else {
+            captchaFrame.style.width = '610px';
+            captchaFrame.style.height = '1280px';
+        }
+        captchaFrame.style.transformOrigin='top left !important';
         let scaleK = 1;
         while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.4)) {
             scaleK = scaleK - 0.1 * (isMobile() ? 1.7 : 1);

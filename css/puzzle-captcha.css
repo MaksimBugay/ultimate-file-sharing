@@ -67,3 +67,14 @@
     text-align: center;
     align-content: center;
 }
+
+.captcha-button {
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    width: 150px;
+    height: 50px;
+}
