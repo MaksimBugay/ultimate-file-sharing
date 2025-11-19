@@ -25,7 +25,14 @@
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
 
-<div id="mainContainer"></div>
+<div class="main-container">
+    <div id="contentPreviewContainer" class="visual-challenge-container">
+        <div id="captchaContainer" style="margin-left: 5px; margin-top: 50px; transform: scale(1.0);">
+            <iframe id="captchaFrame" class="similarity-captcha-iframe"></iframe>
+        </div>
+    </div>
+</div>
+
 </body>
 <script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
 <script src="js/embedded-similarity-captcha.js?v=<?= time(); ?>"></script>
@@ -33,7 +40,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const pageId = uuid.v4().toString();
-        const captchaContainer = document.getElementById('mainContainer');
+        const captchaContainer = document.getElementById('captchaContainer');
         if (!captchaContainer) return;
 
         addVisualSimilarityChallenge(

@@ -2,29 +2,30 @@ async function addVisualSimilarityChallenge(captchaContainer, pageId, humanToken
     if (!captchaContainer) return;
 
     // Add the class to the existing container
-    captchaContainer.classList.add('embedded-similarity-challenge-container');
+    captchaContainer.style.width = "auto";
+    captchaContainer.style.transformOrigin = "top left !important";
+    captchaContainer.style.display = 'inline-block';
 
-    // Apply margin styles
-    captchaContainer.style.marginTop = '15px';
-    captchaContainer.style.marginLeft = '5px';
-
+    let captchaFrame = document.getElementById('captchaFrame');
     // Create and configure the iframe
-    const captchaFrame = document.createElement('iframe');
-    captchaFrame.id = 'captchaFrame';
-    captchaContainer.classList.add('embedded-similarity-challenge-container');
-    captchaFrame.style.padding = '0';
-    captchaFrame.style.margin = '0';
-    captchaFrame.style.width = '620px';
+    if (!captchaFrame) {
+        captchaFrame = document.createElement('iframe');
+        captchaFrame.id = 'captchaFrame';
+        captchaFrame.className = "similarity-captcha-iframe";
+        captchaFrame.style.padding = '0';
+        captchaFrame.style.margin = '0';
+
+        // Append the iframe to the container
+        captchaContainer.appendChild(captchaFrame);
+    }
+    captchaFrame.style.width = '610px';
     captchaFrame.style.height = '1280px';
     captchaFrame.src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
 
-    // Append the iframe to the container
-    captchaContainer.appendChild(captchaFrame);
-    captchaContainer.style.transformOrigin = "top left";
     let scaleK = 1;
     if (captchaContainer && captchaFrame) {
         while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.4)) {
-            scaleK = scaleK - 0.1 * (isMobile() ? 2.3 : 1);
+            scaleK = scaleK - 0.1;
             captchaContainer.style.transform = `scale(${scaleK})`;
         }
     }
