@@ -32,7 +32,7 @@ h2 {
     padding: 0;
     font-family: 'Arial', sans-serif;
     width: 100%;
-    height: calc(100vh - 80px);
+    height: calc(100vh - 0px);
     display: flex;
     justify-content: center;
     align-items: center;
