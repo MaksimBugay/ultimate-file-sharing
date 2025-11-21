@@ -27,12 +27,27 @@ h2 {
     margin: 0;
 }
 
-.main-container {
+.main-container-without-bottom-space {
     margin: 0;
     padding: 0;
     font-family: 'Arial', sans-serif;
     width: 100%;
     height: calc(100vh - 0px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: url('../images/data-pipe.webp');
+    background-size: 100% 100%; /* Make the background cover the entire page */
+    background-repeat: no-repeat; /* Prevent the image from repeating */
+    background-position: center center; /* Center the background image */
+}
+
+.main-container {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    width: 100%;
+    height: calc(100vh - 220px);
     display: flex;
     justify-content: center;
     align-items: center;
