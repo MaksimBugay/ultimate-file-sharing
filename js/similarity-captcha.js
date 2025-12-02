@@ -521,7 +521,7 @@ async function openWsConnection() {
         const pClient = new ClientFilter(
             "SecureFileShare",
             "dynamic-captcha",
-            PuzzleCaptcha.embedded ? uuid.v4().toString() : PuzzleCaptcha.pageId,
+            PuzzleCaptcha.pageId,
             "PUZZLE_CAPTCHA_APP"
         );
         await PushcaClient.openWsConnection(

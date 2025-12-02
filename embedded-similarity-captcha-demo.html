@@ -38,21 +38,23 @@
 <script src="js/embedded-similarity-captcha.js?v=<?= time(); ?>"></script>
 <script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const pageId = uuid.v4().toString();
+    document.addEventListener('DOMContentLoaded', async function () {
+        const apiKey = uuid.v4().toString();
+        const sessionId = uuid.v4().toString();
+        const pageId = await generatePageId(apiKey, sessionId);
         const captchaContainer = document.getElementById('captchaContainer');
         if (!captchaContainer) return;
 
         addVisualSimilarityChallenge(
             captchaContainer,
             pageId,
-            function (token) {
-                alert(`Human token was received for page with id = ${pageId}: ${token}`);
-                /*const isValid = await validateHumanToken(pageId, token);
+            async function (token) {
+                //alert(`Human token was received for page with id = ${pageId}: ${token}`);
+                const isValid = await validateAdvancedHumanToken(pageId, token, apiKey);
                 if (isValid) {
                     console.log(`"${pageId}", "${token}"`);
-                    alert(`"${pageId}", "${token}"`);
-                }*/
+                    alert(`Advanced human token is valid: ${token}`);
+                }
                 location.reload();
             }
         );
