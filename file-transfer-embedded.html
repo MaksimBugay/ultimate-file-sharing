@@ -108,6 +108,16 @@
     </div>
 </div>
 
+<div id="consentDialog" class="consent-dialog">
+    <div class="dialog-box">
+        <h2>Clipboard Access Request</h2>
+        <p>This website requires access to your clipboard to perform certain actions. Do you want to allow clipboard
+            access?</p>
+        <button id="allowClipboard">Allow</button>
+        <button id="denyClipboard">Deny</button>
+    </div>
+</div>
+
 <div id="languageDropdown" class="dropdown" style="position: absolute; right: 15px; top: 30px; display: none">
     <button id="dropdownButton" class="dropdown-button">Select Language</button>
     <ul id="dropdownList" class="dropdown-list"></ul>
@@ -243,7 +253,8 @@
 </div>
 </body>
 
-<script src="https://secure.fileshare.ovh/js/pushca.file-transfer.min.js?v=<?= time(); ?>"></script>
+<!--<script src="https://secure.fileshare.ovh/js/pushca.file-transfer.min.js?v=<?= time(); ?>"></script>-->
+<script src="js/pushca.file-transfer.min.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];

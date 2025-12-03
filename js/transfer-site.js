@@ -2,6 +2,7 @@ const FileTransfer = {};
 FileTransfer.applicationId = 'DIRECT_TRANSFER';
 FileTransfer.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileTransfer.scanQrCodeWaiterId = 'scan-qr-code-result';
+FileTransfer.jointLinkPrefix = 'joint-link::destination-alias::';
 FileTransfer.pingIntervalId = window.setInterval(function () {
     PushcaClient.sendPing();
 }, 10000);
@@ -10,6 +11,26 @@ window.addEventListener("beforeunload", function () {
     FileTransfer.observer.disconnect();
     clearInterval(pingIntervalId);
 });
+
+const urlParams = new URLSearchParams(window.location.search);
+let sourceHost = null;
+if (urlParams.get('source-host')) {
+    try {
+        const jsonString = decodeFromBase64UrlSafe(urlParams.get('source-host'));
+        const clientObj = JSON.parse(jsonString);
+
+        sourceHost = new ClientFilter(
+            clientObj.workSpaceId,
+            clientObj.accountId,
+            clientObj.deviceId,
+            clientObj.applicationId
+        );
+    } catch (err) {
+        console.error("Failed to decode source-host:", err);
+    }
+
+    console.log(sourceHost);
+}
 
 const selectFilesBtn = document.getElementById('selectFilesBtn');
 const ownerVirtualHost = document.getElementById('ownerVirtualHost');
@@ -206,7 +227,7 @@ function holdFocus(event) {
 
 if (document.getElementById('selectFilesSubContainer')) {
     document.getElementById('selectFilesSubContainer').addEventListener(
-        'mousemove', function (event) {
+        'mousemove', function () {
             if (!receiverVirtualHost.readOnly) {
                 return;
             }
@@ -242,6 +263,7 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
 //==================================== Show owner QR code ==============================================================
 const ownerQrCodeBtn = document.getElementById('ownerQrCodeBtn');
 const ownerQrCodeTitleBtn = document.getElementById("ownerQrCodeTitleBtn");
+const copyJointLinkBtn = document.getElementById("copyJointLinkBtn");
 const infoDialog = document.getElementById("infoDialog");
 const closeInfoBtn = document.getElementById("closeInfoBtn");
 
@@ -281,6 +303,21 @@ function showInfoMsg(msg, url = null) {
     }
     showInfoDialog();
 }
+
+function copyJointLink() {
+    const serverUrl = PushcaClient.clusterBaseUrl;
+    //const serverUrl = "http://localhost:63343/ultimate-file-sharing";
+    const sourceHost = encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj));
+    const url = `${serverUrl}/file-transfer-embedded.html?source-host=${encodeURIComponent(sourceHost)}`;
+    copyTextToClipboard(url);
+    showInfoMsg(`Joint link was copied to clipboard (open it in browser on receiver side).`);
+}
+
+copyJointLinkBtn.addEventListener('click', function () {
+    if (PushcaClient.isOpen()) {
+        copyJointLink();
+    }
+});
 
 ownerQrCodeBtn.addEventListener('click', function () {
     if (ownerVirtualHost.value) {
@@ -348,13 +385,17 @@ scanQrCodeBtn.addEventListener('click', async function (event) {
         }
     );
     if (WaiterResponseType.SUCCESS === result.type) {
-        FileTransfer.receiverVirtualHost = result.body;
-        console.log(`Receiver virtual host ${FileTransfer.receiverVirtualHost}`);
-        performReceiverAliasLookup(receiverVirtualHost, FileTransfer.receiverVirtualHost)
+        resolveReceiverVirtualHost(result.body);
     } else {
         console.warn("Failed attempt to scan receiver virtual host name");
     }
 });
+
+function resolveReceiverVirtualHost(alias) {
+    FileTransfer.receiverVirtualHost = alias;
+    console.log(`Receiver virtual host ${FileTransfer.receiverVirtualHost}`);
+    performReceiverAliasLookup(receiverVirtualHost, FileTransfer.receiverVirtualHost);
+}
 
 FileTransfer.videoWasStartedWaiterId = 'video-was-started';
 const video = document.getElementById('video');
@@ -706,6 +747,16 @@ PushcaClient.onFileTransferChunkHandler = async function (binaryWithHeader) {
     return await TransferFileHelper.processedReceivedChunk(binaryWithHeader, FileTransfer);
 };
 
+PushcaClient.onMessageHandler = function (ws, data) {
+    if (data.includes(FileTransfer.jointLinkPrefix)) {
+        if (!FileTransfer.receiverVirtualHost) {
+            const destAlias = data.replace(FileTransfer.jointLinkPrefix, "");
+            resolveReceiverVirtualHost(destAlias);
+        }
+    }
+}
+
+
 async function openWsConnection(deviceFpId) {
     FileTransfer.deviceFpId = deviceFpId;
     setOriginatorVirtualHostClickHandler(FileTransfer.deviceFpId);
@@ -766,6 +817,15 @@ async function openWsConnection(deviceFpId) {
             //showHostDetailsDialog(FileTransfer.deviceFpId, clientWithAlias);
             console.log(clientWithAlias);
             setDeviceFromVirtualHost(clientWithAlias.alias);
+            if (sourceHost) {
+                const msg = `${FileTransfer.jointLinkPrefix}${clientWithAlias.alias}`;
+                await PushcaClient.broadcastMessage(
+                    null,
+                    sourceHost,
+                    false,
+                    msg
+                );
+            }
         }
     }
 }
