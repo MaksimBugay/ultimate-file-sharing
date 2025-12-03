@@ -349,6 +349,11 @@
     background-size: cover;
 }
 
+.joint-link-button-img {
+    background: url('../images/joint-link-white.jpg') no-repeat center center;
+    background-size: cover;
+}
+
 .scan-qr-code-button-img {
     background: url('https://secure.fileshare.ovh/images/scan-qr-code1.png') no-repeat center center;
 }

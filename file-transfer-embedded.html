@@ -166,8 +166,12 @@
                     <div class="centered-container">
                         <input class="fancy-input  fancy-input-with-warning" type="text" readonly id="ownerVirtualHost"
                                placeholder="data channel is broken"/>
-                        <button id="ownerQrCodeBtn" class="qr-code-button qr-code-button-img"
-                                title="show as QR code"></button>
+                        <div style="display: flex; flex-direction: column">
+                            <button id="ownerQrCodeBtn" class="qr-code-button qr-code-button-img"
+                                    title="show as QR code"></button>
+                            <button id="copyJointLinkBtn" class="qr-code-button joint-link-button-img"
+                                    style="margin-top: 7px" title="Copy joint link"></button>
+                        </div>
                     </div>
                 </fieldset>
             </div>
