@@ -51,7 +51,7 @@
     height: auto;
     max-width: 90vw;
     max-width: 90dvw;
-    margin: 0 0 0 0;
+    margin: 0 0 0 13px;
     padding: 5px;
     border-radius: 8px;
     background-color: transparent;
@@ -398,19 +398,16 @@
 .drop-zone {
     width: 150px;
     height: 150px;
-    min-width: 170px;
-    min-height: 75px;
     border: 2px dashed gray;
     border-radius: 10px;
     display: flex;
     justify-content: center; /* Horizontally center */
     align-items: center; /* Vertically center */
     text-align: center; /* Ensure text is centered within the block */
-    vertical-align: center;
     font-weight: bold;
     font-size: 1rem;
     margin: 0;
-    padding: 15px;
+    padding: 30px 15px 15px;
     box-sizing: border-box; /* Ensure padding doesn't exceed container size */
 
     color: darkblue;
