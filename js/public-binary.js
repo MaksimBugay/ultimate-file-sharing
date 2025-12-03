@@ -16,6 +16,11 @@ if (urlParams.get('human-only')) {
     humanOnly = true;
 }
 
+if (!humanOnly) {
+    const directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}`;
+    window.location.replace(directDownloadUrl);
+}
+
 let manifest = null;
 let openInBrowserFlag = false;
 let contentSize = 0;
@@ -64,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function () {
             captchaFrame.style.width = '610px';
             captchaFrame.style.height = '1280px';
         }
-        captchaFrame.style.transformOrigin='top left !important';
+        captchaFrame.style.transformOrigin = 'top left !important';
         let scaleK = 1;
         while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.4)) {
             scaleK = scaleK - 0.1 * (isMobile() ? 1.7 : 1);
