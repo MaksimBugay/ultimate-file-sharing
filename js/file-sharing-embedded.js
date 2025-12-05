@@ -355,6 +355,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     initEventsForCopyPasteArea();
+    if (toolBarPasteArea) {
+        toolBarPasteArea.focus();
+    }
 });
 
 //==================================File sharing implementation=========================================================
@@ -517,8 +520,8 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     }
     const urlWithThumbnail = await buildPublicUrl(manifest);
     if (FileSharing.parentClient) {
-        PushcaClient.sendMessageWithAcknowledge(
-            uuid.v4().toString(),
+        await PushcaClient.broadcastMessage(
+            null,
             FileSharing.parentClient,
             false,
             urlWithThumbnail
