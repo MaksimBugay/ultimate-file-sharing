@@ -79,10 +79,11 @@ function padBase64String(base64String) {
 
 function openBlobInTheSameTab(blob, binaryFileName) {
     if (isMobile()) {
-        openBlobInBrowser(blob, binaryFileName)
+        openBlobInBrowser(blob, binaryFileName);
+    } else {
+        const blobUrl = URL.createObjectURL(blob);
+        window.location.replace(blobUrl);
     }
-    const blobUrl = URL.createObjectURL(blob);
-    window.location.replace(blobUrl);
 }
 
 function openBlobInBrowser(blob, binaryFileName) {
