@@ -217,8 +217,6 @@ if (!humanOnly) {
 
         if (result) {
             const blob = new Blob(chunks, {type: manifest.mimeType});
-            //openBlobInBrowser(blob, manifest.name);
-
             if (canBeShownInBrowser(manifest.mimeType)) {
                 openBlobInTheSameTab(blob, manifest.name);
             } else {
