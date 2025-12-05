@@ -77,6 +77,14 @@ function padBase64String(base64String) {
     return base64String;
 }
 
+function openBlobInTheSameTab(blob, binaryFileName) {
+    if (isMobile()) {
+        openBlobInBrowser(blob, binaryFileName)
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    window.location.replace(blobUrl);
+}
+
 function openBlobInBrowser(blob, binaryFileName) {
     if ('text/plain' === blob.type) {
         const reader = new FileReader();
