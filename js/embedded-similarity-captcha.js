@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (isValid) {
                 if (SimilarityChallenge.parentOrigin) {
                     window.opener.postMessage(
-                        {msg: "valid_human_token", value: token},
+                        {msg: "valid_human_token", value: {token: token, pageId: SimilarityChallenge.pageId}},
                         SimilarityChallenge.parentOrigin
                     );
                 } else {
