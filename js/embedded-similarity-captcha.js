@@ -1,6 +1,13 @@
 const SimilarityChallenge = {};
 SimilarityChallenge.pageId = null;
+SimilarityChallenge.parentOrigin = null;
+
 document.addEventListener('DOMContentLoaded', async function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('orn')) {
+        SimilarityChallenge.parentOrigin = decodeURIComponent(urlParams.get('orn'));
+    }
+
     const apiKey = uuid.v4().toString();
     const sessionId = uuid.v4().toString();
     const clientIp = await getClientIpViaPushca();
@@ -19,8 +26,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
             const isValid = await validateAdvancedHumanToken(SimilarityChallenge.pageId, token, apiKey);
             if (isValid) {
-                console.log(`"${SimilarityChallenge.pageId}", "${token}"`);
-                alert(`Advanced human token is valid: ${token}`);
+                if (SimilarityChallenge.parentOrigin) {
+                    window.opener.postMessage(
+                        {msg: "valid_human_token", value: token},
+                        SimilarityChallenge.parentOrigin
+                    );
+                } else {
+                    console.log(`"${SimilarityChallenge.pageId}", "${token}"`);
+                    alert(`Advanced human token is valid: ${token}`);
+                }
             }
         }
     );
