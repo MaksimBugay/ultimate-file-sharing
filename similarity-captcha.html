@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure FileShare: Visual similarity challenge</title>
+    <link rel="stylesheet" href="css/similarity-captcha.css">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="https://secure.fileshare.ovh/images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="https://secure.fileshare.ovh/images/file-sharing16.png">
+
+    <!-- Open Graph meta tags -->
+    <meta property="og:title" content="Secure FileShare: dynamic captcha">
+    <meta property="og:description" content="Dynamic captcha demo">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/not-a-robot.png">
+    <meta property="og:url" content="https://secure.fileshare.ovh/images/not-a-robot.png">
+    <meta property="og:type" content="website">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Secure FileShare: dynamic captcha">
+    <meta name="twitter:description" content="Dynamic captcha demo">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/not-a-robot.png">
+</head>
+<body>
+
+<div id="captchaContainer" class="captcha-main-container">
+    <iframe id="captchaFrame" class="similarity-captcha-iframe"></iframe>
+</div>
+
+</body>
+<script src="js/similarity.challenge.min.js?v=<?= time(); ?>"></script>
+</html>

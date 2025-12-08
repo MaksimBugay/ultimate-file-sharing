@@ -1,0 +1,24 @@
+
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%) fixed;
+}
+
+.captcha-main-container {
+    margin: 0 0 0 0;
+    padding: 0;
+    width: auto;
+    height: auto;
+    transform-origin: top left !important;
+    transform: scale(1.0);
+    visibility: hidden;
+}
+
+.similarity-captcha-iframe {
+    border: none;
+    margin: 0 0 0 0;
+    padding: 0 0 0 0;
+    border-radius: 10px;
+}

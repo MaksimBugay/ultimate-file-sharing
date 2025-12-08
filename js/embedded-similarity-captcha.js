@@ -1,10 +1,28 @@
-async function addVisualSimilarityChallenge(captchaContainer, pageId, humanTokenConsumer) {
+document.addEventListener('DOMContentLoaded', async function () {
+    const apiKey = uuid.v4().toString();
+    const sessionId = uuid.v4().toString();
+    const pageId = await generatePageId(apiKey, sessionId);
+    const captchaContainer = document.getElementById('captchaContainer');
     if (!captchaContainer) return;
 
-    // Add the class to the existing container
-    captchaContainer.style.width = "auto";
-    captchaContainer.style.transformOrigin = "top left !important";
-    captchaContainer.style.display = 'inline-block';
+    await addVisualSimilarityChallenge(
+        captchaContainer,
+        apiKey,
+        pageId,
+        async function (token) {
+            //alert(`Human token was received for page with id = ${pageId}: ${token}`);
+            const isValid = await validateAdvancedHumanToken(pageId, token, apiKey);
+            if (isValid) {
+                console.log(`"${pageId}", "${token}"`);
+                alert(`Advanced human token is valid: ${token}`);
+            }
+            location.reload();
+        }
+    );
+});
+
+async function addVisualSimilarityChallenge(captchaContainer, apiKey, pageId, humanTokenConsumer) {
+    if (!captchaContainer) return;
 
     let captchaFrame = document.getElementById('captchaFrame');
     // Create and configure the iframe
@@ -24,7 +42,7 @@ async function addVisualSimilarityChallenge(captchaContainer, pageId, humanToken
 
     let scaleK = 1;
     if (captchaContainer && captchaFrame) {
-        while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.4)) {
+        while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.0)) {
             scaleK = scaleK - 0.1;
             captchaContainer.style.transform = `scale(${scaleK})`;
         }
@@ -39,7 +57,56 @@ async function addVisualSimilarityChallenge(captchaContainer, pageId, humanToken
         }
     }
 
-    await openWsConnection(null, pageId);
+    await openWsConnection(apiKey, pageId);
+}
+
+function getVisibleWidth() {
+    const bodyRect = document.body.getBoundingClientRect();
+    const htmlRect = document.documentElement.getBoundingClientRect();
+
+    // Pick the smaller width that fits inside viewport
+    const viewportWidth = Math.min(
+        bodyRect.width,
+        htmlRect.width,
+        window.innerWidth,
+        window.visualViewport?.width || Infinity
+    );
+
+    return Math.round(viewportWidth);
+}
+
+function getVisibleHeight() {
+    const bodyRect = document.body.getBoundingClientRect();
+    const htmlRect = document.documentElement.getBoundingClientRect();
+
+    const viewportHeight = Math.min(
+        bodyRect.height,
+        htmlRect.height,
+        window.innerHeight,
+        window.visualViewport?.height || Infinity
+    );
+
+    return Math.round(viewportHeight);
+}
+
+function getVisibleViewportSize() {
+    // visualViewport gives the visible area of the page
+    const width = getVisibleWidth();
+    const height = getVisibleHeight();
+
+    return {width, height};
+}
+
+function reCenterCaptchaFrame(captchaContainer) {
+    if (!captchaContainer) {
+        return;
+    }
+    const viewport = getVisibleViewportSize();
+    captchaContainer.style.position = 'absolute';
+    const rect = captchaContainer.getBoundingClientRect();
+    captchaContainer.style.left = Math.round((viewport.width - rect.width) / 2) + 'px';
+    captchaContainer.style.top = Math.round((viewport.height - rect.height) / 2) + 'px';
+    captchaContainer.style.visibility = 'visible';
 }
 
 async function openWsConnection(apiKey, pageId) {
@@ -63,5 +130,6 @@ async function openWsConnection(apiKey, pageId) {
             },
             apiKey
         );
+        delay(1000).then(() => reCenterCaptchaFrame(document.getElementById("captchaContainer")));
     }
 }

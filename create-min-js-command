@@ -26,3 +26,6 @@ terser fp.min.js detect.min.js client.min.js uuid.min.js qrcode.min.js jsQR.js p
 terser fp.min.js common-utils.js callable-future.js uuid.min.js security-utils.js owner-signature.js pnotifications.js pushca-binary-helper.js backend-binary-ping.js -o backend.binary.ping.min.js -c "passes=3,drop_console=false,drop_debugger=true" -m "toplevel=true,keep_fnames=false,keep_classnames=false" --toplevel
 
 terser fp.min.js common-utils.js callable-future.js uuid.min.js security-utils.js owner-signature.js pnotifications.js pushca-binary-helper.js backend-binary-ping.js -o backend.binary.silent.ping.min.js -c "passes=3,drop_console=true,drop_debugger=true" -m "toplevel=true,keep_fnames=false,keep_classnames=false" --toplevel
+
+--similarity captcha with obfuscation
+terser fp.min.js common-utils.js callable-future.js uuid.min.js security-utils.js owner-signature.js pnotifications.js pushca-binary-helper.js validate-human-token.js embedded-similarity-captcha.js -o similarity.challenge.min.js -c "passes=3,drop_console=true,drop_debugger=true" -m "toplevel=true,keep_fnames=false,keep_classnames=false" --toplevel
