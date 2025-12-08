@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 console.log(`"${pageId}", "${token}"`);
                 alert(`Advanced human token is valid: ${token}`);
             }
-            location.reload();
         }
     );
 });
@@ -49,13 +48,16 @@ async function addVisualSimilarityChallenge(captchaContainer, apiKey, pageId, hu
     }
 
     PushcaClient.onHumanTokenHandler = async function (token) {
-        PushcaClient.stopWebSocketPermanently();
-        document.getElementById("captchaFrame").remove();
-
         if (typeof humanTokenConsumer === 'function') {
-            humanTokenConsumer(token);
+            await humanTokenConsumer(token);
         }
+
+        closeAll();
     }
+
+    PushcaClient.onOpenHandler = function () {
+        delay(300000).then(() => closeAll());
+    };
 
     await openWsConnection(apiKey, pageId);
 }
@@ -130,6 +132,19 @@ async function openWsConnection(apiKey, pageId) {
             },
             apiKey
         );
-        delay(1000).then(() => reCenterCaptchaFrame(document.getElementById("captchaContainer")));
+        delay(1000).then(
+            () => reCenterCaptchaFrame(document.getElementById("captchaContainer"))
+        );
     }
+}
+
+function closeAll() {
+    if (PushcaClient.isOpen()) {
+        PushcaClient.stopWebSocketPermanently();
+    }
+    const captchaContainer = document.getElementById("captchaContainer");
+    if (captchaContainer) {
+        captchaContainer.remove();
+    }
+    window.close();
 }
