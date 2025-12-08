@@ -79,6 +79,15 @@ if (!humanOnly) {
 
     document.addEventListener('DOMContentLoaded', function () {
         if (humanOnly) {
+            /*const origin = window.location.origin;
+            const target = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(origin)}`;
+            window.open(target, "_blank");
+
+            window.addEventListener("message", (event) => {
+                console.log(event.data.msg, event.data.value);
+                previewBox.style.display = "block";
+                downloadPublicBinary(workspaceId, binaryId, event.data.value.pageId, event.data.value.token);
+            });*/
             const pageId = uuid.v4().toString();
             PushcaClient.onHumanTokenHandler = async function (token) {
                 PushcaClient.stopWebSocket();
