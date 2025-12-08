@@ -4,9 +4,8 @@ async function getClientIp() {
     const { ip } = await res.json();
     return ip;
 }
-async function generatePageId(apiKey, sessionId) {
+async function generatePageId(apiKey, sessionId, clientIp) {
     const url = 'https://secure.fileshare.ovh/binary/generate-page-id';
-    const clientIp = await getClientIp();
     const payload = {
         apiKey: apiKey,
         clientIp: clientIp,

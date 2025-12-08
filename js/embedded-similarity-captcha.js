@@ -1,26 +1,32 @@
+const SimilarityChallenge = {};
+SimilarityChallenge.pageId = null;
 document.addEventListener('DOMContentLoaded', async function () {
     const apiKey = uuid.v4().toString();
     const sessionId = uuid.v4().toString();
-    const pageId = await generatePageId(apiKey, sessionId);
+    const clientIp = await getClientIpViaPushca();
     const captchaContainer = document.getElementById('captchaContainer');
     if (!captchaContainer) return;
+
+    SimilarityChallenge.pageId = await generatePageId(apiKey, sessionId, clientIp);
 
     await addVisualSimilarityChallenge(
         captchaContainer,
         apiKey,
-        pageId,
         async function (token) {
-            //alert(`Human token was received for page with id = ${pageId}: ${token}`);
-            const isValid = await validateAdvancedHumanToken(pageId, token, apiKey);
+            //alert(`Human token was received for page with id = ${SimilarityChallenge.pageId}: ${token}`);
+            if (PushcaClient.isOpen()) {
+                PushcaClient.stopWebSocketPermanently();
+            }
+            const isValid = await validateAdvancedHumanToken(SimilarityChallenge.pageId, token, apiKey);
             if (isValid) {
-                console.log(`"${pageId}", "${token}"`);
+                console.log(`"${SimilarityChallenge.pageId}", "${token}"`);
                 alert(`Advanced human token is valid: ${token}`);
             }
         }
     );
 });
 
-async function addVisualSimilarityChallenge(captchaContainer, apiKey, pageId, humanTokenConsumer) {
+async function addVisualSimilarityChallenge(captchaContainer, apiKey, humanTokenConsumer) {
     if (!captchaContainer) return;
 
     let captchaFrame = document.getElementById('captchaFrame');
@@ -37,7 +43,7 @@ async function addVisualSimilarityChallenge(captchaContainer, apiKey, pageId, hu
     }
     captchaFrame.style.width = '610px';
     captchaFrame.style.height = '1280px';
-    captchaFrame.src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
+    captchaFrame.src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${SimilarityChallenge.pageId}&piece-length=300`;
 
     let scaleK = 1;
     if (captchaContainer && captchaFrame) {
@@ -59,7 +65,7 @@ async function addVisualSimilarityChallenge(captchaContainer, apiKey, pageId, hu
         delay(120000).then(() => closeAll());
     };
 
-    await openWsConnection(apiKey, pageId);
+    await openCaptchaWsConnection(apiKey, SimilarityChallenge.pageId);
 }
 
 function getVisibleWidth() {
@@ -111,7 +117,47 @@ function reCenterCaptchaFrame(captchaContainer) {
     captchaContainer.style.visibility = 'visible';
 }
 
-async function openWsConnection(apiKey, pageId) {
+async function getClientIpViaPushca() {
+    if (!PushcaClient.isOpen()) {
+        try {
+            const pClient = new ClientFilter(
+                "SecureFileShare",
+                "dynamic-captcha",
+                uuid.v4().toString(),
+                "CAPTCHA_CLIENT_IP_TEST"
+            );
+            const result = await CallableFuture.callAsynchronously(
+                10_000,
+                `${pClient.hashCode()}`,
+                function () {
+                    PushcaClient.openWsConnection(
+                        'wss://secure.fileshare.ovh:31085',
+                        pClient,
+                        function (clientObj) {
+                            return new ClientFilter(
+                                clientObj.workSpaceId,
+                                clientObj.accountId,
+                                clientObj.deviceId,
+                                clientObj.applicationId
+                            );
+                        }
+                    );
+                }
+            );
+            if (WaiterResponseType.SUCCESS === result.type) {
+                const clientWithAlias = await PushcaClient.connectionAliasLookup(result.body);
+                return clientWithAlias.ip;
+            } else {
+                console.warn("Failed attempt to get connection alias");
+            }
+        } finally {
+            PushcaClient.stopWebSocket();
+        }
+    }
+    return await getClientIp();
+}
+
+async function openCaptchaWsConnection(apiKey, pageId) {
     if (!PushcaClient.isOpen()) {
         const pClient = new ClientFilter(
             "SecureFileShare",
@@ -119,6 +165,7 @@ async function openWsConnection(apiKey, pageId) {
             pageId,
             "CAPTCHA_CLIENT"
         );
+
         await PushcaClient.openWsConnection(
             'wss://secure.fileshare.ovh:31085',
             pClient,
@@ -132,6 +179,7 @@ async function openWsConnection(apiKey, pageId) {
             },
             apiKey
         );
+
         delay(1000).then(
             () => reCenterCaptchaFrame(document.getElementById("captchaContainer"))
         );
