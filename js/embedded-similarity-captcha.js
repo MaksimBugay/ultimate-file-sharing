@@ -56,7 +56,7 @@ async function addVisualSimilarityChallenge(captchaContainer, apiKey, pageId, hu
     }
 
     PushcaClient.onOpenHandler = function () {
-        delay(300000).then(() => closeAll());
+        delay(120000).then(() => closeAll());
     };
 
     await openWsConnection(apiKey, pageId);
