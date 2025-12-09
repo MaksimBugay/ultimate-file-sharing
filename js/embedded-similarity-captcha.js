@@ -29,16 +29,6 @@ document.addEventListener('DOMContentLoaded', async function () {
         );
     }
 
-    window.opener.postMessage(
-        {
-            msg: 'challenge_tab_was_open',
-            value: {
-                pageId: SimilarityChallenge.pageId
-            }
-        },
-        SimilarityChallenge.parentOrigin
-    );
-
     await addVisualSimilarityChallenge(
         captchaContainer,
         SimilarityChallenge.apiKey,
@@ -115,6 +105,20 @@ async function addVisualSimilarityChallenge(captchaContainer, apiKey, humanToken
     PushcaClient.onOpenHandler = function () {
         delay(120000).then(() => closeAll());
     };
+
+    PushcaClient.onMessageHandler = function (ws, data) {
+        if (data.includes(`VISUAL_SIMILARITY_CHALLENGE_WAS_STARTED::${SimilarityChallenge.pageId}`)) {
+            window.opener.postMessage(
+                {
+                    msg: 'challenge_tab_was_open',
+                    value: {
+                        pageId: SimilarityChallenge.pageId
+                    }
+                },
+                SimilarityChallenge.parentOrigin
+            );
+        }
+    }
 
     await openCaptchaWsConnection(apiKey, SimilarityChallenge.pageId);
 }

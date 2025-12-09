@@ -454,6 +454,7 @@ PushcaClient.onOpenHandler = async function () {
     }
     await delay(300);
 }
+
 PushcaClient.onHumanTokenHandler = function (token) {
     console.log(`Human token was received: ${token}`)
     PushcaClient.stopWebSocket();
@@ -513,7 +514,27 @@ PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
         };
         img.src = blobUrl;
     }
+    await sendChallengeStartedAcknowledge();
 };
+
+async function sendChallengeStartedAcknowledge() {
+    if (!PuzzleCaptcha.pageId) {
+        return;
+    }
+    const pClient = new ClientFilter(
+        "SecureFileShare",
+        "dynamic-captcha",
+        PuzzleCaptcha.pageId,
+        "CAPTCHA_CLIENT"
+    );
+    const acknowledgeMsg = `VISUAL_SIMILARITY_CHALLENGE_WAS_STARTED::${PuzzleCaptcha.pageId}`;
+    await PushcaClient.broadcastMessage(
+        null,
+        pClient,
+        false,
+        acknowledgeMsg
+    );
+}
 
 // WebSocket connection
 async function openWsConnection() {
