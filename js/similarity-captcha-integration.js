@@ -6,6 +6,7 @@ ChallengeAttributes.pageId = null;
 ChallengeAttributes.origin = window.location.origin;
 ChallengeAttributes.successfullyOpen = false;
 ChallengeAttributes.numberOfFailedAttempt = 0;
+ChallengeAttributes.popupRef = null;
 
 async function initChallengeAttributes() {
     ChallengeAttributes.apiKey = uuid.v4().toString();
@@ -62,7 +63,7 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
     }
 
     yesBtn.onclick = async function () {
-        await openSimilarityChallengeTab(null);
+        await openSimilarityChallengeTab();
 
         // Optional: hide dialog after launch
         dialog.style.display = "none";
@@ -85,6 +86,17 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
             if (msgPageId === ChallengeAttributes.pageId) {
                 console.log("Challenge tab was successfully open");
                 ChallengeAttributes.successfullyOpen = true;
+            }
+            return;
+        }
+
+        if (event.data.msg === 'challenge_was_not_solved') {
+            if (msgPageId === ChallengeAttributes.pageId) {
+                console.log("Challenge was not solved");
+                ChallengeAttributes.successfullyOpen = false;
+                initChallengeAttributes().then(
+                    () => openSimilarityChallengeTab()
+                );
             }
             return;
         }
@@ -121,26 +133,24 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
     });
 }
 
-async function openSimilarityChallengeTab(inPopupRef) {
+async function openSimilarityChallengeTab() {
     if (ChallengeAttributes.numberOfFailedAttempt > 3) {
-        if (inPopupRef && (!inPopupRef.closed)) {
-            inPopupRef.close();
+        if (ChallengeAttributes.popupRef && (!ChallengeAttributes.popupRef.closed)) {
+            ChallengeAttributes.popupRef.close();
         }
         renderIsHumanResponse('<h1 class="error-text">Error</h1><p>Your internet connection is very unstable, try later.</p>');
         return null;
     }
 
     // open immediately (safe from popup blocker)
-    let popupRef;
     const url = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(ChallengeAttributes.origin)}&pid=${ChallengeAttributes.pageId}`;
-    if (inPopupRef) {
-        popupRef = inPopupRef;
-        popupRef.location.href = url;
+    if (ChallengeAttributes.popupRef) {
+        ChallengeAttributes.popupRef.location.href = url;
     } else {
-        popupRef = window.open(url, "_blank");
+        ChallengeAttributes.popupRef = window.open(url, "_blank");
     }
 
-    if (!popupRef) {
+    if (!ChallengeAttributes.popupRef) {
         alert("Please allow popups to start the challenge");
         return null;
     }
@@ -149,12 +159,10 @@ async function openSimilarityChallengeTab(inPopupRef) {
         if (!ChallengeAttributes.successfullyOpen) {
             ChallengeAttributes.numberOfFailedAttempt = ChallengeAttributes.numberOfFailedAttempt + 1;
             initChallengeAttributes().then(
-                () => openSimilarityChallengeTab(popupRef)
+                () => openSimilarityChallengeTab()
             );
         }
     });
-
-    return popupRef;
 }
 
 function renderIsHumanResponse(htmlStr) {

@@ -117,6 +117,16 @@ async function addVisualSimilarityChallenge(captchaContainer, apiKey, humanToken
                 },
                 SimilarityChallenge.parentOrigin
             );
+        } else if (data.includes(`VISUAL_SIMILARITY_CHALLENGE_WAS_NOT_SOLVED::${SimilarityChallenge.pageId}`)) {
+            window.opener.postMessage(
+                {
+                    msg: 'challenge_was_not_solved',
+                    value: {
+                        pageId: SimilarityChallenge.pageId
+                    }
+                },
+                SimilarityChallenge.parentOrigin
+            );
         }
     }
 

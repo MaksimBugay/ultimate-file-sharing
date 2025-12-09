@@ -432,12 +432,18 @@ function reloadOnFail(showError) {
         errorMessage.textContent = `You can try better next time!`;
         errorMessage.style.display = 'block';
     }
-    delay(1500).then(() => {
-        puzzleCaptchaArea.style.display = 'none';
-        const url = new URL(window.location.href);
-        url.searchParams.set('hide-task', 'true');
-        window.location.href = url.toString();
-    });
+    sendChallengeWasNotSolvedEvent().then(
+        () => {
+            delay(5000).then(
+                () => {
+                    puzzleCaptchaArea.style.display = 'none';
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('hide-task', 'true');
+                    window.location.href = url.toString();
+                }
+            );
+        }
+    );
 }
 
 // WebSocket handlers
@@ -518,6 +524,14 @@ PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
 };
 
 async function sendChallengeStartedAcknowledge() {
+    await sendChallengeEventMessage("VISUAL_SIMILARITY_CHALLENGE_WAS_STARTED");
+}
+
+async function sendChallengeWasNotSolvedEvent() {
+    await sendChallengeEventMessage("VISUAL_SIMILARITY_CHALLENGE_WAS_NOT_SOLVED");
+}
+
+async function sendChallengeEventMessage(eventType) {
     if (!PuzzleCaptcha.pageId) {
         return;
     }
@@ -527,14 +541,14 @@ async function sendChallengeStartedAcknowledge() {
         PuzzleCaptcha.pageId,
         "CAPTCHA_CLIENT"
     );
-    const acknowledgeMsg = `VISUAL_SIMILARITY_CHALLENGE_WAS_STARTED::${PuzzleCaptcha.pageId}`;
     await PushcaClient.broadcastMessage(
         null,
         pClient,
         false,
-        acknowledgeMsg
+        `${eventType}::${PuzzleCaptcha.pageId}`
     );
 }
+
 
 // WebSocket connection
 async function openWsConnection() {
