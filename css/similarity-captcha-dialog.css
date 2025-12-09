@@ -1,0 +1,66 @@
+.sc-dialog-container {
+    background: white;
+    padding: 10px 10px;
+    border-radius: 12px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+    text-align: center;
+    width: 100%;
+    max-width: 500px;
+    position: absolute;
+    z-index: 1000;
+}
+
+.small-text {
+    font-size: 8px;
+}
+
+.error-text {
+    color: red;
+}
+
+.sc-dialog-header {
+    font-size: 24px;
+    margin: 0 0 12px 0;
+}
+
+.sc-dialog-normal-text {
+    font-size: 18px;
+    margin: 0 0 20px 0;
+}
+
+.sc-dialog-button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 4px;
+}
+
+.sc-dialog-yes-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%) fixed;
+    color: white;
+}
+
+.sc-dialog-cancel-btn {
+    background: #ccc;
+}
+
+@media (max-width: 768px) {
+    .sc-dialog-container {
+        max-width: 90dvw;
+    }
+
+    .sc-dialog-header {
+        font-size: 7dvw;
+    }
+
+    .sc-dialog-normal-text {
+        font-size: 5dvw;
+    }
+
+    .sc-dialog-button {
+        font-size: 5dvw;
+        padding: 3dvw 4dvw;
+    }
+}

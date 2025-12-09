@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visual Similarity Challenge</title>
+    <link rel="stylesheet" href="css/similarity-captcha-dialog.css">
     <style>
         html, body {
             margin: 0;
@@ -12,163 +13,34 @@
             font-family: Arial, sans-serif;
             background: #f3f3f3;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             width: 100vw;
             height: 100vh;
         }
-
-        #dialog {
-            background: white;
-            padding: 10px 10px;
-            border-radius: 12px;
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
-            text-align: center;
-            width: 100%;
-            max-width: 500px;
-        }
-
-        .small-text {
-            font-size: 8px;
-        }
-
-        .error-text {
-            color: red;
-        }
-
-        #dialog h1 {
-            font-size: 24px;
-            margin: 0 0 12px 0;
-        }
-
-        #dialog p {
-            font-size: 18px;
-            margin: 0 0 20px 0;
-        }
-
-        button {
-            padding: 10px 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            margin: 4px;
-        }
-
-        #yesBtn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%) fixed;
-            color: white;
-        }
-
-        #cancelBtn {
-            background: #ccc;
-        }
-
-        @media (max-width: 768px) {
-            html, body {
-                width: 100dvw;
-                height: 100dvh;
-            }
-
-            #dialog {
-                max-width: 90dvw;
-            }
-
-            #dialog h1 {
-                font-size: 7dvw;
-            }
-
-            #dialog p {
-                font-size: 5dvw;
-            }
-
-            button {
-                font-size: 5dvw;
-                padding: 3dvw 4dvw;
-            }
-        }
     </style>
 </head>
 <body>
 
-<div id="dialog">
-    <h1>Are you ready?</h1>
-    <p>Take a visual similarity challenge to prove you are a human.</p>
-    <button id="cancelBtn">Cancel</button>
-    <button id="yesBtn">Yes, start</button>
-</div>
 
+</body>
 <script src="js/uuid.min.js"></script>
 <script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
+<script src="js/similarity-captcha-integration.js?v=<?= time(); ?>"></script>
 <script>
-    const apiKey = uuid.v4().toString();
-    const sessionId = uuid.v4().toString();
-
-    let pageId;
-    let popupRef = null;
-
-    // --- when user clicks yes ---
-    document.getElementById("yesBtn").onclick = async function () {
-
-        // then navigate it (popup stays allowed)
-        const clientIp = await getClientIp();
-        pageId = await generatePageId(apiKey, sessionId, clientIp);
-        const origin = window.location.origin;
-        // open immediately (safe from popup blocker)
-        popupRef = window.open("about:blank", "_blank");
-        popupRef.location.href = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(origin)}&pid=${pageId}`;
-
-        // Optional: hide dialog after launch
-        document.getElementById("dialog").style.display = "none";
-    };
-
-    // cancel closes page UI (your choice what happens)
-    document.getElementById("cancelBtn").onclick = function () {
-        document.getElementById("dialog").innerHTML = "<p>Challenge canceled.</p>";
-    };
-
-    // receive message from child captcha
-    window.addEventListener("message", async function (event) {
-        console.log("Child says:", event.data);
-
-        const token = event.data.value.token;
-        const msgPageId = event.data.value.pageId;
-
-        if (msgPageId !== pageId) {
-            renderIsHumanResponse(
-                `<h1 class="error-text">Error</h1><p>Tampered Human token was received</p>`
-            );
-            return;
-        }
-
-        const clientIp = await getClientIp();
-
-        const isValid = await validateAdvancedHumanToken(
-            pageId,
-            token,
-            apiKey,
-            sessionId,
-            clientIp);
-
-        if (isValid) {
-            renderIsHumanResponse(
-                `<h1>Thank you!</h1><p>Human token was acquired: </p><div class="small-text">${event.data.value.token}</div>`
-            );
-        } else {
-            renderIsHumanResponse(
-                `<h1 class="error-text">Error</h1><p>Invalid Human token was received</p>`
-            );
-        }
+    document.addEventListener('DOMContentLoaded', function () {
+        createSimilarityChallengeDialog(
+            document.body,
+            false,
+            (token, pageId) => {
+                document.body.innerHTML =
+                    `<h1>Thank you!</h1><p>Human token was acquired: </p>
+                     <br><div class="small-text">${token}</div>
+                     <br><p>for page id</p>
+                     <br><div class="small-text">${pageId.substring(0, 50)}...</div>`;
+            }
+        );
     });
-
-    function renderIsHumanResponse(htmlStr) {
-        const captchaDialog = document.getElementById("dialog");
-        if (!captchaDialog) {
-            return
-        }
-        captchaDialog.innerHTML = htmlStr;
-        captchaDialog.style.display = "block";
-    }
 </script>
-</body>
 </html>
