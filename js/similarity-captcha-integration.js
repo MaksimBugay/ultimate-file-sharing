@@ -131,8 +131,19 @@ async function openSimilarityChallengeTab(inPopupRef) {
     }
 
     // open immediately (safe from popup blocker)
-    const popupRef = inPopupRef ? inPopupRef : window.open("about:blank", "_blank");
-    popupRef.location.href = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(ChallengeAttributes.origin)}&pid=${ChallengeAttributes.pageId}`;
+    let popupRef;
+    const url = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(ChallengeAttributes.origin)}&pid=${ChallengeAttributes.pageId}`;
+    if (inPopupRef) {
+        popupRef = inPopupRef;
+        popupRef.location.href = url;
+    } else {
+        popupRef = window.open(url, "_blank");
+    }
+
+    if (!popupRef) {
+        alert("Please allow popups to start the challenge");
+        return null;
+    }
 
     delay(8000).then(() => {
         if (!ChallengeAttributes.successfullyOpen) {
