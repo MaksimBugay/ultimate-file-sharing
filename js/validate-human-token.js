@@ -1,9 +1,9 @@
-
 async function getClientIp() {
     const res = await fetch("https://api.ipify.org?format=json");
-    const { ip } = await res.json();
+    const {ip} = await res.json();
     return ip;
 }
+
 async function generatePageId(apiKey, sessionId, clientIp) {
     const url = 'https://secure.fileshare.ovh/binary/generate-page-id';
     const payload = {
@@ -36,7 +36,7 @@ async function generatePageId(apiKey, sessionId, clientIp) {
     }
 }
 
-async function validateAdvancedHumanToken(pageId, token, apiKey){
+async function validateAdvancedHumanToken(pageId, token, apiKey, sessionId, clientIp) {
     const url = 'https://secure.fileshare.ovh/pushca/similarity-captcha/validate-human-token';
     const payload = {
         pageId: pageId,
@@ -56,10 +56,28 @@ async function validateAdvancedHumanToken(pageId, token, apiKey){
         if (response.ok) {
             const validateResponse = await response.json(); // Parse the JSON response
             console.log('Validation response:', validateResponse);
-            const {valid} = validateResponse;
-            return valid;
+            const {valid, claims} = validateResponse;
+            /*
+            allClaims.put("ip", clientIp);
+            allClaims.put("sId", sessionId == null ? UUID.randomUUID().toString() : sessionId);
+             */
+            if (valid) {
+                const claimsMap = claims ? new Map(Object.entries(claims)) : new Map();
+                // validate sessionId match if provided
+                if (sessionId && (claimsMap.get('sId') !== sessionId)) {
+                    console.warn('Session mismatch:', sessionId, claimsMap.get('sId'));
+                    return false;
+                }
+                if (clientIp && (claimsMap.get('ip') !== clientIp)) {
+                    console.warn('Client IP address mismatch:', clientIp, claimsMap.get('ip'));
+                    return false;
+                }
+                return true;
+            } else {
+                return false;
+            }
         } else {
-            console.error('Failed to validate advanced human token. Status:', response.status);
+            console.error('Failed to validate token:', response.status, response.statusText);
             return false;
         }
     } catch (error) {

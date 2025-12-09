@@ -1,40 +1,67 @@
 const SimilarityChallenge = {};
 SimilarityChallenge.pageId = null;
 SimilarityChallenge.parentOrigin = null;
+SimilarityChallenge.apiKey = null;
+SimilarityChallenge.sessionId = null;
+SimilarityChallenge.demoMode = true;
 
 document.addEventListener('DOMContentLoaded', async function () {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('orn')) {
         SimilarityChallenge.parentOrigin = decodeURIComponent(urlParams.get('orn'));
     }
-
-    const apiKey = uuid.v4().toString();
-    const sessionId = uuid.v4().toString();
-    const clientIp = await getClientIpViaPushca();
+    if (urlParams.get('pid')) {
+        SimilarityChallenge.pageId = decodeURIComponent(urlParams.get('pid'));
+        SimilarityChallenge.demoMode = false;
+    }
     const captchaContainer = document.getElementById('captchaContainer');
     if (!captchaContainer) return;
 
-    SimilarityChallenge.pageId = await generatePageId(apiKey, sessionId, clientIp);
+    if (!SimilarityChallenge.pageId) {
+        SimilarityChallenge.apiKey = uuid.v4().toString();
+        SimilarityChallenge.sessionId = uuid.v4().toString();
+        const clientIp = await getClientIpViaPushca();
+
+        SimilarityChallenge.pageId = await generatePageId(
+            SimilarityChallenge.apiKey,
+            SimilarityChallenge.sessionId,
+            clientIp
+        );
+    }
 
     await addVisualSimilarityChallenge(
         captchaContainer,
-        apiKey,
+        SimilarityChallenge.apiKey,
         async function (token) {
             //alert(`Human token was received for page with id = ${SimilarityChallenge.pageId}: ${token}`);
             if (PushcaClient.isOpen()) {
                 PushcaClient.stopWebSocketPermanently();
             }
-            const isValid = await validateAdvancedHumanToken(SimilarityChallenge.pageId, token, apiKey);
-            if (isValid) {
-                if (SimilarityChallenge.parentOrigin) {
-                    window.opener.postMessage(
-                        {msg: "valid_human_token", value: {token: token, pageId: SimilarityChallenge.pageId}},
-                        SimilarityChallenge.parentOrigin
-                    );
-                } else {
+            if (SimilarityChallenge.demoMode) {
+                const clientIp = await getClientIp();
+                const isValid = await validateAdvancedHumanToken(
+                    SimilarityChallenge.pageId,
+                    token,
+                    SimilarityChallenge.apiKey,
+                    SimilarityChallenge.sessionId,
+                    clientIp);
+                if (isValid) {
                     console.log(`"${SimilarityChallenge.pageId}", "${token}"`);
                     alert(`Advanced human token is valid: ${token}`);
                 }
+                return;
+            }
+            if (SimilarityChallenge.parentOrigin) {
+                window.opener.postMessage(
+                    {
+                        msg: "valid_human_token",
+                        value: {
+                            token: token,
+                            pageId: SimilarityChallenge.pageId
+                        }
+                    },
+                    SimilarityChallenge.parentOrigin
+                );
             }
         }
     );
@@ -132,6 +159,10 @@ function reCenterCaptchaFrame(captchaContainer) {
 }
 
 async function getClientIpViaPushca() {
+    //so far for simplicity
+    if (1 === 1) {
+        return getClientIp();
+    }
     if (!PushcaClient.isOpen()) {
         try {
             const pClient = new ClientFilter(

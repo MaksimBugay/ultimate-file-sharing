@@ -32,6 +32,10 @@
             font-size: 8px;
         }
 
+        .error-text {
+            color: red;
+        }
+
         #dialog h1 {
             font-size: 24px;
             margin: 0 0 12px 0;
@@ -94,18 +98,25 @@
     <button id="yesBtn">Yes, start</button>
 </div>
 
+<script src="js/uuid.min.js"></script>
+<script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
 <script>
+    const apiKey = uuid.v4().toString();
+    const sessionId = uuid.v4().toString();
+
+    let pageId;
     let popupRef = null;
 
     // --- when user clicks yes ---
-    document.getElementById("yesBtn").onclick = function () {
-
-        // open immediately (safe from popup blocker)
-        popupRef = window.open("about:blank", "_blank");
+    document.getElementById("yesBtn").onclick = async function () {
 
         // then navigate it (popup stays allowed)
+        const clientIp = await getClientIp();
+        pageId = await generatePageId(apiKey, sessionId, clientIp);
         const origin = window.location.origin;
-        popupRef.location.href = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(origin)}`;
+        // open immediately (safe from popup blocker)
+        popupRef = window.open("about:blank", "_blank");
+        popupRef.location.href = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(origin)}&pid=${pageId}`;
 
         // Optional: hide dialog after launch
         document.getElementById("dialog").style.display = "none";
@@ -117,16 +128,47 @@
     };
 
     // receive message from child captcha
-    window.addEventListener("message", (event) => {
+    window.addEventListener("message", async function (event) {
         console.log("Child says:", event.data);
 
-        const captchaDialog = document.getElementById("dialog");
-        if (captchaDialog) {
-            captchaDialog.style.display = "block";
-            captchaDialog.innerHTML =
-                `<h1>Thank you!</h1><p>Human token was acquired: </p><div class="small-text">${event.data.value.token}</div>`;
+        const token = event.data.value.token;
+        const msgPageId = event.data.value.pageId;
+
+        if (msgPageId !== pageId) {
+            renderIsHumanResponse(
+                `<h1 class="error-text">Error</h1><p>Tampered Human token was received</p>`
+            );
+            return;
+        }
+
+        const clientIp = await getClientIp();
+
+        const isValid = await validateAdvancedHumanToken(
+            pageId,
+            token,
+            apiKey,
+            sessionId,
+            clientIp);
+
+        if (isValid) {
+            renderIsHumanResponse(
+                `<h1>Thank you!</h1><p>Human token was acquired: </p><div class="small-text">${event.data.value.token}</div>`
+            );
+        } else {
+            renderIsHumanResponse(
+                `<h1 class="error-text">Error</h1><p>Invalid Human token was received</p>`
+            );
         }
     });
+
+    function renderIsHumanResponse(htmlStr) {
+        const captchaDialog = document.getElementById("dialog");
+        if (!captchaDialog) {
+            return
+        }
+        captchaDialog.innerHTML = htmlStr;
+        captchaDialog.style.display = "block";
+    }
 </script>
 </body>
 </html>
