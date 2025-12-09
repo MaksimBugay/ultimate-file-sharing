@@ -19,6 +19,12 @@ async function initChallengeAttributes() {
 }
 
 function createSimilarityChallengeDialog(container, removeOnCancel, humanTokenConsumer) {
+    initChallengeAttributes().then(
+        () => createSimilarityChallengeDialogElements(container, removeOnCancel, humanTokenConsumer)
+    );
+}
+
+function createSimilarityChallengeDialogElements(container, removeOnCancel, humanTokenConsumer) {
     // container
     const dialog = document.createElement("div");
     dialog.id = "scDialog";
@@ -124,7 +130,6 @@ async function openSimilarityChallengeTab(inPopupRef) {
         return null;
     }
 
-    await initChallengeAttributes();
     // open immediately (safe from popup blocker)
     const popupRef = inPopupRef ? inPopupRef : window.open("about:blank", "_blank");
     popupRef.location.href = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(ChallengeAttributes.origin)}&pid=${ChallengeAttributes.pageId}`;
@@ -132,7 +137,9 @@ async function openSimilarityChallengeTab(inPopupRef) {
     delay(8000).then(() => {
         if (!ChallengeAttributes.successfullyOpen) {
             ChallengeAttributes.numberOfFailedAttempt = ChallengeAttributes.numberOfFailedAttempt + 1;
-            openSimilarityChallengeTab(popupRef);
+            initChallengeAttributes().then(
+                () => openSimilarityChallengeTab(popupRef)
+            );
         }
     });
 
