@@ -116,7 +116,7 @@ function createSimilarityChallengeDialog(container, removeOnCancel, humanTokenCo
 }
 
 async function openSimilarityChallengeTab(inPopupRef) {
-    if (ChallengeAttributes.numberOfFailedAttempt > 2) {
+    if (ChallengeAttributes.numberOfFailedAttempt > 3) {
         if (inPopupRef && (!inPopupRef.closed)) {
             inPopupRef.close();
         }
