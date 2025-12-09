@@ -427,13 +427,9 @@ function initializePuzzleCaptcha() {
 }
 
 function reloadOnFail(showError) {
-    PushcaClient.stopWebSocket();
-    if (showError) {
-        errorMessage.textContent = `You can try better next time!`;
-        errorMessage.style.display = 'block';
-    }
     sendChallengeWasNotSolvedEvent().then(
         () => {
+            PushcaClient.stopWebSocket();
             delay(5000).then(
                 () => {
                     puzzleCaptchaArea.style.display = 'none';
@@ -444,6 +440,10 @@ function reloadOnFail(showError) {
             );
         }
     );
+    if (showError) {
+        errorMessage.textContent = `You can try better next time!`;
+        errorMessage.style.display = 'block';
+    }
 }
 
 // WebSocket handlers
