@@ -539,7 +539,7 @@ async function sendChallengeEventMessage(eventType) {
         "SecureFileShare",
         "dynamic-captcha",
         PuzzleCaptcha.pageId,
-        "CAPTCHA_CLIENT"
+        null
     );
     await PushcaClient.broadcastMessage(
         null,
