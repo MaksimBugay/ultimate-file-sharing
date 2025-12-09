@@ -4,6 +4,8 @@ ChallengeAttributes.sessionId = null;
 ChallengeAttributes.clientIp = null;
 ChallengeAttributes.pageId = null;
 ChallengeAttributes.origin = window.location.origin;
+ChallengeAttributes.successfullyOpen = false;
+ChallengeAttributes.numberOfFailedAttempt = 0;
 
 async function initChallengeAttributes() {
     ChallengeAttributes.apiKey = uuid.v4().toString();
@@ -54,10 +56,7 @@ function createSimilarityChallengeDialog(container, removeOnCancel, humanTokenCo
     }
 
     yesBtn.onclick = async function () {
-        await initChallengeAttributes();
-        // open immediately (safe from popup blocker)
-        const popupRef = window.open("about:blank", "_blank");
-        popupRef.location.href = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(ChallengeAttributes.origin)}&pid=${ChallengeAttributes.pageId}`;
+        await openSimilarityChallengeTab(null);
 
         // Optional: hide dialog after launch
         dialog.style.display = "none";
@@ -74,8 +73,17 @@ function createSimilarityChallengeDialog(container, removeOnCancel, humanTokenCo
     window.addEventListener("message", async function (event) {
         console.log("Child says:", event.data);
 
-        const token = event.data.value.token;
         const msgPageId = event.data.value.pageId;
+
+        if (event.data.msg === 'challenge_tab_was_open') {
+            if (msgPageId === ChallengeAttributes.pageId) {
+                console.log("Challenge tab was successfully open");
+                ChallengeAttributes.successfullyOpen = true;
+            }
+            return;
+        }
+
+        const token = event.data.value.token;
 
         if (msgPageId !== ChallengeAttributes.pageId) {
             renderIsHumanResponse(
@@ -107,6 +115,30 @@ function createSimilarityChallengeDialog(container, removeOnCancel, humanTokenCo
     });
 }
 
+async function openSimilarityChallengeTab(inPopupRef) {
+    if (ChallengeAttributes.numberOfFailedAttempt > 2) {
+        if (inPopupRef && (!inPopupRef.closed)) {
+            inPopupRef.close();
+        }
+        renderIsHumanResponse('<h1 class="error-text">Error</h1><p>Your internet connection is very unstable, try later.</p>');
+        return null;
+    }
+
+    await initChallengeAttributes();
+    // open immediately (safe from popup blocker)
+    const popupRef = inPopupRef ? inPopupRef : window.open("about:blank", "_blank");
+    popupRef.location.href = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(ChallengeAttributes.origin)}&pid=${ChallengeAttributes.pageId}`;
+
+    delay(8000).then(() => {
+        if (!ChallengeAttributes.successfullyOpen) {
+            ChallengeAttributes.numberOfFailedAttempt = ChallengeAttributes.numberOfFailedAttempt + 1;
+            openSimilarityChallengeTab(popupRef);
+        }
+    });
+
+    return popupRef;
+}
+
 function renderIsHumanResponse(htmlStr) {
     const captchaDialog = document.getElementById("scDialog");
     if (!captchaDialog) {
@@ -114,5 +146,9 @@ function renderIsHumanResponse(htmlStr) {
     }
     captchaDialog.innerHTML = htmlStr;
     captchaDialog.style.display = "block";
+}
+
+function delay(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 

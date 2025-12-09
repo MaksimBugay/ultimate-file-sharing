@@ -29,6 +29,16 @@ document.addEventListener('DOMContentLoaded', async function () {
         );
     }
 
+    window.opener.postMessage(
+        {
+            msg: 'challenge_tab_was_open',
+            value: {
+                pageId: SimilarityChallenge.pageId
+            }
+        },
+        SimilarityChallenge.parentOrigin
+    );
+
     await addVisualSimilarityChallenge(
         captchaContainer,
         SimilarityChallenge.apiKey,
