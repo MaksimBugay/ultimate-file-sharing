@@ -25,11 +25,26 @@
 
 
 </body>
-<script src="js/uuid.min.js"></script>
-<script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
-<script src="js/similarity-captcha-integration.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/uuid.min.js"></script>
+<script src="https://secure.fileshare.ovh/js/validate-human-token.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/similarity-captcha-integration.js?v=<?= time(); ?>"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const generatePageIdCustomFunction = async function (apiKey, sessionId, clientIp) {
+            return await generatePageId(
+                apiKey,
+                sessionId,
+                clientIp
+            );
+        };
+        const validateHumanTokenCustomFunction = async function (pageId, token, apiKey, sessionId, clientIp) {
+            return await validateAdvancedHumanToken(
+                pageId,
+                token,
+                apiKey,
+                sessionId,
+                clientIp);
+        };
         createSimilarityChallengeDialog(
             document.body,
             false,
@@ -39,7 +54,10 @@
                      <br><div class="small-text">${token}</div>
                      <br><p>for page id</p>
                      <br><div class="small-text">${pageId.substring(0, 50)}...</div>`;
-            }
+            },
+            true,
+            generatePageIdCustomFunction,
+            validateHumanTokenCustomFunction
         );
     });
 </script>

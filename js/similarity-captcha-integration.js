@@ -7,19 +7,49 @@ ChallengeAttributes.origin = window.location.origin;
 ChallengeAttributes.successfullyOpen = false;
 ChallengeAttributes.numberOfFailedAttempt = 0;
 ChallengeAttributes.popupRef = null;
+ChallengeAttributes.hideValidationError = false;
+ChallengeAttributes.generatePageIdFunction = async function (apiKey, sessionId, clientIp) {
+    return await generatePageId(
+        apiKey,
+        sessionId,
+        clientIp
+    );
+}
+ChallengeAttributes.validateHumanTokenFunction = async function (pageId, token, apiKey, sessionId, clientIp) {
+    return await validateAdvancedHumanToken(
+        pageId,
+        token,
+        apiKey,
+        sessionId,
+        clientIp);
+}
 
 async function initChallengeAttributes() {
     ChallengeAttributes.apiKey = uuid.v4().toString();
     ChallengeAttributes.sessionId = uuid.v4().toString();
     ChallengeAttributes.clientIp = await getClientIp();
-    ChallengeAttributes.pageId = await generatePageId(
+    ChallengeAttributes.pageId = await ChallengeAttributes.generatePageIdFunction(
         ChallengeAttributes.apiKey,
         ChallengeAttributes.sessionId,
         ChallengeAttributes.clientIp
     );
 }
 
-function createSimilarityChallengeDialog(container, removeOnCancel, humanTokenConsumer) {
+function createSimilarityChallengeDialog(container,
+                                         removeOnCancel,
+                                         humanTokenConsumer,
+                                         hideValidationError,
+                                         generatePageIdCustomFunction,
+                                         validateHumanTokenCustomFunction) {
+    if (hideValidationError) {
+        ChallengeAttributes.hideValidationError = true;
+    }
+    if (typeof generatePageIdCustomFunction === 'function') {
+        ChallengeAttributes.generatePageIdFunction = generatePageIdCustomFunction;
+    }
+    if (typeof validateHumanTokenCustomFunction === 'function') {
+        ChallengeAttributes.validateHumanTokenFunction = validateHumanTokenCustomFunction;
+    }
     initChallengeAttributes().then(
         () => createSimilarityChallengeDialogElements(container, removeOnCancel, humanTokenConsumer)
     );
@@ -104,13 +134,13 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
         const token = event.data.value.token;
 
         if (msgPageId !== ChallengeAttributes.pageId) {
-            renderIsHumanResponse(
+            renderIsHumanErrorResponse(
                 `<h1 class="error-text">Error</h1><p>Tampered Human token was received</p>`
             );
             return;
         }
 
-        const isValid = await validateAdvancedHumanToken(
+        const isValid = await ChallengeAttributes.validateHumanTokenFunction(
             ChallengeAttributes.pageId,
             token,
             ChallengeAttributes.apiKey,
@@ -126,7 +156,7 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
                 );
             }
         } else {
-            renderIsHumanResponse(
+            renderIsHumanErrorResponse(
                 `<h1 class="error-text">Error</h1><p>Invalid Human token was received</p>`
             );
         }
@@ -172,6 +202,13 @@ function renderIsHumanResponse(htmlStr) {
     }
     captchaDialog.innerHTML = htmlStr;
     captchaDialog.style.display = "block";
+}
+
+function renderIsHumanErrorResponse(htmlStr) {
+    if (!ChallengeAttributes.hideValidationError) {
+        return;
+    }
+    renderIsHumanResponse(htmlStr);
 }
 
 function delay(milliseconds) {
