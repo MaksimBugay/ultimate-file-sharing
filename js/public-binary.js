@@ -127,10 +127,11 @@ if (!humanOnly) {
         manifest = await downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken);
 
         contentSize = manifest.datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
-        if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
+        if (contentSize < MemoryBlock.MB100) {
             openInBrowserFlag = true;
         }
-        if (openInBrowserFlag || (!window.showSaveFilePicker)) {
+        const isSavePickerSupported = await supportsSavePicker();
+        if (openInBrowserFlag || (!isSavePickerSupported)) {
             showDownloadProgress();
             await openPublicBinaryInBrowser(manifest);
         } else {
@@ -239,4 +240,32 @@ if (!humanOnly) {
             throw error; // Rethrow error to handle it in the calling function
         }
     }
+}
+
+async function supportsSavePicker(timeoutMs = 200) {
+    if (typeof window.showSaveFilePicker !== "function") {
+        return false;
+    }
+
+    let timeout;
+
+    const timeoutPromise = new Promise(resolve => {
+        timeout = setTimeout(() => resolve(false), timeoutMs);
+    });
+
+    const testPromise = (async () => {
+        try {
+            await window.showSaveFilePicker({
+                suggestedName: "test.txt",
+                types: [{ accept: {"text/plain": [".txt"]} }]
+            });
+            clearTimeout(timeout);
+            return true;  // if it really works
+        } catch (e) {
+            clearTimeout(timeout);
+            return false;  // if API rejects (unsupported)
+        }
+    })();
+
+    return Promise.race([timeoutPromise, testPromise]);
 }

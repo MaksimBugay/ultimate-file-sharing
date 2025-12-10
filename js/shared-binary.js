@@ -4,7 +4,8 @@ const playableMediaTypes = [
     "video/mp4",
     'video/webm; codecs="vp8, opus"',
     'video/webm; codecs="vp9, opus"',
-    "audio/webm"
+    "audio/webm",
+    "audio/mpeg"
 ];
 
 const playableImageTypes = [
@@ -78,12 +79,13 @@ function padBase64String(base64String) {
 }
 
 function openBlobInTheSameTab(blob, binaryFileName) {
-    if (isMobile()) {
+    openBlobInBrowser(blob, binaryFileName);
+    /*if (isMobile()) {
         openBlobInBrowser(blob, binaryFileName);
     } else {
         const blobUrl = URL.createObjectURL(blob);
         window.location.replace(blobUrl);
-    }
+    }*/
 }
 
 function openBlobInBrowser(blob, binaryFileName) {
