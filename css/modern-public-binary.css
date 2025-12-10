@@ -78,9 +78,8 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: 
-        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.3) 0%, transparent 50%);
+    background: radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.3) 0%, transparent 50%);
     pointer-events: none;
     animation: gradientShift 15s ease infinite;
 }
@@ -194,6 +193,23 @@ button:hover {
 
 button:active {
     transform: translateY(0);
+}
+
+.download-link-button {
+    display: none;
+    padding: 10px 20px;
+    background-color: #4CAF50; /* Green button */
+    color: white;
+    text-decoration: none; /* remove underline */
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.download-link-button:hover {
+    background-color: #45a049;
 }
 
 /* Content container with modern styling */
@@ -323,11 +339,11 @@ body > iframe:first-of-type {
         padding: 20px 16px;
         max-width: 100%;
     }
-    
+
     h2 {
         font-size: 24px;
     }
-    
+
     #captchaContainer {
         padding: 16px;
     }
@@ -338,15 +354,15 @@ body > iframe:first-of-type {
         padding: 16px 12px;
         max-width: 100%;
     }
-    
+
     h2 {
         font-size: 20px;
     }
-    
+
     .input-group {
         margin-bottom: 12px;
     }
-    
+
     #captchaContainer {
         padding: 12px;
     }

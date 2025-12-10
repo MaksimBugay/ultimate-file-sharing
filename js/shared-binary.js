@@ -148,7 +148,11 @@ function openBlobInBrowser(blob, binaryFileName) {
         contentContainer.style.display = 'block';
         contentVideoPlayer.style.display = 'block';
     } else {
-        downloadFile(blob, binaryFileName);
+        if (isMobile()) {
+            document.getElementById("downloadLink").style.display = 'inline-block';
+        } else {
+            downloadFile(blob, binaryFileName);
+        }
     }
 }
 
