@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure FileShare: Public content</title>
-    <link rel="stylesheet" href="css/protected-binary.css">
     <link rel="stylesheet" href="css/dynamic-captcha.css">
-    <link rel="stylesheet" href="css/similarity-captcha-dialog.css">
     <link rel="stylesheet" href="css/modern-public-binary.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
@@ -26,7 +24,7 @@
     <meta name="twitter:description" content="public content">
     <meta name="twitter:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
 </head>
-<body style="background-color: #006BFD;padding: 0;margin: 0;">
+<body style="padding: 0;margin: 0;">
 <iframe src="html/header-modern.html" width="100%" height="93px"
         style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
 <div class="main-container">
@@ -54,9 +52,9 @@
         </div>
     </div>
     <div id="contentPreviewContainer" class="login-container">
-        <!--<div id="captchaContainer" style="margin-top: 50px; transform: scale(1.0);">
+        <div id="captchaContainer" style="margin-top: 50px; transform: scale(1.0);">
             <iframe id="captchaFrame" class="similarity-captcha-iframe"></iframe>
-        </div>-->
+        </div>
         <div id="previewBox" class="login-box" style="display: none">
             <h2>Content details</h2>
             <div class="input-group">
@@ -99,7 +97,7 @@
     <div class="product-dialog-content">
         <button class="product-dialog-close" id="closeDialog">&times;</button>
         <h2 class="product-dialog-title">Choose Product</h2>
-
+        
         <div class="product-options">
             <a href="https://secure.fileshare.ovh/" target="_blank" class="product-option">
                 <div class="product-icon">
@@ -113,7 +111,7 @@
                     <span class="product-link">secure.fileshare.ovh →</span>
                 </div>
             </a>
-
+            
             <a href="https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj" target="_blank" class="product-option">
                 <div class="product-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -131,20 +129,10 @@
 </div>
 
 </body>
-<!--<script src="js/fp.min.js"></script>
-<script src="js/common-utils.js"></script>
-<script src="js/callable-future.js?v=<?= time(); ?>"></script>
-<script src="js/uuid.min.js"></script>
-<script src="js/security-utils.js"></script>
-<script src="js/owner-signature.js?v=<?= time(); ?>"></script>
-<script src="js/pnotifications.js?v=<?= time(); ?>"></script>
-<script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>-->
-<script src="js/pushca.min.js?v=<?= time(); ?>"></script>
 <script src="js/product-dialog.js"></script>
-<script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
-<script src="js/similarity-captcha-integration.js?v=<?= time(); ?>"></script>
-<script src="js/shared-binary.js?v=<?= time(); ?>"></script>
-<script src="js/public-binary.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/pushca.min.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/shared-binary.js?v=<?= time(); ?>"></script>
+<script src="https://secure.fileshare.ovh/js/public-binary.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];

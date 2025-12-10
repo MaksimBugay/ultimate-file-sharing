@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="canonical" href="https://secure.fileshare.ovh/html/header-modern.html" />
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type">
+    <title>Header</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .modern-header {
+            background: linear-gradient(135deg, #0066FF 0%, #0052CC 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modern-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00D4FF 0%, #0099FF 50%, #00D4FF 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .logo-image {
+            height: 60px;
+            width: auto;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+            transition: all 0.3s ease;
+        }
+
+        .logo-container:hover .logo-image {
+            filter: drop-shadow(0 4px 16px rgba(255, 255, 255, 0.4));
+            transform: scale(1.02);
+        }
+
+        .follow-us-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .follow-us-title {
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
+        }
+
+        .social-link:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .social-icon {
+            width: 20px;
+            height: 20px;
+            fill: white;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .follow-us-title {
+                display: none;
+            }
+            
+            .social-link span {
+                display: none;
+            }
+            
+            .social-link {
+                padding: 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .modern-header {
+                padding: 12px 16px;
+                gap: 12px;
+            }
+
+            .logo-image {
+                height: 48px;
+            }
+
+            .social-links {
+                gap: 8px;
+            }
+
+            .social-link {
+                padding: 8px;
+            }
+
+            .social-icon {
+                width: 18px;
+                height: 18px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-image {
+                height: 40px;
+            }
+
+            .social-link {
+                padding: 6px;
+            }
+
+            .social-icon {
+                width: 16px;
+                height: 16px;
+            }
+        }
+
+        .logo-container {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header class="modern-header">
+        <a href="javascript:void(0)" class="logo-container" id="logoLink">
+            <img src="../images/secure_fileshare_logo.png" alt="Secure FileShare Logo" class="logo-image">
+        </a>
+        
+        <div class="follow-us-section">
+            <h3 class="follow-us-title">Follow Us</h3>
+            <div class="social-links">
+                <a href="https://www.facebook.com/profile.php?id=61569366542948" target="_blank" rel="noopener noreferrer" class="social-link">
+                    <svg class="social-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    <span>Facebook</span>
+                </a>
+                <a href="https://www.youtube.com/playlist?list=PLYnMJJjt4qq13kjqTNgBOQ0GHKcxoWjlF" target="_blank" rel="noopener noreferrer" class="social-link">
+                    <svg class="social-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                    </svg>
+                    <span>YouTube</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <script>
+        // Send message to parent window when logo is clicked
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoLink = document.getElementById('logoLink');
+
+            logoLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Send message to parent window to show dialog
+                window.parent.postMessage('showProductDialog', window.location.origin);
+            });
+        });
+    </script>
+</body>
+</html>
+
