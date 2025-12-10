@@ -102,7 +102,9 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
     cancelBtn.onclick = function () {
         dialog.innerHTML = "<p>Challenge canceled.</p>";
         if (removeOnCancel) {
-            dialog.remove();
+            delay(2000).then(
+                () => dialog.remove()
+            );
         }
     };
 
