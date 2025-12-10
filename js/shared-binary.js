@@ -39,6 +39,7 @@ const progressBarContainer = document.getElementById("progressBarContainer");
 const progressBar = document.getElementById("downloadProgress");
 const progressPercentage = document.getElementById("progressPercentage");
 const errorMessage = document.getElementById('errorMessage');
+const downloadLink = document.getElementById("downloadLink");
 
 function showDownloadProgress() {
     progressBarContainer.style.display = 'block';
@@ -149,7 +150,10 @@ function openBlobInBrowser(blob, binaryFileName) {
         contentVideoPlayer.style.display = 'block';
     } else {
         if (isMobile()) {
-            document.getElementById("downloadLink").style.display = 'inline-block';
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = binaryFileName;
+            contentContainer.style.display = 'block';
+            downloadLink.style.display = 'inline-block';
         } else {
             downloadFile(blob, binaryFileName);
         }
