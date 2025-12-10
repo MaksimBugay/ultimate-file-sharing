@@ -197,7 +197,7 @@ button:active {
 }
 
 /* Content container with modern styling */
-#contentContainer {
+.content-container {
     background: var(--card-bg) !important;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);

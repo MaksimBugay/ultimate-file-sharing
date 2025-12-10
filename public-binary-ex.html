@@ -16,7 +16,8 @@
     <meta property="og:title" content="Secure FileShare">
     <meta property="og:description" content="public content">
     <meta property="og:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
-    <meta property="og:url" content="https://secure.fileshare.ovh/public-binary-ex.html?w=<!--# echo var='arg_w' -->&id=<!--# echo var='arg_id' -->&tn=<!--# echo var='arg_tn' -->">
+    <meta property="og:url"
+          content="https://secure.fileshare.ovh/public-binary-ex.html?w=<!--# echo var='arg_w' -->&id=<!--# echo var='arg_id' -->&tn=<!--# echo var='arg_tn' -->">
     <meta property="og:type" content="website">
     <meta property="fb:app_id" content="61569366542948">
 
@@ -33,7 +34,7 @@
     <p id="errorMessage"
        style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
 
-    <div id="contentContainer" style="padding: 3px;background-color: white;display: none;">
+    <div id="contentContainer" class="content-container" style="display: none;">
         <img id="contentImage" class="media-content-container" src="images/how-to-medium.png"
              alt="Open image in browser">
         <embed id="pdfViewer" type="application/pdf" class="pdf-content-container"/>
@@ -114,7 +115,8 @@
                 </div>
             </a>
 
-            <a href="https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj" target="_blank" class="product-option">
+            <a href="https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj"
+               target="_blank" class="product-option">
                 <div class="product-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
