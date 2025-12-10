@@ -56,18 +56,7 @@ if (!humanOnly) {
 
     const workspaceIdLabel = document.getElementById('workspaceIdLabel');
     const contentPreviewContainer = document.getElementById('contentPreviewContainer');
-    const captchaFrame = document.getElementById("captchaFrame");
-    const captchaContainer = document.getElementById("captchaContainer");
     const previewBox = document.getElementById("previewBox");
-
-    function removeCaptcha() {
-        if (captchaFrame) {
-            captchaFrame.remove();
-        }
-        if (captchaContainer) {
-            captchaContainer.remove();
-        }
-    }
 
     function showErrorMessage(errorText) {
         contentPreviewContainer.remove();
@@ -79,66 +68,18 @@ if (!humanOnly) {
 
     document.addEventListener('DOMContentLoaded', function () {
         if (humanOnly) {
-            /*const origin = window.location.origin;
-            const target = `https://secure.fileshare.ovh/similarity-captcha.html?orn=${encodeURIComponent(origin)}`;
-            window.open(target, "_blank");
-
-            window.addEventListener("message", (event) => {
-                console.log(event.data.msg, event.data.value);
-                previewBox.style.display = "block";
-                downloadPublicBinary(workspaceId, binaryId, event.data.value.pageId, event.data.value.token);
-            });*/
-            const pageId = uuid.v4().toString();
-            PushcaClient.onHumanTokenHandler = async function (token) {
-                PushcaClient.stopWebSocket();
-                delay(1000);
-                removeCaptcha();
-                previewBox.style.display = "block";
-
-                downloadPublicBinary(workspaceId, binaryId, pageId, token);
-            };
-
-            //captchaFrame.src = `https://secure.fileshare.ovh/puzzle-captcha-min.html?page-id=${pageId}&piece-length=180&skip-demo=false`;
-            captchaFrame.src = `https://secure.fileshare.ovh/similarity-captcha-min.html?page-id=${pageId}&piece-length=300`;
-            if (isMobile()) {
-                captchaFrame.style.width = '610px';
-                captchaFrame.style.height = '1265px';
-            } else {
-                captchaFrame.style.width = '610px';
-                captchaFrame.style.height = '1280px';
-            }
-            captchaFrame.style.transformOrigin = 'top left !important';
-            let scaleK = 1;
-            while ((!isElementFullyVisible(captchaFrame)) && (scaleK > 0.4)) {
-                scaleK = scaleK - 0.1 * (isMobile() ? 1.7 : 1);
-                captchaContainer.style.transform = `scale(${scaleK})`;
-            }
-            openWsConnection();
-
-            async function openWsConnection() {
-                if (!PushcaClient.isOpen()) {
-                    const pClient = new ClientFilter(
-                        "SecureFileShare",
-                        "dynamic-captcha",
-                        pageId,
-                        "CAPTCHA_CLIENT"
-                    );
-                    await PushcaClient.openWsConnection(
-                        'wss://secure.fileshare.ovh:31085',
-                        pClient,
-                        function (clientObj) {
-                            return new ClientFilter(
-                                clientObj.workSpaceId,
-                                clientObj.accountId,
-                                clientObj.deviceId,
-                                clientObj.applicationId
-                            );
-                        }
-                    );
-                }
-            }
+            createSimilarityChallengeDialog(
+                contentPreviewContainer,
+                true,
+                (token, pageId) => {
+                    previewBox.style.display = "block";
+                    downloadPublicBinary(workspaceId, binaryId, pageId, token);
+                },
+                false,
+                null,
+                null
+            );
         } else {
-            removeCaptcha();
             previewBox.style.display = "block";
             downloadPublicBinary(workspaceId, binaryId, null, null);
         }

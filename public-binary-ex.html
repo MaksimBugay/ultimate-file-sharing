@@ -6,6 +6,7 @@
     <title>Secure FileShare: Public content</title>
     <link rel="stylesheet" href="css/protected-binary.css">
     <link rel="stylesheet" href="css/dynamic-captcha.css">
+    <link rel="stylesheet" href="css/similarity-captcha-dialog.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -52,9 +53,9 @@
         </div>
     </div>
     <div id="contentPreviewContainer" class="login-container">
-        <div id="captchaContainer" style="margin-top: 50px; transform: scale(1.0);">
+        <!--<div id="captchaContainer" style="margin-top: 50px; transform: scale(1.0);">
             <iframe id="captchaFrame" class="similarity-captcha-iframe"></iframe>
-        </div>
+        </div>-->
         <div id="previewBox" class="login-box" style="display: none">
             <h2>Content details</h2>
             <div class="input-group">
@@ -100,6 +101,8 @@
 <script src="js/pnotifications.js?v=<?= time(); ?>"></script>
 <script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>-->
 <script src="js/pushca.min.js?v=<?= time(); ?>"></script>
+<script src="js/validate-human-token.js?v=<?= time(); ?>"></script>
+<script src="js/similarity-captcha-integration.js?v=<?= time(); ?>"></script>
 <script src="js/shared-binary.js?v=<?= time(); ?>"></script>
 <script src="js/public-binary.js?v=<?= time(); ?>"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
