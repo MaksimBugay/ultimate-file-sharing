@@ -17,6 +17,24 @@ async function webSocketAvailabilityCheck() {
     return WaiterResponseType.SUCCESS === result.type;
 }
 
+function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, humanToken) {
+    let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}`;
+    if (pageId) {
+        directDownloadUrl = `${directDownloadUrl}?page-id=${pageId}&human-token=${humanToken}`;
+    }
+
+    webSocketAvailabilityCheck().then(result => {
+        if (!result) {
+            window.location.replace(directDownloadUrl);
+        } else {
+            openWsConnection(binaryId).then(() => {
+                PushcaClient.stopWebSocketPermanently();
+                delay(100).then(() => window.location.replace(directDownloadUrl));
+            });
+        }
+    });
+}
+
 const serverUrl = 'https://secure.fileshare.ovh';
 const urlParams = new URLSearchParams(window.location.search);
 let workspaceId = null;
@@ -36,18 +54,12 @@ if (urlParams.get('human-only')) {
 }
 
 if (!humanOnly) {
-    const directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}`;
-
-    webSocketAvailabilityCheck().then(result => {
-        if (!result) {
-            window.location.replace(directDownloadUrl);
-        } else {
-            openWsConnection(binaryId).then(() => {
-                PushcaClient.stopWebSocketPermanently();
-                delay(100).then(() => window.location.replace(directDownloadUrl));
-            });
-        }
-    });
+    openPublicBinaryInTheSameTab(
+        workspaceId,
+        binaryId,
+        null,
+        null
+    );
 } else {
 
     let manifest = null;
@@ -72,8 +84,12 @@ if (!humanOnly) {
                 contentPreviewContainer,
                 true,
                 (token, pageId) => {
-                    previewBox.style.display = "block";
-                    downloadPublicBinary(workspaceId, binaryId, pageId, token);
+                    openPublicBinaryInTheSameTab(
+                        workspaceId,
+                        binaryId,
+                        pageId,
+                        token
+                    );
                 },
                 false,
                 null,
@@ -253,7 +269,7 @@ async function supportsSavePicker(timeoutMs = 200) {
         try {
             await window.showSaveFilePicker({
                 suggestedName: "test.txt",
-                types: [{ accept: {"text/plain": [".txt"]} }]
+                types: [{accept: {"text/plain": [".txt"]}}]
             });
             clearTimeout(timeout);
             return true;  // if it really works
