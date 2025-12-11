@@ -7,6 +7,7 @@
     <title>Secure FileShare: Dynamic captcha</title>
     <link rel="stylesheet" href="css/dynamic-captcha.css">
     <link rel="stylesheet" href="css/puzzle-captcha.css">
+    <link rel="stylesheet" href="css/bmv-spinner.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -25,24 +26,27 @@
     <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
 </head>
 <body style="padding: 0;margin: 0; width: 600px; height: 1280px; background-color: lightcyan;">
-<div id="previewBox" class="similarity-captcha-box">
-    <div id="captchaCaptionContainer" style="flex-direction: row;display: none;">
-        <img id="showTaskBtn" src="images/show-task-btn1.png" class="captcha-button" style="margin-right: 35px"
-             alt="show task button">
-        <div id="brandNameDiv" class="brand-name">DynoCAP</div>
-        <img id="viewDemoBtn" src="images/view-demo-btn1.png" class="captcha-button" style="margin-left: 35px"
-             alt="view demo button">
+<div id="vcMainContainer" class="centered-container">
+    <div id="previewBox" class="similarity-captcha-box" style="display: none">
+        <div id="captchaCaptionContainer" style="flex-direction: row;display: none;">
+            <img id="showTaskBtn" src="images/show-task-btn1.png" class="captcha-button" style="margin-right: 35px"
+                 alt="show task button">
+            <div id="brandNameDiv" class="brand-name">DynoCAP</div>
+            <img id="viewDemoBtn" src="images/view-demo-btn1.png" class="captcha-button" style="margin-left: 35px"
+                 alt="view demo button">
+        </div>
+        <p id="errorMessage" class="similarity-captcha-message"></p>
+        <div id="captchaHint" class="captcha-hint" style="display: none">
+            Task: find matching shapes and drag one onto its pair to align them.
+        </div>
+        <canvas id="puzzleCaptchaArea"></canvas>
+        <img id="selectedCaptchaPiece" class="selected-piece" style="display: none" draggable="false"
+             alt="Selected captcha piece">
     </div>
-    <p id="errorMessage" class="similarity-captcha-message"></p>
-    <div id="captchaHint" class="captcha-hint" style="display: none">
-        Task: find matching shapes and drag one onto its pair to align them.
-    </div>
-    <canvas id="puzzleCaptchaArea"></canvas>
-    <img id="selectedCaptchaPiece" class="selected-piece" style="display: none" draggable="false"
-         alt="Selected captcha piece">
 </div>
 </body>
 <script src="js/similarity.captcha.min.js?v=<?= time(); ?>"></script>
+<script src="js/bmv-spinner.js?v=<?= time(); ?>"></script>
 <!--<script src="js/common-utils.js"></script>
 <script src="js/callable-future.js?v=<?= time(); ?>"></script>
 <script src="js/uuid.min.js"></script>

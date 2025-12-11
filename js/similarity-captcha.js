@@ -32,6 +32,7 @@ if (urlParams.get('piece-length')) {
 PuzzleCaptcha.showTask = true;
 PuzzleCaptcha.skipDemo = true;
 
+const previewBox = document.getElementById("previewBox");
 const puzzleCaptchaArea = document.getElementById("puzzleCaptchaArea");
 const selectedCaptchaPiece = document.getElementById("selectedCaptchaPiece");
 const errorMessage = document.getElementById('errorMessage');
@@ -409,6 +410,9 @@ function selectPuzzleCaptchaPiecePointerDown() {
 
 // Initialize everything
 function initializePuzzleCaptcha() {
+    const box = document.getElementById("vcMainContainer");
+    showSpinner(box);
+
     addCompatibilityStyles();
     initializeMobileSettings();
     setupEventListeners();
@@ -476,6 +480,10 @@ PushcaClient.onHumanTokenHandler = function (token) {
     });
 }
 PushcaClient.onPuzzleCaptchaSetHandler = async function (binaryWithHeader) {
+    previewBox.style.display = 'flex';
+    delay(100).then(
+        () => hideSpinner()
+    );
     const puzzleCaptchaData = binaryWithHeader.payload;
     const blob = new Blob([puzzleCaptchaData], {type: 'image/png'});
     const blobUrl = URL.createObjectURL(blob);
