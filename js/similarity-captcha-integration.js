@@ -73,19 +73,24 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
     text.textContent = "Take a visual similarity challenge to prove you are a human.";
     dialog.appendChild(text);
 
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.className = "one-line-layout";
+
     // cancel button
     const cancelBtn = document.createElement("button");
     cancelBtn.id = "scCancelBtn";
     cancelBtn.className = "sc-dialog-button sc-dialog-cancel-btn";
     cancelBtn.textContent = "Cancel";
-    dialog.appendChild(cancelBtn);
+    buttonsContainer.appendChild(cancelBtn);
 
     // yes button
     const yesBtn = document.createElement("button");
     yesBtn.id = "scYesBtn";
     yesBtn.className = "sc-dialog-button sc-dialog-yes-btn";
-    yesBtn.textContent = "Yes, start";
-    dialog.appendChild(yesBtn);
+    yesBtn.textContent = "Start";
+    buttonsContainer.appendChild(yesBtn);
+
+    dialog.appendChild(buttonsContainer);
 
     // append to provided parent
     if (container) {
