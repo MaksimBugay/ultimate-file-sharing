@@ -154,6 +154,7 @@ function openBlobInBrowser(blob, binaryFileName) {
             downloadLink.download = binaryFileName;
             contentContainer.style.display = 'block';
             downloadLink.style.display = 'inline-block';
+            downloadLink.click();
         } else {
             downloadFile(blob, binaryFileName);
         }

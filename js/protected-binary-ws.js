@@ -56,11 +56,7 @@ async function openProtectedBinaryInBrowser(manifest, encryptionContract) {
 
     if (result) {
         const blob = new Blob(chunks, {type: manifest.mimeType});
-        if (canBeShownInBrowser(manifest.mimeType)) {
-            openBlobInTheSameTab(blob, manifest.name);
-        } else {
-            downloadFile(blob, manifest.name);
-        }
+        openBlobInTheSameTab(blob, manifest.name);
     }
 
     await postDownloadProcessor(result ? "" : 'RESPONSE_WITH_ERROR');
