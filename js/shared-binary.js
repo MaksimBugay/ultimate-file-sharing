@@ -169,23 +169,20 @@ function openBlobInBrowser(blob, binaryFileName) {
 }
 
 function isTelegram() {
-    // Telegram WebApp object (most reliable)
-    if (typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
-        return true;
-    }
+    const ua = (navigator.userAgent || '').toLowerCase();
 
-    const ua = navigator.userAgent || '';
+    // Check Telegram WebApp object
+    const hasTelegramWebApp = typeof window.Telegram === 'object' && typeof window.Telegram.WebApp === 'object';
 
-    // Telegram Android: 'Telegram' in UA
-    if (/Telegram/i.test(ua)) {
-        return true;
-    }
+    // Check legacy proxy object (sometimes used in older Telegram WebViews)
+    const hasTelegramProxy = typeof window.TelegramWebviewProxy !== 'undefined';
 
-    // Optional iOS fallback (Telegram iOS uses WKWebView, can't reliably detect)
-    // Some iOS Telegram UAs look like Safari, so you may need to just offer a fallback
+    // Check user agent string
+    const uaTelegram = ua.includes('telegram');
 
-    return false;
+    return hasTelegramWebApp || hasTelegramProxy || uaTelegram;
 }
+
 
 function isFacebook() {
     const ua = navigator.userAgent || '';
