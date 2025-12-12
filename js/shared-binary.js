@@ -153,8 +153,10 @@ function openBlobInBrowser(blob, binaryFileName) {
             //diagnoseTelegram();
             if (isEmbeddedBrowser()) {
                 downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.target = '_blank';
-                alert("Open link in a proper browser like Chrome or Firefox");
+                downloadLink.addEventListener("click", () => {
+                        alert("Open link in a proper browser like Chrome or Firefox");
+                    }
+                );
             } else {
                 downloadLink.href = URL.createObjectURL(blob);
                 downloadLink.download = binaryFileName;
