@@ -150,6 +150,13 @@ function openBlobInBrowser(blob, binaryFileName) {
         contentVideoPlayer.style.display = 'block';
     } else {
         if (isMobile()) {
+            if (isEmbeddedBrowser()) {
+                alert("Open link in a proper browser like Chrome or Firefox");
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.target = '_blank';
+                downloadLink.style.display = 'inline-block';
+                return;
+            }
             downloadLink.href = URL.createObjectURL(blob);
             downloadLink.download = binaryFileName;
             contentContainer.style.display = 'block';
@@ -159,6 +166,34 @@ function openBlobInBrowser(blob, binaryFileName) {
             downloadFile(blob, binaryFileName);
         }
     }
+}
+
+function isTelegram() {
+    // Telegram WebApp object (most reliable)
+    if (typeof window.Telegram !== 'undefined' && window.Telegram.WebApp) {
+        return true;
+    }
+
+    const ua = navigator.userAgent || '';
+
+    // Telegram Android: 'Telegram' in UA
+    if (/Telegram/i.test(ua)) {
+        return true;
+    }
+
+    // Optional iOS fallback (Telegram iOS uses WKWebView, can't reliably detect)
+    // Some iOS Telegram UAs look like Safari, so you may need to just offer a fallback
+
+    return false;
+}
+
+function isFacebook() {
+    const ua = navigator.userAgent || '';
+    return /FBAN|FBAV/i.test(ua);
+}
+
+function isEmbeddedBrowser() {
+    return isTelegram() || isFacebook();
 }
 
 async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, afterFinishedHandler) {
