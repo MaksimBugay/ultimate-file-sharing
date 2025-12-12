@@ -71,34 +71,41 @@
                     <span id="buttonText">Download</span>
                 </button>
             </div>
+            <div id="progressBarContainer" style="display: none;">
+                <progress id="downloadProgress" value="0" max="100" style="width: 100%"></progress>
+                <span id="progressPercentage">0%</span>
+            </div>
             <div id="miscContainer" class="misc-container">
-                <div class="input-group">
-                    <label id="readMeLabel" style="font-weight: bold;font-size: 14px">Read me: </label>
-                    <div id="readMeTextMemo"
-                         class="read-me-text-memo"
-                         aria-label="provide information about content"
-                         contenteditable="false"
-                         spellcheck="true"
-                         data-lexical-editor="true"
-                         role="textbox"
-                    ></div>
+                <div class="misc-header">
+                    <span id="hideShowContentDetailsCaption">Show content details</span>
+                    <span class="misc-arrow">▼</span>
                 </div>
-                <div class="input-group">
-                    <label id="ownerSignatureLabel" style="font-weight: bold;font-size: 14px; color: lightseagreen">Owner
-                        signature: </label>
-                </div>
-                <div class="input-group">
-                    <label for="workSpaceId" style="font-weight: bold;font-size: 14px">Workspace ID </label>
-                    <input type="text" id="workSpaceId" name="workspace-id" required>
-                </div>
-                <input type="checkbox" id="openInBrowserCheckbox" checked style="display: none"/>
-                <div id="pastCredentialsContainer" class="memo-container" style="margin-bottom: 0">
-                <textarea id="pastCredentials" rows="2" cols="30"
-                      placeholder="Past string with credentials received from owner here or enter workspace ID and password manually"></textarea>
-                </div>
-                <div id="progressBarContainer" style="display: none;">
-                    <progress id="downloadProgress" value="0" max="100" style="width: 100%"></progress>
-                    <span id="progressPercentage">0%</span>
+
+                <div class="misc-body">
+                    <div class="input-group">
+                        <label id="readMeLabel" style="font-weight: bold;font-size: 14px">Read me: </label>
+                        <div id="readMeTextMemo"
+                             class="read-me-text-memo"
+                             aria-label="provide information about content"
+                             contenteditable="false"
+                             spellcheck="true"
+                             data-lexical-editor="true"
+                             role="textbox"
+                        ></div>
+                    </div>
+                    <div class="input-group">
+                        <label id="ownerSignatureLabel" style="font-weight: bold;font-size: 14px; color: lightseagreen">Owner
+                            signature: </label>
+                    </div>
+                    <div class="input-group">
+                        <label for="workSpaceId" style="font-weight: bold;font-size: 14px">Workspace ID </label>
+                        <input type="text" id="workSpaceId" name="workspace-id" required>
+                    </div>
+                    <input type="checkbox" id="openInBrowserCheckbox" checked style="display: none"/>
+                    <div id="pastCredentialsContainer" class="memo-container" style="margin-bottom: 0">
+                    <textarea id="pastCredentials" rows="2" cols="30"
+                          placeholder="Past string with credentials received from owner here or enter workspace ID and password manually"></textarea>
+                    </div>
                 </div>
             </div>
         </div>

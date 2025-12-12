@@ -675,6 +675,7 @@ progress::-moz-progress-bar {
     margin-top: 10px;
     padding: 16px 16px;
     border-radius: 12px;
+    overflow: hidden;
 
     background: rgba(221, 209, 255, 0.45);
     backdrop-filter: blur(8px);
@@ -693,5 +694,41 @@ progress::-moz-progress-bar {
     font-weight: bold;
     font-size: 14px;
 }
+
+/* Header */
+.misc-header {
+    padding: 12px 16px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    background: rgba(221, 209, 255, 0.75);
+    border-radius: 12px;
+}
+
+.misc-arrow {
+    transition: transform 0.25s ease;
+}
+
+/* Collapsible body */
+.misc-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    padding: 0 16px;
+}
+
+.misc-container.open .misc-body {
+    max-height: 2000px; /* must be large enough to fit content */
+    padding-bottom: 16px;
+}
+
+.misc-container.open .misc-arrow {
+    transform: rotate(180deg);
+}
+
 
 
