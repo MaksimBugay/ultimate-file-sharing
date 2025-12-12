@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure FileShare: Protected content</title>
     <link rel="stylesheet" href="css/protected-binary.css">
+    <link rel="stylesheet" href="css/modern-public-binary.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -50,8 +51,22 @@
         </div>
     </div>
     <div class="login-container">
-        <div id="loginBox" class="login-box">
+        <div id="loginBox" class="content-details-container">
             <h2>Credentials</h2>
+            <div class="input-group">
+                <label for="password" style="font-weight: bold;font-size: 14px">Password</label>
+                <div class="password-container">
+                    <input type="password" id="password" name="password"  placeholder="Enter password" required>
+                    <button type="button" id="togglePassword" class="toggle-password"></button>
+                </div>
+            </div>
+            <div class="input-group">
+                <input type="checkbox" id="reuseCredentialsCheckbox"/>
+                Use for all content from that owner
+            </div>
+            <div class="input-group" style="margin-bottom: 0">
+                <label id="readMeLabel" style="font-weight: bold;font-size: 14px">Read me: </label>
+            </div>
             <div class="input-group">
                 <div id="readMeTextMemo"
                      class="read-me-text-memo"
@@ -69,17 +84,6 @@
             <div class="input-group">
                 <label for="workSpaceId" style="font-weight: bold;font-size: 14px">Workspace ID </label>
                 <input type="text" id="workSpaceId" name="workspace-id" required>
-            </div>
-            <div class="input-group">
-                <label for="password" style="font-weight: bold;font-size: 14px">Password</label>
-                <div class="password-container">
-                    <input type="password" id="password" name="password" required>
-                    <button type="button" id="togglePassword" class="toggle-password"></button>
-                </div>
-            </div>
-            <div class="input-group">
-                <input type="checkbox" id="reuseCredentialsCheckbox"/>
-                Use for all content from that owner
             </div>
             <input type="checkbox" id="openInBrowserCheckbox" checked style="display: none"/>
             <div id="pastCredentialsContainer" class="memo-container">
