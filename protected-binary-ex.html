@@ -25,13 +25,13 @@
     <meta name="twitter:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
 </head>
 <body style="background-color: #006BFD;padding: 0;margin: 0;">
-<iframe src="html/header.html" width="100%" height="93px"
+<iframe src="html/header-modern.html" width="100%" height="93px"
         style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
-<div class="main-container">
+<div class="main-container-full-height">
     <p id="errorMessage"
        style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
 
-    <div id="contentContainer" style="padding: 3px;background-color: white;display: none;">
+    <div id="contentContainer" class="content-container" style="display: none;">
         <img id="contentImage" class="media-content-container" src="images/how-to-medium.png"
              alt="Open image in browser">
         <embed id="pdfViewer" type="application/pdf" class="pdf-content-container" width="100%" height="100%" />
@@ -102,8 +102,48 @@
         </div>
     </div>
 </div>
+<!-- Product Selection Dialog -->
+<div id="productDialog" class="product-dialog">
+    <div class="product-dialog-overlay"></div>
+    <div class="product-dialog-content">
+        <button class="product-dialog-close" id="closeDialog">&times;</button>
+        <h2 class="product-dialog-title">Choose Product</h2>
+
+        <div class="product-options">
+            <a href="https://secure.fileshare.ovh/" target="_blank" class="product-option">
+                <div class="product-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <div class="product-info">
+                    <h3>Web Application</h3>
+                    <p>Access secure file sharing directly in your browser</p>
+                    <span class="product-link">secure.fileshare.ovh →</span>
+                </div>
+            </a>
+
+            <a href="https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj"
+               target="_blank" class="product-option">
+                <div class="product-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                </div>
+                <div class="product-info">
+                    <h3>Chrome Extension</h3>
+                    <p>Quick access from your browser toolbar with added features</p>
+                    <span class="product-link">Chrome Web Store →</span>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+<!--------------------------------------------------------------------------------------------------------------------->
+
 </body>
 <script src="js/fp.min.js"></script>
+<script src="js/product-dialog.js"></script>
 <script src="js/common-utils.js"></script>
 <script src="js/callable-future.js?v=<?= time(); ?>"></script>
 <script src="js/uuid.min.js"></script>
