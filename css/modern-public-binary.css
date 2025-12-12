@@ -113,7 +113,7 @@ body {
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 32px;
+    padding: 10px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     width: auto;
     height: auto;
@@ -667,6 +667,31 @@ progress::-webkit-progress-value {
 
 progress::-moz-progress-bar {
     background: linear-gradient(90deg, #7928CA, #FF0080);
+}
+
+/*============================================================================================*/
+
+.misc-container {
+    margin-top: 10px;
+    padding: 16px 16px;
+    border-radius: 12px;
+
+    background: rgba(221, 209, 255, 0.45);
+    backdrop-filter: blur(8px);
+
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Remove bottom margin from labels when needed */
+.input-group.no-bottom {
+    margin-bottom: 0;
+}
+
+.label-strong {
+    font-weight: bold;
+    font-size: 14px;
 }
 
 
