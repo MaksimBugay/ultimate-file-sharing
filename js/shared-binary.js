@@ -150,37 +150,52 @@ function openBlobInBrowser(blob, binaryFileName) {
         contentVideoPlayer.style.display = 'block';
     } else {
         if (isMobile()) {
+            //diagnoseTelegram();
             if (isEmbeddedBrowser()) {
-                alert("Open link in a proper browser like Chrome or Firefox");
                 downloadLink.href = URL.createObjectURL(blob);
                 downloadLink.target = '_blank';
-                downloadLink.style.display = 'inline-block';
-                return;
+                alert("Open link in a proper browser like Chrome or Firefox");
+            } else {
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = binaryFileName;
+                downloadLink.click();
             }
-            downloadLink.href = URL.createObjectURL(blob);
-            downloadLink.download = binaryFileName;
             contentContainer.style.display = 'block';
             downloadLink.style.display = 'inline-block';
-            downloadLink.click();
         } else {
             downloadFile(blob, binaryFileName);
         }
     }
 }
 
+function diagnoseTelegram() {
+    const info = {
+        userAgent: navigator.userAgent,
+        hasTelegram: typeof window.Telegram !== 'undefined',
+        hasWebApp: !!(window.Telegram && window.Telegram.WebApp),
+        hasWebViewProxy: typeof window.TelegramWebviewProxy !== 'undefined',
+        windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('telegram')),
+        navigatorKeys: Object.keys(navigator).filter(k => k.toLowerCase().includes('telegram'))
+    };
+    if (window.Telegram) {
+        info.telegramKeys = Object.keys(window.Telegram);
+        if (window.Telegram.WebApp) {
+            info.webAppKeys = Object.keys(window.Telegram.WebApp);
+            info.platform = window.Telegram.WebApp.platform;
+            info.version = window.Telegram.WebApp.version;
+        }
+    }
+    alert(`Diagnostic: ${JSON.stringify(info, null, 2)}`);
+    console.log('Telegram Diagnostic:', JSON.stringify(info, null, 2));
+    return info;
+}
+
 function isTelegram() {
-    const ua = (navigator.userAgent || '').toLowerCase();
-
-    // Check Telegram WebApp object
-    const hasTelegramWebApp = typeof window.Telegram === 'object' && typeof window.Telegram.WebApp === 'object';
-
-    // Check legacy proxy object (sometimes used in older Telegram WebViews)
-    const hasTelegramProxy = typeof window.TelegramWebviewProxy !== 'undefined';
-
-    // Check user agent string
-    const uaTelegram = ua.includes('telegram');
-
-    return hasTelegramWebApp || hasTelegramProxy || uaTelegram;
+    return !!(
+        window.TelegramWebview ||
+        (window.Telegram?.WebApp) ||
+        /Telegram/i.test(navigator.userAgent || '')
+    );
 }
 
 
