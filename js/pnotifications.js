@@ -530,7 +530,7 @@ PushcaClient.executeWithRepeatOnFailure = async function (id, commandWithId, inT
     let timeoutMs = inTimeoutMs || 5000;
     let ackId = id || commandWithId.id;
 
-    return await CallableFuture.callAsynchronouslyWithRepeatOfFailure(timeoutMs, ackId, n, function (waiterId) {
+    return await CallableFuture.callAsynchronouslyWithRepeatOfFailure(timeoutMs, ackId, n, function () {
         PushcaClient.ws.send(commandWithId.message);
     });
 }
@@ -793,7 +793,7 @@ async function getAuthorizedWsUrl(baseUrl, clientObj, apiKey) {
                 CallableFuture.releaseWaiterIfExistsWithError(waiterId, error);
             };
 
-            tmpWs.onclose = function (event) {
+            tmpWs.onclose = function () {
                 delay(500).then(() => {
                     CallableFuture.releaseWaiterIfExistsWithError(waiterId, "Failed public sign-in attempt");
                 })
@@ -814,6 +814,7 @@ PushcaClient.openWsConnection = async function (baseUrl, clientObj,
     PushcaClient.serverBaseUrl = baseUrl;
     PushcaClient.ClientObj = clientObj;
     PushcaClient.clientObjRefresher = clientObjRefresher;
+    PushcaClient.apiKey = apiKey;
 
     if (!withoutRefresh) {
         initConnectionRecoveryInterval(baseUrl);
@@ -1323,7 +1324,14 @@ PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode
 
 PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuffer) {
     if (!PushcaClient.isOpen()) {
-        await PushcaClient.restoreWsConnection();
+        PushcaClient.stopWebSocket();
+        await PushcaClient.openWsConnection(
+            PushcaClient.serverBaseUrl,
+            PushcaClient.ClientObj,
+            PushcaClient.clientObjRefresher,
+            false,
+            PushcaClient.apiKey
+        );
     }
 
     for (let numberOfCheckAttempts = 0;
