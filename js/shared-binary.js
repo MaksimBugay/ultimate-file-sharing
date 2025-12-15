@@ -195,7 +195,7 @@ function openBlobInBrowser0(blob, binaryFileName) {
             const aspect = contentVideoPlayer.videoWidth / contentVideoPlayer.videoHeight;
             const rect = contentContainer.getBoundingClientRect();
             const cWidth = rect.width * 0.9;
-            const cHeight = rect.height * 0.9;
+            const cHeight = rect.height * 0.95;
 
             let width, height;
             if (rect.width < rect.height) {
@@ -204,6 +204,7 @@ function openBlobInBrowser0(blob, binaryFileName) {
             } else {
                 height = Math.round(cHeight);
                 width = Math.round(cHeight * aspect);
+                contentVideoPlayer.style.marginLeft = `${Math.round((rect.width - width) / 2)}px`;
             }
 
             contentVideoPlayer.setAttribute("width", width);
