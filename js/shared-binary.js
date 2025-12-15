@@ -159,6 +159,16 @@ function openBlobInBrowser0(blob, binaryFileName) {
         const blobUrl = URL.createObjectURL(blob);
         contentImage.src = blobUrl;
         contentImage.onload = function () {
+            /*const imgWidth = contentImage.naturalWidth
+            const imgHeight = contentImage.naturalHeight
+            alert(`${imgWidth};${imgHeight};${imgWidth / imgHeight}`);*/
+            calculatePosition(
+                contentImage.naturalWidth,
+                contentImage.naturalHeight,
+                contentImage,
+                false
+            );
+
             contentImage.style.display = 'block';
             URL.revokeObjectURL(blobUrl);
         };
@@ -192,7 +202,13 @@ function openBlobInBrowser0(blob, binaryFileName) {
         });
 
         contentVideoPlayer.addEventListener("loadedmetadata", () => {
-            const aspect = contentVideoPlayer.videoWidth / contentVideoPlayer.videoHeight;
+            calculatePosition(
+                contentVideoPlayer.videoWidth,
+                contentVideoPlayer.videoHeight,
+                contentVideoPlayer,
+                true
+            );
+            /*const aspect = contentVideoPlayer.videoWidth / contentVideoPlayer.videoHeight;
             const rect = contentContainer.getBoundingClientRect();
             const cWidth = rect.width * 0.9;
             const cHeight = rect.height * 0.95;
@@ -211,7 +227,7 @@ function openBlobInBrowser0(blob, binaryFileName) {
             contentVideoPlayer.setAttribute("height", height);
 
             contentVideoPlayer.style.width = `${width}px`;
-            contentVideoPlayer.style.height = `${height}px`;
+            contentVideoPlayer.style.height = `${height}px`;*/
             contentVideoPlayer.style.display = 'block';
         });
     } else {
@@ -226,6 +242,39 @@ function openBlobInBrowser0(blob, binaryFileName) {
             downloadFile(blob, binaryFileName);
         }
     }
+}
+
+function calculatePosition(sourceWidth, sourceHeight, sourceEl, fullscreen) {
+    const aspect = sourceWidth / sourceHeight;
+    const rect = contentContainer.getBoundingClientRect();
+    const cWidth = rect.width - 20;
+    const cHeight = rect.height - 20;
+
+    let width = sourceWidth;
+    let height = sourceHeight;
+    if ((sourceWidth > cWidth) || (sourceHeight > cHeight) || fullscreen) {
+        if (rect.width < rect.height) {
+            width = Math.round(cWidth);
+            height = Math.round(cWidth / aspect);
+        } else {
+            height = Math.round(cHeight);
+            width = Math.round(cHeight * aspect);
+        }
+    }
+    const marginLeft = Math.round((rect.width - width) / 2);
+    if (marginLeft > 10) {
+        sourceEl.style.marginLeft = `${marginLeft}px`;
+    }
+    const marginTop = Math.round((rect.height - height) / 2);
+    if (marginTop > 10) {
+        sourceEl.style.marginTop = `${marginTop}px`;
+    }
+
+    sourceEl.setAttribute("width", width);
+    sourceEl.setAttribute("height", height);
+
+    sourceEl.style.width = `${width}px`;
+    sourceEl.style.height = `${height}px`;
 }
 
 async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, afterFinishedHandler) {
