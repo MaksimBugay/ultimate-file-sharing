@@ -159,16 +159,12 @@ function openBlobInBrowser0(blob, binaryFileName) {
         const blobUrl = URL.createObjectURL(blob);
         contentImage.src = blobUrl;
         contentImage.onload = function () {
-            /*const imgWidth = contentImage.naturalWidth
-            const imgHeight = contentImage.naturalHeight
-            alert(`${imgWidth};${imgHeight};${imgWidth / imgHeight}`);*/
             calculatePosition(
                 contentImage.naturalWidth,
                 contentImage.naturalHeight,
                 contentImage,
                 false
             );
-
             contentImage.style.display = 'block';
             URL.revokeObjectURL(blobUrl);
         };
@@ -208,26 +204,6 @@ function openBlobInBrowser0(blob, binaryFileName) {
                 contentVideoPlayer,
                 true
             );
-            /*const aspect = contentVideoPlayer.videoWidth / contentVideoPlayer.videoHeight;
-            const rect = contentContainer.getBoundingClientRect();
-            const cWidth = rect.width * 0.9;
-            const cHeight = rect.height * 0.95;
-
-            let width, height;
-            if (rect.width < rect.height) {
-                width = Math.round(cWidth);
-                height = Math.round(cWidth / aspect);
-            } else {
-                height = Math.round(cHeight);
-                width = Math.round(cHeight * aspect);
-                contentVideoPlayer.style.marginLeft = `${Math.round((rect.width - width) / 2)}px`;
-            }
-
-            contentVideoPlayer.setAttribute("width", width);
-            contentVideoPlayer.setAttribute("height", height);
-
-            contentVideoPlayer.style.width = `${width}px`;
-            contentVideoPlayer.style.height = `${height}px`;*/
             contentVideoPlayer.style.display = 'block';
         });
     } else {
