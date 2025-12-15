@@ -270,22 +270,24 @@ async function openWsConnection(binaryId) {
 //======================================================================================================================
 
 
-if (isEmbeddedBrowser() && /Android/i.test(navigator.userAgent)) {
-    document.querySelector('.login-container').remove();
-    contentContainer.style.display = "block";
+if (isEmbeddedBrowser()) {
+    if (/Android/i.test(navigator.userAgent)) {
+        document.querySelector('.login-container').remove();
+        contentContainer.style.display = "block";
 
-    const href = window.location.href;
+        const href = window.location.href;
 
-    // Remove protocol FIRST
-    const noScheme = href.replace(/^https?:\/\//, '');
+        // Remove protocol FIRST
+        const noScheme = href.replace(/^https?:\/\//, '');
 
-    downloadLink.href =
-        `intent://${noScheme}` +
-        `#Intent;scheme=https;package=com.android.chrome;end`;
+        downloadLink.href =
+            `intent://${noScheme}` +
+            `#Intent;scheme=https;package=com.android.chrome;end`;
 
-    downloadLink.target = '_blank';
-    downloadLink.style.display = 'inline-block';
-    downloadLink.addEventListener("click", () => window.close());
-} else if (isEmbeddedBrowser() && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-    //showIOSInstruction();
+        downloadLink.target = '_blank';
+        downloadLink.style.display = 'inline-block';
+        downloadLink.addEventListener("click", () => window.close());
+    } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        //showIOSInstruction();
+    }
 }
