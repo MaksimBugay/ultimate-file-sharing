@@ -26,6 +26,48 @@ function canBeShownInBrowser(contentType) {
     return ('application/pdf' === contentType) || ('text/plain' === contentType) || playableImageTypes.includes(contentType) || isPlayableMedia(contentType);
 }
 
+function diagnoseTelegram() {
+    const info = {
+        userAgent: navigator.userAgent,
+        hasTelegram: typeof window.Telegram !== 'undefined',
+        hasWebApp: !!(window.Telegram && window.Telegram.WebApp),
+        hasWebViewProxy: typeof window.TelegramWebviewProxy !== 'undefined',
+        windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('telegram')),
+        navigatorKeys: Object.keys(navigator).filter(k => k.toLowerCase().includes('telegram'))
+    };
+    if (window.Telegram) {
+        info.telegramKeys = Object.keys(window.Telegram);
+        if (window.Telegram.WebApp) {
+            info.webAppKeys = Object.keys(window.Telegram.WebApp);
+            info.platform = window.Telegram.WebApp.platform;
+            info.version = window.Telegram.WebApp.version;
+        }
+    }
+    alert(`Diagnostic: ${JSON.stringify(info, null, 2)}`);
+    console.log('Telegram Diagnostic:', JSON.stringify(info, null, 2));
+    return info;
+}
+
+//diagnoseTelegram();
+function isTelegram() {
+    return !!(
+        window.TelegramWebview ||
+        (window.Telegram?.WebApp) ||
+        /Telegram/i.test(navigator.userAgent || '')
+    );
+}
+
+
+function isFacebook() {
+    const ua = navigator.userAgent || '';
+    return /FBAN|FBAV/i.test(ua);
+}
+
+function isEmbeddedBrowser() {
+    return isTelegram() || isFacebook();
+}
+
+
 //======================================================================================================================
 
 const contentContainer = document.getElementById('contentContainer');
@@ -90,6 +132,7 @@ function openBlobInTheSameTab(blob, binaryFileName) {
 }
 
 function openBlobInBrowser(blob, binaryFileName) {
+    contentContainer.style.display = 'block';
     if ('text/plain' === blob.type) {
         const reader = new FileReader();
         const textDecoder = new TextDecoder("utf-8");
@@ -101,7 +144,6 @@ function openBlobInBrowser(blob, binaryFileName) {
                 contentText.innerHTML = textDecoder.decode(resultBuffer);
                 contentText.style.display = 'block';
                 contentTextContainer.style.display = 'block';
-                contentContainer.style.display = 'block';
             } else {
                 console.error("Error: Expected ArrayBuffer, but got something else");
             }
@@ -112,7 +154,6 @@ function openBlobInBrowser(blob, binaryFileName) {
         const blobUrl = URL.createObjectURL(blob);
         contentImage.src = blobUrl;
         contentImage.onload = function () {
-            contentContainer.style.display = 'block';
             contentImage.style.display = 'block';
             URL.revokeObjectURL(blobUrl);
         };
@@ -120,7 +161,6 @@ function openBlobInBrowser(blob, binaryFileName) {
         const blobUrl = URL.createObjectURL(blob);
         delay(1000).then(() => {
             pdfViewer.src = blobUrl;
-            contentContainer.style.display = 'block';
             pdfViewer.style.display = 'block';
         });
         delay(5000).then(() => {
@@ -146,68 +186,18 @@ function openBlobInBrowser(blob, binaryFileName) {
             });
         });
 
-        contentContainer.style.display = 'block';
         contentVideoPlayer.style.display = 'block';
     } else {
         if (isMobile()) {
-            //diagnoseTelegram();
-            if (isEmbeddedBrowser()) {
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.addEventListener("click", () => {
-                        alert("Open link in a proper browser like Chrome or Firefox");
-                    }
-                );
-            } else {
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = binaryFileName;
-                downloadLink.click();
-            }
-            contentContainer.style.display = 'block';
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.target = '_blank';
+            downloadLink.download = binaryFileName;
             downloadLink.style.display = 'inline-block';
+            downloadLink.click();
         } else {
             downloadFile(blob, binaryFileName);
         }
     }
-}
-
-function diagnoseTelegram() {
-    const info = {
-        userAgent: navigator.userAgent,
-        hasTelegram: typeof window.Telegram !== 'undefined',
-        hasWebApp: !!(window.Telegram && window.Telegram.WebApp),
-        hasWebViewProxy: typeof window.TelegramWebviewProxy !== 'undefined',
-        windowKeys: Object.keys(window).filter(k => k.toLowerCase().includes('telegram')),
-        navigatorKeys: Object.keys(navigator).filter(k => k.toLowerCase().includes('telegram'))
-    };
-    if (window.Telegram) {
-        info.telegramKeys = Object.keys(window.Telegram);
-        if (window.Telegram.WebApp) {
-            info.webAppKeys = Object.keys(window.Telegram.WebApp);
-            info.platform = window.Telegram.WebApp.platform;
-            info.version = window.Telegram.WebApp.version;
-        }
-    }
-    alert(`Diagnostic: ${JSON.stringify(info, null, 2)}`);
-    console.log('Telegram Diagnostic:', JSON.stringify(info, null, 2));
-    return info;
-}
-
-function isTelegram() {
-    return !!(
-        window.TelegramWebview ||
-        (window.Telegram?.WebApp) ||
-        /Telegram/i.test(navigator.userAgent || '')
-    );
-}
-
-
-function isFacebook() {
-    const ua = navigator.userAgent || '';
-    return /FBAN|FBAV/i.test(ua);
-}
-
-function isEmbeddedBrowser() {
-    return isTelegram() || isFacebook();
 }
 
 async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, afterFinishedHandler) {
@@ -279,3 +269,23 @@ async function openWsConnection(binaryId) {
 
 //======================================================================================================================
 
+
+if (isEmbeddedBrowser() && /Android/i.test(navigator.userAgent)) {
+    document.querySelector('.login-container').remove();
+    contentContainer.style.display = "block";
+
+    const href = window.location.href;
+
+    // Remove protocol FIRST
+    const noScheme = href.replace(/^https?:\/\//, '');
+
+    downloadLink.href =
+        `intent://${noScheme}` +
+        `#Intent;scheme=https;package=com.android.chrome;end`;
+
+    downloadLink.target = '_blank';
+    downloadLink.style.display = 'inline-block';
+    downloadLink.addEventListener("click", () => window.close());
+} else if (isEmbeddedBrowser() && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    //showIOSInstruction();
+}
