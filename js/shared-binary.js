@@ -271,12 +271,7 @@ async function openWsConnection(binaryId) {
 function initDownloadLink(downloadLink, href) {
     downloadLink.rel = 'noopener noreferrer';
     downloadLink.href = href;
-    downloadLink.target = '_blank';
-    downloadLink.addEventListener("click",
-        function () {
-            window.close();
-        }
-    );
+    //downloadLink.target = '_blank';
 }
 
 if (isEmbeddedBrowser()) {
