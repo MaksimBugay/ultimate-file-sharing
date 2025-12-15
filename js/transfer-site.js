@@ -569,6 +569,10 @@ async function processSelectedFiles(files) {
             }
         }
     }
+    await PushcaClient.restoreBrokenWsConnection();
+    while (!ownerVirtualHost.value) {
+        delay(100);
+    }
     for (let i = 0; i < files.length; i++) {
         await TransferFileHelper.transferFileToVirtualHostBase(
             files[i],
