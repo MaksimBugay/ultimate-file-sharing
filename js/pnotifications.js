@@ -1322,7 +1322,7 @@ PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode
     return result;
 }
 
-PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuffer) {
+PushcaClient.restoreBrokenWsConnection = async function () {
     if (!PushcaClient.isOpen()) {
         PushcaClient.stopWebSocket();
         await PushcaClient.openWsConnection(
@@ -1333,6 +1333,10 @@ PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuf
             PushcaClient.apiKey
         );
     }
+}
+
+PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuffer) {
+    await PushcaClient.restoreBrokenWsConnection();
 
     for (let numberOfCheckAttempts = 0;
          (numberOfCheckAttempts < 300) && (!PushcaClient.isOpen());
@@ -1376,6 +1380,7 @@ PushcaClient.cacheBinaryChunkInCloud = async function (binaryId, order, arrayBuf
 }
 
 PushcaClient.connectionAliasLookup = async function (fragment) {
+    await PushcaClient.restoreBrokenWsConnection();
     let metaData = {};
     metaData["fragment"] = fragment;
     let commandWithId = PushcaClient.buildCommandMessage(Command.CONNECTION_ALIAS_LOOKUP, metaData);
