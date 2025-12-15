@@ -196,7 +196,7 @@ button:active {
 .download-link-button {
     display: none;
     padding: 10px 20px;
-    background-color: #4CAF50; /* Green button */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%) fixed;
     color: white;
     text-decoration: none; /* remove underline */
     border-radius: 6px;
@@ -207,7 +207,7 @@ button:active {
 }
 
 .download-link-button:hover {
-    background-color: #45a049;
+    background-color: #5145a0;
 }
 
 /* Content container with modern styling */
@@ -728,6 +728,30 @@ progress::-moz-progress-bar {
 
 .misc-container.open .misc-arrow {
     transform: rotate(180deg);
+}
+
+#ios-instruction {
+    padding: 16px;
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+#ios-instruction h2 {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+#ios-instruction ol {
+    padding-left: 18px;
+}
+
+#ios-open-link {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #007aff;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
 }
 
 
