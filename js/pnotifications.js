@@ -1325,6 +1325,9 @@ PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode
 PushcaClient.restoreBrokenWsConnection = async function () {
     if (!PushcaClient.isOpen()) {
         PushcaClient.stopWebSocket();
+        if (typeof PushcaClient.clientObjRefresher === 'function') {
+            PushcaClient.clientObjRefresher(PushcaClient.ClientObj);
+        }
         await PushcaClient.openWsConnection(
             PushcaClient.serverBaseUrl,
             PushcaClient.ClientObj,
