@@ -252,23 +252,24 @@ function calculatePosition(sourceWidth, sourceHeight, sourceEl, fullscreen) {
 
     let width = sourceWidth;
     let height = sourceHeight;
-    if ((sourceWidth > cWidth) || (sourceHeight > cHeight) || fullscreen) {
+    if ((sourceWidth >= cWidth) || (sourceHeight >= cHeight) || fullscreen) {
         if (rect.width < rect.height) {
-            width = Math.round(cWidth);
-            height = Math.round(cWidth / aspect);
+            width = Math.round(cWidth) - 2;
+            height = Math.round(width / aspect);
         } else {
-            height = Math.round(cHeight);
-            width = Math.round(cHeight * aspect);
+            height = Math.round(cHeight) - 2;
+            width = Math.round(height * aspect);
         }
     }
-    const marginLeft = Math.round((rect.width - width) / 2);
-    if (marginLeft > 10) {
+    const marginLeft = Math.round((cWidth - width) / 2);
+    if (marginLeft > 2) {
         sourceEl.style.marginLeft = `${marginLeft}px`;
     }
-    const marginTop = Math.round((rect.height - height) / 2);
-    if (marginTop > 10) {
+    const marginTop = Math.round((cHeight - height) / 2);
+    if (marginTop > 2) {
         sourceEl.style.marginTop = `${marginTop}px`;
     }
+    console.log(`margins: left ${marginLeft}; top ${marginTop}`);
 
     sourceEl.setAttribute("width", width);
     sourceEl.setAttribute("height", height);
