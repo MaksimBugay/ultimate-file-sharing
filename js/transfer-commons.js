@@ -112,6 +112,7 @@ acceptFileTransferDialog.addEventListener("click", (event) => {
 
 acceptFileTransferBtn.addEventListener('click', async function () {
     try {
+        await PushcaClient.restoreBrokenWsConnection();
         showDownloadProgress();
         await TransferFileHelper.saveTransfer().then(() => {
             TransferFileHelper.cleanTransfer();
