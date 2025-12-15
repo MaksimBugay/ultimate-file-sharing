@@ -132,6 +132,12 @@ function openBlobInTheSameTab(blob, binaryFileName) {
 
 function openBlobInBrowser(blob, binaryFileName) {
     contentContainer.style.display = 'block';
+    delay(500).then(
+        () => openBlobInBrowser0(blob, binaryFileName)
+    );
+}
+
+function openBlobInBrowser0(blob, binaryFileName) {
     if ('text/plain' === blob.type) {
         const reader = new FileReader();
         const textDecoder = new TextDecoder("utf-8");
@@ -185,7 +191,28 @@ function openBlobInBrowser(blob, binaryFileName) {
             });
         });
 
-        contentVideoPlayer.style.display = 'block';
+        contentVideoPlayer.addEventListener("loadedmetadata", () => {
+            const aspect = contentVideoPlayer.videoWidth / contentVideoPlayer.videoHeight;
+            const rect = contentContainer.getBoundingClientRect();
+            const cWidth = rect.width * 0.9;
+            const cHeight = rect.height * 0.9;
+
+            let width, height;
+            if (rect.width < rect.height) {
+                width = Math.round(cWidth);
+                height = Math.round(cWidth / aspect);
+            } else {
+                height = Math.round(cHeight);
+                width = Math.round(cHeight * aspect);
+            }
+
+            contentVideoPlayer.setAttribute("width", width);
+            contentVideoPlayer.setAttribute("height", height);
+
+            contentVideoPlayer.style.width = `${width}px`;
+            contentVideoPlayer.style.height = `${height}px`;
+            contentVideoPlayer.style.display = 'block';
+        });
     } else {
         if (isMobile()) {
             const downloadLink = document.getElementById("downloadLink");
