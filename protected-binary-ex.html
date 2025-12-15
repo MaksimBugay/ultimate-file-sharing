@@ -33,7 +33,36 @@
        style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
 
     <div id="contentContainer" class="content-container" style="display: none;">
-        <a id="downloadLink" class="download-link-button">Download in Chrome</a>
+        <div id="ios-instruction" style="display:none">
+            <h2>Open in Safari</h2>
+
+            <p>
+                To download this file on iPhone or iPad:
+            </p>
+
+            <ol>
+                <li>Tap the <strong>⋮</strong> or <strong>Share</strong> button</li>
+                <li>Select <strong>“Open in Safari”</strong></li>
+            </ol>
+
+            <a id="iosDownloadLink" target="_blank" rel="noopener" class="download-link-button">
+                Open page in Safari
+            </a>
+        </div>
+        <div id="android-instruction" style="display:none">
+            <h2>Open in Chrome</h2>
+
+            <p>
+                To download this file on Android:
+            </p>
+
+            <ol>
+                <li>Tap the <strong>⋮</strong> or <strong>Share</strong> button</li>
+                <li>Select <strong>“Open in...”</strong></li>
+            </ol>
+
+            <a id="androidDownloadLink" class="download-link-button">Open page in Chrome</a>
+        </div>
         <img id="contentImage" class="media-content-container" src="images/how-to-medium.png"
              alt="Open image in browser">
         <embed id="pdfViewer" type="application/pdf" class="pdf-content-container" width="100%" height="100%"/>
@@ -105,7 +134,7 @@
                     <input type="checkbox" id="openInBrowserCheckbox" checked style="display: none"/>
                     <div id="pastCredentialsContainer" class="memo-container" style="margin-bottom: 0">
                     <textarea id="pastCredentials" rows="2" cols="30"
-                          placeholder="Past string with credentials received from owner here or enter workspace ID and password manually"></textarea>
+                              placeholder="Past string with credentials received from owner here or enter workspace ID and password manually"></textarea>
                     </div>
                 </div>
             </div>

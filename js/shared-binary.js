@@ -81,7 +81,6 @@ const progressBarContainer = document.getElementById("progressBarContainer");
 const progressBar = document.getElementById("downloadProgress");
 const progressPercentage = document.getElementById("progressPercentage");
 const errorMessage = document.getElementById('errorMessage');
-const downloadLink = document.getElementById("downloadLink");
 
 function showDownloadProgress() {
     progressBarContainer.style.display = 'block';
@@ -269,25 +268,36 @@ async function openWsConnection(binaryId) {
 
 //======================================================================================================================
 
+function initDownloadLink(downloadLink, href) {
+    downloadLink.rel = 'noopener noreferrer';
+    downloadLink.href = href;
+    downloadLink.target = '_blank';
+    downloadLink.addEventListener("click",
+        function () {
+            window.close();
+        }
+    );
+}
 
 if (isEmbeddedBrowser()) {
+    document.querySelector('.login-container').remove();
+    contentContainer.style.display = "block";
+    const href = window.location.href;
     if (/Android/i.test(navigator.userAgent)) {
-        document.querySelector('.login-container').remove();
-        contentContainer.style.display = "block";
-
-        const href = window.location.href;
+        const downloadLink = document.getElementById("androidDownloadLink");
 
         // Remove protocol FIRST
         const noScheme = href.replace(/^https?:\/\//, '');
 
-        downloadLink.href =
-            `intent://${noScheme}` +
-            `#Intent;scheme=https;package=com.android.chrome;end`;
-
-        downloadLink.target = '_blank';
-        downloadLink.style.display = 'inline-block';
-        downloadLink.addEventListener("click", () => window.close());
+        initDownloadLink(
+            downloadLink,
+            `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;end`
+        );
+        document.getElementById("android-instruction").style.display = "block";
     } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        //showIOSInstruction();
+        const downloadLink = document.getElementById("iosDownloadLink");
+
+        initDownloadLink(downloadLink, href);
+        document.getElementById("ios-instruction").style.display = "block";
     }
 }
