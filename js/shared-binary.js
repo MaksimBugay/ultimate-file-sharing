@@ -188,6 +188,7 @@ function openBlobInBrowser(blob, binaryFileName) {
         contentVideoPlayer.style.display = 'block';
     } else {
         if (isMobile()) {
+            const downloadLink = document.getElementById("downloadLink");
             downloadLink.href = URL.createObjectURL(blob);
             downloadLink.target = '_blank';
             downloadLink.download = binaryFileName;
