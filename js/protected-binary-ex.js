@@ -1,8 +1,3 @@
-function initDownloadLink(downloadLink, href) {
-    downloadLink.rel = 'noopener noreferrer';
-    downloadLink.href = href;
-    //downloadLink.target = '_blank';
-}
 
 document.addEventListener('DOMContentLoaded', function () {
     if (isEmbeddedBrowser()) {
@@ -14,16 +9,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Remove protocol FIRST
             const noScheme = href.replace(/^https?:\/\//, '');
-
-            initDownloadLink(
-                downloadLink,
-                `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;end`
-            );
+            downloadLink.href = `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;end`;
             document.getElementById("android-instruction").style.display = "block";
         } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
             const downloadLink = document.getElementById("iosDownloadLink");
-
-            initDownloadLink(downloadLink, href);
+            downloadLink.rel = 'noopener noreferrer';
+            downloadLink.href = href;
             document.getElementById("ios-instruction").style.display = "block";
         }
     } else {

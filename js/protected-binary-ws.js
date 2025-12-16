@@ -1,4 +1,3 @@
-
 setPastCredentialsHandler(downloadProtectedBinary);
 
 setPressEnterKeyHandler(downloadProtectedBinary);
@@ -19,11 +18,26 @@ async function downloadProtectedBinary() {
         return;
     }
 
-    const encryptionContract = await EncryptionContract.fromTransferableString(
-        encryptionContractStr,
-        passwordField.value,
-        stringToByteArray(workspaceField.value)
-    );
+    let encryptionContract;
+    try {
+        encryptionContract = await EncryptionContract.fromTransferableString(
+            encryptionContractStr,
+            passwordField.value,
+            stringToByteArray(workspaceField.value)
+        );
+    } catch (err) {
+        let message;
+
+        if (err instanceof Error) {
+            message = err.message;
+        } else if (typeof err === "string") {
+            message = err;
+        } else {
+            message = JSON.stringify(err, null, 2);
+        }
+
+        alert(`${passwordField.value}: ${message}`);
+    }
 
     //alert("open on mobile error that fixed after refresh");
 
