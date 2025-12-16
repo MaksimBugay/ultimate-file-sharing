@@ -1,4 +1,3 @@
-
 function initDownloadLink(downloadLink, href) {
     downloadLink.rel = 'noopener noreferrer';
     downloadLink.href = href;
@@ -27,3 +26,15 @@ if (isEmbeddedBrowser()) {
         document.getElementById("ios-instruction").style.display = "block";
     }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const miscHeader = document.querySelector(".misc-header");
+    if (miscHeader) {
+        miscHeader.addEventListener("click", function () {
+            const container = document.getElementById("miscContainer");
+            const hideShowContentDetailsCaption = document.getElementById("hideShowContentDetailsCaption");
+            hideShowContentDetailsCaption.innerText = "Hide content details";
+            container.classList.toggle("open");
+        });
+    }
+});

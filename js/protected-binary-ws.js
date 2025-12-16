@@ -5,13 +5,6 @@ setPressEnterKeyHandler(downloadProtectedBinary);
 
 setDownloadBtnHandler(downloadProtectedBinary);
 
-document.querySelector(".misc-header").addEventListener("click", function () {
-    const container = document.getElementById("miscContainer");
-    const hideShowContentDetailsCaption = document.getElementById("hideShowContentDetailsCaption");
-    hideShowContentDetailsCaption.innerText = "Hide content details";
-    container.classList.toggle("open");
-});
-
 let manifest = null;
 let contentSize = null;
 
