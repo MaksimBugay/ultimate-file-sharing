@@ -613,8 +613,33 @@ function closeInfoDialog() {
     }
     if (FileSharing.activeInfoUrl) {
         copyTextToClipboard(FileSharing.activeInfoUrl);
+        if (isMobile()) {
+            showNativeShareDialog(name, FileSharing.activeInfoUrl).then(ableToShow => {
+                if (!ableToShow) {
+                    console.log('Cannot show native share dialog');
+                }
+            });
+        }
         FileSharing.activeInfoUrl = null;
     }
+}
+
+async function showNativeShareDialog(vText, vUrl) {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: vText,
+                text: `Download link ${vText}`,
+                url: vUrl
+            });
+            return true;
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    } else {
+        console.log('Web Share API not supported on this browser.');
+    }
+    return false;
 }
 
 function showInfoDialog() {
