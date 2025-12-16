@@ -219,6 +219,8 @@ FingerprintJS.load().then(fp => {
 });
 
 async function applyCredentialsFromDb(signatureHash) {
+    //TODO try to figure out why mixed and broken when different browsers in use
+    if (1 === 1) return;
     const credentials = await getCredentialsFromDb(signatureHash);
     if (credentials) {
         const jsonObj = JSON.parse(credentials);
