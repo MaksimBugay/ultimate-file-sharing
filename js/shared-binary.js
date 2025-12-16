@@ -228,7 +228,7 @@ function calculatePosition(sourceWidth, sourceHeight, sourceEl, fullscreen) {
 
     let width = sourceWidth;
     let height = sourceHeight;
-    if ((sourceWidth >= cWidth) || (sourceHeight >= cHeight) || fullscreen) {
+    if (fullscreen) {
         if (rect.width < rect.height) {
             width = Math.round(cWidth) - 2;
             height = Math.round(width / aspect);
@@ -236,7 +236,26 @@ function calculatePosition(sourceWidth, sourceHeight, sourceEl, fullscreen) {
             height = Math.round(cHeight) - 2;
             width = Math.round(height * aspect);
         }
+    } else {
+        if (width >= cWidth || height >= cHeight) {
+            if (rect.width < rect.height) {
+                width = Math.round(cWidth) - 2;
+                height = Math.round(width / aspect);
+                while (height > cHeight) {
+                    width = width - 2;
+                    height = Math.round(width / aspect);
+                }
+            } else {
+                height = Math.round(cHeight) - 2;
+                width = Math.round(height * aspect);
+                while (width > cWidth) {
+                    height = height - 2;
+                    width = Math.round(height * aspect);
+                }
+            }
+        }
     }
+
     const marginLeft = Math.round((cWidth - width) / 2);
     if (marginLeft > 2) {
         sourceEl.style.marginLeft = `${marginLeft}px`;

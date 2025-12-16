@@ -25,6 +25,8 @@ async function downloadProtectedBinary() {
         stringToByteArray(workspaceField.value)
     );
 
+    //alert("open on mobile error that fixed after refresh");
+
     contentSize = manifest.datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
     console.log(`Content size = ${contentSize}`);
     if (canBeShownInBrowser(manifest.mimeType) && (contentSize < MemoryBlock.MB100)) {
