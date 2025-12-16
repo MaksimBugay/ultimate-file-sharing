@@ -45,6 +45,7 @@ const uploadProgressPercentage = document.getElementById('uploadProgressPercenta
 const destinationHint = document.getElementById('destinationHint');
 const destinationContainer = document.getElementById('destinationContainer');
 const howToButton = document.getElementById('howToButton');
+const selectFilesSubContainer = document.getElementById("selectFilesSubContainer");
 
 const fileTransferBtn = document.getElementById('fileTransferBtn');
 const fileTransferProgressBtn = document.getElementById('fileTransferProgressBtn');
@@ -584,10 +585,11 @@ async function processSelectedFiles(files) {
         return;
     }
 
+    await PushcaClient.restoreBrokenWsConnection();
+
     fileTransferBtn.style.display = 'none';
     fileTransferProgressBtn.style.display = 'block';
-    selectFilesBtn.style.display = 'none';
-    dropZone.style.display = 'none';
+    selectFilesSubContainer.style.display = 'none';
     let i = 0;
     FileTransfer.extraProgressHandler = function () {
         i += 1;
@@ -615,6 +617,7 @@ async function processSelectedFiles(files) {
     FileTransfer.extraProgressHandler = null;
     fileTransferBtn.style.display = 'block';
     fileTransferProgressBtn.style.display = 'none';
+    selectFilesSubContainer.style.display = 'flex';
     FileTransfer.reBindControls(true);
 }
 
