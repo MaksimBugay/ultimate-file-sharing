@@ -2,6 +2,7 @@ const FileTransfer = {};
 FileTransfer.applicationId = 'DIRECT_TRANSFER';
 FileTransfer.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileTransfer.scanQrCodeWaiterId = 'scan-qr-code-result';
+FileTransfer.preparedJointLink = null;
 FileTransfer.jointLinkPrefix = 'joint-link::destination-alias::';
 FileTransfer.pingIntervalId = window.setInterval(function () {
     PushcaClient.sendPing();
@@ -274,6 +275,34 @@ function isInfoDialogVisible() {
 function closeInfoDialog() {
     infoDialog.classList.remove('visible');
     receiverVirtualHost.focus();
+    if (FileTransfer.preparedJointLink) {
+        if (isMobile()) {
+            showNativeShareDialog("Joint link", FileTransfer.preparedJointLink).then(ableToShow => {
+                if (!ableToShow) {
+                    console.log('Cannot show native share dialog');
+                }
+            });
+        }
+    }
+    FileTransfer.preparedJointLink = null;
+}
+
+async function showNativeShareDialog(vText, vUrl) {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: vText,
+                text: `Download link ${vText}`,
+                url: vUrl
+            });
+            return true;
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    } else {
+        console.log('Web Share API not supported on this browser.');
+    }
+    return false;
 }
 
 function showInfoDialog() {
@@ -309,8 +338,9 @@ function copyJointLink() {
     //const serverUrl = "http://localhost:63343/ultimate-file-sharing";
     const sourceHost = encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj));
     const url = `${serverUrl}/file-transfer-embedded.html?source-host=${encodeURIComponent(sourceHost)}`;
-    copyTextToClipboard(url);
-    showInfoMsg(`Joint link was copied to clipboard (open it in browser on receiver side).`);
+    FileTransfer.preparedJointLink = url;
+    //copyTextToClipboard(url);
+    showInfoMsg(`Joint link was copied to clipboard (open it in browser on receiver side).`, url);
 }
 
 copyJointLinkBtn.addEventListener('click', function () {
