@@ -73,10 +73,14 @@ class EncryptionContract {
 
     async toTransferableString(pwd, salt) {
         const encryptedKey = await encryptPrivateKey(this.base64Key, this.base64IV, pwd, salt);
-        return encodeToBase64UrlSafe(JSON.stringify({
-            base64Key: encryptedKey,
-            base64IV: this.base64IV
-        }));
+        return encodeToBase64UrlSafe(
+            JSON.stringify(
+                {
+                    base64Key: encryptedKey,
+                    base64IV: this.base64IV
+                }
+            )
+        );
     }
 
     static async fromTransferableString(transferableString, password, salt) {
