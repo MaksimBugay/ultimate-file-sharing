@@ -278,7 +278,7 @@ function closeInfoDialog() {
     receiverVirtualHost.focus();
     if (FileTransfer.preparedJointLink) {
         if (isMobile()) {
-            showNativeShareDialog("Joint link", FileTransfer.preparedJointLink).then(ableToShow => {
+            showNativeShareDialog(ownerVirtualHost.value, FileTransfer.preparedJointLink).then(ableToShow => {
                 if (!ableToShow) {
                     console.log('Cannot show native share dialog');
                 }
@@ -292,8 +292,8 @@ async function showNativeShareDialog(vText, vUrl) {
     if (navigator.share) {
         try {
             await navigator.share({
-                title: vText,
-                text: `Download link ${vText}`,
+                title: `Joint link to ${vText}`,
+                text: "",
                 url: vUrl
             });
             return true;
