@@ -93,7 +93,57 @@ if (!humanOnly) {
                 },
                 false,
                 null,
-                null
+                null,
+                () => {
+                    const mainContainer = document.querySelector('.main-container-full-height');
+                    if (mainContainer) {
+                        mainContainer.style.display = 'none';
+                    }
+                    delay(1000).then(
+                        () => {
+                            const demoWidgetContainer = document.getElementById("demoWidgetContainer");
+                            if (demoWidgetContainer) {
+                                const adItems = [
+                                    {
+                                        title: "Share with a full control over access to your content",
+                                        srcUrl: "https://secure.fileshare.ovh/videos/file-share-demo-new.mp4",
+                                        link: "https://secure.fileshare.ovh/file-sharing-embedded.html"
+                                    },
+                                    {
+                                        title: "Create extra security layer on top of any social media",
+                                        srcUrl: "https://secure.fileshare.ovh/videos/Fileshare-Chrome-extension-demo.mp4",
+                                        link: "https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj?hl=en-US&utm_source=ext_sidebar"
+                                    },
+                                    {
+                                        title: "Transfer files between any devices with ultimate security",
+                                        srcUrl: "https://secure.fileshare.ovh/videos/file-transfer-demo.mp4",
+                                        link: "https://secure.fileshare.ovh/file-transfer-embedded.html"
+                                    }
+                                ];
+
+                                // Cryptocurrency wallets for donations
+                                const wallets = [
+                                    {
+                                        cryptoCurrency: "Bitcoin (BTC)",
+                                        walletAddress: "bc1qqa79qjjr8q0wc86spkyw354tpd27am3s57flxtj409xdn6yyrqfstpp9m2"
+                                    },
+                                    {
+                                        cryptoCurrency: "Ethereum (ETH)",
+                                        walletAddress: "0xe99B15Ff9B0b9eE5BCA3411d693DeE2e4b87bA5C"
+                                    },
+                                    {
+                                        cryptoCurrency: "USDT TRC-20 (TRX)",
+                                        walletAddress: "THGBNA1XpxCDWZJYcAVEGpBNQA9AuSANzp"
+                                    }
+                                ];
+
+                                // Create and inject the widget
+                                addDemoWidget(adItems, wallets, demoWidgetContainer);
+                                demoWidgetContainer.style.display = 'block';
+                            }
+                        }
+                    )
+                }
             );
         } else {
             previewBox.style.display = "block";

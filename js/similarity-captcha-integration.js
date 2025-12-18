@@ -40,7 +40,8 @@ function createSimilarityChallengeDialog(container,
                                          humanTokenConsumer,
                                          hideValidationError,
                                          generatePageIdCustomFunction,
-                                         validateHumanTokenCustomFunction) {
+                                         validateHumanTokenCustomFunction,
+                                         onChallengeOpenHandler) {
     if (hideValidationError) {
         ChallengeAttributes.hideValidationError = true;
     }
@@ -49,6 +50,9 @@ function createSimilarityChallengeDialog(container,
     }
     if (typeof validateHumanTokenCustomFunction === 'function') {
         ChallengeAttributes.validateHumanTokenFunction = validateHumanTokenCustomFunction;
+    }
+    if (typeof onChallengeOpenHandler === 'function') {
+        ChallengeAttributes.onChallengeOpenHandler = onChallengeOpenHandler;
     }
     initChallengeAttributes().then(
         () => createSimilarityChallengeDialogElements(container, removeOnCancel, humanTokenConsumer)
@@ -102,6 +106,9 @@ function createSimilarityChallengeDialogElements(container, removeOnCancel, huma
 
         // Optional: hide dialog after launch
         dialog.style.display = "none";
+        if (typeof ChallengeAttributes.onChallengeOpenHandler === 'function') {
+            ChallengeAttributes.onChallengeOpenHandler();
+        }
     };
 
     cancelBtn.onclick = function () {

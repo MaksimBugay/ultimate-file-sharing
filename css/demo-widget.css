@@ -1,0 +1,390 @@
+/* Demo Widget Styles - Modern Glassmorphic Design */
+
+:root {
+  --dw-primary: #0ff4c6;
+  --dw-secondary: #ff6b9d;
+  --dw-accent: #a855f7;
+  --dw-bg-dark: #0d1117;
+  --dw-bg-card: rgba(22, 27, 34, 0.85);
+  --dw-border: rgba(255, 255, 255, 0.08);
+  --dw-text: #e6edf3;
+  --dw-text-muted: #8b949e;
+  --dw-glow: rgba(15, 244, 198, 0.15);
+  --dw-radius: 16px;
+  --dw-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.demo-widget-container {
+  font-family: 'Outfit', 'SF Pro Display', -apple-system, sans-serif;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 1200px;
+  aspect-ratio: 16 / 9;
+  padding: 20px;
+  box-sizing: border-box;
+  background: var(--dw-bg-dark);
+  background-image: 
+    radial-gradient(ellipse at 20% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(15, 244, 198, 0.1) 0%, transparent 50%);
+  border-radius: var(--dw-radius);
+  position: relative;
+  overflow: hidden;
+}
+
+.demo-widget-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+}
+
+.demo-widget-cell {
+  position: relative;
+  background: var(--dw-bg-card);
+  border: 1px solid var(--dw-border);
+  border-radius: var(--dw-radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  transition: var(--dw-transition);
+  animation: dw-fadeIn 0.5s ease-out backwards;
+}
+
+.demo-widget-cell:nth-child(1) { animation-delay: 0.1s; }
+.demo-widget-cell:nth-child(2) { animation-delay: 0.2s; }
+.demo-widget-cell:nth-child(3) { animation-delay: 0.3s; }
+.demo-widget-cell:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes dw-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.demo-widget-cell:hover {
+  border-color: rgba(15, 244, 198, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(15, 244, 198, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.demo-widget-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+/* Title Header */
+.demo-widget-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+  border-bottom: 1px solid var(--dw-border);
+  position: relative;
+  z-index: 2;
+}
+
+.demo-widget-title-icon {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  border-radius: 50%;
+  background: var(--dw-primary);
+  box-shadow: 0 0 8px var(--dw-primary);
+  animation: dw-pulse 2s ease-in-out infinite;
+  margin-top: 6px;
+}
+
+@keyframes dw-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.demo-widget-title-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dw-text);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: var(--dw-transition);
+  display: inline;
+  flex: 1;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.demo-widget-title-link:hover {
+  color: var(--dw-primary);
+}
+
+.demo-widget-title-link::after {
+  content: ' ↗';
+  font-size: 12px;
+  opacity: 0;
+  transition: var(--dw-transition);
+}
+
+.demo-widget-title-link:hover::after {
+  opacity: 1;
+}
+
+/* iFrame Container */
+.demo-widget-iframe-wrapper {
+  flex: 1;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.demo-widget-iframe-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  transition: var(--dw-transition);
+  z-index: 1;
+}
+
+.demo-widget-iframe-wrapper:hover::after {
+  background: rgba(15, 244, 198, 0.05);
+}
+
+.demo-widget-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  pointer-events: none;
+}
+
+/* Donate Section */
+.demo-widget-donate {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.demo-widget-donate-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.demo-widget-donate-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  display: block;
+  animation: dw-heartbeat 1.5s ease-in-out infinite;
+}
+
+@keyframes dw-heartbeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.1); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.05); }
+}
+
+.demo-widget-donate-title {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--dw-primary), var(--dw-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.demo-widget-donate-subtitle {
+  font-size: 12px;
+  color: var(--dw-text-muted);
+  margin-top: 4px;
+}
+
+.demo-widget-wallets {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.demo-widget-wallets::-webkit-scrollbar {
+  width: 4px;
+}
+
+.demo-widget-wallets::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.demo-widget-wallets::-webkit-scrollbar-thumb {
+  background: var(--dw-accent);
+  border-radius: 2px;
+}
+
+.demo-widget-wallet {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--dw-border);
+  border-radius: 10px;
+  padding: 12px;
+  transition: var(--dw-transition);
+  cursor: pointer;
+  position: relative;
+}
+
+.demo-widget-wallet:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--dw-accent);
+}
+
+.demo-widget-wallet-crypto {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dw-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demo-widget-wallet-crypto::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--dw-accent);
+  border-radius: 2px;
+}
+
+.demo-widget-wallet-address {
+  font-size: 11px;
+  color: var(--dw-text-muted);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  word-break: break-all;
+  line-height: 1.5;
+  transition: var(--dw-transition);
+}
+
+.demo-widget-wallet:hover .demo-widget-wallet-address {
+  color: var(--dw-text);
+}
+
+.demo-widget-wallet-copy {
+  font-size: 10px;
+  color: var(--dw-primary);
+  opacity: 0;
+  transition: var(--dw-transition);
+  pointer-events: none;
+  white-space: nowrap;
+  margin-top: 6px;
+  text-align: right;
+}
+
+.demo-widget-wallet:hover .demo-widget-wallet-copy {
+  opacity: 1;
+}
+
+.demo-widget-wallet.copied .demo-widget-wallet-copy {
+  color: var(--dw-secondary);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .demo-widget-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, minmax(250px, auto));
+    aspect-ratio: unset;
+    max-height: 80vh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .demo-widget-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .demo-widget-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+
+  .demo-widget-container::-webkit-scrollbar-thumb {
+    background: var(--dw-primary);
+    border-radius: 3px;
+  }
+
+  .demo-widget-cell {
+    scroll-snap-align: start;
+    min-height: 250px;
+  }
+
+  .demo-widget-title {
+    padding: 12px 14px;
+  }
+
+  .demo-widget-donate {
+    padding: 16px;
+  }
+
+  .demo-widget-wallet-copy {
+    opacity: 1;
+  }
+
+  .demo-widget-donate-icon {
+    font-size: 28px;
+  }
+
+  .demo-widget-donate-title {
+    font-size: 16px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .demo-widget-container {
+    break-inside: avoid;
+    background: white;
+  }
+}
+
+.demo-widget-parent-container {
+  background-color: transparent;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 10px !important;
+  width: 100%;
+  height: 100%;
+}
+
+
