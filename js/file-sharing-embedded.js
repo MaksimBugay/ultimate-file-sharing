@@ -369,7 +369,7 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
         file,
         file.name,
         file.type,
-        `name = ${file.name}; size = ${Math.round(file.size / MemoryBlock.MB)} Mb; content-type = ${file.type}`,
+        `name = ${file.name}; size = ${calculateDisplaySizeMb(file.size)} Mb; content-type = ${file.type}`,
         FileSharing.saveInCloudProcessor
     );
     return await FileSharing.saveContentInCloud(
@@ -393,7 +393,7 @@ FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, fo
         blob,
         name,
         type,
-        `name = ${name}; size = ${Math.round(blob.size / MemoryBlock.MB)} Mb; content-type = ${type}`,
+        `name = ${name}; size = ${calculateDisplaySizeMb(blob.size)} Mb; content-type = ${type}`,
         FileSharing.saveInCloudProcessor
     );
     return await FileSharing.saveBlobWithIdInCloud(
@@ -464,10 +464,18 @@ FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inR
     );
 }
 
+function calculateDisplaySizeMb(size) {
+    let sizeMb = Math.round(size / MemoryBlock.MB);
+    if (sizeMb === 0) {
+        sizeMb = 0.001;
+    }
+    return sizeMb;
+}
+
 FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSpaceId, name, type, size, inReadMeText, splitAndStoreProcessor, forHuman, password) {
     let readMeText = inReadMeText ? inReadMeText : '';
     if (FileSharing.defaultReadMeText === inReadMeText) {
-        readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
+        readMeText = `name = ${name}; size = ${calculateDisplaySizeMb(size)} Mb; content-type = ${type}`;
     }
     const encryptionContract = password ? await generateEncryptionContract() : null;
     const createManifestResult = await createBinaryManifest(
