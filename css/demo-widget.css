@@ -2,7 +2,7 @@
 
 :root {
   --dw-primary: #0ff4c6;
-  --dw-secondary: #ff6b9d;
+  --dw-secondary: #c084fc;
   --dw-accent: #a855f7;
   --dw-bg-dark: #0d1117;
   --dw-bg-card: rgba(22, 27, 34, 0.85);
@@ -122,51 +122,56 @@
 .demo-widget-title-link {
   font-size: 14px;
   font-weight: 600;
-  color: var(--dw-text);
-  text-decoration: none;
+  color: var(--dw-primary);
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 244, 198, 0.4);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
   letter-spacing: 0.02em;
   transition: var(--dw-transition);
-  display: inline;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
   flex: 1;
   line-height: 1.4;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  text-shadow: 0 0 20px rgba(15, 244, 198, 0.3);
+  cursor: pointer;
 }
 
 .demo-widget-title-link:hover {
-  color: var(--dw-primary);
+  color: #fff;
+  text-shadow: 0 0 25px rgba(15, 244, 198, 0.5);
+  text-decoration-color: var(--dw-secondary);
+  text-decoration-thickness: 2px;
 }
 
 .demo-widget-title-link::after {
-  content: ' ↗';
-  font-size: 12px;
-  opacity: 0;
+  content: '↗';
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dw-bg-dark);
+  background: var(--dw-primary);
+  padding: 3px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 1px;
   transition: var(--dw-transition);
+  box-shadow: 0 0 10px rgba(15, 244, 198, 0.4);
 }
 
 .demo-widget-title-link:hover::after {
-  opacity: 1;
+  background: var(--dw-secondary);
+  box-shadow: 0 0 15px rgba(192, 132, 252, 0.5);
+  transform: translate(2px, -2px);
 }
 
 /* iFrame Container */
 .demo-widget-iframe-wrapper {
   flex: 1;
   position: relative;
-  cursor: pointer;
   overflow: hidden;
-}
-
-.demo-widget-iframe-wrapper::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: transparent;
-  transition: var(--dw-transition);
-  z-index: 1;
-}
-
-.demo-widget-iframe-wrapper:hover::after {
-  background: rgba(15, 244, 198, 0.05);
 }
 
 .demo-widget-iframe {
@@ -174,7 +179,6 @@
   height: 100%;
   border: none;
   display: block;
-  pointer-events: none;
 }
 
 /* Donate Section */
@@ -313,6 +317,69 @@
   color: var(--dw-secondary);
 }
 
+/* Small Height Viewport - ensure content is scrollable */
+@media (max-height: 600px) {
+  .demo-widget-container {
+    aspect-ratio: unset;
+    grid-template-rows: repeat(2, minmax(200px, 1fr));
+    min-height: 450px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .demo-widget-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .demo-widget-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+
+  .demo-widget-container::-webkit-scrollbar-thumb {
+    background: var(--dw-primary);
+    border-radius: 3px;
+  }
+
+  .demo-widget-cell {
+    min-height: 200px;
+  }
+
+  .demo-widget-donate {
+    padding: 12px;
+  }
+
+  .demo-widget-donate-header {
+    margin-bottom: 10px;
+  }
+
+  .demo-widget-donate-icon {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+
+  .demo-widget-donate-title {
+    font-size: 14px;
+  }
+
+  .demo-widget-donate-subtitle {
+    font-size: 10px;
+  }
+
+  .demo-widget-wallet {
+    padding: 8px;
+  }
+
+  .demo-widget-wallet-crypto {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+
+  .demo-widget-wallet-address {
+    font-size: 10px;
+  }
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .demo-widget-container {
@@ -367,6 +434,20 @@
   }
 }
 
+/* Small height AND narrow width (e.g., phone in landscape) */
+@media (max-width: 768px) and (max-height: 500px) {
+  .demo-widget-container {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, minmax(180px, 1fr));
+    max-height: none;
+    scroll-snap-type: none;
+  }
+
+  .demo-widget-cell {
+    min-height: 180px;
+  }
+}
+
 /* Print styles */
 @media print {
   .demo-widget-container {
@@ -381,18 +462,29 @@
 
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
 
   box-sizing: border-box;
 
-  margin-left: 1dvw;
-  margin-top: 1dvh;
+  margin-left: 1vw;
+  margin-top: 1vh;
+  padding: 10px;
 
-  width: 100%;
-  max-width: 98dvw;
-  height: calc(98dvh - 95px);
+  width: 98vw;
+  min-height: 300px;
+  height: calc(96vh - 100px);
   border-radius: 10px;
+}
+
+/* Mobile: Use dynamic viewport units for stable sizing with browser UI */
+@media (max-width: 768px) {
+  .demo-widget-parent-container {
+    margin-left: 1dvw;
+    margin-top: 1dvh;
+    width: 98dvw;
+    height: calc(96dvh - 100px);
+  }
 }
 
 

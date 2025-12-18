@@ -89,7 +89,6 @@ function loadWidgetFont() {
 /**
  * Creates an ad cell with iframe and title
  * @param {{title: string, srcUrl: string, link: string}} item - Ad item data
- * @param {number} index - Cell index for animation delay
  * @returns {HTMLElement} The created cell element
  */
 function createAdCell(item) {
@@ -120,9 +119,6 @@ function createAdCell(item) {
   // iFrame wrapper
   const iframeWrapper = document.createElement('div');
   iframeWrapper.className = 'demo-widget-iframe-wrapper';
-  iframeWrapper.addEventListener('click', () => {
-    window.open(redirectUrl, '_blank', 'noopener,noreferrer');
-  });
 
   const iframe = document.createElement('iframe');
   iframe.className = 'demo-widget-iframe';
@@ -131,6 +127,9 @@ function createAdCell(item) {
   iframe.sandbox = 'allow-scripts allow-same-origin';
   iframe.title = item.title || 'Advertisement content';
   iframe.setAttribute('aria-label', item.title || 'Advertisement');
+  iframe.setAttribute('allowfullscreen', '');
+  iframe.setAttribute('webkitallowfullscreen', '');
+  iframe.setAttribute('mozallowfullscreen', '');
 
   iframeWrapper.appendChild(iframe);
 
