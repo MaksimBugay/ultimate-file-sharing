@@ -269,6 +269,10 @@ const copyJointLinkBtn = document.getElementById("copyJointLinkBtn");
 const infoDialog = document.getElementById("infoDialog");
 const closeInfoBtn = document.getElementById("closeInfoBtn");
 
+if (!isMobile()) {
+    copyJointLinkBtn.style.display = 'block';
+}
+
 function isInfoDialogVisible() {
     return infoDialog.classList.contains('visible');
 }
@@ -277,6 +281,7 @@ function closeInfoDialog() {
     infoDialog.classList.remove('visible');
     receiverVirtualHost.focus();
     if (FileTransfer.preparedJointLink) {
+        copyTextToClipboard(FileTransfer.preparedJointLink);
         if (isMobile()) {
             showNativeShareDialog(ownerVirtualHost.value, FileTransfer.preparedJointLink).then(ableToShow => {
                 if (!ableToShow) {
@@ -344,10 +349,9 @@ function copyJointLink() {
     showInfoMsg(`Joint link was copied to clipboard (open it in browser on receiver side).`, url);
 }
 
-copyJointLinkBtn.addEventListener('click', function () {
-    if (PushcaClient.isOpen()) {
-        copyJointLink();
-    }
+copyJointLinkBtn.addEventListener('click', async function () {
+    await PushcaClient.restoreBrokenWsConnection();
+    copyJointLink();
 });
 
 ownerQrCodeBtn.addEventListener('click', function () {
