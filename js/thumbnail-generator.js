@@ -56,7 +56,8 @@ ThumbnailGenerator.buildAndSaveThumbnail = async function (
     name,
     type,
     readMeText,
-    saveInCloudProcessor
+    saveInCloudProcessor,
+    expiredAt
 ) {
     const thumbnailName = buildThumbnailName(binaryId);
     const thumbnailId = buildThumbnailId(binaryId);
@@ -98,7 +99,8 @@ ThumbnailGenerator.buildAndSaveThumbnail = async function (
             ThumbnailGenerator.thumbnailWorkspaceId,
             thumbnailName,
             'image/png',
-            thumbnailBlob
+            thumbnailBlob,
+            expiredAt
         );
     }
     //alert(`https://secure.fileshare.ovh/binary/${ThumbnailGenerator.thumbnailWorkspaceId}/${thumbnailId}`);

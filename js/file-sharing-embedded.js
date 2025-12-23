@@ -7,7 +7,8 @@ FileSharing = {}
 FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileSharing.parentClient = null;
-FileSharing.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspaceId, thumbnailName, type, thumbnailBlob) {
+FileSharing.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspaceId, thumbnailName,
+                                                   type, thumbnailBlob, expiredAt) {
     await FileSharing.saveBlobWithIdInCloud(
         thumbnailId,
         thumbnailWorkspaceId,
@@ -16,7 +17,8 @@ FileSharing.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspa
         FileSharing.defaultReadMeText,
         thumbnailBlob,
         false,
-        null
+        null,
+        expiredAt
     )
 }
 const urlParams = new URLSearchParams(window.location.search);
@@ -91,6 +93,16 @@ async function afterAllCleanup(binaryId, withPageRefresh) {
     }
 }
 
+function currentTimestampPlusDays(n) {
+    const now = Date.now(); // milliseconds
+    const msInDay = 24 * 60 * 60 * 1000;
+    return Math.floor((now + n * msInDay) / 1000);
+}
+
+function getBinaryLinkExpirationTime() {
+    return currentTimestampPlusDays(30);
+}
+
 async function processSelectedFiles(files) {
     let i = 0;
     FileSharing.extraProgressHandler = function () {
@@ -110,7 +122,8 @@ async function processSelectedFiles(files) {
             files[i],
             await getReadMeText(),
             protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false,
-            (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null
+            (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null,
+            getBinaryLinkExpirationTime()
         );
     }
 }
@@ -227,6 +240,7 @@ async function processClipboardItems(clipboardItems) {
     const protectionAttributes = getProtectionAttributes();
     const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
     const binaryPassword = (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null;
+    const expiredAt = getBinaryLinkExpirationTime();
 
     for (let item of clipboardItems) {
         if (item.kind === 'file') {
@@ -241,7 +255,8 @@ async function processClipboardItems(clipboardItems) {
                 await getReadMeText(),
                 blob,
                 forHuman,
-                binaryPassword
+                binaryPassword,
+                expiredAt
             );
         } else if (item.kind === 'string') {
             if (textItems) {
@@ -265,7 +280,8 @@ async function processClipboardItems(clipboardItems) {
                 await getReadMeText(),
                 textBlob,
                 forHuman,
-                binaryPassword
+                binaryPassword,
+                expiredAt
             );
         }
     }
@@ -361,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 //==================================File sharing implementation=========================================================
-FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password) {
+FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password, expiredAt) {
     const binaryId = uuid.v4().toString();
     //generate and save thumbnail here
     await ThumbnailGenerator.buildAndSaveThumbnail(
@@ -370,7 +386,8 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
         file.name,
         file.type,
         `name = ${file.name}; size = ${calculateDisplaySizeMb(file.size)} Mb; content-type = ${file.type}`,
-        FileSharing.saveInCloudProcessor
+        FileSharing.saveInCloudProcessor,
+        expiredAt
     );
     return await FileSharing.saveContentInCloud(
         binaryId,
@@ -381,11 +398,12 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
             }, `Failed file sharing attempt: ${file.name}`);
         },
         forHuman,
-        password
+        password,
+        expiredAt
     );
 }
 
-FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, forHuman, password) {
+FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, forHuman, password, expiredAt) {
     const binaryId = uuid.v4().toString();
     //generate and save thumbnail here
     await ThumbnailGenerator.buildAndSaveThumbnail(
@@ -394,7 +412,8 @@ FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, fo
         name,
         type,
         `name = ${name}; size = ${calculateDisplaySizeMb(blob.size)} Mb; content-type = ${type}`,
-        FileSharing.saveInCloudProcessor
+        FileSharing.saveInCloudProcessor,
+        expiredAt
     );
     return await FileSharing.saveBlobWithIdInCloud(
         binaryId,
@@ -404,11 +423,13 @@ FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, fo
         inReadMeText,
         blob,
         forHuman,
-        password
+        password,
+        expiredAt
     )
 }
 
-FileSharing.saveBlobWithIdInCloud = async function (binaryId, workSpaceId, name, type, readMeText, blob, forHuman, password) {
+FileSharing.saveBlobWithIdInCloud = async function (binaryId, workSpaceId, name, type, readMeText, blob,
+                                                    forHuman, password, expiredAt) {
     return await FileSharing.saveContentWithWorkSpaceIdInCloud(
         binaryId,
         workSpaceId,
@@ -446,11 +467,13 @@ FileSharing.saveBlobWithIdInCloud = async function (binaryId, workSpaceId, name,
             return !pipeWasBroken;
         },
         forHuman,
-        password
+        password,
+        expiredAt
     );
 }
 
-FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inReadMeText, splitAndStoreProcessor, forHuman, password) {
+FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inReadMeText, splitAndStoreProcessor,
+                                                 forHuman, password, expiredAt) {
     return await FileSharing.saveContentWithWorkSpaceIdInCloud(
         binaryId,
         FileSharing.workSpaceId,
@@ -460,7 +483,8 @@ FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inR
         inReadMeText,
         splitAndStoreProcessor,
         forHuman,
-        password
+        password,
+        expiredAt
     );
 }
 
@@ -472,7 +496,8 @@ function calculateDisplaySizeMb(size) {
     return sizeMb;
 }
 
-FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSpaceId, name, type, size, inReadMeText, splitAndStoreProcessor, forHuman, password) {
+FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSpaceId, name, type, size, inReadMeText,
+                                                                splitAndStoreProcessor, forHuman, password, expiredAt) {
     let readMeText = inReadMeText ? inReadMeText : '';
     if (FileSharing.defaultReadMeText === inReadMeText) {
         readMeText = `name = ${name}; size = ${calculateDisplaySizeMb(size)} Mb; content-type = ${type}`;
@@ -487,7 +512,8 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
         encryptionContract,
         true,
         forHuman,
-        workSpaceId
+        workSpaceId,
+        expiredAt
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(

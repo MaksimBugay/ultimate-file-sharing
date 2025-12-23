@@ -88,7 +88,8 @@ SaveInCloudHelper.cacheBlobWithIdAndWorkspaceInCloud = async function (binaryId,
         },
         storeInCloud,
         forHuman,
-        password
+        password,
+        null
     );
 }
 
@@ -116,10 +117,13 @@ SaveInCloudHelper.cacheFileInCloud = async function (file, readMeText, storeInCl
         },
         storeInCloud,
         forHuman,
-        password
+        password,
+        null
     );
 }
-SaveInCloudHelper.cacheContentInCloud = async function (binaryId, workspaceId, name, type, size, inReadMeText, splitAndStoreProcessor, storeInCloud, forHuman, password) {
+SaveInCloudHelper.cacheContentInCloud = async function (binaryId, workspaceId, name, type, size, inReadMeText,
+                                                        splitAndStoreProcessor, storeInCloud,
+                                                        forHuman, password, expiredAt) {
     let readMeText = inReadMeText ? inReadMeText/*.substring(0, 1500)*/ : '';
     if (Fileshare.defaultReadMeText === inReadMeText) {
         readMeText = `name = ${name}; size = ${Math.round(size / MemoryBlock.MB)} Mb; content-type = ${type}`;
@@ -134,7 +138,8 @@ SaveInCloudHelper.cacheContentInCloud = async function (binaryId, workspaceId, n
         encryptionContract,
         storeInCloud,
         forHuman,
-        workspaceId
+        workspaceId,
+        expiredAt
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${name}`, null);
