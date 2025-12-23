@@ -1,0 +1,446 @@
+/**
+ * Secure FileShare DateTime Picker
+ * Production-grade datetime picker matching the secure.fileshare.ovh design
+ * Author: FileShare Team
+ * Version: 1.0.0
+ */
+
+/* CSS Variables for theming */
+:root {
+  --sfsp-primary-bg: linear-gradient(145deg, #ffe066 0%, #ffd633 50%, #ffcc00 100%);
+  --sfsp-secondary-bg: #fff9e6;
+  --sfsp-accent-color: #0088bb;
+  --sfsp-accent-hover: #006699;
+  --sfsp-border-color: #cccccc;
+  --sfsp-border-radius: 12px;
+  --sfsp-text-color: #333333;
+  --sfsp-label-color: #0088bb;
+  --sfsp-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  --sfsp-input-bg: #ffffff;
+  --sfsp-selected-bg: #0088bb;
+  --sfsp-selected-text: #ffffff;
+  --sfsp-today-border: #0088bb;
+  --sfsp-hover-bg: #e6f4fa;
+  --sfsp-disabled-color: #cccccc;
+  --sfsp-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Main container */
+.sfsp-datetime-picker {
+  font-family: var(--sfsp-font-family);
+  position: relative;
+  display: inline-block;
+}
+
+/* Inline container with label on left */
+.sfsp-inline-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Label styling */
+.sfsp-label {
+  font-weight: bold;
+  font-family: Questrial, sans-serif;
+  color: #006BFD;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Input container */
+.sfsp-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.sfsp-input {
+  width: 100%;
+  padding: 12px 45px 12px 15px;
+  font-size: 15px;
+  font-family: var(--sfsp-font-family);
+  border: 2px solid var(--sfsp-border-color);
+  border-radius: 8px;
+  background: var(--sfsp-input-bg);
+  color: var(--sfsp-text-color);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.sfsp-input:hover {
+  border-color: var(--sfsp-accent-color);
+}
+
+.sfsp-input:focus {
+  outline: none;
+  border-color: var(--sfsp-accent-color);
+  box-shadow: 0 0 0 3px rgba(0, 136, 187, 0.15);
+}
+
+.sfsp-input::placeholder {
+  color: #999999;
+}
+
+/* Calendar icon button */
+.sfsp-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--sfsp-accent-color);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.sfsp-toggle-btn:hover {
+  background: var(--sfsp-accent-hover);
+}
+
+.sfsp-toggle-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.sfsp-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: white;
+}
+
+/* Dropdown calendar */
+.sfsp-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: var(--sfsp-input-bg);
+  border: 2px solid var(--sfsp-border-color);
+  border-radius: var(--sfsp-border-radius);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.25s ease;
+}
+
+.sfsp-dropdown.sfsp-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Calendar header */
+.sfsp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  background: linear-gradient(145deg, #ffe066, #ffcc00);
+  border-radius: 10px 10px 0 0;
+  border-bottom: 1px solid var(--sfsp-border-color);
+}
+
+.sfsp-nav-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  color: var(--sfsp-accent-color);
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.sfsp-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.sfsp-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sfsp-month-year {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--sfsp-accent-color);
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.sfsp-month-year:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Weekdays header */
+.sfsp-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 10px 10px 5px;
+  background: var(--sfsp-secondary-bg);
+}
+
+.sfsp-weekday {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sfsp-accent-color);
+  text-transform: uppercase;
+}
+
+/* Days grid */
+.sfsp-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 5px 10px 10px;
+  gap: 4px;
+}
+
+.sfsp-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--sfsp-text-color);
+}
+
+.sfsp-day:hover:not(.sfsp-disabled):not(.sfsp-other-month) {
+  background: var(--sfsp-hover-bg);
+}
+
+.sfsp-day.sfsp-today {
+  border: 2px solid var(--sfsp-today-border);
+  font-weight: 600;
+}
+
+.sfsp-day.sfsp-selected {
+  background: var(--sfsp-selected-bg);
+  color: var(--sfsp-selected-text);
+  font-weight: 600;
+}
+
+.sfsp-day.sfsp-other-month {
+  color: var(--sfsp-disabled-color);
+}
+
+.sfsp-day.sfsp-disabled {
+  color: var(--sfsp-disabled-color);
+  cursor: not-allowed;
+}
+
+/* Time picker section */
+.sfsp-time-section {
+  padding: 12px 15px;
+  border-top: 1px solid var(--sfsp-border-color);
+  background: var(--sfsp-secondary-bg);
+}
+
+.sfsp-time-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sfsp-accent-color);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.sfsp-time-inputs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sfsp-time-input {
+  width: 60px;
+  padding: 8px;
+  font-size: 18px;
+  font-family: var(--sfsp-font-family);
+  font-weight: 600;
+  text-align: center;
+  border: 2px solid var(--sfsp-border-color);
+  border-radius: 8px;
+  background: var(--sfsp-input-bg);
+  color: var(--sfsp-text-color);
+  transition: border-color 0.2s ease;
+}
+
+.sfsp-time-input:focus {
+  outline: none;
+  border-color: var(--sfsp-accent-color);
+}
+
+.sfsp-time-separator {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--sfsp-accent-color);
+}
+
+/* Footer actions */
+.sfsp-footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 15px;
+  border-top: 1px solid var(--sfsp-border-color);
+  background: linear-gradient(145deg, #ffe066, #ffcc00);
+  border-radius: 0 0 10px 10px;
+}
+
+.sfsp-btn {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--sfsp-font-family);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sfsp-btn-clear {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--sfsp-text-color);
+}
+
+.sfsp-btn-clear:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.sfsp-btn-today {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--sfsp-accent-color);
+}
+
+.sfsp-btn-today:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.sfsp-btn-confirm {
+  background: var(--sfsp-accent-color);
+  color: white;
+}
+
+.sfsp-btn-confirm:hover {
+  background: var(--sfsp-accent-hover);
+}
+
+/* Month/Year picker view */
+.sfsp-month-grid,
+.sfsp-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 15px;
+}
+
+.sfsp-month-item,
+.sfsp-year-item {
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 14px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--sfsp-text-color);
+}
+
+.sfsp-month-item:hover,
+.sfsp-year-item:hover {
+  background: var(--sfsp-hover-bg);
+}
+
+.sfsp-month-item.sfsp-selected,
+.sfsp-year-item.sfsp-selected {
+  background: var(--sfsp-selected-bg);
+  color: var(--sfsp-selected-text);
+  font-weight: 600;
+}
+
+.sfsp-month-item.sfsp-current,
+.sfsp-year-item.sfsp-current {
+  border: 2px solid var(--sfsp-today-border);
+  font-weight: 600;
+}
+
+/* Accessibility */
+.sfsp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+  .sfsp-datetime-picker {
+    max-width: 100%;
+  }
+  
+  .sfsp-dropdown {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 20px);
+    max-width: 360px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .sfsp-dropdown.sfsp-open {
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Animation keyframes */
+@keyframes sfsp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .sfsp-datetime-picker[data-theme="auto"] {
+    --sfsp-primary-bg: linear-gradient(145deg, #3d3d00 0%, #4d4d00 50%, #5c5c00 100%);
+    --sfsp-secondary-bg: #2d2d00;
+    --sfsp-input-bg: #1a1a00;
+    --sfsp-text-color: #f0f0f0;
+    --sfsp-border-color: #555500;
+  }
+}
+

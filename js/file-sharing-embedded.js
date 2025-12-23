@@ -7,6 +7,7 @@ FileSharing = {}
 FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileSharing.parentClient = null;
+FileSharing.binaryLinkExpirationTime = null;
 FileSharing.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspaceId, thumbnailName,
                                                    type, thumbnailBlob, expiredAt) {
     await FileSharing.saveBlobWithIdInCloud(
@@ -42,6 +43,9 @@ const readMeTextMemo = document.getElementById("readMeTextMemo");
 const fileInput = document.getElementById('fileInput');
 fileInput.removeAttribute('webkitdirectory');
 fileInput.setAttribute('multiple', '');
+
+const additionalRulesContainer = document.getElementById("additionalRulesContainer");
+
 
 const progressBarContainer = document.getElementById('progressBarContainer');
 const uploadProgress = document.getElementById('uploadProgress');
@@ -100,7 +104,11 @@ function currentTimestampPlusDays(n) {
 }
 
 function getBinaryLinkExpirationTime() {
-    return currentTimestampPlusDays(30);
+    if (FileSharing.binaryLinkExpirationTime) {
+        return FileSharing.binaryLinkExpirationTime;
+    } else {
+        return currentTimestampPlusDays(30);
+    }
 }
 
 async function processSelectedFiles(files) {
@@ -373,6 +381,24 @@ document.addEventListener('DOMContentLoaded', function () {
     initEventsForCopyPasteArea();
     if (toolBarPasteArea) {
         toolBarPasteArea.focus();
+    }
+
+    if (additionalRulesContainer && (typeof SFSPDateTimePicker === 'function')) {
+        new SFSPDateTimePicker(
+            {
+                container: additionalRulesContainer,
+                label: 'Remove after ',
+                inputMaxWidth: '300px',
+                getInitialDate: (now) => {
+                    const future = new Date(now);
+                    future.setDate(future.getDate() + 30);
+                    return future;
+                },
+                onChange: (timestamp, date) => {
+                    FileSharing.binaryLinkExpirationTime = timestamp;
+                }
+            }
+        );
     }
 });
 

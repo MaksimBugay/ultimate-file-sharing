@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ultimate file sharing</title>
     <link rel="stylesheet" href="css/consent-dialog.css">
+    <link rel="stylesheet" href="css/datetime-picker.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
     <link rel="stylesheet" href="css/file-sharing-embedded.css">
 
@@ -74,11 +75,13 @@
             <div style="display: flex; flex-direction: row; justify-content: flex-end; margin-bottom: 50px">
                 <div style="margin-right: 40px">
                     <img id="howToButton" src="images/help.png" alt="How to" class="top-button-img"
-                         title="Documentation" onclick="window.open('https://secure.fileshare.ovh/manual/secure-fileshare-documentation.html', '_blank')">
+                         title="Documentation"
+                         onclick="window.open('https://secure.fileshare.ovh/manual/secure-fileshare-documentation.html', '_blank')">
                 </div>
                 <div style="margin-right: 40px">
                     <img id="privacyButton" src="images/privacy.png" alt="Privacy" class="top-button-img"
-                         title="privacy policy" onclick="window.open('https://secure.fileshare.ovh/privacy/file-sharing-privacy.html', '_blank')">
+                         title="privacy policy"
+                         onclick="window.open('https://secure.fileshare.ovh/privacy/file-sharing-privacy.html', '_blank')">
                 </div>
             </div>
             <div id="transOwnerContainer">
@@ -91,7 +94,8 @@
                          spellcheck="true"
                          data-lexical-editor="true"
                          role="textbox"
-                    >Default description</div>
+                    >Default description
+                    </div>
                 </fieldset>
             </div>
             <div id="transReceiverContainer">
@@ -120,6 +124,14 @@
                     </div>
                 </fieldset>
             </div>
+
+            <fieldset class="file-share-fieldset">
+                <legend class="file-share-legend">
+                    Additional rules
+                </legend>
+                <div id="additionalRulesContainer" class="centered-container"  style="font-size: 14px">
+                </div>
+            </fieldset>
 
             <div id="selectFilesContainer">
                 <fieldset class="file-share-fieldset centered-container">
@@ -157,6 +169,7 @@
 </div>
 </body>
 
+<script src="js/datetime-picker.js?v=<?= time(); ?>"></script>
 <script src="js/file.sharing.min.js?v=<?= time(); ?>"></script>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
