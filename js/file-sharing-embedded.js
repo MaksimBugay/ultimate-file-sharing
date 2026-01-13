@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', function () {
         new SFSPDateTimePicker(
             {
                 container: additionalRulesContainer,
-                label: 'Remove after ',
+                label: '',
                 inputMaxWidth: '300px',
                 getInitialDate: (now) => {
                     const future = new Date(now);

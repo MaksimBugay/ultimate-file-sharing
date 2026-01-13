@@ -27,10 +27,16 @@ function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, humanToken)
         if (!result) {
             window.location.replace(directDownloadUrl);
         } else {
-            openWsConnection(binaryId).then(() => {
-                PushcaClient.stopWebSocketPermanently();
-                delay(100).then(() => window.location.replace(directDownloadUrl));
-            });
+            openWsConnection(binaryId).then(
+                () => {
+                    delay(1500).then(
+                        () => {
+                            PushcaClient.stopWebSocketPermanently();
+                            window.location.replace(directDownloadUrl);
+                        }
+                    );
+                }
+            );
         }
     });
 }
