@@ -8,6 +8,7 @@ FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileSharing.parentClient = null;
 FileSharing.binaryLinkExpirationTime = null;
+FileSharing.remoteStreamInputId = 'remoteStreamUrlInput';
 FileSharing.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspaceId, thumbnailName,
                                                    type, thumbnailBlob, expiredAt) {
     await FileSharing.saveBlobWithIdInCloud(
@@ -45,6 +46,7 @@ fileInput.removeAttribute('webkitdirectory');
 fileInput.setAttribute('multiple', '');
 
 const additionalRulesContainer = document.getElementById("additionalRulesContainer");
+const urlInputContainer = document.getElementById("urlInputContainer");
 
 
 const progressBarContainer = document.getElementById('progressBarContainer');
@@ -207,6 +209,10 @@ function passwordInputIsActive() {
     return document.activeElement.id === passwordInput.id;
 }
 
+function urlInputIsActive() {
+    return document.activeElement.id === FileSharing.remoteStreamInputId;
+}
+
 function readMeMemoIsActive() {
     return document.activeElement.id === readMeTextMemo.id;
 }
@@ -215,7 +221,7 @@ function initEventsForCopyPasteArea() {
     if (document.getElementById('selectFilesSubContainer')) {
         document.getElementById('selectFilesSubContainer').addEventListener(
             'mousemove', function () {
-                if (passwordInputIsActive() || readMeMemoIsActive()) {
+                if (passwordInputIsActive() || readMeMemoIsActive() || urlInputIsActive()) {
                     return;
                 }
                 if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
@@ -398,6 +404,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     FileSharing.binaryLinkExpirationTime = timestamp;
                 }
             }
+        );
+    }
+
+    if (urlInputContainer) {
+        SFSPUrlInput.create(
+            FileSharing.remoteStreamInputId,
+            urlInputContainer,
+            '350px',
+            "",
+            (value) => alert(`URL set: ${value}`)
         );
     }
 });

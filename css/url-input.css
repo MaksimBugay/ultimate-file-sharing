@@ -1,0 +1,178 @@
+/**
+ * Secure FileShare URL Input Widget
+ * Production-grade URL input component matching the secure.fileshare.ovh design
+ */
+
+:root {
+  --sfsp-primary-bg: linear-gradient(145deg, #ffe066 0%, #ffd633 50%, #ffcc00 100%);
+  --sfsp-secondary-bg: #fff9e6;
+  --sfsp-accent-color: #0088bb;
+  --sfsp-accent-hover: #006699;
+  --sfsp-border-color: #cccccc;
+  --sfsp-border-radius: 12px;
+  --sfsp-text-color: #333333;
+  --sfsp-label-color: #0088bb;
+  --sfsp-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  --sfsp-input-bg: #ffffff;
+  --sfsp-disabled-color: #999999;
+  --sfsp-error-color: #c0392b;
+  --sfsp-success-color: #1e824c;
+  --sfsp-font-family: inherit;
+}
+
+/* Main container */
+.sfsp-url-input {
+  font-family: var(--sfsp-font-family);
+  color: var(--sfsp-text-color);
+  display: inline-block;
+  width: 100%;
+}
+
+/* Inline container with label on left */
+.sfsp-url-inline-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Label styling */
+.sfsp-url-label {
+  color: var(--sfsp-label-color);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Input wrapper */
+.sfsp-url-input-wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* URL Input field */
+.sfsp-url-field {
+  width: 100%;
+  padding: 12px 110px 12px 15px;
+  font-size: 15px;
+  font-family: var(--sfsp-font-family);
+  border: 2px solid var(--sfsp-border-color);
+  border-radius: 8px;
+  background: var(--sfsp-input-bg);
+  color: var(--sfsp-text-color);
+  cursor: text;
+  caret-color: var(--sfsp-accent-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.sfsp-url-field:hover {
+  border-color: var(--sfsp-accent-color);
+}
+
+.sfsp-url-field:focus {
+  outline: none;
+  border-color: var(--sfsp-accent-color);
+  box-shadow: 0 0 0 3px rgba(0, 136, 187, 0.15);
+}
+
+.sfsp-url-field::placeholder {
+  color: var(--sfsp-disabled-color);
+}
+
+.sfsp-url-field.sfsp-empty {
+  color: var(--sfsp-disabled-color);
+  font-style: italic;
+}
+
+.sfsp-url-field.sfsp-url-input--error {
+  border-color: var(--sfsp-error-color);
+}
+
+/* Prevent text selection highlight on the display value */
+.sfsp-url-field::selection {
+  background: rgba(0, 136, 187, 0.2);
+}
+
+/* Copy URL button */
+.sfsp-copy-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  background: var(--sfsp-accent-color);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--sfsp-font-family);
+}
+
+.sfsp-copy-btn:hover {
+  background: var(--sfsp-accent-hover);
+}
+
+.sfsp-copy-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Message area */
+.sfsp-url-message {
+  margin-top: 6px;
+  font-size: 12px;
+  min-height: 16px;
+}
+
+.sfsp-url-message--error {
+  color: var(--sfsp-error-color);
+}
+
+.sfsp-url-message--success {
+  color: var(--sfsp-success-color);
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .sfsp-url-inline-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .sfsp-url-input-wrapper {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .sfsp-url-field {
+    padding-right: 15px;
+  }
+
+  .sfsp-copy-btn {
+    position: static;
+    transform: none;
+    width: 100%;
+    margin-top: 8px;
+    height: 40px;
+  }
+
+  .sfsp-copy-btn:active {
+    transform: scale(0.98);
+  }
+}

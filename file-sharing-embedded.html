@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/datetime-picker.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
     <link rel="stylesheet" href="css/file-sharing-embedded.css">
+    <link rel="stylesheet" href="css/url-input.css">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -103,7 +104,7 @@
                 <legend class="file-share-legend">
                     Remove after
                 </legend>
-                <div id="additionalRulesContainer" class="centered-container"  style="font-size: 14px">
+                <div id="additionalRulesContainer" class="centered-container" style="font-size: 14px">
                 </div>
             </fieldset>
 
@@ -127,7 +128,7 @@
                         </div>
                     </div>
                     <div id="passwordInputContainer" class="hidden-element">
-                        <label for="passwordInput"></label>
+                        <label for="passwordInput" style="width: 100%"></label>
                         <input class="fancy-password-input" type="text" id="passwordInput"
                                placeholder="Enter password to protect your content"/>
                     </div>
@@ -152,6 +153,11 @@
                     </div>
                     <input type="file" id="fileInput" style="display:none" multiple>
                 </fieldset>
+
+                <fieldset class="file-share-fieldset centered-container">
+                    <legend class="file-share-legend">Provide remote stream url (experimental)</legend>
+                    <div id="urlInputContainer"></div>
+                </fieldset>
             </div>
             <div class="tb-copy-past" id="tbCopyPastMemo">
                     <textarea class="tb-copy-past-memo"
@@ -171,6 +177,7 @@
 </body>
 
 <script src="js/datetime-picker.js?v=<?= time(); ?>"></script>
+<script src="js/url-input.js?v=<?= time(); ?>"></script>
 <script src="js/file.sharing.min.js?v=<?= time(); ?>"></script>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
