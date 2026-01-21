@@ -426,7 +426,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
                         const binaryPassword = (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null;
 
-                        alert(blob.type);
                         await FileSharing.saveBlobInCloud(
                             name,
                             blob.type,
