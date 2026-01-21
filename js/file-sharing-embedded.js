@@ -3,12 +3,13 @@ const ProtectionType = Object.freeze({
     CAPTCHA: 'pCaptcha'
 });
 
-FileSharing = {}
+const FileSharing = {}
 FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileSharing.parentClient = null;
 FileSharing.binaryLinkExpirationTime = null;
 FileSharing.remoteStreamInputId = 'remoteStreamUrlInput';
+FileSharing.remoteStreamDownloadServer = 'https://secure.fileshare.ovh/remote-stream/';
 FileSharing.saveInCloudProcessor = async function (thumbnailId, thumbnailWorkspaceId, thumbnailName,
                                                    type, thumbnailBlob, expiredAt) {
     await FileSharing.saveBlobWithIdInCloud(
@@ -413,7 +414,13 @@ document.addEventListener('DOMContentLoaded', function () {
             urlInputContainer,
             '350px',
             "",
-            (value) => alert(`URL set: ${value}`)
+            async function(url){
+                await downloadRemoteStream(FileSharing.remoteStreamDownloadServer, url, (blob, name) => {
+                    // Process the downloaded file
+                    console.log(`Downloaded ${name}, size: ${blob.size}`);
+                    alert(`Downloaded ${name}, size: ${blob.size}`);
+                });
+            }
         );
     }
 });
