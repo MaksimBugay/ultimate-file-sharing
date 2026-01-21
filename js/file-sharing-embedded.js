@@ -414,12 +414,30 @@ document.addEventListener('DOMContentLoaded', function () {
             urlInputContainer,
             '350px',
             "",
-            async function(url){
-                await downloadRemoteStream(FileSharing.remoteStreamDownloadServer, url, (blob, name) => {
-                    // Process the downloaded file
-                    console.log(`Downloaded ${name}, size: ${blob.size}`);
-                    alert(`Downloaded ${name}, size: ${blob.size}`);
-                });
+            async function (url) {
+                await downloadRemoteStream(
+                    FileSharing.remoteStreamDownloadServer,
+                    url,
+                    async function (blob, name) {
+                        // Process the downloaded file
+                        console.log(`Downloaded ${name}, size: ${blob.size}`);
+                        const expiredAt = getBinaryLinkExpirationTime();
+                        const protectionAttributes = getProtectionAttributes();
+                        const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
+                        const binaryPassword = (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null;
+
+                        alert(blob.type);
+                        await FileSharing.saveBlobInCloud(
+                            name,
+                            blob.type,
+                            await getReadMeText(),
+                            blob,
+                            forHuman,
+                            binaryPassword,
+                            expiredAt
+                        );
+                    }
+                );
             }
         );
     }
