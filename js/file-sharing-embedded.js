@@ -446,6 +446,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         showErrorMsg(
                             errorText,
                             () => {
+                                dataIsReady = true;
                                 remoteStreamUrlInput.clear();
                                 enableRemoteStreamUrlSection();
                             }
