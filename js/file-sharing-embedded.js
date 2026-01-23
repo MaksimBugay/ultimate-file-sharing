@@ -409,18 +409,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (urlInputContainer) {
-        SFSPUrlInput.create(
+        const remoteStreamUrlInput = SFSPUrlInput.create(
             FileSharing.remoteStreamInputId,
             urlInputContainer,
             '350px',
             "",
             async function (url) {
+                disableRemoteStreamUrlSection();
+                let dataIsReady = false;
+                showInfiniteProgress(FileSharing.progressBarWidget, () => dataIsReady);
                 await downloadRemoteStream(
                     FileSharing.remoteStreamDownloadServer,
                     url,
                     async function (blob, name) {
                         // Process the downloaded file
                         console.log(`Downloaded ${name}, size: ${blob.size}`);
+                        dataIsReady = true;
                         const expiredAt = getBinaryLinkExpirationTime();
                         const protectionAttributes = getProtectionAttributes();
                         const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
@@ -435,12 +439,51 @@ document.addEventListener('DOMContentLoaded', function () {
                             binaryPassword,
                             expiredAt
                         );
+                        remoteStreamUrlInput.clear();
+                        enableRemoteStreamUrlSection();
+                    },
+                    function (errorText) {
+                        showErrorMsg(
+                            errorText,
+                            () => {
+                                remoteStreamUrlInput.clear();
+                                enableRemoteStreamUrlSection();
+                            }
+                        );
                     }
                 );
             }
         );
     }
 });
+
+async function showInfiniteProgress(progressBarWidget, stopWhenFunction) {
+    if (typeof stopWhenFunction !== 'function') {
+        return;
+    }
+    progressBarContainer.style.display = 'block';
+    let i = 0;
+
+    while ((i < 100) && (!stopWhenFunction())) {
+        await delay(500);
+        progressBarWidget.setProgress(i);
+        i++;
+        if (i === 100) {
+            i = 0;
+        }
+    }
+
+    progressBarWidget.setProgress(0);
+    progressBarContainer.style.display = 'none';
+}
+
+function enableRemoteStreamUrlSection() {
+    document.getElementById('remoteStreamUrlSection').disabled = false;
+}
+
+function disableRemoteStreamUrlSection() {
+    document.getElementById('remoteStreamUrlSection').disabled = true;
+}
 
 //==================================File sharing implementation=========================================================
 FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password, expiredAt) {

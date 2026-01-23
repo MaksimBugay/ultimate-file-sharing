@@ -61,7 +61,7 @@ function extractFilename(headers, sourceUrl) {
  *   }
  * );
  */
-async function downloadRemoteStream(serverBaseUrl, sourceUrl, responseHandler) {
+async function downloadRemoteStream(serverBaseUrl, sourceUrl, responseHandler, errorHandler) {
     // Validate inputs
     if (!serverBaseUrl || typeof serverBaseUrl !== 'string') {
         throw new TypeError('serverBaseUrl must be a non-empty string');
@@ -88,7 +88,12 @@ async function downloadRemoteStream(serverBaseUrl, sourceUrl, responseHandler) {
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`Download failed: ${response.status} ${response.statusText} - ${errorText}`);
+        if (typeof errorHandler === 'function') {
+            errorHandler(errorText);
+            return;
+        } else {
+            throw new Error(`Download failed: ${response.status} ${response.statusText} - ${errorText}`);
+        }
     }
 
     const filename = extractFilename(response.headers, sourceUrl);
