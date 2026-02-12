@@ -946,6 +946,7 @@ PushcaClient.sendAcknowledge = function (id) {
 }
 
 PushcaClient.sendGatewayRequest = async function (dest, path, requestPayload, timeout = 30_000) {
+    await PushcaClient.restoreBrokenWsConnection();
     let metaData = {};
     metaData['receiver'] = dest.toJSON(false);
     metaData['preserveOrder'] = false;

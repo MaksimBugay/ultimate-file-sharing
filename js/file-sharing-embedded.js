@@ -7,6 +7,7 @@ const FileSharing = {}
 FileSharing.applicationId = 'SIMPLE_FILE_SHARING';
 FileSharing.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileSharing.parentClient = null;
+FileSharing.wakeLock = null;
 FileSharing.binaryLinkExpirationTime = null;
 FileSharing.remoteStreamInputId = 'remoteStreamUrlInput';
 FileSharing.remoteStreamDownloadServer = 'https://secure.fileshare.ovh/remote-stream/';
@@ -418,10 +419,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 disableRemoteStreamUrlSection();
                 let dataIsReady = false;
                 showInfiniteProgress(FileSharing.progressBarWidget, () => dataIsReady);
+                await requestWakeLock(FileSharing);
                 const publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(url);
                 dataIsReady = true;
                 remoteStreamUrlInput.clear();
                 enableRemoteStreamUrlSection();
+                releaseWakeLock(FileSharing);
                 const dialogId = uuid.v4().toString();
                 const dialogResult = await CallableFuture.callAsynchronously(
                     300_000,
