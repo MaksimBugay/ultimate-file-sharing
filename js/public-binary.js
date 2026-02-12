@@ -17,8 +17,52 @@ async function webSocketAvailabilityCheck() {
     return WaiterResponseType.SUCCESS === result.type;
 }
 
-function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, humanToken) {
-    let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}`;
+async function downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken) {
+    const url = serverUrl + "/binary/m/public"; // Ensure this is your actual API URL
+
+    const requestData = {
+        workspaceId: workspaceId,
+        binaryId: binaryId,
+        pageId: pageId,
+        humanToken: humanToken
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        console.error("Error during fetching binary manifest:", error);
+        throw error; // Rethrow error to handle it in the calling function
+    }
+}
+
+async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, humanToken) {
+    let encodedNameSuffix = "";
+    try {
+        const manifest = await downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken);
+        encodedNameSuffix = `/${encodeURIComponent(manifest.name)}`;
+    } catch (error) {
+        const message =
+            error?.response?.data?.message ||
+            error?.response?.data ||
+            error?.message ||
+            JSON.stringify(error);
+
+        console.log(`Failed to load manifest:\n${message}`);
+    }
+    let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}${encodedNameSuffix}`;
     if (pageId) {
         directDownloadUrl = `${directDownloadUrl}?page-id=${pageId}&human-token=${humanToken}`;
     }
@@ -109,23 +153,25 @@ if (!humanOnly) {
     });
 
     function downloadPublicBinary(workspaceId, binaryId, pageId, humanToken) {
-        prepareBinaryDownloading(workspaceId, binaryId, pageId, humanToken).then((userActionRequired) => {
-            if (!userActionRequired) {
-                return;
-            }
-            downloadBtn.addEventListener('click', function () {
-                savePublicBinaryAsFile(manifest);
-            });
-            document.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if ('downloadBtn' === event.target.id) {
-                        savePublicBinaryAsFile(manifest);
-                    }
+        prepareBinaryDownloading(workspaceId, binaryId, pageId, humanToken).then(
+            (userActionRequired) => {
+                if (!userActionRequired) {
+                    return;
                 }
-            });
-        });
+                downloadBtn.addEventListener('click', function () {
+                    savePublicBinaryAsFile(manifest);
+                });
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        if ('downloadBtn' === event.target.id) {
+                            savePublicBinaryAsFile(manifest);
+                        }
+                    }
+                });
+            }
+        );
     }
 
 //======================================== Implementations =============================================================
@@ -226,37 +272,6 @@ if (!humanOnly) {
         } catch (error) {
             console.error('Cannot fetch public binary description:', error);
             return null;
-        }
-    }
-
-    async function downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken) {
-        const url = serverUrl + "/binary/m/public"; // Ensure this is your actual API URL
-
-        const requestData = {
-            workspaceId: workspaceId,
-            binaryId: binaryId,
-            pageId: pageId,
-            humanToken: humanToken
-        };
-
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(requestData)
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            return await response.json();
-
-        } catch (error) {
-            console.error("Error during fetching binary manifest:", error);
-            throw error; // Rethrow error to handle it in the calling function
         }
     }
 }
