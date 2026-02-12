@@ -418,7 +418,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 disableRemoteStreamUrlSection();
                 let dataIsReady = false;
                 showInfiniteProgress(FileSharing.progressBarWidget, () => dataIsReady);
-                await downloadRemoteStream(
+                const publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(url);
+                dataIsReady = true;
+                remoteStreamUrlInput.clear();
+                enableRemoteStreamUrlSection();
+                const dialogId = uuid.v4().toString();
+                const dialogResult = await CallableFuture.callAsynchronously(
+                    300_000,
+                    dialogId,
+                    () => {
+                        sharePublicUrlViaInfoMessage(publicUrl, dialogId);
+                    }
+                );
+                if (WaiterResponseType.SUCCESS !== dialogResult.type) {
+                    console.warn("Failed attempt to register close modal window event");
+                }
+
+                /*await downloadRemoteStream(
                     FileSharing.remoteStreamDownloadServer,
                     url,
                     async function (blob, name) {
@@ -452,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
                         );
                     }
-                );
+                );*/
             }
         );
     }

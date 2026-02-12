@@ -945,7 +945,7 @@ PushcaClient.sendAcknowledge = function (id) {
     PushcaClient.ws.send(commandWithId.message);
 }
 
-PushcaClient.sendGatewayRequest = async function (dest, path, requestPayload) {
+PushcaClient.sendGatewayRequest = async function (dest, path, requestPayload, timeout = 30_000) {
     let metaData = {};
     metaData['receiver'] = dest.toJSON(false);
     metaData['preserveOrder'] = false;
@@ -953,7 +953,7 @@ PushcaClient.sendGatewayRequest = async function (dest, path, requestPayload) {
     metaData["payload"] = byteArrayToBase64(requestPayload);
 
     let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_GATEWAY_REQUEST, metaData);
-    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId, 30_000)
+    let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId, timeout)
     if (WaiterResponseType.ERROR === result.type) {
         console.error("Failed send gateway request attempt: " + result.body);
         return null;

@@ -49,6 +49,7 @@ function extractFilename(headers, sourceUrl) {
  * @param {string} serverBaseUrl - Base URL of the download server (e.g., 'http://localhost:8000')
  * @param {string} sourceUrl - The source URL to download from
  * @param {function} responseHandler - Callback function: (blob, name) => void
+ * @param errorHandler
  * @returns {Promise<void>}
  * @throws {Error} - Throws on network errors or HTTP errors
  *
@@ -104,6 +105,47 @@ async function downloadRemoteStream(serverBaseUrl, sourceUrl, responseHandler, e
     responseHandler(blob, filename);
 }
 
+
+async function sendDownloadRemoteStreamRequestToBinaryProxy(url) {
+
+    const dest = new ClientFilter(
+        "PushcaCluster",
+        "admin",
+        "experimental-publisher-local",
+        "BINARY-PROXY-CONNECTION-TO-PUSHER"
+    );
+
+    const request = {"url": url};
+
+    const response = await PushcaClient.sendGatewayRequest(
+        dest,
+        GatewayPath.PUBLISH_REMOTE_STREAM,
+        stringToByteArray(JSON.stringify(request)),
+        15 * 60_000
+    );
+
+    if (!response) {
+        return null;
+    }
+
+    if ('error' === response) {
+        return null;
+    }
+
+    try {
+        const jsonResponseWrapper = JSON.parse(response);
+        const responseBytes = base64ToArrayBuffer(jsonResponseWrapper.body);
+        const responseStr = arrayBufferToString(responseBytes);
+        const jsonObject = JSON.parse(responseStr);
+        if (jsonObject.error) {
+            alert(jsonObject.error);
+        }
+        return jsonObject.url;
+    } catch (err) {
+        console.warn(`Failed download remote stream ${url} attempt: ` + err);
+        return null;
+    }
+}
 
 
 

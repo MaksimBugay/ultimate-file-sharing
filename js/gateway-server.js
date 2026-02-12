@@ -3,7 +3,8 @@ const routs = new Map();
 const GatewayPath = Object.freeze({
     VERIFY_BINARY_SIGNATURE: "verify-binary-signature",
     VERIFY_JOIN_TRANSFER_GROUP_REQUEST: "verify-join-transfer-group-request",
-    RESOLVE_IP_WITH_PROXY_CHECK: "RESOLVE_IP_WITH_PROXY_CHECK"
+    RESOLVE_IP_WITH_PROXY_CHECK: "RESOLVE_IP_WITH_PROXY_CHECK",
+    PUBLISH_REMOTE_STREAM: "PUBLISH_REMOTE_STREAM"
 });
 
 async function verifyJoinTransferGroupRequest(header, requestPayload) {
