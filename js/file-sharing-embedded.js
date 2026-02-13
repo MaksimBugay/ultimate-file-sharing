@@ -39,6 +39,8 @@ if (urlParams.get('page-id')) {
 const protectWithPasswordChoice = document.getElementById("protectWithPasswordChoice");
 const protectWithCaptchaChoice = document.getElementById("protectWithCaptchaChoice");
 const passwordInputContainer = document.getElementById("passwordInputContainer");
+const readMeContainer = document.getElementById("readMeContainer");
+const remoteStreamUrlSection = document.getElementById('remoteStreamUrlSection');
 const passwordInput = document.getElementById("passwordInput");
 const selectFilesBtn = document.getElementById('selectFilesBtn');
 const fileTransferProgressBtn = document.getElementById('fileTransferProgressBtn');
@@ -140,16 +142,29 @@ async function processSelectedFiles(files) {
     }
 }
 
+function makeShareWithPasswordUiAdjustments() {
+    protectWithPasswordChoice.checked = true;
+    protectWithCaptchaChoice.checked = false;
+    passwordInputContainer.style.display = 'block';
+    readMeContainer.style.display = 'block';
+    remoteStreamUrlSection.style.display = 'none';
+    passwordInput.focus();
+}
+
+function makeSharePublicUiAdjustments(protectWithCaptcha = true) {
+    protectWithCaptchaChoice.checked = protectWithCaptcha;
+    protectWithPasswordChoice.checked = false;
+    passwordInputContainer.style.display = 'none';
+    readMeContainer.style.display = 'none';
+    remoteStreamUrlSection.style.display = 'flex';
+    urlInputContainer.focus();
+}
+
 function setProtectionTypeChoice(choiceName) {
     if (choiceName === ProtectionType.PASSWORD) {
-        protectWithPasswordChoice.checked = true;
-        protectWithCaptchaChoice.checked = false;
-        passwordInputContainer.style.display = 'block';
-        passwordInput.focus();
+        makeShareWithPasswordUiAdjustments();
     } else if (choiceName === ProtectionType.CAPTCHA) {
-        protectWithCaptchaChoice.checked = true;
-        protectWithPasswordChoice.checked = false;
-        passwordInputContainer.style.display = 'none';
+        makeSharePublicUiAdjustments();
     }
 }
 
@@ -356,6 +371,7 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
 //======================================================================================================================
 
 document.addEventListener('DOMContentLoaded', function () {
+    makeSharePublicUiAdjustments(false);
     document.querySelectorAll('input[name="protectWithPasswordChoice"]').forEach((element) => {
         element.addEventListener('change', function () {
             setProtectionTypeChoice(this.value);
@@ -420,7 +436,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 let dataIsReady = false;
                 showInfiniteProgress(FileSharing.progressBarWidget, () => dataIsReady);
                 await requestWakeLock(FileSharing);
-                const publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(url);
+                const protectionAttributes = getProtectionAttributes();
+                const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
+                const publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman);
                 dataIsReady = true;
                 remoteStreamUrlInput.clear();
                 enableRemoteStreamUrlSection();
