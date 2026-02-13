@@ -156,8 +156,12 @@ function makeSharePublicUiAdjustments(protectWithCaptcha = true) {
     protectWithPasswordChoice.checked = false;
     passwordInputContainer.style.display = 'none';
     readMeContainer.style.display = 'none';
-    remoteStreamUrlSection.style.display = 'flex';
-    urlInputContainer.focus();
+    if (remoteStreamUrlSection) {
+        remoteStreamUrlSection.style.display = 'flex';
+        if (urlInputContainer) {
+            urlInputContainer.focus();
+        }
+    }
 }
 
 function setProtectionTypeChoice(choiceName) {
@@ -371,7 +375,6 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
 //======================================================================================================================
 
 document.addEventListener('DOMContentLoaded', function () {
-    makeSharePublicUiAdjustments(false);
     document.querySelectorAll('input[name="protectWithPasswordChoice"]').forEach((element) => {
         element.addEventListener('change', function () {
             setProtectionTypeChoice(this.value);
@@ -426,6 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (urlInputContainer) {
+        makeSharePublicUiAdjustments(false);
         const remoteStreamUrlInput = SFSPUrlInput.create(
             FileSharing.remoteStreamInputId,
             urlInputContainer,
