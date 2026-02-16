@@ -63,6 +63,7 @@ async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, human
         console.log(`Failed to load manifest:\n${message}`);
     }
     let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}${encodedNameSuffix}`;
+    //let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}`;
     if (pageId) {
         directDownloadUrl = `${directDownloadUrl}?page-id=${pageId}&human-token=${humanToken}`;
     }

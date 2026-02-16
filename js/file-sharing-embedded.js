@@ -442,7 +442,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 await requestWakeLock(FileSharing);
                 const protectionAttributes = getProtectionAttributes();
                 const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
-                const publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman);
+                const publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(
+                    url,
+                    forHuman,
+                    getBinaryLinkExpirationTime()
+                );
                 dataIsReady = true;
                 remoteStreamUrlInput.clear();
                 enableRemoteStreamUrlSection();

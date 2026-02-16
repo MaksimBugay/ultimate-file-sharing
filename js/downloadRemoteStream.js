@@ -106,7 +106,7 @@ async function downloadRemoteStream(serverBaseUrl, sourceUrl, responseHandler, e
 }
 
 
-async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman) {
+async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman, expiredAt) {
 
     const dest = new ClientFilter(
         "PushcaCluster",
@@ -115,7 +115,11 @@ async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman) {
         "BINARY-PROXY-CONNECTION-TO-PUSHER"
     );
 
-    const request = {"url": url, "forHuman": forHuman};
+    const request = {
+        "url": url,
+        "forHuman": forHuman,
+        "expiredAt": expiredAt
+    };
 
     const response = await PushcaClient.sendGatewayRequest(
         dest,
