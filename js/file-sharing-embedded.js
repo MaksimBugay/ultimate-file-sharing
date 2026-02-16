@@ -231,18 +231,43 @@ function passwordInputIsActive() {
 }
 
 function urlInputIsActive() {
-    return document.activeElement.id === FileSharing.remoteStreamInputId;
+    return document.activeElement.id === "remoteStreamUrlInput-field";
 }
 
 function readMeMemoIsActive() {
     return document.activeElement.id === readMeTextMemo.id;
 }
 
+function dateTimeInputActive() {
+    return document.activeElement.className.startsWith("sfsp-time-input");
+}
+
 function initEventsForCopyPasteArea() {
-    if (document.getElementById('selectFilesSubContainer')) {
-        document.getElementById('selectFilesSubContainer').addEventListener(
-            'mousemove', function () {
-                if (passwordInputIsActive() || readMeMemoIsActive() || urlInputIsActive()) {
+    document.addEventListener("focusin", (event) => {
+        const el = event.target;
+
+        if (
+            el.matches("input, textarea, select, [contenteditable='true']")
+        ) {
+            FileSharing.activeUserInput = true;
+        }
+    });
+
+    document.addEventListener(
+        "focusout",
+        (event) => {
+            if (event.target.matches("input, textarea, select, [contenteditable='true']")) {
+                FileSharing.activeUserInput = false;
+            }
+        }
+    );
+
+    if (document.getElementById('selectFilesSection')) {
+        document.getElementById('selectFilesSection').addEventListener(
+            'mousemove', function (event) {
+                if (dateTimeInputActive() || passwordInputIsActive() || readMeMemoIsActive() || urlInputIsActive(event.target)) {
+                    event.stopPropagation();
+                    event.preventDefault();
                     return;
                 }
                 if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
@@ -364,7 +389,7 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
     if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
         return;
     }
-    if (passwordInputIsActive() || readMeMemoIsActive()) {
+    if (dateTimeInputActive() || passwordInputIsActive() || readMeMemoIsActive() || urlInputIsActive()) {
         return;
     }
     if (toolBarPasteArea) {
