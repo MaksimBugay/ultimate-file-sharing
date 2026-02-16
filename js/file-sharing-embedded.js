@@ -451,16 +451,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 remoteStreamUrlInput.clear();
                 enableRemoteStreamUrlSection();
                 releaseWakeLock(FileSharing);
-                const dialogId = uuid.v4().toString();
-                const dialogResult = await CallableFuture.callAsynchronously(
-                    300_000,
-                    dialogId,
-                    () => {
-                        sharePublicUrlViaInfoMessage(publicUrl, dialogId);
+                if (publicUrl) {
+                    const dialogId = uuid.v4().toString();
+                    const dialogResult = await CallableFuture.callAsynchronously(
+                        300_000,
+                        dialogId,
+                        () => {
+                            sharePublicUrlViaInfoMessage(publicUrl, dialogId);
+                        }
+                    );
+                    if (WaiterResponseType.SUCCESS !== dialogResult.type) {
+                        console.warn("Failed attempt to register close modal window event");
                     }
-                );
-                if (WaiterResponseType.SUCCESS !== dialogResult.type) {
-                    console.warn("Failed attempt to register close modal window event");
                 }
 
                 /*await downloadRemoteStream(

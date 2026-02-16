@@ -143,6 +143,7 @@ async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman, expir
         const jsonObject = JSON.parse(responseStr);
         if (jsonObject.error) {
             alert(jsonObject.error);
+            return null;
         }
         return jsonObject.url;
     } catch (err) {
