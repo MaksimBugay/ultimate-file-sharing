@@ -105,7 +105,12 @@ async function downloadRemoteStream(serverBaseUrl, sourceUrl, responseHandler, e
     responseHandler(blob, filename);
 }
 
-
+function ytDlpErrorObfuscation(error){
+    return error.replace(
+        /;.*?Confirm you are on the latest version using\s+yt-dlp.*?(?=;|$)/gs,
+        ''
+    );
+}
 async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman, expiredAt) {
 
     const dest = new ClientFilter(
@@ -142,7 +147,8 @@ async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman, expir
         const responseStr = arrayBufferToString(responseBytes);
         const jsonObject = JSON.parse(responseStr);
         if (jsonObject.error) {
-            alert(jsonObject.error);
+            //alert(ytDlpErrorObfuscation(jsonObject.error));
+            showErrorMsg(ytDlpErrorObfuscation(jsonObject.error), null);
             return null;
         }
         return jsonObject.url;
