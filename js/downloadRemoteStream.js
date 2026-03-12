@@ -111,7 +111,53 @@ function ytDlpErrorObfuscation(error){
         ''
     );
 }
+
 async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman, expiredAt) {
+    const endpoint = "https://secure.fileshare.ovh/binary/publish-remote-stream";
+
+    const request = { url, forHuman, expiredAt };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15 * 60 * 1000); // 15 min
+
+    try {
+        const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(request),
+            signal: controller.signal
+        });
+
+        if (!response.ok) {
+            const text = await response.text().catch(() => "");
+            showErrorMsg(`HTTP ${response.status}: ${text || response.statusText}`, null);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+            showErrorMsg(`Binary proxy error: ${data.error}`, null);
+            return null;
+        }
+
+        if (!data.url) {
+            showErrorMsg("Binary proxy returned no URL", null);
+            return null;
+        }
+
+        return data.url;
+
+    } catch (error) {
+        if (error.name === "AbortError") {
+            showErrorMsg("Binary proxy request timed out", null);
+        } else {
+            showErrorMsg(ytDlpErrorObfuscation(error.message), null);
+        }
+        return null; // explicitly return a safe value instead of re-throwing
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+async function sendDownloadRemoteStreamRequestToBinaryProxyWs(url, forHuman, expiredAt) {
 
     const dest = new ClientFilter(
         "PushcaCluster",
