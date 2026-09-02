@@ -48,6 +48,126 @@ async function downloadPublicBinaryManifest(workspaceId, binaryId, pageId, human
     }
 }
 
+/**
+ * Check whether a video URL can actually be played in the current browser.
+ *
+ * Attempts real playback and requires sustained progress (currentTime >= 2s)
+ * to confirm the video is genuinely playable, not just a few buffered frames.
+ *
+ * @param {string} src - Video URL to test.
+ * @param {number} [timeoutMs=12000] - Max time to wait before declaring failure.
+ * @returns {Promise<{playable: boolean, reason: string}>}
+ */
+async function canPlayInBrowser(src, timeoutMs = 12000) {
+    // Quick content-type check — reject non-video early
+    try {
+        const resp = await fetch(src, {
+            method: 'HEAD',
+            cache: 'no-store',
+            signal: AbortSignal.timeout(5000),
+        });
+        if (!resp.ok) {
+            return { playable: false, reason: `server returned ${resp.status}` };
+        }
+        const contentType = (resp.headers.get('content-type') || '').toLowerCase();
+        if (contentType && !contentType.startsWith('video/') && !contentType.startsWith('application/octet-stream')) {
+            return { playable: false, reason: `not a video: ${contentType}` };
+        }
+    } catch (e) {
+        return { playable: false, reason: `HEAD request failed: ${e.message}` };
+    }
+
+    // Playback test: require sustained progress, not just one decoded frame
+    return new Promise((resolve) => {
+        let video = document.getElementById('videoTester');
+        if (!video) {
+            video = document.createElement('video');
+            video.id = 'videoTester';
+            video.style.cssText =
+                'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none';
+            document.body.appendChild(video);
+        }
+
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'auto';
+        video.volume = 0;
+
+        let settled = false;
+        let playbackStarted = false;
+        let stallTimer = null;
+        const listeners = [];
+
+        const on = (target, event, handler) => {
+            target.addEventListener(event, handler);
+            listeners.push([target, event, handler]);
+        };
+
+        const cleanup = () => {
+            listeners.forEach(([t, e, h]) => t.removeEventListener(e, h));
+            listeners.length = 0;
+            if (stallTimer) clearTimeout(stallTimer);
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
+        };
+
+        const done = (playable, reason) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            cleanup();
+            resolve({ playable, reason });
+        };
+
+        const timer = setTimeout(() => {
+            if (playbackStarted && video.currentTime > 0 && video.videoWidth > 0) {
+                done(true, `partial playback confirmed at ${video.currentTime.toFixed(1)}s`);
+            } else {
+                done(false, 'timeout waiting for sustained playback');
+            }
+        }, timeoutMs);
+
+        on(video, 'error', () => {
+            const code = video.error ? video.error.code : -1;
+            const msgs = {
+                1: 'aborted',
+                2: 'network error',
+                3: 'decode error',
+                4: 'format not supported',
+            };
+            done(false, msgs[code] || `error code ${code}`);
+        });
+
+        on(video, 'timeupdate', () => {
+            if (video.currentTime > 0 && video.videoWidth > 0 && video.videoHeight > 0) {
+                playbackStarted = true;
+                // Reset stall detection on each progress
+                if (stallTimer) clearTimeout(stallTimer);
+                stallTimer = setTimeout(() => {
+                    if (video.currentTime < 1.5) {
+                        done(false, `playback stalled at ${video.currentTime.toFixed(1)}s`);
+                    }
+                }, 4000);
+
+                if (video.currentTime >= 2.0) {
+                    done(true, `sustained playback confirmed ${video.videoWidth}x${video.videoHeight}`);
+                }
+            }
+        });
+
+        on(video, 'loadeddata', () => {
+            if (video.videoWidth === 0 || video.videoHeight === 0) {
+                done(false, 'loaded but no video dimensions');
+                return;
+            }
+            video.play().catch(() => done(false, 'play() rejected'));
+        });
+
+        video.src = src;
+        video.load();
+    });
+}
 async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, humanToken) {
     let encodedNameSuffix = "";
     try {
@@ -64,8 +184,10 @@ async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, human
     }
     let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}${encodedNameSuffix}`;
     //let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}`;
+    const forDownloadOnly =  false;//! (await canPlayInBrowser(directDownloadUrl));
+    directDownloadUrl = `${directDownloadUrl}?for-download-only=${forDownloadOnly}`;
     if (pageId) {
-        directDownloadUrl = `${directDownloadUrl}?page-id=${pageId}&human-token=${humanToken}`;
+        directDownloadUrl = `${directDownloadUrl}&page-id=${pageId}&human-token=${humanToken}`;
     }
 
     webSocketAvailabilityCheck().then(result => {

@@ -127,12 +127,20 @@ async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman, expir
             signal: controller.signal
         });
 
+        // Handle HTTP errors first (consume body once and return)
         if (!response.ok) {
             const text = await response.text().catch(() => "");
             showErrorMsg(`HTTP ${response.status}: ${text || response.statusText}`, null);
+            return null;
         }
 
-        const data = await response.json();
+        // Safe to parse JSON now (body not consumed before)
+        const data = await response.json().catch(() => null);
+
+        if (!data) {
+            showErrorMsg("Binary proxy returned invalid JSON", null);
+            return null;
+        }
 
         if (data.error) {
             showErrorMsg(`Binary proxy error: ${data.error}`, null);
@@ -152,7 +160,7 @@ async function sendDownloadRemoteStreamRequestToBinaryProxy(url, forHuman, expir
         } else {
             showErrorMsg(ytDlpErrorObfuscation(error.message), null);
         }
-        return null; // explicitly return a safe value instead of re-throwing
+        return null;
     } finally {
         clearTimeout(timeout);
     }
