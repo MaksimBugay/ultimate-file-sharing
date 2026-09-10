@@ -67,14 +67,14 @@ async function canPlayInBrowser(src, timeoutMs = 12000) {
             signal: AbortSignal.timeout(5000),
         });
         if (!resp.ok) {
-            return { playable: false, reason: `server returned ${resp.status}` };
+            return {playable: false, reason: `server returned ${resp.status}`};
         }
         const contentType = (resp.headers.get('content-type') || '').toLowerCase();
         if (contentType && !contentType.startsWith('video/') && !contentType.startsWith('application/octet-stream')) {
-            return { playable: false, reason: `not a video: ${contentType}` };
+            return {playable: false, reason: `not a video: ${contentType}`};
         }
     } catch (e) {
-        return { playable: false, reason: `HEAD request failed: ${e.message}` };
+        return {playable: false, reason: `HEAD request failed: ${e.message}`};
     }
 
     // Playback test: require sustained progress, not just one decoded frame
@@ -117,7 +117,7 @@ async function canPlayInBrowser(src, timeoutMs = 12000) {
             settled = true;
             clearTimeout(timer);
             cleanup();
-            resolve({ playable, reason });
+            resolve({playable, reason});
         };
 
         const timer = setTimeout(() => {
@@ -168,10 +168,13 @@ async function canPlayInBrowser(src, timeoutMs = 12000) {
         video.load();
     });
 }
+
 async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, humanToken) {
     let encodedNameSuffix = "";
+    let binaryMimeType;
     try {
         const manifest = await downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken);
+        binaryMimeType = manifest.mimeType;
         encodedNameSuffix = `/${encodeURIComponent(manifest.name)}`;
     } catch (error) {
         const message =
@@ -183,8 +186,11 @@ async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, human
         console.log(`Failed to load manifest:\n${message}`);
     }
     let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}${encodedNameSuffix}`;
+    if (isPlayableMedia(binaryMimeType)) {
+        directDownloadUrl = `${serverUrl}/binary/stream/${workspaceId}/${binaryId}${encodedNameSuffix}`;
+    }
     //let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}`;
-    const forDownloadOnly =  false;//! (await canPlayInBrowser(directDownloadUrl));
+    const forDownloadOnly = false;//! (await canPlayInBrowser(directDownloadUrl));
     directDownloadUrl = `${directDownloadUrl}?for-download-only=${forDownloadOnly}`;
     if (pageId) {
         directDownloadUrl = `${directDownloadUrl}&page-id=${pageId}&human-token=${humanToken}`;
