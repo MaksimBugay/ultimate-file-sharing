@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     future.setDate(future.getDate() + 30);
                     return future;
                 },
-                onChange: (timestamp, date) => {
+                onChange: (timestamp, _) => {
                     FileSharing.binaryLinkExpirationTime = timestamp;
                 }
             }
@@ -762,16 +762,6 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
     return true;
 }
 
-async function getFinalProtectedUrl(url) {
-    await delay(1000);
-    const response = await fetch(url, {
-        method: "GET",
-        redirect: "follow" // default, but explicit here
-    });
-
-    return response.url;
-}
-
 async function removeLocalBinary(manifest) {
     const result = await CallableFuture.callAsynchronously(
         1000, null, function (waiterId) {
@@ -790,17 +780,21 @@ async function removeLocalBinary(manifest) {
 
 async function buildPublicUrl(manifest) {
     await removeLocalBinary(manifest);
+    const tnParam = buildThumbnailId(manifest.id);
+
+    if (manifest.password) {
+        const url = new URL('/protected-binary-ex.html', PushcaClient.clusterBaseUrl);
+        url.searchParams.set('s', manifest.getPrivateUrlShortSuffix());
+        url.searchParams.set('tn', tnParam);
+        return url.toString();
+    }
 
     const publicUrWithoutThumbnail = manifest.getPublicUrl(FileSharing.workSpaceId, true);
 
     let publicUrl = publicUrWithoutThumbnail;
     if (!publicUrWithoutThumbnail.includes('tn=')) {
-        publicUrl = `${publicUrWithoutThumbnail}&tn=${buildThumbnailId(manifest.id)}`;
+        publicUrl = `${publicUrWithoutThumbnail}&tn=${tnParam}`;
     }
-    if (manifest.password) {
-        return await getFinalProtectedUrl(publicUrl);
-    }
-
     return publicUrl.replace("public-binary.html", "public-binary-ex.html");
 }
 

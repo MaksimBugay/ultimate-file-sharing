@@ -25,7 +25,17 @@ async function fetchProtectedBinaryDescription(suffix) {
 const serverUrl = 'https://secure.fileshare.ovh';
 const urlParams = new URLSearchParams(window.location.search);
 
-let protectedUrlSuffix = decodeURIComponent(urlParams.get('suffix'));
+const shortSuffix = urlParams.get('s');
+if (shortSuffix) {
+    const target = new URL(`/binary/${encodeURIComponent(shortSuffix)}`, window.location.origin);
+    const thumbnailId = urlParams.get('tn');
+    if (thumbnailId) {
+        target.searchParams.set('tn', thumbnailId);
+    }
+    window.location.replace(target.toString());
+}
+
+let protectedUrlSuffix = decodeURIComponent(urlParams.get('suffix') || '');
 let encryptionContractStr;
 let signatureHash;
 
@@ -231,4 +241,3 @@ async function applyCredentialsFromDb(signatureHash) {
 }
 
 //======================================================================================================================
-
