@@ -59,6 +59,7 @@
       <div class="controls">
         <button id="startButton" type="button">Start recording</button>
         <button id="stopButton" type="button" class="secondary" disabled>Stop recording</button>
+        <button id="saveRecentMicButton" type="button" class="secondary" disabled>Save audio from 12–5s ago</button>
         <button id="replayButton" type="button" class="secondary" disabled>Replay video + audio</button>
         <button id="saveButton" type="button" class="secondary" disabled>Save video file</button>
       </div>
@@ -67,12 +68,11 @@
 
   <dl class="stats">
     <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
-    <div class="stat"><dt>Video chunks</dt><dd id="videoCount">0</dd></div>
-    <div class="stat"><dt>Audio chunks</dt><dd id="audioCount">0</dd></div>
+    <div class="stat"><dt>Audio/video chunk pairs</dt><dd id="chunkCount">0</dd></div>
     <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
   </dl>
 
-  <p class="details">Saving creates two ordinary media files: a video-only <code>.webm</code> or <code>.mp4</code> file first, then an audio-only file. Replay becomes available after recording stops and plays matching <span data-chunk-seconds>5</span>-second video and audio chunks in order, without joining them into one file. Use the replay controls to pause or adjust audio. Recording needs HTTPS or localhost.</p>
+  <p class="details">While recording, Save audio from 12–5s ago creates a separate <code>.wav</code> clip from completed microphone chunks for future echo cancellation. Saving after recording creates two ordinary media files: a video-only <code>.webm</code> or <code>.mp4</code> file first, then an audio-only file. Replay becomes available after recording stops and plays matching <span data-chunk-seconds>5</span>-second video and audio chunks in order, without joining them into one file. Use the replay controls to pause or adjust audio. Recording needs HTTPS or localhost.</p>
 </main>
 <script src="js/video-recorder.js" defer></script>
 </body>

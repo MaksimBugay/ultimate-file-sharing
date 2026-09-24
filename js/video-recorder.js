@@ -7,11 +7,15 @@
     && requestedChunkSeconds >= 0.1 && requestedChunkSeconds <= 3600
     ? requestedChunkSeconds : 5;
   const CHUNK_MS = Math.round(CHUNK_SECONDS * 1000);
+  const ECHO_WINDOW_START_MS = 12000;
+  const ECHO_WINDOW_END_MS = 5000;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const ui = {
     live: document.getElementById('liveVideo'),
     playerCaption: document.getElementById('playerCaption'),
     start: document.getElementById('startButton'),
     stop: document.getElementById('stopButton'),
+    saveRecentMic: document.getElementById('saveRecentMicButton'),
     replayButton: document.getElementById('replayButton'),
     replayControls: document.getElementById('replayControls'),
     pauseReplayButton: document.getElementById('pauseReplayButton'),
@@ -20,8 +24,7 @@
     save: document.getElementById('saveButton'),
     status: document.getElementById('status'),
     elapsed: document.getElementById('elapsed'),
-    videoCount: document.getElementById('videoCount'),
-    audioCount: document.getElementById('audioCount'),
+    chunkCount: document.getElementById('chunkCount'),
     storedSize: document.getElementById('storedSize')
   };
 
@@ -29,7 +32,9 @@
     element.textContent = String(CHUNK_SECONDS);
   });
 
-  const chunks = { video: [], audio: [] };
+  const chunks = [];
+  const pendingPairs = new Map();
+  const nextSegmentIndex = { video: 0, audio: 0 };
   const active = { video: null, audio: null };
   const wholeRecording = { video: null, audio: null };
   const fileParts = { video: [], audio: [] };
@@ -52,6 +57,7 @@
   let saveStage = 'video';
   let baseName = '';
   let stoppingPromise = null;
+  let recentMicSaving = false;
 
   function setStatus(message, error = false) {
     ui.status.textContent = message;
@@ -59,20 +65,46 @@
   }
 
   function updateStats() {
-    ui.videoCount.textContent = chunks.video.length;
-    ui.audioCount.textContent = chunks.audio.length;
-    const bytes = [...chunks.video, ...chunks.audio]
-      .reduce((total, chunk) => total + chunk.blob.size, 0)
+    ui.chunkCount.textContent = chunks.length;
+    const bytes = chunks.reduce((total, chunk) => total + chunk.videoBinary.size + chunk.audioBinary.size, 0)
+      + [...pendingPairs.values()].reduce((total, pair) =>
+        total + (pair.video?.blob.size || 0) + (pair.audio?.blob.size || 0), 0)
       + [...fileParts.video, ...fileParts.audio].reduce((total, part) => total + part.size, 0);
     ui.storedSize.textContent = `${(bytes / 1048576).toFixed(1)} MB`;
-    ui.save.disabled = busy || !recordingFinished || saveStage === 'done'
-      || (saveStage === 'video' ? !chunks.video.length : !chunks.audio.length);
-    ui.replayButton.disabled = busy || !recordingFinished || !chunks.video.length || !chunks.audio.length;
+    ui.save.disabled = busy || !recordingFinished || saveStage === 'done' || !chunks.length;
+    ui.replayButton.disabled = busy || !recordingFinished || !chunks.length;
+    updateRecentMicButton();
   }
 
   function updateElapsed() {
     const seconds = Math.floor((performance.now() - startedAt) / 1000);
     ui.elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    updateRecentMicButton();
+  }
+
+  function echoWindow(nowMs = Math.round(performance.now() - startedAt)) {
+    return { startMs: nowMs - ECHO_WINDOW_START_MS, endMs: nowMs - ECHO_WINDOW_END_MS };
+  }
+
+  function completedAudioForRange({ startMs, endMs }) {
+    return chunks.filter(chunk => chunk.startMs < endMs && chunk.endMs > startMs);
+  }
+
+  function hasCompleteAudioRange({ startMs, endMs }, selected) {
+    if (startMs < 0 || !selected.length) return false;
+    let coveredUntil = startMs;
+    for (const chunk of selected) {
+      if (chunk.startMs > coveredUntil + 100) return false;
+      coveredUntil = Math.max(coveredUntil, chunk.endMs);
+    }
+    return coveredUntil >= endMs;
+  }
+
+  function updateRecentMicButton() {
+    const range = echoWindow();
+    const selected = completedAudioForRange(range);
+    ui.saveRecentMic.disabled = busy || !recording || recentMicSaving || !AudioContextClass
+      || !hasCompleteAudioRange(range, selected);
   }
 
   function pickMimeType(kind) {
@@ -116,9 +148,8 @@
     replayAudio.pause();
     releaseReplayUrls();
     const index = replayIndex++;
-    const videoChunk = chunks.video[index];
-    const audioChunk = chunks.audio[index];
-    if (!videoChunk || !audioChunk) {
+    const chunk = chunks[index];
+    if (!chunk) {
       replayActive = false;
       ui.live.removeAttribute('src');
       ui.live.load();
@@ -128,12 +159,12 @@
       ui.playerCaption.textContent = 'Replay finished. Press Replay video + audio to watch again.';
       return;
     }
-    replayUrl = URL.createObjectURL(videoChunk.blob);
-    replayAudioUrl = URL.createObjectURL(audioChunk.blob);
+    replayUrl = URL.createObjectURL(chunk.videoBinary);
+    replayAudioUrl = URL.createObjectURL(chunk.audioBinary);
     replayAudio.src = replayAudioUrl;
     ui.live.src = replayUrl;
     audioBlocked = false;
-    ui.playerCaption.textContent = `Playing video and audio chunk ${index + 1} of ${Math.min(chunks.video.length, chunks.audio.length)}`;
+    ui.playerCaption.textContent = `Playing video and audio chunk ${index + 1} of ${chunks.length}`;
     playReplayAudio();
     ui.live.play().catch(() => {
       if (replayActive) {
@@ -146,7 +177,7 @@
   }
 
   function replayRecording() {
-    if (busy || recording || !recordingFinished || !chunks.video.length || !chunks.audio.length) return;
+    if (busy || recording || !recordingFinished || !chunks.length) return;
     ui.live.pause();
     replayAudio.pause();
     ui.live.controls = false;
@@ -185,11 +216,33 @@
     segment.recorder.stop();
   }
 
+  function storeSegment(kind, index, blob, startMs, endMs) {
+    if (!blob.size) return;
+    const pair = pendingPairs.get(index) || {};
+    pair[kind] = { blob, startMs, endMs };
+    if (pair.video && pair.audio) {
+      const audio = pair.audio;
+      chunks.push({
+        audioBinary: audio.blob,
+        videoBinary: pair.video.blob,
+        index,
+        startMs: audio.startMs,
+        endMs: audio.endMs,
+        durationMs: audio.endMs - audio.startMs
+      });
+      pendingPairs.delete(index);
+    } else {
+      pendingPairs.set(index, pair);
+    }
+    updateStats();
+  }
+
   function startSegment(kind, stream, mimeType) {
     if (!recording) return;
     const options = mimeType ? { mimeType } : undefined;
     const recorder = new MediaRecorder(stream, options);
     const parts = [];
+    const index = nextSegmentIndex[kind]++;
     const startMs = Math.round(performance.now() - startedAt);
     let resolveDone;
     const done = new Promise(resolve => { resolveDone = resolve; });
@@ -209,15 +262,7 @@
       const blob = new Blob(parts, { type: recorder.mimeType || mimeType || parts[0]?.type || '' });
       if (blob.size) {
         const endMs = segment.endMs ?? Math.round(performance.now() - startedAt);
-        const chunk = {
-          index: chunks[kind].length,
-          startMs,
-          endMs,
-          durationMs: endMs - startMs,
-          blob
-        };
-        chunks[kind].push(chunk);
-        updateStats();
+        storeSegment(kind, index, blob, startMs, endMs);
       }
       resolveDone();
       if (recording) {
@@ -293,6 +338,7 @@
     if (stoppingPromise) return stoppingPromise;
     if (!recording) return Promise.resolve();
     recording = false;
+    updateRecentMicButton();
     stoppingPromise = (async () => {
       ui.stop.disabled = true;
       clearInterval(elapsedTimer);
@@ -308,13 +354,14 @@
         }
       }
       await Promise.all(finishing);
+      pendingPairs.clear();
       mediaStream?.getTracks().forEach(track => track.stop());
       ui.live.srcObject = null;
       recordingFinished = true;
-      ui.playerCaption.textContent = chunks.video.length && chunks.audio.length
+      ui.playerCaption.textContent = chunks.length
         ? 'Recording stopped. Press Replay video + audio to play the stored chunks.'
         : 'Recording stopped without a complete video and audio chunk pair.';
-      setStatus(`Recording stopped. ${chunks.video.length} video and ${chunks.audio.length} audio chunks are ready.`);
+      setStatus(`Recording stopped. ${chunks.length} video and audio chunk pairs are ready.`);
       updateStats();
     })();
     return stoppingPromise;
@@ -330,6 +377,60 @@
     return '.webm';
   }
 
+  function encodeWav(samples, sampleRate) {
+    const dataBytes = samples.length * 2;
+    const bytes = new ArrayBuffer(44 + dataBytes);
+    const view = new DataView(bytes);
+    const writeText = (offset, value) => {
+      for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+    };
+    writeText(0, 'RIFF');
+    view.setUint32(4, 36 + dataBytes, true);
+    writeText(8, 'WAVE');
+    writeText(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeText(36, 'data');
+    view.setUint32(40, dataBytes, true);
+    for (let i = 0; i < samples.length; i++) {
+      const sample = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(44 + i * 2, sample < 0 ? sample * 32768 : sample * 32767, true);
+    }
+    return new Blob([bytes], { type: 'audio/wav' });
+  }
+
+  async function createEchoCancellationAudio(range, selected) {
+    const context = new AudioContextClass();
+    try {
+      const sampleRate = context.sampleRate;
+      const samples = new Float32Array(Math.round((range.endMs - range.startMs) * sampleRate / 1000));
+      for (const chunk of selected) {
+        const overlapStart = Math.max(range.startMs, chunk.startMs);
+        const overlapEnd = Math.min(range.endMs, chunk.endMs);
+        const decoded = await context.decodeAudioData(await chunk.audioBinary.arrayBuffer());
+        const outputOffset = Math.round((overlapStart - range.startMs) * sampleRate / 1000);
+        const inputOffset = Math.round((overlapStart - chunk.startMs) * sampleRate / 1000);
+        const wanted = Math.round((overlapEnd - overlapStart) * sampleRate / 1000);
+        const count = Math.max(0, Math.min(wanted, decoded.length - inputOffset, samples.length - outputOffset));
+        for (let frame = 0; frame < count; frame++) {
+          let sample = 0;
+          for (let channel = 0; channel < decoded.numberOfChannels; channel++) {
+            sample += decoded.getChannelData(channel)[inputOffset + frame];
+          }
+          samples[outputOffset + frame] = sample / decoded.numberOfChannels;
+        }
+      }
+      return encodeWav(samples, sampleRate);
+    } finally {
+      await context.close();
+    }
+  }
+
   function downloadFallback(blob, fileName) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -341,8 +442,42 @@
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
+  async function saveEchoCancellationAudio() {
+    if (!recording || recentMicSaving || !AudioContextClass) return;
+    const range = echoWindow();
+    const selected = completedAudioForRange(range);
+    if (!hasCompleteAudioRange(range, selected)) return;
+    const fileName = `${baseName}-mic-${range.startMs}-${range.endMs}.wav`;
+    recentMicSaving = true;
+    updateRecentMicButton();
+    try {
+      // Request the picker during this click; build the frozen time range in parallel.
+      const handlePromise = window.showSaveFilePicker
+        ? window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{ description: 'Microphone audio snippet', accept: { 'audio/wav': ['.wav'] } }]
+          })
+        : Promise.resolve(null);
+      const [handle, blob] = await Promise.all([handlePromise, createEchoCancellationAudio(range, selected)]);
+      if (handle) {
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } else {
+        downloadFallback(blob, fileName);
+      }
+      setStatus(`Saved microphone audio from ${(range.startMs / 1000).toFixed(1)}s to ${(range.endMs / 1000).toFixed(1)}s.`);
+    } catch (error) {
+      if (error.name !== 'AbortError') setStatus(`Could not save microphone snippet: ${error.message}`, true);
+      else setStatus('Microphone snippet save canceled. Recording continues.');
+    } finally {
+      recentMicSaving = false;
+      updateRecentMicButton();
+    }
+  }
+
   async function saveCurrentTrack() {
-    if (busy || !recordingFinished || !chunks[saveStage].length) return;
+    if (busy || !recordingFinished || !chunks.length) return;
     const kind = saveStage;
     if (!fileParts[kind].length) {
       setStatus(`No ${kind} data was recorded.`, true);
@@ -417,6 +552,7 @@
   });
   ui.start.addEventListener('click', startRecording);
   ui.stop.addEventListener('click', stopRecording);
+  ui.saveRecentMic.addEventListener('click', saveEchoCancellationAudio);
   ui.replayButton.addEventListener('click', replayRecording);
   ui.pauseReplayButton.addEventListener('click', () => {
     if (!replayActive) return;
