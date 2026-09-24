@@ -44,7 +44,7 @@
   <div class="page-heading">
     <h1>Chunked camera recorder</h1>
     <p id="status" class="status" role="status" aria-live="polite">Ready. Camera and microphone permission is needed.</p>
-    <p class="intro">Record camera video and microphone audio as separate, roughly five-second chunks. After recording stops, replay matching video and audio chunks in the same player. Everything stays in this browser tab until you save it.</p>
+    <p class="intro">Record camera video and microphone audio as separate, roughly <span data-chunk-seconds>5</span>-second chunks. After recording stops, replay matching video and audio chunks in the same player. Everything stays in this browser tab until you save it.</p>
   </div>
   <div class="viewport-stage">
     <section class="panel" aria-label="Camera and replay">
@@ -72,7 +72,7 @@
     <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
   </dl>
 
-  <p class="details">Saving creates two ordinary media files: a video-only <code>.webm</code> or <code>.mp4</code> file first, then an audio-only file. Replay becomes available after recording stops and plays matching five-second video and audio chunks in order, without joining them into one file. Use the replay controls to pause or adjust audio. Recording needs HTTPS or localhost.</p>
+  <p class="details">Saving creates two ordinary media files: a video-only <code>.webm</code> or <code>.mp4</code> file first, then an audio-only file. Replay becomes available after recording stops and plays matching <span data-chunk-seconds>5</span>-second video and audio chunks in order, without joining them into one file. Use the replay controls to pause or adjust audio. Recording needs HTTPS or localhost.</p>
 </main>
 <script src="js/video-recorder.js" defer></script>
 </body>

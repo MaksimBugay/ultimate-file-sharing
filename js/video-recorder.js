@@ -1,7 +1,12 @@
 (() => {
   'use strict';
 
-  const CHUNK_MS = 5000;
+  const chunkSecondsParam = new URLSearchParams(window.location.search).get('chunkSeconds');
+  const requestedChunkSeconds = chunkSecondsParam === null ? NaN : Number(chunkSecondsParam);
+  const CHUNK_SECONDS = Number.isFinite(requestedChunkSeconds)
+    && requestedChunkSeconds >= 0.1 && requestedChunkSeconds <= 3600
+    ? requestedChunkSeconds : 5;
+  const CHUNK_MS = Math.round(CHUNK_SECONDS * 1000);
   const ui = {
     live: document.getElementById('liveVideo'),
     playerCaption: document.getElementById('playerCaption'),
@@ -19,6 +24,10 @@
     audioCount: document.getElementById('audioCount'),
     storedSize: document.getElementById('storedSize')
   };
+
+  document.querySelectorAll('[data-chunk-seconds]').forEach(element => {
+    element.textContent = String(CHUNK_SECONDS);
+  });
 
   const chunks = { video: [], audio: [] };
   const active = { video: null, audio: null };

@@ -3,11 +3,11 @@ share any file from you machine in two clicks
 
 ## Chunked camera recorder
 
-Open `video-recorder.html` through HTTPS or localhost. Allow camera and microphone access, then start recording. The page records separate video-only and audio-only segments of about five seconds each. When recording stops, click **Replay video + audio** to play matching segments in order. One visible player shows the camera and replay video; a hidden audio element plays each matching audio segment. Use the replay controls below the player to pause, mute, or adjust the audio volume. Replay keeps the segments separate rather than joining them into one binary.
+Open `video-recorder.html` through HTTPS or localhost. Set the chunk duration with `?chunkSeconds=3` (seconds; defaults to 5, accepts 0.1–3600). Allow camera and microphone access, then start recording. The page records separate video-only and audio-only segments of about the selected duration. When recording stops, click **Replay video + audio** to play matching segments in order. One visible player shows the camera and replay video; a hidden audio element plays each matching audio segment. Use the replay controls below the player to pause, mute, or adjust the audio volume. Replay keeps the segments separate rather than joining them into one binary.
 
 After recording stops and the final chunks finish, click **Save video file** and choose a destination. Click **Save audio file** afterward and choose a destination for the second file. The saved files are ordinary media files, with extensions chosen from the browser's recording format: `.webm`, `.mp4`, or `.ogg` for audio. They open directly in media players such as IINA. Browsers without the File System Access save picker use their normal download behavior.
 
-The page also keeps individually playable five-second video and audio segments in memory. A continuous recorder runs alongside those segment recorders so the saved files have a valid, uninterrupted media container. Segment boundaries can have small gaps because each standalone segment starts a fresh encoder; the saved continuous files avoid those gaps. The recording remains in memory until the tab closes.
+The page also keeps individually playable video and audio segments in memory. A continuous recorder runs alongside those segment recorders so the saved files have a valid, uninterrupted media container. Segment boundaries can have small gaps because each standalone segment starts a fresh encoder; the saved continuous files avoid those gaps. The recording remains in memory until the tab closes.
 
 To convert the two saved files into one MP4 with FFmpeg, run a command such as:
 
