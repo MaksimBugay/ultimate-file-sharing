@@ -8,56 +8,62 @@
   <style>
     :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #0d1420; color: #edf3fa; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 32px 20px; }
-    main { max-width: 1100px; margin: auto; }
-    h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 4vw, 2.5rem); }
+    body { margin: 0; padding: 12px 20px; }
+    main { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 1100px; height: calc(100svh - 24px); margin: auto; }
+    .page-heading { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 4px 16px; width: 100%; }
+    h1 { flex: 1 1 400px; margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); }
     p { color: #afc0d2; }
-    .intro { max-width: 760px; margin: 0 0 28px; }
-    .panel { width: 100%; overflow: hidden; border: 1px solid #304156; border-radius: 16px; background: #172334; }
-    .panel h2 { margin: 0; padding: 16px; font-size: 1rem; }
-    video { display: block; width: 100%; aspect-ratio: 16/9; background: #070d14; border-radius: 10px; object-fit: contain; }
-    .caption { margin: 10px 16px 0; font-size: .9rem; }
-    .replay-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 16px 0; }
+    .intro { flex-basis: 100%; margin: 0; font-size: .9rem; line-height: 1.3; }
+    .viewport-stage { display: flex; flex: 1 1 auto; min-height: 0; align-items: center; justify-content: center; }
+    .panel { display: flex; flex-direction: column; width: min(50vw, 100%); max-height: 100%; overflow: hidden; border: 1px solid #304156; border-radius: 16px; background: #172334; }
+    .panel h2 { margin: 0; padding: 10px 14px; font-size: 1rem; }
+    video { display: block; flex: 1 1 auto; width: 100%; min-height: 0; aspect-ratio: 16/9; background: #070d14; border-radius: 10px; object-fit: contain; }
+    .caption { margin: 6px 14px 0; font-size: .85rem; }
+    .replay-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 14px 0; }
     .replay-controls[hidden] { display: none; }
     .replay-controls label { display: flex; gap: 10px; align-items: center; color: #edf3fa; }
     .replay-controls input { width: 130px; accent-color: #4a9eff; }
-    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 16px 16px; }
-    button { padding: 11px 18px; border: 0; border-radius: 9px; background: #4a9eff; color: #081321; font: inherit; font-weight: 700; cursor: pointer; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 14px 14px; }
+    button { padding: 8px 12px; border: 0; border-radius: 9px; background: #4a9eff; color: #081321; font: inherit; font-weight: 700; cursor: pointer; }
     button.secondary { background: #304156; color: #edf3fa; }
     button:disabled { opacity: .45; cursor: not-allowed; }
     button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
-    .status { min-height: 24px; color: #c7d8ea; }
-    .stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
-    .stat { flex: 1 1 150px; padding: 14px 18px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
-    .stat dt { color: #afc0d2; font-size: .85rem; }
-    .stat dd { margin: 2px 0 0; font-size: 1.45rem; font-weight: 700; }
-    .details { max-width: 800px; margin-top: 24px; font-size: .92rem; }
+    .status { min-height: 24px; margin: 0; color: #c7d8ea; font-size: .88rem; }
+    .stats { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0; }
+    .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
+    .stat dt { color: #afc0d2; font-size: .78rem; }
+    .stat dd { margin: 2px 0 0; font-size: 1.1rem; font-weight: 700; }
+    .details { flex: 0 0 auto; max-width: 100%; margin: 0; font-size: .78rem; line-height: 1.3; }
     code { color: #b6dcff; }
-    @media (max-width: 680px) { body { padding: 20px 12px; } }
+    @media (max-width: 680px) { body { padding-inline: 12px; } .panel { width: 100%; } .intro { display: none; } }
+    @media (max-height: 620px) { main { height: auto; min-height: calc(100svh - 24px); } .viewport-stage { flex: 0 0 auto; } .panel { max-height: none; } }
   </style>
 </head>
 <body>
 <main>
-  <h1>Chunked camera recorder</h1>
-  <p class="intro">Record camera video and microphone audio as separate, roughly five-second chunks. After recording stops, replay matching video and audio chunks in the same player. Everything stays in this browser tab until you save it.</p>
-
-  <section class="panel" aria-label="Camera and replay">
-    <h2>Camera and replay</h2>
-    <video id="liveVideo" autoplay muted playsinline></video>
-    <p id="playerCaption" class="caption">Live preview appears here when recording starts.</p>
-    <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
-      <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
-      <button id="muteReplayButton" type="button" class="secondary" aria-pressed="false">Mute audio</button>
-      <label for="replayVolume">Volume <input id="replayVolume" type="range" min="0" max="100" value="100"></label>
-    </div>
-    <div class="controls">
-      <button id="startButton" type="button">Start recording</button>
-      <button id="stopButton" type="button" class="secondary" disabled>Stop recording</button>
-      <button id="replayButton" type="button" class="secondary" disabled>Replay video + audio</button>
-      <button id="saveButton" type="button" class="secondary" disabled>Save video file</button>
-    </div>
-  </section>
-  <p id="status" class="status" role="status" aria-live="polite">Ready. Camera and microphone permission is needed.</p>
+  <div class="page-heading">
+    <h1>Chunked camera recorder</h1>
+    <p id="status" class="status" role="status" aria-live="polite">Ready. Camera and microphone permission is needed.</p>
+    <p class="intro">Record camera video and microphone audio as separate, roughly five-second chunks. After recording stops, replay matching video and audio chunks in the same player. Everything stays in this browser tab until you save it.</p>
+  </div>
+  <div class="viewport-stage">
+    <section class="panel" aria-label="Camera and replay">
+      <h2>Camera and replay</h2>
+      <video id="liveVideo" autoplay muted playsinline></video>
+      <p id="playerCaption" class="caption">Live preview appears here when recording starts.</p>
+      <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
+        <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
+        <button id="muteReplayButton" type="button" class="secondary" aria-pressed="false">Mute audio</button>
+        <label for="replayVolume">Volume <input id="replayVolume" type="range" min="0" max="100" value="100"></label>
+      </div>
+      <div class="controls">
+        <button id="startButton" type="button">Start recording</button>
+        <button id="stopButton" type="button" class="secondary" disabled>Stop recording</button>
+        <button id="replayButton" type="button" class="secondary" disabled>Replay video + audio</button>
+        <button id="saveButton" type="button" class="secondary" disabled>Save video file</button>
+      </div>
+    </section>
+  </div>
 
   <dl class="stats">
     <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
