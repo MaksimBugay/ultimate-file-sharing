@@ -178,15 +178,22 @@
     fileMimeTypes[kind] = recorder.mimeType || mimeType || '';
   }
 
+  function stopSegment(segment) {
+    clearTimeout(segment.timer);
+    if (segment.recorder.state === 'inactive') return;
+    segment.endMs = Math.round(performance.now() - startedAt);
+    segment.recorder.stop();
+  }
+
   function startSegment(kind, stream, mimeType) {
     if (!recording) return;
     const options = mimeType ? { mimeType } : undefined;
     const recorder = new MediaRecorder(stream, options);
     const parts = [];
-    const segmentStart = performance.now();
+    const startMs = Math.round(performance.now() - startedAt);
     let resolveDone;
     const done = new Promise(resolve => { resolveDone = resolve; });
-    const segment = { recorder, timer: null, done };
+    const segment = { recorder, timer: null, done, startMs, endMs: null };
     active[kind] = segment;
 
     recorder.addEventListener('dataavailable', event => {
@@ -201,10 +208,12 @@
       if (active[kind] === segment) active[kind] = null;
       const blob = new Blob(parts, { type: recorder.mimeType || mimeType || parts[0]?.type || '' });
       if (blob.size) {
+        const endMs = segment.endMs ?? Math.round(performance.now() - startedAt);
         const chunk = {
           index: chunks[kind].length,
-          startMs: Math.round(segmentStart - startedAt),
-          durationMs: Math.round(performance.now() - segmentStart),
+          startMs,
+          endMs,
+          durationMs: endMs - startMs,
           blob
         };
         chunks[kind].push(chunk);
@@ -220,9 +229,7 @@
       }
     });
     recorder.start();
-    segment.timer = setTimeout(() => {
-      if (recorder.state === 'recording') recorder.stop();
-    }, CHUNK_MS);
+    segment.timer = setTimeout(() => stopSegment(segment), CHUNK_MS);
   }
 
   async function startRecording() {
@@ -266,8 +273,8 @@
       for (const kind of ['video', 'audio']) {
         for (const current of [active[kind], wholeRecording[kind]]) {
           if (!current) continue;
-          clearTimeout(current.timer);
-          if (current.recorder.state !== 'inactive') current.recorder.stop();
+          if (current === active[kind]) stopSegment(current);
+          else if (current.recorder.state !== 'inactive') current.recorder.stop();
         }
       }
       mediaStream?.getTracks().forEach(track => track.stop());
@@ -295,9 +302,9 @@
       for (const kind of ['video', 'audio']) {
         for (const current of [active[kind], wholeRecording[kind]]) {
           if (!current) continue;
-          clearTimeout(current.timer);
           finishing.push(current.done);
-          if (current.recorder.state !== 'inactive') current.recorder.stop();
+          if (current === active[kind]) stopSegment(current);
+          else if (current.recorder.state !== 'inactive') current.recorder.stop();
         }
       }
       await Promise.all(finishing);
@@ -436,7 +443,9 @@
     recording = false;
     for (const kind of ['video', 'audio']) {
       for (const current of [active[kind], wholeRecording[kind]]) {
-        if (current?.recorder.state === 'recording') current.recorder.stop();
+        if (!current) continue;
+        if (current === active[kind]) stopSegment(current);
+        else if (current.recorder.state === 'recording') current.recorder.stop();
       }
     }
     mediaStream?.getTracks().forEach(track => track.stop());
