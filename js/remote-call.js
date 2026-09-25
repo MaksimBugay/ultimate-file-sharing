@@ -55,8 +55,9 @@
   let micSaving = false;
   let saveStage = 'video';
   let baseName = '';
-  let storedBytes = 0;
   let player = null;
+  let recorderSession = null;
+  let localLink = null;
   let cameraTrack = null;
   let cameraActive = false;
   let cameraBusy = false;
@@ -65,13 +66,6 @@
   let canvasContext = null;
   let canvasStream = null;
   let drawTimer = null;
-  const recorders = { audio: null, video: null };
-  const chunks = { audio: [], video: [] };
-  const mimeTypes = { audio: '', video: '' };
-  const lastEndMs = { audio: 0, video: 0 };
-  const nextSequence = { audio: 0, video: 0 };
-  const conversionTail = { audio: Promise.resolve(), video: Promise.resolve() };
-  const mediaWindows = new Map();
   const pcmFrames = [];
   let pcmSampleRate = 0;
 
@@ -92,11 +86,12 @@
   }
 
   function updateStats() {
-    ui.count.textContent = `${chunks.audio.length} / ${chunks.video.length}`;
-    ui.size.textContent = `${(storedBytes / 1048576).toFixed(1)} MB`;
+    const chunks = recorderSession?.chunks;
+    ui.count.textContent = `${chunks?.audio.length || 0} / ${chunks?.video.length || 0}`;
+    ui.size.textContent = `${((recorderSession?.storedBytes || 0) / 1048576).toFixed(1)} MB`;
     ui.cameraEnabled.disabled = busy || cameraBusy || !!stoppingPromise;
-    ui.replay.disabled = busy || recording || !finished || !chunks.audio.length || !chunks.video.length;
-    ui.save.disabled = busy || !finished || saveStage === 'done' || !chunks[saveStage]?.length;
+    ui.replay.disabled = busy || recording || !finished || !chunks?.audio.length || !chunks?.video.length;
+    ui.save.disabled = busy || !finished || saveStage === 'done' || !chunks?.[saveStage]?.length;
     updateMicButton();
   }
 
@@ -112,79 +107,163 @@
     return track;
   }
 
-  function addToWindow(chunk) {
-    const index = Math.floor(chunk.startTime / WINDOW_MS);
-    let window = mediaWindows.get(index);
-    if (!window) {
-      window = {
-        index,
-        startTime: index * WINDOW_MS,
-        endTime: (index + 1) * WINDOW_MS,
-        duration: WINDOW_MS,
-        audio: null,
-        video: null
+  // Temporary local transport. Replace only this class when WebSocket delivery is added.
+  class LocalChunkLink {
+    constructor(receiver) {
+      this.receiver = receiver;
+      this.tracks = {
+        audio: { queue: [], ended: false, notified: false },
+        video: { queue: [], ended: false, notified: false }
       };
-      mediaWindows.set(index, window);
+      this.closed = false;
+      this.pumpTimer = setInterval(() => this.flush(), 50);
     }
-    const kind = chunk.mediaType.toLowerCase();
-    if (!window[kind]) window[kind] = chunk;
-    else {
-      // MediaRecorder timeslices are approximate. Retain extra chunks without changing their timestamps.
-      (window.extra ||= { audio: [], video: [] })[kind].push(chunk);
-    }
-    const oldestAllowed = index - 30;
-    for (const key of mediaWindows.keys()) {
-      if (key < oldestAllowed) mediaWindows.delete(key);
-    }
-  }
 
-  function onRecorderData(kind, event) {
-    if (!event.data?.size) return;
-    const index = nextSequence[kind]++;
-    const endTime = Math.max(lastEndMs[kind] + 1, relativeMs());
-    const startTime = lastEndMs[kind];
-    lastEndMs[kind] = endTime;
-    const blob = event.data;
-    conversionTail[kind] = conversionTail[kind].then(async () => {
-      const binary = new Uint8Array(await blob.arrayBuffer());
-      const chunk = {
-        index,
-        mediaType: kind.toUpperCase(),
-        startTime,
-        endTime,
-        duration: endTime - startTime,
-        binary
-      };
-      chunks[kind].push(chunk);
-      addToWindow(chunk);
-      storedBytes += binary.byteLength;
-      updateStats();
-      if (recording && storedBytes >= MAX_RECORDING_BYTES) {
-        setStatus('Recording reached the 512 MB in-memory limit. Finishing…');
-        void stopRecording();
+    publishChunk(chunk) {
+      const kind = chunk.mediaType.toLowerCase();
+      if (!this.tracks[kind] || this.closed) return;
+      this.tracks[kind].queue.push(chunk);
+      this.flush();
+    }
+
+    finishTrack(kind) {
+      if (!this.tracks[kind] || this.closed) return;
+      this.tracks[kind].ended = true;
+      this.flush();
+    }
+
+    flush() {
+      if (this.closed || this.receiver.closed) return;
+      try {
+        for (const kind of ['audio', 'video']) {
+          const track = this.tracks[kind];
+          let sent = 0;
+          while (sent < track.queue.length && this.receiver.receiveChunk(track.queue[sent])) sent++;
+          if (sent) track.queue.splice(0, sent);
+          if (track.ended && !track.queue.length && !track.notified) {
+            track.notified = true;
+            this.receiver.finishTrack(kind);
+          }
+        }
+      } catch (error) {
+        setStatus(`Local chunk delivery failed: ${error.message}`, true);
+        this.close();
       }
-    }).catch(error => {
-      setStatus(`Could not store ${kind} chunk: ${error.message}`, true);
-      if (recording) void stopRecording();
-    });
+    }
+
+    close() {
+      if (this.closed) return;
+      this.closed = true;
+      clearInterval(this.pumpTimer);
+      for (const track of Object.values(this.tracks)) track.queue.length = 0;
+    }
   }
 
-  function startRecorder(kind, track, mimeType) {
-    const recorder = new MediaRecorder(new MediaStream([track]), {
-      mimeType,
-      ...(kind === 'audio' ? { audioBitsPerSecond: 64000 } : { videoBitsPerSecond: 1500000 })
-    });
-    let resolveStopped;
-    const stopped = new Promise(resolve => { resolveStopped = resolve; });
-    recorder.addEventListener('dataavailable', event => onRecorderData(kind, event));
-    recorder.addEventListener('error', event => {
-      setStatus(`${kind} recorder failed: ${event.error?.message || 'unknown error'}`, true);
-      if (recording) void stopRecording();
-    });
-    recorder.addEventListener('stop', resolveStopped, { once: true });
-    recorder.start(CHUNK_MS);
-    recorders[kind] = { recorder, stopped };
-    mimeTypes[kind] = recorder.mimeType || mimeType;
+  class CallRecorder {
+    constructor({ clock, onUpdate, onLimit, onError }) {
+      this.clock = clock;
+      this.onUpdate = onUpdate;
+      this.onLimit = onLimit;
+      this.onError = onError;
+      this.publisher = null;
+      this.recorders = { audio: null, video: null };
+      this.chunks = { audio: [], video: [] };
+      this.mimeTypes = { audio: '', video: '' };
+      this.lastEndMs = { audio: 0, video: 0 };
+      this.nextSequence = { audio: 0, video: 0 };
+      this.conversionTail = { audio: Promise.resolve(), video: Promise.resolve() };
+      this.mediaWindows = new Map();
+      this.storedBytes = 0;
+    }
+
+    setPublisher(publisher) {
+      this.publisher = publisher;
+    }
+
+    publishChunk(chunk) {
+      // Outbound boundary: a WebSocket publisher can replace this local publisher later.
+      this.publisher?.publishChunk(chunk);
+    }
+
+    addToWindow(chunk) {
+      const index = Math.floor(chunk.startTime / WINDOW_MS);
+      let window = this.mediaWindows.get(index);
+      if (!window) {
+        window = {
+          index,
+          startTime: index * WINDOW_MS,
+          endTime: (index + 1) * WINDOW_MS,
+          duration: WINDOW_MS,
+          audio: null,
+          video: null
+        };
+        this.mediaWindows.set(index, window);
+      }
+      const kind = chunk.mediaType.toLowerCase();
+      if (!window[kind]) window[kind] = chunk;
+      else (window.extra ||= { audio: [], video: [] })[kind].push(chunk);
+      const oldestAllowed = index - 30;
+      for (const key of this.mediaWindows.keys()) {
+        if (key < oldestAllowed) this.mediaWindows.delete(key);
+      }
+    }
+
+    onData(kind, event) {
+      if (!event.data?.size) return;
+      const index = this.nextSequence[kind]++;
+      const endTime = Math.max(this.lastEndMs[kind] + 1, this.clock());
+      const startTime = this.lastEndMs[kind];
+      this.lastEndMs[kind] = endTime;
+      const blob = event.data;
+      this.conversionTail[kind] = this.conversionTail[kind].then(async () => {
+        const binary = new Uint8Array(await blob.arrayBuffer());
+        const chunk = {
+          index,
+          mediaType: kind.toUpperCase(),
+          mimeType: this.mimeTypes[kind],
+          startTime,
+          endTime,
+          duration: endTime - startTime,
+          binary
+        };
+        this.chunks[kind].push(chunk);
+        this.addToWindow(chunk);
+        this.storedBytes += binary.byteLength;
+        this.publishChunk(chunk);
+        this.onUpdate();
+        if (this.storedBytes >= MAX_RECORDING_BYTES) this.onLimit();
+      }).catch(error => this.onError(kind, error));
+    }
+
+    start(kind, track, mimeType) {
+      const recorder = new MediaRecorder(new MediaStream([track]), {
+        mimeType,
+        ...(kind === 'audio' ? { audioBitsPerSecond: 64000 } : { videoBitsPerSecond: 1500000 })
+      });
+      let resolveStopped;
+      const stopped = new Promise(resolve => { resolveStopped = resolve; });
+      recorder.addEventListener('dataavailable', event => this.onData(kind, event));
+      recorder.addEventListener('error', event => {
+        this.onError(kind, event.error || new Error('unknown recorder error'));
+      });
+      recorder.addEventListener('stop', resolveStopped, { once: true });
+      recorder.start(CHUNK_MS);
+      this.recorders[kind] = { recorder, stopped };
+      this.mimeTypes[kind] = recorder.mimeType || mimeType;
+    }
+
+    stopImmediately() {
+      for (const current of Object.values(this.recorders)) {
+        if (current && current.recorder.state !== 'inactive') current.recorder.stop();
+      }
+    }
+
+    async stop() {
+      const done = Object.values(this.recorders).filter(Boolean).map(current => current.stopped);
+      this.stopImmediately();
+      await Promise.all(done);
+      await Promise.all([this.conversionTail.audio, this.conversionTail.video]);
+    }
   }
 
   function drawVideoFrame() {
@@ -472,12 +551,9 @@
   }
 
   class MseReplayPlayer {
-    constructor(video, fragments, types, { live = false, playAfter = 0 } = {}) {
+    constructor(video, types, { playAfter = 0 } = {}) {
       this.video = video;
-      this.localFragments = fragments;
-      this.localIndex = { audio: 0, video: 0 };
       this.types = types;
-      this.live = live;
       this.playAfter = playAfter;
       this.inbox = {
         audio: { next: 0, pending: new Map(), bytes: 0, finished: false },
@@ -554,31 +630,8 @@
       this.progress();
     }
 
-    finishLive() {
-      this.live = false;
-      this.progress();
-    }
-
-    feedLocalChunks() {
-      if (!this.localFragments) return;
-      for (const kind of ['audio', 'video']) {
-        const source = this.localFragments[kind];
-        const queue = this.queues[kind];
-        let supplied = 0;
-        while (this.localIndex[kind] < source.length && supplied < 4
-          && queue.bufferedEnd() - this.video.currentTime < 12
-          && queue.queuedBytes < queue.maxQueuedBytes / 2) {
-          if (!this.ingestChunk(source[this.localIndex[kind]])) break;
-          this.localIndex[kind]++;
-          supplied++;
-        }
-        if (!this.live && this.localIndex[kind] === source.length) this.inbox[kind].finished = true;
-      }
-    }
-
     progress() {
       if (this.closed || !this.queues) return;
-      this.feedLocalChunks();
       this.flushOrdered('audio');
       this.flushOrdered('video');
       for (const queue of Object.values(this.queues)) {
@@ -706,22 +759,27 @@
   }
 
   function resetRecording() {
+    localLink?.close();
+    localLink = null;
     player?.close();
     player = null;
     stopVideoCapture();
     cameraBusy = false;
-    for (const kind of ['audio', 'video']) {
-      chunks[kind].length = 0;
-      recorders[kind] = null;
-      mimeTypes[kind] = '';
-      lastEndMs[kind] = 0;
-      nextSequence[kind] = 0;
-      conversionTail[kind] = Promise.resolve();
-    }
-    mediaWindows.clear();
+    recorderSession = new CallRecorder({
+      clock: relativeMs,
+      onUpdate: updateStats,
+      onLimit: () => {
+        if (!recording) return;
+        setStatus('Recording reached the 512 MB in-memory limit. Finishing…');
+        void stopRecording();
+      },
+      onError: (kind, error) => {
+        setStatus(`${kind} recorder failed: ${error.message}`, true);
+        if (recording) void stopRecording();
+      }
+    });
     pcmFrames.length = 0;
     pcmSampleRate = 0;
-    storedBytes = 0;
     finished = false;
     saveStage = 'video';
     ui.save.textContent = 'Save video file';
@@ -771,21 +829,25 @@
       baseName = `recording-${new Date().toISOString().replace(/[:.]/g, '-')}`;
       startedAt = performance.now();
       recording = true;
-      startRecorder('audio', audioTrack, audioMime);
-      startRecorder('video', canvasStream.getVideoTracks()[0], videoMime);
       ui.video.muted = false;
       ui.video.volume = Number(ui.volume.value) / 100;
       ui.controls.hidden = false;
-      player = new MseReplayPlayer(ui.video, chunks, mimeTypes,
-        { live: true, playAfter: startedAt + REPLAY_DELAY_MS });
+      player = new MseReplayPlayer(ui.video, { audio: audioMime, video: videoMime },
+        { playAfter: startedAt + REPLAY_DELAY_MS });
+      localLink = new LocalChunkLink(player);
+      recorderSession.setPublisher(localLink);
+      recorderSession.start('audio', audioTrack, audioMime);
+      recorderSession.start('video', canvasStream.getVideoTracks()[0], videoMime);
       updateReplayControls();
       elapsedTimer = setInterval(updateElapsed, 250);
       ui.stop.disabled = false;
       setStatus('Recording continuous audio and video streams. Delayed replay begins in five seconds.');
     } catch (error) {
       recording = false;
-      await stopRecorders();
+      await recorderSession?.stop();
       await stopPcmCapture();
+      localLink?.close();
+      localLink = null;
       player?.close();
       player = null;
       stopVideoCapture();
@@ -801,18 +863,6 @@
     }
   }
 
-  async function stopRecorders() {
-    const done = [];
-    for (const kind of ['audio', 'video']) {
-      const current = recorders[kind];
-      if (!current) continue;
-      done.push(current.stopped);
-      if (current.recorder.state !== 'inactive') current.recorder.stop();
-    }
-    await Promise.all(done);
-    await Promise.all([conversionTail.audio, conversionTail.video]);
-  }
-
   function stopRecording() {
     if (stoppingPromise) return stoppingPromise;
     if (!recording) return Promise.resolve();
@@ -823,16 +873,17 @@
     setStatus('Finishing the audio and video streams…');
     stoppingPromise = (async () => {
       try {
-        await stopRecorders();
-        player?.finishLive();
+        await recorderSession.stop();
+        localLink?.finishTrack('audio');
+        localLink?.finishTrack('video');
         await stopPcmCapture();
         pcmFrames.length = 0;
         finished = true;
         ui.cameraCaption.textContent = 'Recording stopped.';
-        if (!player || player.closed) ui.caption.textContent = chunks.audio.length && chunks.video.length
+        if (!player || player.closed) ui.caption.textContent = recorderSession.chunks.audio.length && recorderSession.chunks.video.length
           ? 'Recording stopped. Press Replay from start to watch it.'
           : 'Recording stopped without both audio and video data.';
-        setStatus(`Recording stopped. Stored ${chunks.audio.length} audio and ${chunks.video.length} video chunks.`);
+        setStatus(`Recording stopped. Stored ${recorderSession.chunks.audio.length} audio and ${recorderSession.chunks.video.length} video chunks.`);
       } catch (error) {
         setStatus(`Could not finish recording: ${error.message}`, true);
       } finally {
@@ -893,19 +944,27 @@
   }
 
   function replayRecording() {
-    if (recording || busy || !finished || !chunks.audio.length || !chunks.video.length) return;
+    const savedChunks = recorderSession?.chunks;
+    if (recording || busy || !finished || !savedChunks?.audio.length || !savedChunks?.video.length) return;
+    localLink?.close();
     player?.close();
     ui.video.srcObject = null;
     ui.video.muted = false;
     ui.video.volume = Number(ui.volume.value) / 100;
     ui.controls.hidden = false;
     ui.caption.textContent = 'Preparing separate audio and video buffers…';
-    player = new MseReplayPlayer(ui.video, chunks, mimeTypes);
+    player = new MseReplayPlayer(ui.video, recorderSession.mimeTypes);
+    localLink = new LocalChunkLink(player);
+    for (const kind of ['audio', 'video']) {
+      for (const chunk of savedChunks[kind]) localLink.publishChunk(chunk);
+      localLink.finishTrack(kind);
+    }
     updateReplayControls();
   }
 
   async function saveCurrentTrack() {
-    if (busy || !finished || saveStage === 'done' || !chunks[saveStage].length) return;
+    const savedChunks = recorderSession?.chunks;
+    if (busy || !finished || saveStage === 'done' || !savedChunks?.[saveStage]?.length) return;
     const kind = saveStage;
     const fileName = `${baseName}-${kind}.webm`;
     busy = true;
@@ -917,7 +976,8 @@
             types: [{ description: `${kind} recording`, accept: { [`${kind}/webm`]: ['.webm'] } }]
           })
         : null;
-      const blob = new Blob(chunks[kind].map(chunk => chunk.binary), { type: mimeTypes[kind] });
+      const blob = new Blob(savedChunks[kind].map(chunk => chunk.binary),
+        { type: recorderSession.mimeTypes[kind] });
       if (handle) {
         const writable = await handle.createWritable();
         await writable.write(blob);
@@ -971,9 +1031,8 @@
   window.addEventListener('pagehide', () => {
     recording = false;
     clearInterval(elapsedTimer);
-    for (const current of Object.values(recorders)) {
-      if (current && current.recorder.state !== 'inactive') current.recorder.stop();
-    }
+    recorderSession?.stopImmediately();
+    localLink?.close();
     stopVideoCapture();
     mediaStream?.getTracks().forEach(track => track.stop());
     player?.close();
