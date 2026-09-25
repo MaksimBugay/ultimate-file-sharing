@@ -107,7 +107,7 @@
     return track;
   }
 
-  // Temporary local transport. Replace only this class when WebSocket delivery is added.
+  // Local delivery between the recorder and the receiver.
   class LocalChunkLink {
     constructor(receiver) {
       this.receiver = receiver;
@@ -181,7 +181,7 @@
     }
 
     publishChunk(chunk) {
-      // Outbound boundary: a WebSocket publisher can replace this local publisher later.
+      // Live recording and replay from start use the same receiver entry point.
       this.publisher?.publishChunk(chunk);
     }
 
@@ -486,9 +486,13 @@
       this.currentOperation = null;
       this.closed = false;
       this.onUpdateEnd = () => {
-        if (this.currentOperation?.type === 'append') this.queuedBytes -= this.currentOperation.bytes.byteLength;
-        if (this.currentOperation?.type === 'remove') this.trimQueued = false;
+        const completed = this.currentOperation;
         this.currentOperation = null;
+        if (completed?.type === 'append') {
+          this.queuedBytes -= completed.bytes.byteLength;
+          completed.onAppended();
+        }
+        if (completed?.type === 'remove') this.trimQueued = false;
         this.fill();
         this.pump();
         this.onProgress();
@@ -503,9 +507,9 @@
       return ranges.length ? ranges.end(ranges.length - 1) : 0;
     }
 
-    enqueue(bytes) {
+    enqueue(bytes, onAppended) {
       if (this.closed || this.queuedBytes + bytes.byteLength > this.maxQueuedBytes) return false;
-      this.fragments.push(bytes);
+      this.fragments.push({ bytes, onAppended });
       this.queuedBytes += bytes.byteLength;
       return true;
     }
@@ -514,7 +518,7 @@
       if (this.closed) return;
       const ahead = this.bufferedEnd() - this.video.currentTime;
       if (ahead < 12 && this.operations.length < 4 && this.fragments.length) {
-        this.operations.push({ type: 'append', bytes: this.fragments.shift() });
+        this.operations.push({ type: 'append', ...this.fragments.shift() });
       }
       const ranges = this.buffer.buffered;
       const cutoff = this.video.currentTime - 20;
@@ -618,9 +622,10 @@
       const inbox = this.inbox[kind];
       while (inbox.pending.has(inbox.next)) {
         const chunk = inbox.pending.get(inbox.next);
-        if (!queue.enqueue(chunk.binary)) break;
-        inbox.pending.delete(inbox.next++);
-        inbox.bytes -= chunk.binary.byteLength;
+        if (!queue.enqueue(chunk.binary, () => {
+          if (inbox.pending.delete(chunk.index)) inbox.bytes -= chunk.binary.byteLength;
+        })) break;
+        inbox.next++;
       }
     }
 
@@ -955,8 +960,9 @@
     ui.caption.textContent = 'Preparing separate audio and video buffers…';
     player = new MseReplayPlayer(ui.video, recorderSession.mimeTypes);
     localLink = new LocalChunkLink(player);
+    recorderSession.setPublisher(localLink);
     for (const kind of ['audio', 'video']) {
-      for (const chunk of savedChunks[kind]) localLink.publishChunk(chunk);
+      for (const chunk of savedChunks[kind]) recorderSession.publishChunk(chunk);
       localLink.finishTrack(kind);
     }
     updateReplayControls();
