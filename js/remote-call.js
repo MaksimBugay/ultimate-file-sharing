@@ -8,12 +8,15 @@
     ? Math.round(requestedChunkSeconds * 1000) : 1000;
   const WINDOW_MS = CHUNK_MS;
   const INITIAL_COMMON_BUFFER_SECONDS = 0.5;
+  const REPLAY_DELAY_MS = 5000;
   const ECHO_START_MS = 12000;
   const ECHO_END_MS = 5000;
   const MAX_RECORDING_BYTES = 512 * 1048576;
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const ui = {
-    video: document.getElementById('liveVideo'),
+    camera: document.getElementById('liveVideo'),
+    video: document.getElementById('replayVideo'),
+    cameraCaption: document.getElementById('cameraCaption'),
     cameraEnabled: document.getElementById('cameraEnabled'),
     caption: document.getElementById('playerCaption'),
     start: document.getElementById('startButton'),
@@ -211,9 +214,9 @@
     canvasStream = canvas.captureStream(30);
     if (!canvasStream.getVideoTracks()[0]) throw new Error('Canvas video track is unavailable.');
     drawTimer = setInterval(drawVideoFrame, 1000 / 30);
-    ui.video.muted = true;
-    ui.video.srcObject = canvasStream;
-    ui.video.play().catch(() => {});
+    ui.camera.muted = true;
+    ui.camera.srcObject = canvasStream;
+    ui.camera.play().catch(() => {});
   }
 
   async function enableCameraTrack(track) {
@@ -469,11 +472,13 @@
   }
 
   class MseReplayPlayer {
-    constructor(video, fragments, types) {
+    constructor(video, fragments, types, { live = false, playAfter = 0 } = {}) {
       this.video = video;
       this.localFragments = fragments;
       this.localIndex = { audio: 0, video: 0 };
       this.types = types;
+      this.live = live;
+      this.playAfter = playAfter;
       this.inbox = {
         audio: { next: 0, pending: new Map(), bytes: 0, finished: false },
         video: { next: 0, pending: new Map(), bytes: 0, finished: false }
@@ -549,6 +554,11 @@
       this.progress();
     }
 
+    finishLive() {
+      this.live = false;
+      this.progress();
+    }
+
     feedLocalChunks() {
       if (!this.localFragments) return;
       for (const kind of ['audio', 'video']) {
@@ -562,7 +572,7 @@
           this.localIndex[kind]++;
           supplied++;
         }
-        if (this.localIndex[kind] === source.length) this.inbox[kind].finished = true;
+        if (!this.live && this.localIndex[kind] === source.length) this.inbox[kind].finished = true;
       }
     }
 
@@ -582,9 +592,13 @@
       const fullyAppended = Object.values(this.inbox).every(inbox => inbox.finished && !inbox.pending.size)
         && this.queues.audio.idle() && this.queues.video.idle();
       const sharedEnd = Math.min(audioEnd, videoEnd);
-      const initialRange = !this.started && findCommonBufferedRange(audio, video,
+      const waitingForDelay = !this.started && performance.now() < this.playAfter;
+      const initialRange = !this.started && !waitingForDelay && findCommonBufferedRange(audio, video,
         fullyAppended ? 0.05 : INITIAL_COMMON_BUFFER_SECONDS);
       ui.diagnostics.textContent = `MSE · audio ${formatRanges(audio)} · video ${formatRanges(video)} · playhead ${this.video.currentTime.toFixed(2)}s · buffered end gap ${Math.abs(audioEnd - videoEnd).toFixed(2)}s${this.syncHold ? ' · waiting for both streams' : ''}`;
+      if (waitingForDelay) {
+        ui.caption.textContent = `Delayed replay starts in ${Math.ceil((this.playAfter - performance.now()) / 1000)}s.`;
+      }
       if (initialRange) {
         this.started = true;
         this.video.currentTime = initialRange.start;
@@ -609,7 +623,7 @@
         }
         updateReplayControls();
       }
-      if (this.mediaSource.readyState === 'open' && fullyAppended) {
+      if (this.mediaSource.readyState === 'open' && fullyAppended && !waitingForDelay) {
         if (!this.started) {
           this.fail(new Error('Audio and video MSE timelines have no overlapping buffered range'));
           return;
@@ -712,6 +726,8 @@
     saveStage = 'video';
     ui.save.textContent = 'Save video file';
     ui.controls.hidden = true;
+    ui.cameraCaption.textContent = 'Live preview appears here when recording starts.';
+    ui.caption.textContent = 'Replay begins five seconds after recording starts.';
     ui.diagnostics.textContent = 'Audio and video buffer diagnostics appear during replay.';
     updateStats();
   }
@@ -749,7 +765,7 @@
       await startPcmCapture(audioTrack);
       startVideoCapture();
       if (initialCameraTrack) await enableCameraTrack(initialCameraTrack);
-      ui.caption.textContent = cameraActive
+      ui.cameraCaption.textContent = cameraActive
         ? 'Live camera preview, with audio muted to prevent feedback.'
         : 'Camera off. Black video frames and microphone audio are recording.';
       baseName = `recording-${new Date().toISOString().replace(/[:.]/g, '-')}`;
@@ -757,19 +773,27 @@
       recording = true;
       startRecorder('audio', audioTrack, audioMime);
       startRecorder('video', canvasStream.getVideoTracks()[0], videoMime);
+      ui.video.muted = false;
+      ui.video.volume = Number(ui.volume.value) / 100;
+      ui.controls.hidden = false;
+      player = new MseReplayPlayer(ui.video, chunks, mimeTypes,
+        { live: true, playAfter: startedAt + REPLAY_DELAY_MS });
+      updateReplayControls();
       elapsedTimer = setInterval(updateElapsed, 250);
       ui.stop.disabled = false;
-      setStatus('Recording continuous audio and video streams. Camera-off periods contain black frames.');
+      setStatus('Recording continuous audio and video streams. Delayed replay begins in five seconds.');
     } catch (error) {
       recording = false;
       await stopRecorders();
       await stopPcmCapture();
+      player?.close();
+      player = null;
       stopVideoCapture();
       mediaStream?.getTracks().forEach(track => track.stop());
       mediaStream = null;
-      ui.video.srcObject = null;
+      ui.camera.srcObject = null;
       ui.start.disabled = false;
-      ui.caption.textContent = 'Camera preview unavailable.';
+      ui.cameraCaption.textContent = 'Camera preview unavailable.';
       setStatus(`Could not start recording: ${error.message}`, true);
     } finally {
       busy = false;
@@ -800,11 +824,13 @@
     stoppingPromise = (async () => {
       try {
         await stopRecorders();
+        player?.finishLive();
         await stopPcmCapture();
         pcmFrames.length = 0;
         finished = true;
-        ui.caption.textContent = chunks.audio.length && chunks.video.length
-          ? 'Recording stopped. Press Replay video + audio to watch it.'
+        ui.cameraCaption.textContent = 'Recording stopped.';
+        if (!player || player.closed) ui.caption.textContent = chunks.audio.length && chunks.video.length
+          ? 'Recording stopped. Press Replay from start to watch it.'
           : 'Recording stopped without both audio and video data.';
         setStatus(`Recording stopped. Stored ${chunks.audio.length} audio and ${chunks.video.length} video chunks.`);
       } catch (error) {
@@ -813,7 +839,7 @@
         stopVideoCapture();
         mediaStream?.getTracks().forEach(track => track.stop());
         mediaStream = null;
-        ui.video.srcObject = null;
+        ui.camera.srcObject = null;
         ui.start.disabled = false;
         stoppingPromise = null;
         updateStats();
@@ -832,7 +858,7 @@
     try {
       if (!ui.cameraEnabled.checked) {
         disableCameraTrack();
-        ui.caption.textContent = 'Camera off. Black video frames and microphone audio continue.';
+        ui.cameraCaption.textContent = 'Camera off. Black video frames and microphone audio continue.';
         setStatus('Camera capture stopped. Continuous video recording now contains black frames.');
       } else {
         const cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -851,7 +877,7 @@
           return;
         }
         mediaStream.addTrack(requestedTrack);
-        ui.caption.textContent = 'Camera on. Live frames are recording with the same video recorder.';
+        ui.cameraCaption.textContent = 'Camera on. Live frames are recording with the same video recorder.';
         setStatus('Camera capture resumed without restarting the video stream.');
       }
     } catch (error) {
@@ -937,7 +963,7 @@
   ui.video.addEventListener('play', updateReplayControls);
   ui.video.addEventListener('pause', updateReplayControls);
   ui.video.addEventListener('ended', () => {
-    if (player && !player.closed) ui.caption.textContent = 'Replay finished. Press Replay video + audio to watch again.';
+    if (player && !player.closed) ui.caption.textContent = 'Replay finished. Press Replay from start to watch again.';
   });
   ui.video.addEventListener('error', () => {
     if (player && !player.closed) player.fail(new Error(ui.video.error?.message || 'Media element error'));

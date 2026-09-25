@@ -9,15 +9,15 @@
     :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #0d1420; color: #edf3fa; }
     * { box-sizing: border-box; }
     body { margin: 0; padding: 12px 20px; }
-    main { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 1100px; height: calc(100svh - 24px); margin: auto; }
+    main { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 1100px; min-height: calc(100svh - 24px); margin: auto; }
     .page-heading { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 4px 16px; width: 100%; }
     h1 { flex: 1 1 400px; margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); }
     p { color: #afc0d2; }
     .intro { flex-basis: 100%; margin: 0; font-size: .9rem; line-height: 1.3; }
-    .viewport-stage { display: flex; flex: 1 1 auto; min-height: 0; align-items: center; justify-content: center; }
-    .panel { display: flex; flex-direction: column; width: min(50vw, 100%); max-height: 100%; overflow: hidden; border: 1px solid #304156; border-radius: 16px; background: #172334; }
+    .viewport-stage { display: flex; gap: 12px; align-items: stretch; }
+    .panel { display: flex; flex: 1 1 0; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid #304156; border-radius: 16px; background: #172334; }
     .panel h2 { margin: 0; padding: 10px 14px; font-size: 1rem; }
-    video { display: block; flex: 1 1 auto; width: 100%; min-height: 0; aspect-ratio: 16/9; background: #070d14; border-radius: 10px; object-fit: contain; }
+    video { display: block; width: 100%; aspect-ratio: 16/9; background: #070d14; border-radius: 10px; object-fit: contain; }
     .caption { margin: 6px 14px 0; font-size: .85rem; }
     .replay-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 14px 0; }
     .replay-controls[hidden] { display: none; }
@@ -38,8 +38,7 @@
     .details { flex: 0 0 auto; max-width: 100%; margin: 0; font-size: .78rem; line-height: 1.3; }
     .diagnostics { flex: 0 0 auto; margin: 0; padding: 7px 10px; border: 1px solid #304156; border-radius: 10px; color: #afc0d2; font-size: .78rem; }
     code { color: #b6dcff; }
-    @media (max-width: 680px) { body { padding-inline: 12px; } .panel { width: 100%; } .intro { display: none; } }
-    @media (max-height: 620px) { main { height: auto; min-height: calc(100svh - 24px); } .viewport-stage { flex: 0 0 auto; } .panel { max-height: none; } }
+    @media (max-width: 680px) { body { padding-inline: 12px; } .viewport-stage { flex-direction: column; } .panel { flex-basis: auto; width: 100%; } .intro { display: none; } }
   </style>
 </head>
 <body>
@@ -47,25 +46,30 @@
   <div class="page-heading">
     <h1>Separate stream call recorder</h1>
     <p id="status" class="status" role="status" aria-live="polite">Ready. Microphone permission is needed; camera is optional.</p>
-    <p class="intro">Record microphone and video in separate continuous streams with roughly <span data-chunk-seconds>1</span>-second chunks. Turning the camera off records black video frames while audio continues. Replay stays synchronized in one player.</p>
+    <p class="intro">The left player shows the live camera. The right player automatically replays recorded audio and video chunks five seconds later. Turning the camera off records black video frames while audio continues. Chunk size is roughly <span data-chunk-seconds>1</span> second.</p>
   </div>
   <div class="viewport-stage">
-    <section class="panel" aria-label="Camera and replay">
-      <h2>Camera and replay</h2>
+    <section class="panel" aria-label="Live camera">
+      <h2>Live camera</h2>
       <video id="liveVideo" autoplay muted playsinline></video>
-      <p id="playerCaption" class="caption">Live preview appears here when recording starts.</p>
-      <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
-        <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
-        <button id="muteReplayButton" type="button" class="secondary" aria-pressed="false">Mute audio</button>
-        <label for="replayVolume">Volume <input id="replayVolume" type="range" min="0" max="100" value="100"></label>
-      </div>
+      <p id="cameraCaption" class="caption">Live preview appears here when recording starts.</p>
       <div class="controls">
         <label for="cameraEnabled"><input id="cameraEnabled" type="checkbox" checked> Camera on</label>
         <button id="startButton" type="button">Start recording</button>
         <button id="stopButton" type="button" class="secondary" disabled>Stop recording</button>
         <button id="saveRecentMicButton" type="button" class="secondary" disabled>Save audio from 12–5s ago</button>
-        <button id="replayButton" type="button" class="secondary" disabled>Replay video + audio</button>
+        <button id="replayButton" type="button" class="secondary" disabled>Replay from start</button>
         <button id="saveButton" type="button" class="secondary" disabled>Save video file</button>
+      </div>
+    </section>
+    <section class="panel" aria-label="Delayed chunk replay">
+      <h2>Delayed chunk replay</h2>
+      <video id="replayVideo" playsinline></video>
+      <p id="playerCaption" class="caption">Replay begins five seconds after recording starts.</p>
+      <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
+        <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
+        <button id="muteReplayButton" type="button" class="secondary" aria-pressed="false">Mute audio</button>
+        <label for="replayVolume">Volume <input id="replayVolume" type="range" min="0" max="100" value="100"></label>
       </div>
     </section>
   </div>
@@ -73,12 +77,13 @@
   <dl class="stats">
     <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
     <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
+    <div class="stat"><dt>Replay delay</dt><dd>5 s</dd></div>
     <div class="stat"><dt>Audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
     <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
   </dl>
 
   <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-  <p class="details">Turn Camera on off at any time to stop camera capture while the continuous video recorder produces black frames. Turning it back on resumes camera frames without restarting either recorder. Save audio from 12–5s ago creates a separate <code>.wav</code> microphone clip. Saving after recording creates one video-only <code>.webm</code> file and one audio-only <code>.webm</code> file. Replay uses one MediaSource with separate audio and video SourceBuffers. Chunk start and end times are milliseconds on a common monotonic clock. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+  <p class="details">Turn Camera on off at any time to stop camera capture while the continuous video recorder produces black frames. Turning it back on resumes camera frames without restarting either recorder. Delayed replay starts automatically while recording and uses one MediaSource with separate audio and video SourceBuffers. Save audio from 12–5s ago creates a separate <code>.wav</code> microphone clip. Saving after recording creates one video-only <code>.webm</code> file and one audio-only <code>.webm</code> file. Chunk start and end times are milliseconds on a common monotonic clock. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
 </main>
 <script src="js/remote-call.js" defer></script>
 </body>
