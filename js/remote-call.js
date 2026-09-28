@@ -789,13 +789,20 @@
     updateStats();
   }
 
+  async function acquireCameraStream(audio) {
+    const video = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } };
+    try {
+      return await navigator.mediaDevices.getUserMedia({ audio, video: { ...video, facingMode: { exact: 'user' } } });
+    } catch (error) {
+      if (error.name !== 'OverconstrainedError' || (error.constraint && error.constraint !== 'facingMode')) throw error;
+      return navigator.mediaDevices.getUserMedia({ audio, video });
+    }
+  }
+
   async function acquireMediaStream() {
     const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
     if (!cameraEnabled()) return navigator.mediaDevices.getUserMedia({ audio, video: false });
-    return navigator.mediaDevices.getUserMedia({
-      audio,
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }
-    }).catch(async () => {
+    return acquireCameraStream(audio).catch(async () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
       setCameraEnabled(false);
       return stream;
@@ -1266,10 +1273,7 @@
         updateCameraCaption();
         setStatus('Camera capture stopped. Continuous video recording now contains black frames.');
       } else {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }
-        });
+        const cameraStream = await acquireCameraStream(false);
         requestedTrack = requireTrack(cameraStream.getVideoTracks()[0], 'Camera track is unavailable.');
         if (!recording) {
           requestedTrack.stop();
