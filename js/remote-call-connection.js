@@ -11,6 +11,7 @@
   const connectionStatus = document.getElementById('connectionStatus');
   const connectionIndicator = document.getElementById('connectionIndicator');
   const nameInput = document.getElementById('callUserName');
+  const localHeading = document.getElementById('localName');
   const counterpartHeading = document.getElementById('counterpartName');
   const encryptionToggle = document.getElementById('encryptMedia');
   const extraEchoToggle = document.getElementById('extraEchoCancellation');
@@ -80,6 +81,7 @@
   encryptionToggle.checked = encryptionEnabled;
   encryptionModeStatus.textContent = `End-to-end encryption: ${encryptionEnabled ? 'on' : 'off'}`;
   nameInput.value = hasSourceHost ? 'Receiver' : 'Caller';
+  localHeading.textContent = userName();
 
   function isPlaybackMark(mark) {
     return mark === null || (Number.isSafeInteger(mark?.chunk) && mark.chunk >= 0
@@ -417,6 +419,7 @@
   });
 
   nameInput.addEventListener('input', () => {
+    localHeading.textContent = userName();
     if (!hasSourceHost && phase === 'waiting' && PushcaClient.isOpen()) refreshJointLink();
   });
 
