@@ -111,10 +111,10 @@
       color: #ccd9ea;
     }
     #jointLinkLabel { position: absolute; top: 0; left: 0; }
-    #jointLink { flex: 3 1 340px; margin-top: 17px; }
+    #jointLink { flex: 3 1 180px; margin-top: 17px; }
     #copyJointLinkButton { flex: 0 0 auto; height: 36px; margin-top: 17px; padding: 5px 12px; }
     .name-field { flex: 0 0 180px; min-width: 150px; }
-    .privacy-field { flex: 0 0 230px; min-width: 0; }
+    .privacy-field { flex: 0 0 auto; min-width: 0; }
     .invite-fields input[type="url"],
     .invite-fields input[type="text"] {
       width: 100%;
@@ -158,6 +158,7 @@
     .join-name-dialog input:focus-visible { outline: 3px solid #79a9ff; outline-offset: 2px; }
     .join-name-dialog button { margin-top: 9px; }
     .privacy-field { align-self: start; }
+    .security-options { display: flex; gap: 6px; }
     .invite-fields .encryption-toggle {
       display: flex;
       align-items: center;
@@ -170,13 +171,22 @@
       background: #0c1729;
       white-space: nowrap;
     }
-    .encryption-toggle input, .echo-toggle input { width: 17px; height: 17px; margin: 0; accent-color: #619cff; }
-    .encryption-status {
-      display: block;
-      margin: 4px 0 0 25px;
-      color: #a8bad1;
+    .invite-fields .echo-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      margin: 0;
+      padding: 6px 10px;
+      border: 1px solid #49617e;
+      border-radius: 10px;
+      background: #0c1729;
+      color: #d6e4f4;
       font-size: .72rem;
+      line-height: 1.2;
+      white-space: nowrap;
     }
+    .encryption-toggle input, .echo-toggle input { flex: 0 0 17px; width: 17px; height: 17px; margin: 0; accent-color: #619cff; }
     #connectionStatus {
       margin-top: 6px;
       padding-top: 6px;
@@ -247,16 +257,6 @@
     .remote-panel video { height: 100%; min-height: 0; aspect-ratio: auto; }
     .caption { margin: 12px 16px 0; color: #b8c9de; font-size: .82rem; }
     .panel > .caption:last-child { margin-bottom: 14px; }
-    .echo-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 14px 16px 16px;
-      padding-top: 12px;
-      border-top: 1px solid #2e4059;
-      color: #d6e4f4;
-      font-size: .78rem;
-    }
     .replay-controls {
       display: flex;
       flex-wrap: wrap;
@@ -356,12 +356,6 @@
     }
     .local-panel video { height: auto; aspect-ratio: 16 / 9; }
     .local-panel .caption { margin: 5px 9px 0; font-size: .7rem; line-height: 1.25; }
-    .local-panel .echo-toggle {
-      margin: 8px 9px 10px;
-      padding-top: 7px;
-      font-size: .7rem;
-      line-height: 1.25;
-    }
     .stats { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0; }
     .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
     .stat dt { color: #afc0d2; font-size: .78rem; }
@@ -370,7 +364,7 @@
     .details { flex: 0 0 auto; max-width: 100%; margin: 0; color: #afc0d2; font-size: .78rem; line-height: 1.3; }
     code { color: #b6dcff; }
     @media (max-width: 1080px) {
-      #jointLink { flex-basis: 280px; }
+      #jointLink { flex-basis: 120px; }
     }
     @media (max-width: 760px) {
       body { height: auto; min-height: 100dvh; overflow: auto; padding: 12px; }
@@ -383,6 +377,7 @@
     @media (max-width: 560px) {
       #jointLink, #copyJointLinkButton, .name-field, .privacy-field { flex-basis: 100%; }
       #copyJointLinkButton { margin-top: 0; }
+      .security-options { flex-wrap: wrap; }
       .controls { width: 100%; border-radius: 16px; }
       .control-divider { display: none; }
       #replayButton, #saveButton { flex: 1 1 145px; }
@@ -435,8 +430,10 @@
       </div>
       <div class="privacy-field">
         <span class="field-label">Security</span>
-        <label class="encryption-toggle"><input id="encryptMedia" type="checkbox" checked> End-to-end encryption</label>
-        <span id="encryptionModeStatus" class="encryption-status" role="status" aria-live="polite">End-to-end encryption: on</span>
+        <div class="security-options">
+          <label class="encryption-toggle"><input id="encryptMedia" type="checkbox" checked> End-to-end encryption</label>
+          <label class="echo-toggle"><input id="extraEchoCancellation" type="checkbox"> Extra echo cancellation (experimental)</label>
+        </div>
       </div>
     </div>
     <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
@@ -463,7 +460,6 @@
         </div>
         <p id="cameraCaption" class="caption">Live preview appears here when recording starts.</p>
         <p id="echoCancellationStatus" class="caption" role="status" aria-live="polite">Echo cancellation will be checked when the microphone opens.</p>
-        <label class="echo-toggle"><input id="extraEchoCancellation" type="checkbox"> Extra echo cancellation (experimental)</label>
       </section>
     </details>
   </div>

@@ -18,7 +18,6 @@
   const counterpartHeading = document.getElementById('counterpartName');
   const encryptionToggle = document.getElementById('encryptMedia');
   const extraEchoToggle = document.getElementById('extraEchoCancellation');
-  const encryptionModeStatus = document.getElementById('encryptionModeStatus');
   const searchParams = new URLSearchParams(window.location.search);
   const pageUrl = new URL(window.location.href);
   pageUrl.search = '';
@@ -81,7 +80,6 @@
     callSecret = window.crypto.getRandomValues(new Uint8Array(32));
   }
   encryptionToggle.checked = encryptionEnabled;
-  encryptionModeStatus.textContent = `End-to-end encryption: ${encryptionEnabled ? 'on' : 'off'}`;
   nameInput.value = hasSourceHost ? 'Receiver' : 'Caller';
   localHeading.textContent = userName();
 
@@ -473,7 +471,6 @@
       return;
     }
     encryptionEnabled = encryptionToggle.checked;
-    encryptionModeStatus.textContent = `End-to-end encryption: ${encryptionEnabled ? 'on' : 'off'}`;
     if (PushcaClient.isOpen()) refreshJointLink();
   });
 
