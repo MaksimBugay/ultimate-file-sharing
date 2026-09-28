@@ -6,98 +6,411 @@
   <title>Remote call</title>
   <link rel="icon" type="image/png" href="images/file-sharing32.png">
   <style>
-    :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #0d1420; color: #edf3fa; }
+    :root {
+      color-scheme: dark;
+      font: 16px/1.45 system-ui, sans-serif;
+      background: #0d1420;
+      color: #edf3fa;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 12px 20px; }
-    main { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 1100px; min-height: calc(100svh - 24px); margin: auto; }
-    .page-heading { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 4px 16px; width: 100%; }
-    h1 { flex: 1 1 400px; margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); }
+    body {
+      margin: 0;
+      height: 100dvh;
+      overflow: hidden;
+      padding: 12px 16px;
+      background: radial-gradient(circle at 48% -24%, #1c3154 0, #0d1420 44%) no-repeat;
+    }
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: min(100%, 1480px);
+      height: 100%;
+      min-height: 0;
+      margin: auto;
+    }
+    h1, h2, p { margin-top: 0; }
     p { color: #afc0d2; }
-    .intro { flex-basis: 100%; margin: 0; font-size: .9rem; line-height: 1.3; }
-    .viewport-stage { display: flex; gap: 12px; align-items: stretch; }
-    .panel { display: flex; flex: 1 1 0; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid #304156; border-radius: 16px; background: #172334; }
-    .panel h2 { margin: 0; padding: 10px 14px; font-size: 1rem; }
-    video { display: block; width: 100%; aspect-ratio: 16/9; background: #070d14; border-radius: 10px; object-fit: contain; }
-    .caption { margin: 6px 14px 0; font-size: .85rem; }
-    .echo-toggle { display: inline-flex; align-items: center; gap: 8px; margin: 8px 14px 0; color: #edf3fa; font-size: .85rem; }
-    .echo-toggle input { accent-color: #4a9eff; }
-    .replay-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 14px 0; }
-    .replay-controls[hidden] { display: none; }
-    .replay-controls label { display: flex; gap: 10px; align-items: center; color: #edf3fa; }
-    .replay-controls input { width: 130px; accent-color: #4a9eff; }
-    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 14px 14px; }
-    .controls label { display: inline-flex; align-items: center; gap: 7px; color: #edf3fa; }
-    .controls input { accent-color: #4a9eff; }
-    button { padding: 8px 12px; border: 0; border-radius: 9px; background: #4a9eff; color: #081321; font: inherit; font-weight: 700; cursor: pointer; }
-    button.secondary { background: #304156; color: #edf3fa; }
+    .eyebrow {
+      display: block;
+      color: #83aef2;
+      font-size: .66rem;
+      font-weight: 800;
+      letter-spacing: .17em;
+    }
+    .page-heading {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
+      gap: 8px 24px;
+      align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      flex: 0 0 48px;
+      height: 48px;
+      border: 1px solid #4a72ad;
+      border-radius: 15px;
+      background: linear-gradient(145deg, #326dcb, #1a417f);
+      box-shadow: 0 10px 30px #06112680;
+      color: #fff;
+    }
+    .brand-mark svg { width: 27px; height: 27px; }
+    h1 { margin: 1px 0 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); line-height: 1.1; }
+    .status { min-height: 22px; margin: 0; font-size: .84rem; }
+    .page-heading > .status {
+      justify-self: end;
+      max-width: min(100%, 570px);
+      padding: 8px 12px;
+      border: 1px solid #2b4466;
+      border-radius: 999px;
+      background: #13243b;
+      color: #d2e2f6;
+      text-align: right;
+    }
+    .intro {
+      display: none;
+      margin: 0;
+      color: #9eafc6;
+      font-size: .83rem;
+    }
+    .joint-link-panel {
+      flex: 0 0 auto;
+      padding: 8px 14px;
+      border: 1px solid #314664;
+      border-radius: 20px;
+      background: linear-gradient(140deg, #1a2a40, #142035);
+      box-shadow: 0 15px 34px #060d1b50;
+    }
+    .invite-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .invite-heading .eyebrow { display: none; }
+    .invite-heading h2 { margin: 0; font-size: .88rem; }
+    .connection-indicator {
+      flex: 0 0 12px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff6868;
+      box-shadow: 0 0 0 3px #ff686830;
+    }
+    .invite-fields {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: start;
+    }
+    .link-field, .link-input { display: contents; }
+    .invite-fields label, .invite-fields .field-label {
+      display: block;
+      margin-bottom: 3px;
+      font-size: .75rem;
+      font-weight: 700;
+      color: #ccd9ea;
+    }
+    #jointLinkLabel { position: absolute; top: 0; left: 0; }
+    #jointLink { flex: 3 1 340px; margin-top: 17px; }
+    #copyJointLinkButton { flex: 0 0 auto; height: 36px; margin-top: 17px; padding: 5px 12px; }
+    .name-field { flex: 1 1 160px; min-width: 150px; }
+    .privacy-field { flex: 0 0 230px; min-width: 0; }
+    .invite-fields input[type="url"],
+    .invite-fields input[type="text"] {
+      width: 100%;
+      min-width: 0;
+      height: 36px;
+      padding: 6px 10px;
+      border: 1px solid #49617e;
+      border-radius: 10px;
+      outline: none;
+      background: #0c1729;
+      color: #f4f8ff;
+      font: inherit;
+      font-size: .88rem;
+    }
+    .invite-fields input:focus-visible { border-color: #79a9ff; box-shadow: 0 0 0 3px #3e78de40; }
+    .privacy-field { align-self: start; }
+    .invite-fields .encryption-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 36px;
+      margin: 0;
+      padding: 6px 10px;
+      border: 1px solid #49617e;
+      border-radius: 10px;
+      background: #0c1729;
+      white-space: nowrap;
+    }
+    .encryption-toggle input, .echo-toggle input { width: 17px; height: 17px; margin: 0; accent-color: #619cff; }
+    .encryption-status {
+      display: block;
+      margin: 4px 0 0 25px;
+      color: #a8bad1;
+      font-size: .72rem;
+    }
+    #connectionStatus {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid #31445e;
+      color: #b8cae0;
+      font-size: .78rem;
+    }
+    button {
+      border: 1px solid transparent;
+      border-radius: 11px;
+      padding: 9px 16px;
+      background: #5f9bff;
+      color: #07162d;
+      font: inherit;
+      font-size: .88rem;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); background: #83b2ff; }
+    button.secondary { border-color: #405573; background: #283a53; color: #eef5ff; }
+    button.secondary:hover:not(:disabled) { background: #36506f; }
+    button:disabled { opacity: .48; cursor: not-allowed; }
+    button:focus-visible, input[type="checkbox"]:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
+    .viewport-stage {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    .panel {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid #31445f;
+      border-radius: 20px;
+      background: #172334;
+      box-shadow: 0 18px 40px #050b1759;
+    }
+    .video-frame { position: relative; overflow: hidden; background: #050910; }
+    .video-frame h2 {
+      position: absolute;
+      z-index: 1;
+      top: 14px;
+      left: 14px;
+      max-width: calc(100% - 28px);
+      margin: 0;
+      overflow: hidden;
+      padding: 7px 12px;
+      border: 1px solid #ffffff24;
+      border-radius: 999px;
+      background: #111d2de8;
+      box-shadow: 0 5px 14px #0008;
+      color: #fff;
+      font-size: .85rem;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    video {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #050910;
+      object-fit: contain;
+    }
+    .remote-panel { display: flex; flex-direction: column; height: 100%; }
+    .remote-panel .video-frame { flex: 1 1 auto; min-height: 0; }
+    .remote-panel video { height: 100%; min-height: 0; aspect-ratio: auto; }
+    .caption { margin: 12px 16px 0; color: #b8c9de; font-size: .82rem; }
+    .panel > .caption:last-child { margin-bottom: 14px; }
+    .echo-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 16px 16px;
+      padding-top: 12px;
+      border-top: 1px solid #2e4059;
+      color: #d6e4f4;
+      font-size: .78rem;
+    }
+    .replay-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 12px 16px 16px;
+    }
+    .replay-controls[hidden], .controls[hidden] { display: none; }
+    .replay-controls label { display: flex; gap: 9px; align-items: center; color: #d8e5f5; font-size: .82rem; }
+    .replay-controls input { width: 120px; accent-color: #619cff; }
+    .call-toolbar {
+      display: flex;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid #334b6c;
+      border-radius: 20px;
+      background: #1a2b43;
+      box-shadow: 0 15px 35px #040a165c;
+    }
     .device-controls { display: inline-flex; gap: 8px; }
-    .device-button.secondary { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; }
-    .device-button svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .device-button.secondary {
+      display: inline-grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+    }
+    .device-button svg {
+      display: block;
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
     .device-button .off-mark { visibility: hidden; }
-    button:disabled { opacity: .45; cursor: not-allowed; }
-    button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
-    .status { min-height: 24px; margin: 0; color: #c7d8ea; font-size: .88rem; }
-    .joint-link-panel { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
-    .connection-indicator { flex: 0 0 12px; width: 12px; height: 12px; border-radius: 50%; background: #ff6868; box-shadow: 0 0 0 3px #ff686830; }
-    .joint-link-panel label { font-weight: 700; }
-    .joint-link-panel input { flex: 1 1 300px; min-width: 0; padding: 8px; border: 1px solid #4b6078; border-radius: 8px; background: #0d1420; color: #edf3fa; font: inherit; }
-    .joint-link-panel .name-input { flex: 0 1 150px; }
-    .joint-link-panel .encryption-toggle { display: inline-flex; align-items: center; gap: 8px; }
-    .joint-link-panel .encryption-toggle input { flex: 0 0 auto; width: 18px; height: 18px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; accent-color: #4a9eff; }
-    .encryption-status { color: #afc0d2; font-size: .82rem; }
-    .joint-link-panel .status { flex-basis: 100%; }
+    #stopButton {
+      min-height: 44px;
+      border-color: #a53448;
+      border-radius: 999px;
+      background: #cf4559;
+      color: #fff;
+    }
+    #stopButton:hover:not(:disabled) { background: #e6596c; }
+    .control-divider { width: 1px; height: 26px; margin: 0 3px; background: #49617f; }
+    .self-view-shell {
+      position: absolute;
+      z-index: 3;
+      right: 14px;
+      bottom: 14px;
+      width: auto;
+      height: auto;
+    }
+    .self-view-shell[open] {
+      width: clamp(190px, 22vw, 300px);
+      height: min(280px, calc(100% - 28px));
+    }
+    .self-view-shell summary {
+      position: static;
+      z-index: 4;
+      top: 8px;
+      right: 8px;
+      padding: 5px 8px;
+      border: 1px solid #6d829f;
+      border-radius: 8px;
+      background: #111d2df2;
+      color: #f1f6ff;
+      font-size: .7rem;
+      font-weight: 700;
+      list-style: none;
+      cursor: pointer;
+      box-shadow: 0 4px 18px #000a;
+    }
+    .self-view-shell[open] summary { position: absolute; box-shadow: none; }
+    .self-view-shell summary::-webkit-details-marker { display: none; }
+    .self-view-shell summary:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
+    .self-view-shell .hide-self { display: none; }
+    .self-view-shell[open] .hide-self { display: inline; }
+    .self-view-shell[open] .show-self { display: none; }
+    .local-panel { height: 100%; overflow: auto; }
+    .local-panel .video-frame h2 {
+      top: 8px;
+      left: 8px;
+      max-width: calc(100% - 106px);
+      padding: 4px 8px;
+      font-size: .72rem;
+    }
+    .local-panel video { height: auto; aspect-ratio: 16 / 9; }
+    .local-panel .caption { margin: 5px 9px 0; font-size: .7rem; line-height: 1.25; }
+    .local-panel .echo-toggle {
+      margin: 8px 9px 10px;
+      padding-top: 7px;
+      font-size: .7rem;
+      line-height: 1.25;
+    }
     .stats { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0; }
     .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
     .stat dt { color: #afc0d2; font-size: .78rem; }
     .stat dd { margin: 2px 0 0; font-size: 1.1rem; font-weight: 700; }
-    .details { flex: 0 0 auto; max-width: 100%; margin: 0; font-size: .78rem; line-height: 1.3; }
-    .diagnostics { flex: 0 0 auto; margin: 0; padding: 7px 10px; border: 1px solid #304156; border-radius: 10px; color: #afc0d2; font-size: .78rem; }
+    .diagnostics { flex: 0 0 auto; margin: 0; padding: 7px 10px; border: 1px solid #304156; border-radius: 10px; color: #afc0d2; font-size: .78rem; overflow-wrap: anywhere; }
+    .details { flex: 0 0 auto; max-width: 100%; margin: 0; color: #afc0d2; font-size: .78rem; line-height: 1.3; }
     code { color: #b6dcff; }
-    @media (max-width: 680px) { body { padding-inline: 12px; } .viewport-stage { flex-direction: column; } .panel { flex-basis: auto; width: 100%; } .intro { display: none; } }
+    @media (max-width: 1080px) {
+      #jointLink { flex-basis: 280px; }
+    }
+    @media (max-width: 760px) {
+      body { height: auto; min-height: 100dvh; overflow: auto; padding: 12px; }
+      main { height: auto; min-height: calc(100dvh - 24px); gap: 12px; }
+      .page-heading { grid-template-columns: 1fr; }
+      .page-heading > .status { justify-self: stretch; max-width: none; text-align: left; border-radius: 12px; }
+      .intro { display: none; }
+      .viewport-stage { flex: none; height: min(62dvh, 520px); min-height: 300px; }
+    }
+    @media (max-width: 560px) {
+      #jointLink, #copyJointLinkButton, .name-field, .privacy-field { flex-basis: 100%; }
+      #copyJointLinkButton { margin-top: 0; }
+      .controls { width: 100%; border-radius: 16px; }
+      .control-divider { display: none; }
+      #replayButton, #saveButton { flex: 1 1 145px; }
+      .stat { flex-basis: calc(50% - 5px); }
+      .self-view-shell { right: 8px; bottom: 8px; }
+      .self-view-shell[open] { width: min(52vw, 240px); height: min(250px, calc(100% - 16px)); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button { transition: none; }
+    }
   </style>
 </head>
 <body>
 <main>
-  <div class="page-heading">
-    <h1>Remote call</h1>
+  <header class="page-heading">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><rect x="5" y="9" width="16" height="14" rx="4" stroke="currentColor" stroke-width="2.5"/><path d="m21 14 6-4v12l-6-4" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      </span>
+      <div><span class="eyebrow">PRIVATE VIDEO ROOM</span><h1>Remote call</h1></div>
+    </div>
     <p id="status" class="status" role="status" aria-live="polite">Ready. Microphone permission is needed; camera is optional.</p>
-    <p class="intro">The left player shows your camera. The right player plays incoming audio and video chunks as they arrive. Turning the camera off sends black video frames; muting the microphone sends silent audio. Chunk size is roughly <span data-chunk-seconds>1</span> second.</p>
-  </div>
-  <div class="joint-link-panel">
-    <span id="connectionIndicator" class="connection-indicator" role="img" aria-label="WebSocket disconnected" title="WebSocket disconnected"></span>
-    <label id="jointLinkLabel" for="jointLink">Joint link</label>
-    <input id="jointLink" type="url" readonly placeholder="Connecting…" aria-label="Joint link">
-    <button id="copyJointLinkButton" type="button" disabled>Copy link</button>
-    <label for="callUserName">Your name</label>
-    <input id="callUserName" class="name-input" type="text" maxlength="80" autocomplete="name">
-    <label class="encryption-toggle"><input id="encryptMedia" type="checkbox" checked> End-to-end encryption</label>
-    <span id="encryptionModeStatus" class="encryption-status" role="status" aria-live="polite">End-to-end encryption: on</span>
-    <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
-  </div>
-  <div class="viewport-stage">
-    <section class="panel" aria-labelledby="localName">
-      <h2 id="localName">Caller</h2>
-      <video id="liveVideo" autoplay muted playsinline></video>
-      <p id="cameraCaption" class="caption">Live preview appears here when recording starts.</p>
-      <p id="echoCancellationStatus" class="caption" role="status" aria-live="polite">Echo cancellation will be checked when the microphone opens.</p>
-      <label class="echo-toggle"><input id="extraEchoCancellation" type="checkbox"> Extra echo cancellation (experimental)</label>
-      <div class="controls">
-        <div class="device-controls" role="group" aria-label="Capture devices">
-          <button id="cameraEnabled" type="button" class="secondary device-button" aria-label="Camera" aria-pressed="true" title="Turn camera off">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/><path class="off-mark" d="M3 21 21 3"/></svg>
-          </button>
-          <button id="muteMicButton" type="button" class="secondary device-button" aria-label="Mute microphone" aria-pressed="false" title="Mute microphone" disabled>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4m-4 0h8"/><path class="off-mark" d="M3 21 21 3"/></svg>
-          </button>
+    <p class="intro">The main tile shows your counterpart and the smaller tile shows your camera. Camera off sends black video; microphone mute sends silence. Chunks are roughly <span data-chunk-seconds>1</span> second.</p>
+  </header>
+  <section class="joint-link-panel" aria-label="Call invitation and connection">
+    <div class="invite-heading">
+      <div><span class="eyebrow">YOUR CALL SPACE</span><h2>Invite &amp; connect</h2></div>
+      <span id="connectionIndicator" class="connection-indicator" role="img" aria-label="WebSocket disconnected" title="WebSocket disconnected"></span>
+    </div>
+    <div class="invite-fields">
+      <div class="link-field">
+        <label id="jointLinkLabel" for="jointLink">Joint link</label>
+        <div class="link-input">
+          <input id="jointLink" type="url" readonly placeholder="Connecting…" aria-label="Joint link">
+          <button id="copyJointLinkButton" type="button" disabled>Copy link</button>
         </div>
-        <button id="stopButton" type="button" class="secondary" disabled>End call</button>
-        <button id="replayButton" type="button" class="secondary" disabled>Replay local recording</button>
-        <button id="saveButton" type="button" class="secondary" disabled>Save recording</button>
       </div>
-    </section>
-    <section class="panel" aria-labelledby="counterpartName">
-      <h2 id="counterpartName">Incoming call</h2>
-      <video id="replayVideo" playsinline></video>
+      <div class="name-field">
+        <label for="callUserName">Your name</label>
+        <input id="callUserName" class="name-input" type="text" maxlength="80" autocomplete="name">
+      </div>
+      <div class="privacy-field">
+        <span class="field-label">Security</span>
+        <label class="encryption-toggle"><input id="encryptMedia" type="checkbox" checked> End-to-end encryption</label>
+        <span id="encryptionModeStatus" class="encryption-status" role="status" aria-live="polite">End-to-end encryption: on</span>
+      </div>
+    </div>
+    <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
+  </section>
+  <div class="viewport-stage">
+    <section class="panel remote-panel" aria-labelledby="counterpartName">
+      <div class="video-frame">
+        <h2 id="counterpartName">Incoming call</h2>
+        <video id="replayVideo" playsinline></video>
+      </div>
       <p id="playerCaption" class="caption">Incoming media appears after the first audio and video chunks arrive.</p>
       <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
         <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
@@ -105,6 +418,34 @@
         <label for="replayVolume">Volume <input id="replayVolume" type="range" min="0" max="100" value="100"></label>
       </div>
     </section>
+    <details class="self-view-shell" open>
+      <summary><span class="hide-self">Hide self view</span><span class="show-self">Show self view</span></summary>
+      <section class="panel local-panel" aria-labelledby="localName">
+        <div class="video-frame">
+          <h2 id="localName">Caller</h2>
+          <video id="liveVideo" autoplay muted playsinline></video>
+        </div>
+        <p id="cameraCaption" class="caption">Live preview appears here when recording starts.</p>
+        <p id="echoCancellationStatus" class="caption" role="status" aria-live="polite">Echo cancellation will be checked when the microphone opens.</p>
+        <label class="echo-toggle"><input id="extraEchoCancellation" type="checkbox"> Extra echo cancellation (experimental)</label>
+      </section>
+    </details>
+  </div>
+  <div class="call-toolbar" role="group" aria-label="Call controls">
+    <div class="controls">
+      <div class="device-controls" role="group" aria-label="Capture devices">
+        <button id="cameraEnabled" type="button" class="secondary device-button" aria-label="Camera" aria-pressed="true" title="Turn camera off">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/><path class="off-mark" d="M3 21 21 3"/></svg>
+        </button>
+        <button id="muteMicButton" type="button" class="secondary device-button" aria-label="Mute microphone" aria-pressed="false" title="Mute microphone" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4m-4 0h8"/><path class="off-mark" d="M3 21 21 3"/></svg>
+        </button>
+      </div>
+      <button id="stopButton" type="button" class="secondary" disabled>End call</button>
+      <span class="control-divider" aria-hidden="true"></span>
+      <button id="replayButton" type="button" class="secondary" disabled>Replay local recording</button>
+      <button id="saveButton" type="button" class="secondary" disabled>Save recording</button>
+    </div>
   </div>
 
   <dl class="stats">
