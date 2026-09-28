@@ -8,9 +8,11 @@
   const applicationId = `REMOTE-CALL-${kind.toUpperCase()}`;
   const wsUrl = 'wss://secure.fileshare.ovh:31085';
   const encoder = new TextEncoder();
-  const hkdfSalt = encoder.encode('remote-call-v5/media');
-  const CHUNK_HEADER_BYTES = 28;
-  const CHUNK_MAGIC = 0x354d4352; // "RCM5" in little-endian byte order.
+  const hkdfSalt = encoder.encode('remote-call-v6/media');
+  // Magic, start, end and creation time, then the playback marks at start and end
+  // (peer chunk number and play time; -1 when nothing from the peer was playing).
+  const CHUNK_HEADER_BYTES = 60;
+  const CHUNK_MAGIC = 0x364d4352; // "RCM6" in little-endian byte order.
   let initialized = false;
   let aliasAttempt = 0;
   let pendingSends = 0;
@@ -27,7 +29,7 @@
     if (!promise) {
       promise = cryptoReady.then(baseKey => crypto.subtle.deriveBits({
         name: 'HKDF', hash: 'SHA-256', salt: hkdfSalt,
-        info: encoder.encode(JSON.stringify(['remote-call-v5', kind, sender, binaryId]))
+        info: encoder.encode(JSON.stringify(['remote-call-v6', kind, sender, binaryId]))
       }, baseKey, 288)).then(bits => {
         const material = new Uint8Array(bits);
         return {
@@ -73,10 +75,29 @@
     window.parent.postMessage({ type, kind, ...fields }, parentOrigin, transfer);
   }
 
-  function packChunk(payload, startTime, endTime, createdAtEpochMs) {
+  function isPlaybackMark(mark) {
+    return mark === null || (Number.isSafeInteger(mark?.chunk) && mark.chunk >= 0
+      && Number.isFinite(mark.timeMs) && mark.timeMs >= 0);
+  }
+
+  function writePlaybackMark(header, offset, mark) {
+    header.setFloat64(offset, mark ? mark.chunk : -1, true);
+    header.setFloat64(offset + 8, mark ? mark.timeMs : -1, true);
+  }
+
+  function readPlaybackMark(header, offset) {
+    const chunk = header.getFloat64(offset, true);
+    const timeMs = header.getFloat64(offset + 8, true);
+    const mark = chunk === -1 && timeMs === -1 ? null : { chunk, timeMs };
+    if (!isPlaybackMark(mark)) throw new Error('Invalid received playback mark');
+    return mark;
+  }
+
+  function packChunk(payload, startTime, endTime, createdAtEpochMs, playStart, playEnd) {
     if (!(payload instanceof ArrayBuffer) || !Number.isSafeInteger(startTime)
       || !Number.isSafeInteger(endTime) || startTime < 0 || endTime <= startTime
-      || !Number.isFinite(createdAtEpochMs) || createdAtEpochMs <= 0) {
+      || !Number.isFinite(createdAtEpochMs) || createdAtEpochMs <= 0
+      || !isPlaybackMark(playStart) || !isPlaybackMark(playEnd)) {
       throw new Error('Invalid recorded chunk timing');
     }
     const wrapped = new ArrayBuffer(CHUNK_HEADER_BYTES + payload.byteLength);
@@ -85,6 +106,8 @@
     header.setFloat64(4, startTime, true);
     header.setFloat64(12, endTime, true);
     header.setFloat64(20, createdAtEpochMs, true);
+    writePlaybackMark(header, 28, playStart);
+    writePlaybackMark(header, 44, playEnd);
     new Uint8Array(wrapped, CHUNK_HEADER_BYTES).set(new Uint8Array(payload));
     return wrapped;
   }
@@ -103,7 +126,12 @@
       || !Number.isFinite(createdAtEpochMs) || createdAtEpochMs <= 0) {
       throw new Error('Invalid received chunk timing');
     }
-    return { senderStartTimeMs, senderEndTimeMs, createdAtEpochMs, payload: payload.slice(CHUNK_HEADER_BYTES) };
+    return {
+      senderStartTimeMs, senderEndTimeMs, createdAtEpochMs,
+      playStart: readPlaybackMark(header, 28),
+      playEnd: readPlaybackMark(header, 44),
+      payload: payload.slice(CHUNK_HEADER_BYTES)
+    };
   }
 
   function reportReceivedChunk(binaryWithHeader, payload, arrivedAtEpochMs) {
@@ -116,6 +144,8 @@
         senderEndTimeMs: chunk.senderEndTimeMs,
         createdAtEpochMs: chunk.createdAtEpochMs,
         arrivedAtEpochMs,
+        playStart: chunk.playStart,
+        playEnd: chunk.playEnd,
         payload: chunk.payload
       }, [chunk.payload]);
     } catch (error) {
@@ -190,7 +220,8 @@
       || typeof message.binaryId !== 'string' || !message.binaryId
       || !Number.isSafeInteger(message.startTime) || !Number.isSafeInteger(message.endTime)
       || message.startTime < 0 || message.endTime <= message.startTime
-      || !Number.isFinite(message.createdAtEpochMs) || message.createdAtEpochMs <= 0) return;
+      || !Number.isFinite(message.createdAtEpochMs) || message.createdAtEpochMs <= 0
+      || !isPlaybackMark(message.playStart) || !isPlaybackMark(message.playEnd)) return;
     if (message.order <= (lastSentOrders.get(message.binaryId) ?? -1)) {
       report('remote-call:error', { message: `${kind} chunk order was reused.` });
       return;
@@ -203,7 +234,7 @@
     pendingSends++;
     sendTail = sendTail.then(async () => {
       const wrapped = packChunk(message.payload, message.startTime, message.endTime,
-        message.createdAtEpochMs);
+        message.createdAtEpochMs, message.playStart, message.playEnd);
       const payload = encryptionEnabled
         ? await encryptChunk(message.binaryId, message.order, wrapped)
         : wrapped;

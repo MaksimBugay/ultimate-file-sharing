@@ -2,8 +2,8 @@
   'use strict';
 
   const WS_URL = 'wss://secure.fileshare.ovh:31085';
-  const PROTOCOL = 'REMOTE_CALL_V5';
-  const SIGNAL_PREFIX = 'remote-call-v5:';
+  const PROTOCOL = 'REMOTE_CALL_V6';
+  const SIGNAL_PREFIX = 'remote-call-v6:';
   const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER', video: 'REMOTE-CALL-VIDEO', audio: 'REMOTE-CALL-AUDIO' };
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
@@ -48,6 +48,7 @@
   if (hasSourceHost) {
     const linkSettings = new URLSearchParams(window.location.hash.slice(1));
     extraEchoToggle.checked = linkSettings.get('extra-echo') === '1';
+    extraEchoToggle.disabled = true;
     const encrypted = linkSettings.get('e2e');
     if (encrypted !== '0' && encrypted !== '1') {
       phase = 'invalid';
@@ -77,6 +78,11 @@
   encryptionToggle.checked = encryptionEnabled;
   encryptionModeStatus.textContent = `End-to-end encryption: ${encryptionEnabled ? 'on' : 'off'}`;
   nameInput.value = hasSourceHost ? 'Receiver' : 'Caller';
+
+  function isPlaybackMark(mark) {
+    return mark === null || (Number.isSafeInteger(mark?.chunk) && mark.chunk >= 0
+      && Number.isFinite(mark.timeMs) && mark.timeMs >= 0);
+  }
 
   function setConnectionStatus(message) {
     connectionStatus.textContent = message;
@@ -191,7 +197,8 @@
       && Number.isSafeInteger(message.senderEndTimeMs)
       && message.senderStartTimeMs >= 0 && message.senderEndTimeMs > message.senderStartTimeMs
       && Number.isFinite(message.createdAtEpochMs) && message.createdAtEpochMs > 0
-      && Number.isFinite(message.arrivedAtEpochMs) && message.arrivedAtEpochMs > 0) {
+      && Number.isFinite(message.arrivedAtEpochMs) && message.arrivedAtEpochMs > 0
+      && isPlaybackMark(message.playStart) && isPlaybackMark(message.playEnd)) {
       if (!entry.expectedBinaryId) {
         if (entry.earlyBytes + message.payload.byteLength <= 16 * 1048576) {
           entry.earlyChunks.push(message);
@@ -232,6 +239,7 @@
       type: 'remote-call:send', kind, binaryId: localBinaryIds[kind],
       order: chunk.index, startTime: chunk.startTime, endTime: chunk.endTime,
       createdAtEpochMs: chunk.createdAtEpochMs,
+      playStart: chunk.playStart ?? null, playEnd: chunk.playEnd ?? null,
       destHashCode: entry.peerClient.hashCode(), payload
     }, window.location.origin, [payload]);
   }

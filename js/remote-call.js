@@ -11,6 +11,11 @@
   const ECHO_START_MS = 12000;
   const ECHO_END_MS = 5000;
   const MAX_RECORDING_BYTES = 512 * 1048576;
+  // Opus needs decoded packets ahead of a snippet before its output settles.
+  const ECHO_REFERENCE_PREROLL_MS = 120;
+  const WEBM_MASTER_IDS = new Set([
+    0x18538067, 0x1549a966, 0x1654ae6b, 0xae, 0xe1, 0x1f43b675, 0xa0
+  ]); // Segment, Info, Tracks, TrackEntry, Audio, Cluster, BlockGroup.
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const ui = {
     camera: document.getElementById('liveVideo'),
@@ -49,11 +54,10 @@
   let silentOutput = null;
   let echoContext = null;
   let echoPlayerSource = null;
-  let echoMicrophoneSource = null;
   let echoNode = null;
-  let echoDestination = null;
-  let echoOutputTrack = null;
-  let echoReferenceConnected = false;
+  let echoClockTimer = null;
+  let echoReference = null;
+  let echoGeneration = 0;
   let micMuted = false;
   let startedAt = 0;
   let elapsedTimer = null;
@@ -106,7 +110,8 @@
     ui.count.textContent = `${chunks?.audio.length || 0} / ${chunks?.video.length || 0}`;
     ui.size.textContent = `${((recorderSession?.storedBytes || 0) / 1048576).toFixed(1)} MB`;
     ui.cameraEnabled.disabled = busy || cameraBusy || !!stoppingPromise || (!!preparedMimeTypes && !recording);
-    ui.extraEchoCancellation.disabled = busy || !!stoppingPromise || !!preparedMimeTypes || recording;
+    ui.extraEchoCancellation.disabled = new URLSearchParams(window.location.search).has('source-host')
+      || busy || !!stoppingPromise || !!preparedMimeTypes || recording;
     ui.muteMic.disabled = !recording || busy || !!stoppingPromise;
     ui.replay.disabled = busy || recording || !finished || !remotePlaybackFinished
       || !chunks?.audio.length || !chunks?.video.length;
@@ -179,8 +184,10 @@
   }
 
   class CallRecorder {
-    constructor({ clock, onUpdate, onLimit, onError }) {
+    constructor({ clock, playbackMark, onUpdate, onLimit, onError }) {
       this.clock = clock;
+      this.playbackMark = playbackMark;
+      this.playMark = null;
       this.onUpdate = onUpdate;
       this.onLimit = onLimit;
       this.onError = onError;
@@ -233,6 +240,11 @@
       const endTime = Math.max(this.lastEndMs[kind] + 1, this.clock());
       const startTime = this.lastEndMs[kind];
       this.lastEndMs[kind] = endTime;
+      // What the peer's stream was playing when this chunk started and ended recording;
+      // the peer rebuilds its own voice that our microphone may have picked up.
+      const playStart = kind === 'audio' ? this.playMark : null;
+      const playEnd = kind === 'audio' ? this.playbackMark() : null;
+      if (kind === 'audio') this.playMark = playEnd;
       const blob = event.data;
       this.conversionTail[kind] = this.conversionTail[kind].then(async () => {
         const binary = new Uint8Array(await blob.arrayBuffer());
@@ -243,6 +255,8 @@
           startTime,
           endTime,
           createdAtEpochMs,
+          playStart,
+          playEnd,
           duration: endTime - startTime,
           binary
         };
@@ -267,6 +281,7 @@
         this.onError(kind, event.error || new Error('unknown recorder error'));
       });
       recorder.addEventListener('stop', resolveStopped, { once: true });
+      if (kind === 'audio') this.playMark = this.playbackMark();
       recorder.start(CHUNK_MS);
       this.recorders[kind] = { recorder, stopped };
       this.mimeTypes[kind] = recorder.mimeType || mimeType;
@@ -407,8 +422,6 @@
     micMuted = muted;
     const audioTrack = mediaStream?.getAudioTracks()[0];
     if (audioTrack) audioTrack.enabled = !muted;
-    if (echoOutputTrack) echoOutputTrack.enabled = !muted;
-    echoNode?.port.postMessage({ type: 'mute', muted });
     ui.muteMic.title = muted ? 'Unmute microphone' : 'Mute microphone';
     ui.muteMic.setAttribute('aria-pressed', String(muted));
     showDeviceOff(ui.muteMic, muted);
@@ -620,6 +633,8 @@
       this.mediaSource = new MediaSource();
       this.url = URL.createObjectURL(this.mediaSource);
       this.queues = null;
+      this.audioChunkEnds = [];
+      this.playingAudioChunk = null;
       this.started = false;
       this.syncHold = true;
       this.userPaused = false;
@@ -677,9 +692,39 @@
         const chunk = inbox.pending.get(inbox.next);
         if (!queue.enqueue(chunk.binary, () => {
           if (inbox.pending.delete(chunk.index)) inbox.bytes -= chunk.binary.byteLength;
+          if (kind === 'audio') this.recordAudioChunkEnd(chunk.index, queue.bufferedEnd());
         })) break;
         inbox.next++;
       }
+    }
+
+    // Chunk i holds the audio buffered after chunk i - 1 and up to its recorded end.
+    recordAudioChunkEnd(index, endSeconds) {
+      this.audioChunkEnds.push({ index, endMs: endSeconds * 1000 });
+      if (this.audioChunkEnds.length > 120) this.audioChunkEnds.shift();
+    }
+
+    // Returns the incoming audio chunk and media time being heard now, or null when
+    // nothing is audible, so the local recorder can tag its chunks with it.
+    updatePlayingAudioChunk() {
+      const video = this.video;
+      this.playingAudioChunk = null;
+      if (this.closed || !this.started || this.syncHold || video.paused || video.seeking
+        || video.muted || video.volume === 0
+        || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
+      const timeMs = video.currentTime * 1000;
+      const ranges = this.queues?.audio.buffer.buffered;
+      let audioBuffered = false;
+      for (let index = 0; index < (ranges?.length || 0); index++) {
+        if (ranges.start(index) * 1000 <= timeMs && timeMs < ranges.end(index) * 1000) {
+          audioBuffered = true;
+          break;
+        }
+      }
+      if (!audioBuffered) return null;
+      const appended = this.audioChunkEnds.find(entry => entry.endMs > timeMs);
+      if (appended) this.playingAudioChunk = { chunk: appended.index, timeMs };
+      return this.playingAudioChunk;
     }
 
     finishTrack(kind) {
@@ -730,6 +775,7 @@
         }
         updateReplayControls();
       }
+      this.updatePlayingAudioChunk();
       if (this.mediaSource.readyState === 'open' && fullyAppended) {
         if (!this.started) {
           this.fail(new Error('Audio and video MSE timelines have no overlapping buffered range'));
@@ -820,11 +866,14 @@
     remoteChunkTimings = { audio: new Map(), video: new Map() };
     player?.close();
     player = null;
+    resetEchoProcessing();
+    echoReference = null;
     stopVideoCapture();
     cameraBusy = false;
     preparedMimeTypes = null;
     recorderSession = new CallRecorder({
       clock: relativeMs,
+      playbackMark: () => (remoteLink && player && !player.closed ? player.updatePlayingAudioChunk() : null),
       onUpdate: updateStats,
       onLimit: () => {
         if (!recording) return;
@@ -920,10 +969,238 @@
     }
   }
 
-  async function prepareExtraEchoCancellation(track) {
-    if (!ui.extraEchoCancellation.checked) return;
-    if (!AudioContextClass || !window.AudioWorkletNode) {
-      throw new Error('AudioWorklet is unavailable in this browser');
+  function readVint(bytes, offset, keepMarker) {
+    if (offset >= bytes.length) return null;
+    const first = bytes[offset];
+    let length = 1;
+    while (length <= 8 && first < 2 ** (8 - length)) length++;
+    if (length > 8) throw new Error('Invalid WebM data');
+    if (offset + length > bytes.length) return null;
+    let value = keepMarker ? first : first % (2 ** (8 - length));
+    for (let i = 1; i < length; i++) value = value * 256 + bytes[offset + i];
+    return { value, length, unknown: !keepMarker && value === 2 ** (7 * length) - 1 };
+  }
+
+  function readUint(bytes, start, end) {
+    let value = 0;
+    for (let i = start; i < end; i++) value = value * 256 + bytes[i];
+    return value;
+  }
+
+  // Extracts Opus packets and media timestamps from our MediaRecorder WebM stream.
+  // Elements can continue across chunk boundaries, so chunks must be pushed in order.
+  class WebmOpusParser {
+    constructor() {
+      this.pending = new Uint8Array(0);
+      this.timecodeScale = 1000000;
+      this.clusterTimecode = 0;
+      this.channels = 1;
+      this.sampleRate = 48000;
+    }
+
+    push(binary) {
+      const bytes = new Uint8Array(this.pending.length + binary.length);
+      bytes.set(this.pending);
+      bytes.set(binary, this.pending.length);
+      const packets = [];
+      let offset = 0;
+      while (offset < bytes.length) {
+        const id = readVint(bytes, offset, true);
+        const size = id && readVint(bytes, offset + id.length, false);
+        if (!size) break;
+        const start = offset + id.length + size.length;
+        if (WEBM_MASTER_IDS.has(id.value)) {
+          offset = start;
+          continue;
+        }
+        if (size.unknown) throw new Error('Unsupported WebM element size');
+        const end = start + size.value;
+        if (end > bytes.length) break;
+        this.readElement(id.value, bytes, start, end, packets);
+        offset = end;
+      }
+      this.pending = bytes.slice(offset);
+      return packets;
+    }
+
+    readElement(id, bytes, start, end, packets) {
+      if (id === 0x2ad7b1) this.timecodeScale = readUint(bytes, start, end);
+      else if (id === 0xe7) this.clusterTimecode = readUint(bytes, start, end);
+      else if (id === 0x9f) this.channels = readUint(bytes, start, end);
+      else if (id === 0xb5) {
+        const view = new DataView(bytes.buffer, bytes.byteOffset + start, end - start);
+        this.sampleRate = end - start === 4 ? view.getFloat32(0) : view.getFloat64(0);
+      } else if (id === 0xa3 || id === 0xa1) {
+        const track = readVint(bytes, start, false);
+        const header = start + (track?.length || 0);
+        if (!track || header + 3 > end) throw new Error('Invalid WebM block');
+        if (Math.floor(bytes[header + 2] / 2) % 4 !== 0) return; // MediaRecorder does not lace audio frames.
+        const unsignedTimecode = bytes[header] * 256 + bytes[header + 1];
+        const relative = unsignedTimecode >= 0x8000 ? unsignedTimecode - 0x10000 : unsignedTimecode;
+        packets.push({
+          timestampUs: Math.round((this.clusterTimecode + relative) * this.timecodeScale / 1000),
+          data: bytes.subarray(header + 3, end)
+        });
+      }
+    }
+  }
+
+  function monoFrame(data) {
+    const samples = new Float32Array(data.numberOfFrames);
+    const plane = new Float32Array(data.numberOfFrames);
+    for (let channel = 0; channel < data.numberOfChannels; channel++) {
+      data.copyTo(plane, { planeIndex: channel, format: 'f32-planar' });
+      for (let i = 0; i < plane.length; i++) samples[i] += plane[i] / data.numberOfChannels;
+    }
+    const startMs = data.timestamp / 1000;
+    return { startMs, endMs: startMs + samples.length * 1000 / data.sampleRate, sampleRate: data.sampleRate, samples };
+  }
+
+  // Decodes our own stored audio chunks around the moments the peer reports playing.
+  class LocalEchoReference {
+    constructor(chunks) {
+      this.chunks = chunks;
+      this.parser = new WebmOpusParser();
+      this.packets = [];
+      this.prunedBefore = 0;
+    }
+
+    parseThrough(index) {
+      while (this.packets.length <= index && this.packets.length < this.chunks.length) {
+        this.packets.push(this.parser.push(this.chunks[this.packets.length].binary));
+      }
+    }
+
+    async decode(firstChunk, lastChunk, fromMs, toMs) {
+      // A single mark can point a whole peer chunk away from the other end of the
+      // snippet, and peers may use different chunk intervals, so widen by timestamps.
+      let last = Math.min(lastChunk, this.chunks.length - 1);
+      this.parseThrough(last);
+      while (last + 1 < this.chunks.length && !(this.packets[last]?.at(-1)?.timestampUs / 1000 >= toMs)) {
+        this.parseThrough(++last);
+      }
+      const prerollFromUs = (fromMs - ECHO_REFERENCE_PREROLL_MS) * 1000;
+      let first = Math.max(0, Math.min(firstChunk, last));
+      while (first > 0 && this.packets[first - 1] && !(this.packets[first]?.[0]?.timestampUs <= prerollFromUs)) first--;
+      const selected = [];
+      for (let i = first; i <= last; i++) {
+        for (const packet of this.packets[i] || []) {
+          if (packet.timestampUs >= prerollFromUs && packet.timestampUs <= toMs * 1000) selected.push(packet);
+        }
+      }
+      for (; this.prunedBefore < first - 60; this.prunedBefore++) this.packets[this.prunedBefore] = null;
+      if (!selected.length) return [];
+      const frames = [];
+      let failure = null;
+      const decoder = new AudioDecoder({
+        output: data => {
+          try { frames.push(monoFrame(data)); } finally { data.close(); }
+        },
+        error: error => { failure = error; }
+      });
+      try {
+        decoder.configure({
+          codec: 'opus', sampleRate: Math.round(this.parser.sampleRate), numberOfChannels: this.parser.channels
+        });
+        for (const packet of selected) {
+          decoder.decode(new EncodedAudioChunk({ type: 'key', timestamp: packet.timestampUs, data: packet.data }));
+        }
+        await decoder.flush();
+      } finally {
+        if (decoder.state !== 'closed') decoder.close();
+      }
+      if (failure) throw failure;
+      return frames;
+    }
+  }
+
+  // Maps a moment of the peer's chunk recording to our media time it was playing.
+  function playedTimeAt(time, timing) {
+    const { senderStartTimeMs: start, senderEndTimeMs: end, playStart, playEnd } = timing;
+    return playStart.timeMs + (time - start) * (playEnd.timeMs - playStart.timeMs) / (end - start);
+  }
+
+  // Rebuilds the part of our stream the peer played while recording one audio chunk,
+  // laid out on that chunk's timeline at the processing sample rate.
+  async function buildEchoReference(reference, timing, sampleRate) {
+    const { playStart, playEnd, senderStartTimeMs: start, senderEndTimeMs: end } = timing;
+    if (!playStart || !playEnd || playEnd.chunk < playStart.chunk) return null;
+    const playbackRate = (playEnd.timeMs - playStart.timeMs) / (end - start);
+    if (playbackRate < 0.5 || playbackRate > 1.5) return null;
+    const frames = await reference.decode(playStart.chunk, playEnd.chunk,
+      playedTimeAt(start, timing), playedTimeAt(end, timing));
+    if (!frames.length) return null;
+    const samples = new Float32Array(Math.round((end - start) * sampleRate / 1000));
+    let frameIndex = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const played = playedTimeAt(start + i * 1000 / sampleRate, timing);
+      while (frameIndex < frames.length - 1 && frames[frameIndex].endMs <= played) frameIndex++;
+      const frame = frames[frameIndex];
+      const position = (played - frame.startMs) * frame.sampleRate / 1000;
+      const lower = Math.floor(position);
+      if (lower < 0 || lower >= frame.samples.length) continue;
+      const next = lower + 1 < frame.samples.length ? frame.samples[lower + 1]
+        : frames[frameIndex + 1]?.samples[0] ?? frame.samples[lower];
+      samples[i] = frame.samples[lower] + (position - lower) * (next - frame.samples[lower]);
+    }
+    return samples;
+  }
+
+  function queueEchoReference(timing) {
+    const reference = echoReference;
+    const generation = echoGeneration;
+    if (!echoNode || !reference || !timing.playStart || !timing.playEnd) return;
+    void buildEchoReference(reference, timing, echoContext.sampleRate).then(samples => {
+      if (!samples || generation !== echoGeneration || !echoNode) return;
+      echoNode.port.postMessage({ type: 'reference', startMs: timing.senderStartTimeMs, samples }, [samples.buffer]);
+    }).catch(error => {
+      if (echoReference !== reference) return;
+      bypassEchoProcessing();
+      console.warn('Extra echo reference is unavailable:', error);
+      ui.echoCancellationStatus.textContent = 'Extra echo cancellation stopped; incoming audio plays normally.';
+    });
+  }
+
+  function resetEchoProcessing() {
+    echoGeneration++;
+    echoNode?.port.postMessage({ type: 'reset' });
+  }
+
+  // References are keyed by the incoming stream's media time; the worklet maps its
+  // own clock to that time from these samples.
+  function postEchoClock() {
+    if (!echoNode) return;
+    const video = ui.video;
+    echoNode.port.postMessage({
+      type: 'clock',
+      mediaMs: video.currentTime * 1000,
+      contextTime: echoContext.currentTime,
+      playing: !video.paused && !video.seeking && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+    });
+  }
+
+  function bypassEchoProcessing() {
+    if (!echoNode) return;
+    clearInterval(echoClockTimer);
+    echoClockTimer = null;
+    echoPlayerSource.disconnect();
+    echoNode.disconnect();
+    echoNode.port.close();
+    echoNode = null;
+    echoReference = null;
+    echoPlayerSource.connect(echoContext.destination);
+  }
+
+  // Keep the media element source for the page's lifetime; only its worklet route
+  // changes, since the element can be captured by one source node only.
+  async function prepareExtraEchoCancellation() {
+    if (!AudioContextClass || !window.AudioWorkletNode || !window.AudioDecoder || !window.EncodedAudioChunk) {
+      throw new Error('AudioWorklet and WebCodecs audio decoding are required');
+    }
+    if (echoNode) {
+      if (echoContext.state !== 'running') await resumeEchoContext(echoContext);
+      ui.echoCancellationStatus.textContent += ' Extra echo cancellation: on.';
+      return;
     }
     if (!echoContext) {
       const context = new AudioContextClass();
@@ -934,48 +1211,38 @@
       try {
         await context.audioWorklet.addModule('js/remote-call-echo-worklet.js');
         await resumeEchoContext(context);
-        const playerSource = context.createMediaElementSource(ui.video);
-        playerSource.connect(context.destination);
-        echoContext = context;
-        echoPlayerSource = playerSource;
+        // Captured last: from here on the element is audible only through this context.
+        echoPlayerSource = context.createMediaElementSource(ui.video);
+        echoPlayerSource.connect(context.destination);
       } catch (error) {
         void context.close().catch(() => {});
         throw error;
       }
+      echoContext = context;
     } else if (echoContext.state !== 'running') {
       await resumeEchoContext(echoContext);
     }
+    const node = new AudioWorkletNode(echoContext, 'remote-call-echo', {
+      numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1]
+    });
     try {
-      echoMicrophoneSource = echoContext.createMediaStreamSource(new MediaStream([track]));
-      echoNode = new AudioWorkletNode(echoContext, 'remote-call-echo', {
-        numberOfInputs: 2, numberOfOutputs: 1, outputChannelCount: [1]
-      });
-      echoDestination = echoContext.createMediaStreamDestination();
-      echoMicrophoneSource.connect(echoNode, 0, 0);
-      echoPlayerSource.connect(echoNode, 0, 1);
-      echoReferenceConnected = true;
-      echoNode.connect(echoDestination);
-      echoOutputTrack = requireTrack(echoDestination.stream.getAudioTracks()[0],
-        'Processed microphone track is unavailable');
-      echoNode.addEventListener('processorerror', () => {
-        setStatus('Extra echo cancellation failed.', true);
-        if (recording) void window.RemoteCallConnection.stopCall();
-      });
-      ui.echoCancellationStatus.textContent += ' Extra echo cancellation: on.';
+      echoPlayerSource.disconnect();
+      echoPlayerSource.connect(node);
+      node.connect(echoContext.destination);
     } catch (error) {
-      stopExtraEchoCancellation();
+      node.disconnect();
+      node.port.close();
+      echoPlayerSource.disconnect();
+      echoPlayerSource.connect(echoContext.destination);
       throw error;
     }
-  }
-
-  function stopExtraEchoCancellation() {
-    echoMicrophoneSource?.disconnect();
-    if (echoReferenceConnected) echoPlayerSource.disconnect(echoNode);
-    echoReferenceConnected = false;
-    echoNode?.disconnect();
-    echoNode?.port.close();
-    echoOutputTrack?.stop();
-    echoMicrophoneSource = echoNode = echoDestination = echoOutputTrack = null;
+    echoNode = node;
+    node.addEventListener('processorerror', () => {
+      bypassEchoProcessing();
+      setStatus('Extra echo cancellation failed; incoming audio now plays unprocessed.', true);
+    });
+    echoClockTimer = setInterval(postEchoClock, 100);
+    ui.echoCancellationStatus.textContent += ' Extra echo cancellation: on.';
   }
 
   async function prepareRecording() {
@@ -1000,10 +1267,9 @@
         'The required microphone or camera track is unavailable.'));
       if (ui.extraEchoCancellation.checked) {
         try {
-          await prepareExtraEchoCancellation(mediaStream.getAudioTracks()[0]);
+          await prepareExtraEchoCancellation();
         } catch (error) {
           console.warn('Extra echo cancellation is unavailable:', error);
-          ui.extraEchoCancellation.checked = false;
           ui.echoCancellationStatus.textContent += ' Extra processing unavailable.';
         }
       }
@@ -1019,7 +1285,7 @@
         : 'Microphone is ready. Black video will be sent.');
       return preparedMimeTypes;
     } catch (error) {
-      stopExtraEchoCancellation();
+      bypassEchoProcessing();
       stopVideoCapture();
       mediaStream?.getTracks().forEach(track => track.stop());
       mediaStream = null;
@@ -1037,11 +1303,12 @@
     if (!preparedMimeTypes || !mediaStream || recording || busy || stoppingPromise) {
       throw new Error('Camera and microphone are not ready');
     }
-    const audioTrack = requireTrack(echoOutputTrack || mediaStream.getAudioTracks()[0],
-      'Microphone track is unavailable');
+    const audioTrack = requireTrack(mediaStream.getAudioTracks()[0], 'Microphone track is unavailable');
     const videoTrack = requireTrack(canvasStream?.getVideoTracks()[0], 'Video track is unavailable');
     startedAt = performance.now();
     recording = true;
+    // Kept after recording stops: the peer's buffered chunks still refer to our audio.
+    echoReference = echoNode ? new LocalEchoReference(recorderSession.chunks.audio) : null;
     try {
       recorderSession.setPublisher({ publishChunk: sendChunk });
       recorderSession.start('audio', audioTrack, preparedMimeTypes.audio);
@@ -1083,7 +1350,6 @@
       } catch (error) {
         setStatus(`Could not finish recording: ${error.message}`, true);
       } finally {
-        stopExtraEchoCancellation();
         stopVideoCapture();
         mediaStream?.getTracks().forEach(track => track.stop());
         mediaStream = null;
@@ -1160,6 +1426,7 @@
   function replayRecording() {
     const savedChunks = recorderSession?.chunks;
     if (recording || busy || !finished || !savedChunks?.audio.length || !savedChunks?.video.length) return;
+    bypassEchoProcessing();
     localLink?.close();
     remoteLink?.close();
     remoteLink = null;
@@ -1212,7 +1479,9 @@
       senderEndTimeMs: timing.senderEndTimeMs,
       createdAtEpochMs: timing.createdAtEpochMs,
       arrivedAtEpochMs: timing.arrivedAtEpochMs,
-      estimatedDeliveryDelayMs: timing.arrivedAtEpochMs - timing.createdAtEpochMs
+      estimatedDeliveryDelayMs: timing.arrivedAtEpochMs - timing.createdAtEpochMs,
+      playStart: timing.playStart,
+      playEnd: timing.playEnd
     };
     const timings = remoteChunkTimings[kind];
     timings.set(order, metadata);
@@ -1224,6 +1493,7 @@
       ...metadata,
       binary: new Uint8Array(payload)
     });
+    if (kind === 'audio') queueEchoReference(metadata);
     maybeFinishRemote();
   }
 
@@ -1259,7 +1529,6 @@
 
   async function abortPreparedMedia() {
     if (recording) return stopRecording();
-    stopExtraEchoCancellation();
     stopVideoCapture();
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
@@ -1365,7 +1634,7 @@
     remoteLink?.close();
     clearTimeout(remoteFinishTimer);
     stopVideoCapture();
-    stopExtraEchoCancellation();
+    clearInterval(echoClockTimer);
     if (echoContext) void echoContext.close().catch(() => {});
     mediaStream?.getTracks().forEach(track => track.stop());
     player?.close();
