@@ -11,6 +11,7 @@
   const connectionStatus = document.getElementById('connectionStatus');
   const connectionIndicator = document.getElementById('connectionIndicator');
   const nameInput = document.getElementById('callUserName');
+  const counterpartHeading = document.getElementById('counterpartName');
   const encryptionToggle = document.getElementById('encryptMedia');
   const extraEchoToggle = document.getElementById('extraEchoCancellation');
   const encryptionModeStatus = document.getElementById('encryptionModeStatus');
@@ -47,6 +48,7 @@
 
   if (hasSourceHost) {
     const linkSettings = new URLSearchParams(window.location.hash.slice(1));
+    setCounterpartName(linkSettings.get('caller-name'));
     extraEchoToggle.checked = linkSettings.get('extra-echo') === '1';
     extraEchoToggle.disabled = true;
     const encrypted = linkSettings.get('e2e');
@@ -88,6 +90,11 @@
     connectionStatus.textContent = message;
   }
 
+  function setCounterpartName(name) {
+    counterpartHeading.textContent = typeof name === 'string' && name.trim()
+      ? name.trim().slice(0, 80) : 'Incoming call';
+  }
+
   function setConnectionHealthy(healthy) {
     const label = healthy ? 'Call connections connected' : 'Call connections incomplete';
     connectionIndicator.style.backgroundColor = healthy ? '#38d985' : '#ff6868';
@@ -109,6 +116,7 @@
     url.searchParams.set('source-host', encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj)));
     const linkSettings = new URLSearchParams({ e2e: encryptionEnabled ? '1' : '0' });
     linkSettings.set('extra-echo', extraEchoToggle.checked ? '1' : '0');
+    linkSettings.set('caller-name', userName());
     if (encryptionEnabled) linkSettings.set('call-key', encodeCallSecret(callSecret));
     url.hash = linkSettings.toString();
     jointLink.value = url.toString();
@@ -212,6 +220,7 @@
 
   function setPeerMedia(message, clients) {
     peer = clients;
+    setCounterpartName(clients.name);
     for (const kind of ['audio', 'video']) {
       const entry = channel(kind);
       entry.peerClient = clients[kind];
@@ -405,6 +414,10 @@
 
   extraEchoToggle.addEventListener('change', () => {
     if (!hasSourceHost && PushcaClient.isOpen()) refreshJointLink();
+  });
+
+  nameInput.addEventListener('input', () => {
+    if (!hasSourceHost && phase === 'waiting' && PushcaClient.isOpen()) refreshJointLink();
   });
 
   window.RemoteCallConnection = {
