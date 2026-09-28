@@ -2,8 +2,8 @@
   'use strict';
 
   const WS_URL = 'wss://secure.fileshare.ovh:31085';
-  const PROTOCOL = 'REMOTE_CALL_V3';
-  const SIGNAL_PREFIX = 'remote-call-v3:';
+  const PROTOCOL = 'REMOTE_CALL_V5';
+  const SIGNAL_PREFIX = 'remote-call-v5:';
   const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER', video: 'REMOTE-CALL-VIDEO', audio: 'REMOTE-CALL-AUDIO' };
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
@@ -12,6 +12,7 @@
   const connectionIndicator = document.getElementById('connectionIndicator');
   const nameInput = document.getElementById('callUserName');
   const encryptionToggle = document.getElementById('encryptMedia');
+  const extraEchoToggle = document.getElementById('extraEchoCancellation');
   const encryptionModeStatus = document.getElementById('encryptionModeStatus');
   const searchParams = new URLSearchParams(window.location.search);
   const pageUrl = new URL(window.location.href);
@@ -46,6 +47,7 @@
 
   if (hasSourceHost) {
     const linkSettings = new URLSearchParams(window.location.hash.slice(1));
+    extraEchoToggle.checked = linkSettings.get('extra-echo') === '1';
     const encrypted = linkSettings.get('e2e');
     if (encrypted !== '0' && encrypted !== '1') {
       phase = 'invalid';
@@ -100,6 +102,7 @@
     const url = new URL(pageUrl);
     url.searchParams.set('source-host', encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj)));
     const linkSettings = new URLSearchParams({ e2e: encryptionEnabled ? '1' : '0' });
+    linkSettings.set('extra-echo', extraEchoToggle.checked ? '1' : '0');
     if (encryptionEnabled) linkSettings.set('call-key', encodeCallSecret(callSecret));
     url.hash = linkSettings.toString();
     jointLink.value = url.toString();
@@ -183,14 +186,19 @@
           .finally(() => setConnectionStatus(message.message));
       }
     } else if (message.type === 'remote-call:chunk' && message.payload instanceof ArrayBuffer
-      && Number.isSafeInteger(message.order) && message.order >= 0) {
+      && Number.isSafeInteger(message.order) && message.order >= 0
+      && Number.isSafeInteger(message.senderStartTimeMs)
+      && Number.isSafeInteger(message.senderEndTimeMs)
+      && message.senderStartTimeMs >= 0 && message.senderEndTimeMs > message.senderStartTimeMs
+      && Number.isFinite(message.createdAtEpochMs) && message.createdAtEpochMs > 0
+      && Number.isFinite(message.arrivedAtEpochMs) && message.arrivedAtEpochMs > 0) {
       if (!entry.expectedBinaryId) {
         if (entry.earlyBytes + message.payload.byteLength <= 16 * 1048576) {
           entry.earlyChunks.push(message);
           entry.earlyBytes += message.payload.byteLength;
         }
       } else if (message.binaryId === entry.expectedBinaryId) {
-        window.RemoteCallMedia?.receiveChunk(message.kind, message.order, message.payload);
+        window.RemoteCallMedia?.receiveChunk(message.kind, message.order, message.payload, message);
       }
     }
   });
@@ -207,7 +215,7 @@
       const entry = channel(kind);
       for (const chunk of entry.earlyChunks) {
         if (chunk.binaryId === entry.expectedBinaryId) {
-          window.RemoteCallMedia.receiveChunk(kind, chunk.order, chunk.payload);
+          window.RemoteCallMedia.receiveChunk(kind, chunk.order, chunk.payload, chunk);
         }
       }
       entry.earlyChunks = [];
@@ -222,7 +230,9 @@
     const payload = chunk.binary.slice().buffer;
     entry.iframe.contentWindow.postMessage({
       type: 'remote-call:send', kind, binaryId: localBinaryIds[kind],
-      order: chunk.index, destHashCode: entry.peerClient.hashCode(), payload
+      order: chunk.index, startTime: chunk.startTime, endTime: chunk.endTime,
+      createdAtEpochMs: chunk.createdAtEpochMs,
+      destHashCode: entry.peerClient.hashCode(), payload
     }, window.location.origin, [payload]);
   }
 
@@ -383,6 +393,10 @@
     encryptionEnabled = encryptionToggle.checked;
     encryptionModeStatus.textContent = `End-to-end encryption: ${encryptionEnabled ? 'on' : 'off'}`;
     if (PushcaClient.isOpen()) refreshJointLink();
+  });
+
+  extraEchoToggle.addEventListener('change', () => {
+    if (!hasSourceHost && PushcaClient.isOpen()) refreshJointLink();
   });
 
   window.RemoteCallConnection = {

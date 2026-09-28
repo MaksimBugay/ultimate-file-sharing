@@ -17,6 +17,7 @@
     video: document.getElementById('replayVideo'),
     cameraCaption: document.getElementById('cameraCaption'),
     echoCancellationStatus: document.getElementById('echoCancellationStatus'),
+    extraEchoCancellation: document.getElementById('extraEchoCancellation'),
     cameraEnabled: document.getElementById('cameraEnabled'),
     muteMic: document.getElementById('muteMicButton'),
     caption: document.getElementById('playerCaption'),
@@ -46,6 +47,13 @@
   let audioProcessor = null;
   let audioSource = null;
   let silentOutput = null;
+  let echoContext = null;
+  let echoPlayerSource = null;
+  let echoMicrophoneSource = null;
+  let echoNode = null;
+  let echoDestination = null;
+  let echoOutputTrack = null;
+  let echoReferenceConnected = false;
   let micMuted = false;
   let startedAt = 0;
   let elapsedTimer = null;
@@ -61,6 +69,7 @@
   let localLink = null;
   let remoteLink = null;
   let remoteReceived = { audio: new Set(), video: new Set() };
+  let remoteChunkTimings = { audio: new Map(), video: new Map() };
   let remoteFinalCounts = null;
   let remoteFinishTimer = null;
   let remotePlaybackFinished = false;
@@ -97,6 +106,7 @@
     ui.count.textContent = `${chunks?.audio.length || 0} / ${chunks?.video.length || 0}`;
     ui.size.textContent = `${((recorderSession?.storedBytes || 0) / 1048576).toFixed(1)} MB`;
     ui.cameraEnabled.disabled = busy || cameraBusy || !!stoppingPromise || (!!preparedMimeTypes && !recording);
+    ui.extraEchoCancellation.disabled = busy || !!stoppingPromise || !!preparedMimeTypes || recording;
     ui.muteMic.disabled = !recording || busy || !!stoppingPromise;
     ui.replay.disabled = busy || recording || !finished || !remotePlaybackFinished
       || !chunks?.audio.length || !chunks?.video.length;
@@ -218,6 +228,7 @@
 
     onData(kind, event) {
       if (!event.data?.size) return;
+      const createdAtEpochMs = performance.timeOrigin + performance.now();
       const index = this.nextSequence[kind]++;
       const endTime = Math.max(this.lastEndMs[kind] + 1, this.clock());
       const startTime = this.lastEndMs[kind];
@@ -231,6 +242,7 @@
           mimeType: this.mimeTypes[kind],
           startTime,
           endTime,
+          createdAtEpochMs,
           duration: endTime - startTime,
           binary
         };
@@ -395,6 +407,8 @@
     micMuted = muted;
     const audioTrack = mediaStream?.getAudioTracks()[0];
     if (audioTrack) audioTrack.enabled = !muted;
+    if (echoOutputTrack) echoOutputTrack.enabled = !muted;
+    echoNode?.port.postMessage({ type: 'mute', muted });
     ui.muteMic.title = muted ? 'Unmute microphone' : 'Mute microphone';
     ui.muteMic.setAttribute('aria-pressed', String(muted));
     showDeviceOff(ui.muteMic, muted);
@@ -803,6 +817,7 @@
     remoteFinalCounts = null;
     remotePlaybackFinished = false;
     remoteReceived = { audio: new Set(), video: new Set() };
+    remoteChunkTimings = { audio: new Map(), video: new Map() };
     player?.close();
     player = null;
     stopVideoCapture();
@@ -890,6 +905,79 @@
     }
   }
 
+  async function resumeEchoContext(context) {
+    let timeout;
+    try {
+      await Promise.race([
+        context.resume(),
+        new Promise((_, reject) => {
+          timeout = setTimeout(() => reject(new Error('Audio processing needs a user gesture')), 1500);
+        })
+      ]);
+      if (context.state !== 'running') throw new Error('Audio processing could not start');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function prepareExtraEchoCancellation(track) {
+    if (!ui.extraEchoCancellation.checked) return;
+    if (!AudioContextClass || !window.AudioWorkletNode) {
+      throw new Error('AudioWorklet is unavailable in this browser');
+    }
+    if (!echoContext) {
+      const context = new AudioContextClass();
+      if (!context.audioWorklet?.addModule) {
+        void context.close().catch(() => {});
+        throw new Error('AudioWorklet is unavailable');
+      }
+      try {
+        await context.audioWorklet.addModule('js/remote-call-echo-worklet.js');
+        await resumeEchoContext(context);
+        const playerSource = context.createMediaElementSource(ui.video);
+        playerSource.connect(context.destination);
+        echoContext = context;
+        echoPlayerSource = playerSource;
+      } catch (error) {
+        void context.close().catch(() => {});
+        throw error;
+      }
+    } else if (echoContext.state !== 'running') {
+      await resumeEchoContext(echoContext);
+    }
+    try {
+      echoMicrophoneSource = echoContext.createMediaStreamSource(new MediaStream([track]));
+      echoNode = new AudioWorkletNode(echoContext, 'remote-call-echo', {
+        numberOfInputs: 2, numberOfOutputs: 1, outputChannelCount: [1]
+      });
+      echoDestination = echoContext.createMediaStreamDestination();
+      echoMicrophoneSource.connect(echoNode, 0, 0);
+      echoPlayerSource.connect(echoNode, 0, 1);
+      echoReferenceConnected = true;
+      echoNode.connect(echoDestination);
+      echoOutputTrack = requireTrack(echoDestination.stream.getAudioTracks()[0],
+        'Processed microphone track is unavailable');
+      echoNode.addEventListener('processorerror', () => {
+        setStatus('Extra echo cancellation failed.', true);
+        if (recording) void window.RemoteCallConnection.stopCall();
+      });
+      ui.echoCancellationStatus.textContent += ' Extra echo cancellation: on.';
+    } catch (error) {
+      stopExtraEchoCancellation();
+      throw error;
+    }
+  }
+
+  function stopExtraEchoCancellation() {
+    echoMicrophoneSource?.disconnect();
+    if (echoReferenceConnected) echoPlayerSource.disconnect(echoNode);
+    echoReferenceConnected = false;
+    echoNode?.disconnect();
+    echoNode?.port.close();
+    echoOutputTrack?.stop();
+    echoMicrophoneSource = echoNode = echoDestination = echoOutputTrack = null;
+  }
+
   async function prepareRecording() {
     if (preparedMimeTypes) return preparedMimeTypes;
     if (busy || recording || stoppingPromise) throw new Error('Media is busy');
@@ -910,6 +998,15 @@
       mediaStream = await acquireMediaStream();
       await configureEchoCancellation(requireTrack(mediaStream.getAudioTracks()[0],
         'The required microphone or camera track is unavailable.'));
+      if (ui.extraEchoCancellation.checked) {
+        try {
+          await prepareExtraEchoCancellation(mediaStream.getAudioTracks()[0]);
+        } catch (error) {
+          console.warn('Extra echo cancellation is unavailable:', error);
+          ui.extraEchoCancellation.checked = false;
+          ui.echoCancellationStatus.textContent += ' Extra processing unavailable.';
+        }
+      }
       const initialCameraTrack = mediaStream.getVideoTracks()[0];
       if (cameraEnabled()) requireTrack(initialCameraTrack,
         'The required microphone or camera track is unavailable.');
@@ -922,6 +1019,7 @@
         : 'Microphone is ready. Black video will be sent.');
       return preparedMimeTypes;
     } catch (error) {
+      stopExtraEchoCancellation();
       stopVideoCapture();
       mediaStream?.getTracks().forEach(track => track.stop());
       mediaStream = null;
@@ -939,7 +1037,8 @@
     if (!preparedMimeTypes || !mediaStream || recording || busy || stoppingPromise) {
       throw new Error('Camera and microphone are not ready');
     }
-    const audioTrack = requireTrack(mediaStream.getAudioTracks()[0], 'Microphone track is unavailable');
+    const audioTrack = requireTrack(echoOutputTrack || mediaStream.getAudioTracks()[0],
+      'Microphone track is unavailable');
     const videoTrack = requireTrack(canvasStream?.getVideoTracks()[0], 'Video track is unavailable');
     startedAt = performance.now();
     recording = true;
@@ -984,6 +1083,7 @@
       } catch (error) {
         setStatus(`Could not finish recording: ${error.message}`, true);
       } finally {
+        stopExtraEchoCancellation();
         stopVideoCapture();
         mediaStream?.getTracks().forEach(track => track.stop());
         mediaStream = null;
@@ -1093,6 +1193,7 @@
     remoteFinalCounts = null;
     remotePlaybackFinished = false;
     remoteReceived = { audio: new Set(), video: new Set() };
+    remoteChunkTimings = { audio: new Map(), video: new Map() };
     ui.video.muted = false;
     ui.video.volume = Number(ui.volume.value) / 100;
     ui.controls.hidden = false;
@@ -1102,12 +1203,25 @@
     updateReplayControls();
   }
 
-  function receiveRemoteChunk(kind, order, payload) {
+  function receiveRemoteChunk(kind, order, payload, timing) {
     if (!remoteLink || (kind !== 'audio' && kind !== 'video')) return;
+    // Start/end are relative to the sender's recording start. Creation and arrival
+    // use epoch milliseconds; their difference also includes any device clock skew.
+    const metadata = {
+      senderStartTimeMs: timing.senderStartTimeMs,
+      senderEndTimeMs: timing.senderEndTimeMs,
+      createdAtEpochMs: timing.createdAtEpochMs,
+      arrivedAtEpochMs: timing.arrivedAtEpochMs,
+      estimatedDeliveryDelayMs: timing.arrivedAtEpochMs - timing.createdAtEpochMs
+    };
+    const timings = remoteChunkTimings[kind];
+    timings.set(order, metadata);
+    if (timings.size > 180) timings.delete(timings.keys().next().value);
     remoteReceived[kind].add(order);
     remoteLink.publishChunk({
       index: order,
       mediaType: kind.toUpperCase(),
+      ...metadata,
       binary: new Uint8Array(payload)
     });
     maybeFinishRemote();
@@ -1145,6 +1259,7 @@
 
   async function abortPreparedMedia() {
     if (recording) return stopRecording();
+    stopExtraEchoCancellation();
     stopVideoCapture();
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
@@ -1168,6 +1283,7 @@
     stop: stopRecording,
     setPeerMimeTypes,
     receiveChunk: receiveRemoteChunk,
+    getReceivedChunkTiming: (kind, order) => remoteChunkTimings[kind]?.get(order) || null,
     finishRemote,
     abort: abortPreparedMedia
   };
@@ -1231,6 +1347,9 @@
     updateReplayControls();
   });
   ui.video.addEventListener('play', updateReplayControls);
+  window.addEventListener('pointerdown', () => {
+    if (echoContext?.state === 'suspended') void echoContext.resume().catch(() => {});
+  }, { capture: true });
   ui.video.addEventListener('pause', updateReplayControls);
   ui.video.addEventListener('ended', () => {
     if (player && !player.closed) ui.caption.textContent = 'Playback finished.';
@@ -1246,6 +1365,8 @@
     remoteLink?.close();
     clearTimeout(remoteFinishTimer);
     stopVideoCapture();
+    stopExtraEchoCancellation();
+    if (echoContext) void echoContext.close().catch(() => {});
     mediaStream?.getTracks().forEach(track => track.stop());
     player?.close();
     if (audioContext) void stopPcmCapture();

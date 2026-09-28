@@ -8,7 +8,9 @@
   const applicationId = `REMOTE-CALL-${kind.toUpperCase()}`;
   const wsUrl = 'wss://secure.fileshare.ovh:31085';
   const encoder = new TextEncoder();
-  const hkdfSalt = encoder.encode('remote-call-v3/media');
+  const hkdfSalt = encoder.encode('remote-call-v5/media');
+  const CHUNK_HEADER_BYTES = 28;
+  const CHUNK_MAGIC = 0x354d4352; // "RCM5" in little-endian byte order.
   let initialized = false;
   let aliasAttempt = 0;
   let pendingSends = 0;
@@ -25,7 +27,7 @@
     if (!promise) {
       promise = cryptoReady.then(baseKey => crypto.subtle.deriveBits({
         name: 'HKDF', hash: 'SHA-256', salt: hkdfSalt,
-        info: encoder.encode(JSON.stringify(['remote-call-v3', kind, sender, binaryId]))
+        info: encoder.encode(JSON.stringify(['remote-call-v5', kind, sender, binaryId]))
       }, baseKey, 288)).then(bits => {
         const material = new Uint8Array(bits);
         return {
@@ -71,6 +73,56 @@
     window.parent.postMessage({ type, kind, ...fields }, parentOrigin, transfer);
   }
 
+  function packChunk(payload, startTime, endTime, createdAtEpochMs) {
+    if (!(payload instanceof ArrayBuffer) || !Number.isSafeInteger(startTime)
+      || !Number.isSafeInteger(endTime) || startTime < 0 || endTime <= startTime
+      || !Number.isFinite(createdAtEpochMs) || createdAtEpochMs <= 0) {
+      throw new Error('Invalid recorded chunk timing');
+    }
+    const wrapped = new ArrayBuffer(CHUNK_HEADER_BYTES + payload.byteLength);
+    const header = new DataView(wrapped);
+    header.setUint32(0, CHUNK_MAGIC, true);
+    header.setFloat64(4, startTime, true);
+    header.setFloat64(12, endTime, true);
+    header.setFloat64(20, createdAtEpochMs, true);
+    new Uint8Array(wrapped, CHUNK_HEADER_BYTES).set(new Uint8Array(payload));
+    return wrapped;
+  }
+
+  function unpackChunk(payload) {
+    if (!(payload instanceof ArrayBuffer) || payload.byteLength <= CHUNK_HEADER_BYTES) {
+      throw new Error('Invalid received media chunk');
+    }
+    const header = new DataView(payload);
+    if (header.getUint32(0, true) !== CHUNK_MAGIC) throw new Error('Unsupported media chunk format');
+    const senderStartTimeMs = header.getFloat64(4, true);
+    const senderEndTimeMs = header.getFloat64(12, true);
+    const createdAtEpochMs = header.getFloat64(20, true);
+    if (!Number.isSafeInteger(senderStartTimeMs) || !Number.isSafeInteger(senderEndTimeMs)
+      || senderStartTimeMs < 0 || senderEndTimeMs <= senderStartTimeMs
+      || !Number.isFinite(createdAtEpochMs) || createdAtEpochMs <= 0) {
+      throw new Error('Invalid received chunk timing');
+    }
+    return { senderStartTimeMs, senderEndTimeMs, createdAtEpochMs, payload: payload.slice(CHUNK_HEADER_BYTES) };
+  }
+
+  function reportReceivedChunk(binaryWithHeader, payload, arrivedAtEpochMs) {
+    try {
+      const chunk = unpackChunk(payload);
+      report('remote-call:chunk', {
+        binaryId: binaryWithHeader.binaryId,
+        order: binaryWithHeader.order,
+        senderStartTimeMs: chunk.senderStartTimeMs,
+        senderEndTimeMs: chunk.senderEndTimeMs,
+        createdAtEpochMs: chunk.createdAtEpochMs,
+        arrivedAtEpochMs,
+        payload: chunk.payload
+      }, [chunk.payload]);
+    } catch (error) {
+      report('remote-call:error', { message: `${kind} chunk ${binaryWithHeader.order}: ${error.message}` });
+    }
+  }
+
   function waitForAlias(client) {
     const attempt = ++aliasAttempt;
     void CallableFuture.callAsynchronously(10000, String(client.hashCode()), () => {}).then(result => {
@@ -89,21 +141,13 @@
   };
   PushcaClient.onFileTransferChunkHandler = binaryWithHeader => {
     if (encryptionEnabled === null) return;
+    const arrivedAtEpochMs = performance.timeOrigin + performance.now();
     if (!encryptionEnabled) {
-      const payload = binaryWithHeader.payload;
-      report('remote-call:chunk', {
-        binaryId: binaryWithHeader.binaryId,
-        order: binaryWithHeader.order,
-        payload
-      }, [payload]);
+      reportReceivedChunk(binaryWithHeader, binaryWithHeader.payload, arrivedAtEpochMs);
       return;
     }
     void decryptChunk(binaryWithHeader.binaryId, binaryWithHeader.order, binaryWithHeader.payload).then(payload => {
-      report('remote-call:chunk', {
-        binaryId: binaryWithHeader.binaryId,
-        order: binaryWithHeader.order,
-        payload
-      }, [payload]);
+      reportReceivedChunk(binaryWithHeader, payload, arrivedAtEpochMs);
     }).catch(() => report('remote-call:error', { message: `Could not decrypt ${kind} chunk ${binaryWithHeader.order}.` }));
   };
 
@@ -143,7 +187,10 @@
     if (message.type !== 'remote-call:send' || !initialized) return;
     if (!(message.payload instanceof ArrayBuffer) || !Number.isSafeInteger(message.order)
       || message.order < 0 || !Number.isInteger(message.destHashCode)
-      || typeof message.binaryId !== 'string' || !message.binaryId) return;
+      || typeof message.binaryId !== 'string' || !message.binaryId
+      || !Number.isSafeInteger(message.startTime) || !Number.isSafeInteger(message.endTime)
+      || message.startTime < 0 || message.endTime <= message.startTime
+      || !Number.isFinite(message.createdAtEpochMs) || message.createdAtEpochMs <= 0) return;
     if (message.order <= (lastSentOrders.get(message.binaryId) ?? -1)) {
       report('remote-call:error', { message: `${kind} chunk order was reused.` });
       return;
@@ -155,9 +202,11 @@
     lastSentOrders.set(message.binaryId, message.order);
     pendingSends++;
     sendTail = sendTail.then(async () => {
+      const wrapped = packChunk(message.payload, message.startTime, message.endTime,
+        message.createdAtEpochMs);
       const payload = encryptionEnabled
-        ? await encryptChunk(message.binaryId, message.order, message.payload)
-        : message.payload;
+        ? await encryptChunk(message.binaryId, message.order, wrapped)
+        : wrapped;
       const result = await PushcaClient.transferBinaryChunk(
         message.binaryId, message.order, message.destHashCode, payload
       );

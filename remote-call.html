@@ -19,6 +19,8 @@
     .panel h2 { margin: 0; padding: 10px 14px; font-size: 1rem; }
     video { display: block; width: 100%; aspect-ratio: 16/9; background: #070d14; border-radius: 10px; object-fit: contain; }
     .caption { margin: 6px 14px 0; font-size: .85rem; }
+    .echo-toggle { display: inline-flex; align-items: center; gap: 8px; margin: 8px 14px 0; color: #edf3fa; font-size: .85rem; }
+    .echo-toggle input { accent-color: #4a9eff; }
     .replay-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 14px 0; }
     .replay-controls[hidden] { display: none; }
     .replay-controls label { display: flex; gap: 10px; align-items: center; color: #edf3fa; }
@@ -78,6 +80,7 @@
       <video id="liveVideo" autoplay muted playsinline></video>
       <p id="cameraCaption" class="caption">Live preview appears here when recording starts.</p>
       <p id="echoCancellationStatus" class="caption" role="status" aria-live="polite">Echo cancellation will be checked when the microphone opens.</p>
+      <label class="echo-toggle"><input id="extraEchoCancellation" type="checkbox"> Extra echo cancellation (experimental)</label>
       <div class="controls">
         <div class="device-controls" role="group" aria-label="Capture devices">
           <button id="cameraEnabled" type="button" class="secondary device-button" aria-label="Camera" aria-pressed="true" title="Turn camera off">
@@ -113,7 +116,7 @@
   </dl>
 
   <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-  <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. The link contains a private media key when encryption is enabled, so share it only with the receiver. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. You can save a recent microphone clip or save your local audio and video files after the call. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+  <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. The link contains a private media key when encryption is enabled, so share it only with the receiver. The optional extra echo setting is also included in the link and uses incoming playback audio to suppress matching sound in the microphone. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. You can save a recent microphone clip or save your local audio and video files after the call. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
 </main>
 <script src="js/pushca.min.js" defer></script>
 <script src="js/remote-call-connection.js" defer></script>
