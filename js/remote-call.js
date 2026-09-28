@@ -8,7 +8,6 @@
     ? Math.round(requestedChunkSeconds * 1000) : 1000;
   const WINDOW_MS = CHUNK_MS;
   const INITIAL_COMMON_BUFFER_SECONDS = 0.5;
-  const REPLAY_DELAY_MS = 5000;
   const ECHO_START_MS = 12000;
   const ECHO_END_MS = 5000;
   const MAX_RECORDING_BYTES = 512 * 1048576;
@@ -20,7 +19,6 @@
     cameraEnabled: document.getElementById('cameraEnabled'),
     muteMic: document.getElementById('muteMicButton'),
     caption: document.getElementById('playerCaption'),
-    start: document.getElementById('startButton'),
     stop: document.getElementById('stopButton'),
     saveMic: document.getElementById('saveRecentMicButton'),
     replay: document.getElementById('replayButton'),
@@ -60,6 +58,12 @@
   let player = null;
   let recorderSession = null;
   let localLink = null;
+  let remoteLink = null;
+  let remoteReceived = { audio: new Set(), video: new Set() };
+  let remoteFinalCounts = null;
+  let remoteFinishTimer = null;
+  let remotePlaybackFinished = false;
+  let preparedMimeTypes = null;
   let cameraTrack = null;
   let cameraActive = false;
   let cameraBusy = false;
@@ -91,9 +95,10 @@
     const chunks = recorderSession?.chunks;
     ui.count.textContent = `${chunks?.audio.length || 0} / ${chunks?.video.length || 0}`;
     ui.size.textContent = `${((recorderSession?.storedBytes || 0) / 1048576).toFixed(1)} MB`;
-    ui.cameraEnabled.disabled = busy || cameraBusy || !!stoppingPromise;
+    ui.cameraEnabled.disabled = busy || cameraBusy || !!stoppingPromise || (!!preparedMimeTypes && !recording);
     ui.muteMic.disabled = !recording || busy || !!stoppingPromise;
-    ui.replay.disabled = busy || recording || !finished || !chunks?.audio.length || !chunks?.video.length;
+    ui.replay.disabled = busy || recording || !finished || !remotePlaybackFinished
+      || !chunks?.audio.length || !chunks?.video.length;
     ui.save.disabled = busy || !finished || saveStage === 'done' || !chunks?.[saveStage]?.length;
     updateMicButton();
   }
@@ -110,7 +115,7 @@
     return track;
   }
 
-  // Local delivery between the recorder and the receiver.
+  // Queue chunks until the MSE receiver has room for them.
   class LocalChunkLink {
     constructor(receiver) {
       this.receiver = receiver;
@@ -149,7 +154,7 @@
           }
         }
       } catch (error) {
-        setStatus(`Local chunk delivery failed: ${error.message}`, true);
+        setStatus(`Chunk delivery failed: ${error.message}`, true);
         this.close();
       }
     }
@@ -184,7 +189,6 @@
     }
 
     publishChunk(chunk) {
-      // Live recording and replay from start use the same receiver entry point.
       this.publisher?.publishChunk(chunk);
     }
 
@@ -591,10 +595,9 @@
   }
 
   class MseReplayPlayer {
-    constructor(video, types, { playAfter = 0 } = {}) {
+    constructor(video, types) {
       this.video = video;
       this.types = types;
-      this.playAfter = playAfter;
       this.inbox = {
         audio: { next: 0, pending: new Map(), bytes: 0, finished: false },
         video: { next: 0, pending: new Map(), bytes: 0, finished: false }
@@ -686,13 +689,9 @@
       const fullyAppended = Object.values(this.inbox).every(inbox => inbox.finished && !inbox.pending.size)
         && this.queues.audio.idle() && this.queues.video.idle();
       const sharedEnd = Math.min(audioEnd, videoEnd);
-      const waitingForDelay = !this.started && performance.now() < this.playAfter;
-      const initialRange = !this.started && !waitingForDelay && findCommonBufferedRange(audio, video,
+      const initialRange = !this.started && findCommonBufferedRange(audio, video,
         fullyAppended ? 0.05 : INITIAL_COMMON_BUFFER_SECONDS);
       ui.diagnostics.textContent = `MSE · audio ${formatRanges(audio)} · video ${formatRanges(video)} · playhead ${this.video.currentTime.toFixed(2)}s · buffered end gap ${Math.abs(audioEnd - videoEnd).toFixed(2)}s${this.syncHold ? ' · waiting for both streams' : ''}`;
-      if (waitingForDelay) {
-        ui.caption.textContent = `Delayed replay starts in ${Math.ceil((this.playAfter - performance.now()) / 1000)}s.`;
-      }
       if (initialRange) {
         this.started = true;
         this.video.currentTime = initialRange.start;
@@ -717,7 +716,7 @@
         }
         updateReplayControls();
       }
-      if (this.mediaSource.readyState === 'open' && fullyAppended && !waitingForDelay) {
+      if (this.mediaSource.readyState === 'open' && fullyAppended) {
         if (!this.started) {
           this.fail(new Error('Audio and video MSE timelines have no overlapping buffered range'));
           return;
@@ -802,21 +801,29 @@
   function resetRecording() {
     localLink?.close();
     localLink = null;
+    remoteLink?.close();
+    remoteLink = null;
+    clearTimeout(remoteFinishTimer);
+    remoteFinishTimer = null;
+    remoteFinalCounts = null;
+    remotePlaybackFinished = false;
+    remoteReceived = { audio: new Set(), video: new Set() };
     player?.close();
     player = null;
     stopVideoCapture();
     cameraBusy = false;
+    preparedMimeTypes = null;
     recorderSession = new CallRecorder({
       clock: relativeMs,
       onUpdate: updateStats,
       onLimit: () => {
         if (!recording) return;
         setStatus('Recording reached the 512 MB in-memory limit. Finishing…');
-        void stopRecording();
+        void window.RemoteCallConnection.stopCall();
       },
       onError: (kind, error) => {
         setStatus(`${kind} recorder failed: ${error.message}`, true);
-        if (recording) void stopRecording();
+        if (recording) void window.RemoteCallConnection.stopCall();
       }
     });
     pcmFrames.length = 0;
@@ -827,85 +834,101 @@
     ui.save.textContent = 'Save video file';
     ui.controls.hidden = true;
     ui.cameraCaption.textContent = 'Live preview appears here when recording starts.';
-    ui.caption.textContent = 'Replay begins five seconds after recording starts.';
+    ui.caption.textContent = 'Incoming audio and video appear here during the call.';
     ui.diagnostics.textContent = 'Audio and video buffer diagnostics appear during replay.';
     updateStats();
   }
 
-  async function startRecording() {
-    if (busy || recording || stoppingPromise) return;
+  async function acquireMediaStream() {
+    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    if (!cameraEnabled()) return navigator.mediaDevices.getUserMedia({ audio, video: false });
+    return navigator.mediaDevices.getUserMedia({
+      audio,
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }
+    }).catch(async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+      setCameraEnabled(false);
+      return stream;
+    });
+  }
+
+  async function prepareRecording() {
+    if (preparedMimeTypes) return preparedMimeTypes;
+    if (busy || recording || stoppingPromise) throw new Error('Media is busy');
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.MediaSource
       || !HTMLCanvasElement.prototype.captureStream) {
-      setStatus('MediaRecorder, MediaSource and canvas capture are required. Use HTTPS or localhost in a Chromium browser.', true);
-      return;
+      throw new Error('MediaRecorder, MediaSource and canvas capture are required. Use HTTPS or localhost in a Chromium browser.');
     }
     const audioMime = pickMime('audio');
     const videoMime = pickMime('video');
     if (!audioMime || !videoMime) {
-      setStatus('This browser has no audio and video WebM formats supported by both MediaRecorder and MediaSource.', true);
-      return;
+      throw new Error('This browser has no audio and video WebM formats supported by both MediaRecorder and MediaSource.');
     }
     busy = true;
-    ui.start.disabled = true;
     setStatus(cameraEnabled()
       ? 'Requesting camera and microphone access…' : 'Requesting microphone access…');
     try {
       resetRecording();
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: cameraEnabled()
-          ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }
-          : false
-      });
-      const audioTrack = requireTrack(mediaStream.getAudioTracks()[0],
+      mediaStream = await acquireMediaStream();
+      requireTrack(mediaStream.getAudioTracks()[0],
         'The required microphone or camera track is unavailable.');
       const initialCameraTrack = mediaStream.getVideoTracks()[0];
       if (cameraEnabled()) requireTrack(initialCameraTrack,
         'The required microphone or camera track is unavailable.');
-      await startPcmCapture(audioTrack);
       startVideoCapture();
       if (initialCameraTrack) await enableCameraTrack(initialCameraTrack);
       updateCameraCaption();
       baseName = `recording-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-      startedAt = performance.now();
-      recording = true;
-      ui.video.muted = false;
-      ui.video.volume = Number(ui.volume.value) / 100;
-      ui.controls.hidden = false;
-      player = new MseReplayPlayer(ui.video, { audio: audioMime, video: videoMime },
-        { playAfter: startedAt + REPLAY_DELAY_MS });
-      localLink = new LocalChunkLink(player);
-      recorderSession.setPublisher(localLink);
-      recorderSession.start('audio', audioTrack, audioMime);
-      recorderSession.start('video', canvasStream.getVideoTracks()[0], videoMime);
-      updateReplayControls();
-      elapsedTimer = setInterval(updateElapsed, 250);
-      ui.stop.disabled = false;
-      setStatus('Recording continuous audio and video streams. Delayed replay begins in five seconds.');
+      preparedMimeTypes = { audio: audioMime, video: videoMime };
+      setStatus(cameraActive ? 'Camera and microphone are ready for the call.'
+        : 'Microphone is ready. Black video will be sent.');
+      return preparedMimeTypes;
     } catch (error) {
-      recording = false;
-      await recorderSession?.stop();
-      await stopPcmCapture();
-      localLink?.close();
-      localLink = null;
-      player?.close();
-      player = null;
       stopVideoCapture();
       mediaStream?.getTracks().forEach(track => track.stop());
       mediaStream = null;
       ui.camera.srcObject = null;
-      ui.start.disabled = false;
       ui.cameraCaption.textContent = 'Camera preview unavailable.';
-      setStatus(`Could not start recording: ${error.message}`, true);
+      setStatus(`Could not prepare media: ${error.message}`, true);
+      throw error;
     } finally {
       busy = false;
       updateStats();
     }
   }
 
+  async function startRecording(sendChunk) {
+    if (!preparedMimeTypes || !mediaStream || recording || busy || stoppingPromise) {
+      throw new Error('Camera and microphone are not ready');
+    }
+    const audioTrack = requireTrack(mediaStream.getAudioTracks()[0], 'Microphone track is unavailable');
+    const videoTrack = requireTrack(canvasStream?.getVideoTracks()[0], 'Video track is unavailable');
+    startedAt = performance.now();
+    recording = true;
+    try {
+      recorderSession.setPublisher({ publishChunk: sendChunk });
+      recorderSession.start('audio', audioTrack, preparedMimeTypes.audio);
+      recorderSession.start('video', videoTrack, preparedMimeTypes.video);
+      void startPcmCapture(audioTrack).catch(error => console.warn('Microphone clip capture is unavailable:', error));
+      elapsedTimer = setInterval(updateElapsed, 250);
+      ui.stop.disabled = false;
+      setStatus('Recording and sending live audio and video.');
+      updateStats();
+    } catch (error) {
+      await stopRecording();
+      throw error;
+    }
+  }
+
   function stopRecording() {
     if (stoppingPromise) return stoppingPromise;
-    if (!recording) return Promise.resolve();
+    if (!recording) {
+      if (mediaStream || preparedMimeTypes) return abortPreparedMedia();
+      return Promise.resolve({
+        audio: recorderSession?.chunks.audio.length || 0,
+        video: recorderSession?.chunks.video.length || 0
+      });
+    }
     recording = false;
     ui.stop.disabled = true;
     clearInterval(elapsedTimer);
@@ -914,15 +937,11 @@
     stoppingPromise = (async () => {
       try {
         await recorderSession.stop();
-        localLink?.finishTrack('audio');
-        localLink?.finishTrack('video');
         await stopPcmCapture();
         pcmFrames.length = 0;
         finished = true;
         ui.cameraCaption.textContent = 'Recording stopped.';
-        if (!player || player.closed) ui.caption.textContent = recorderSession.chunks.audio.length && recorderSession.chunks.video.length
-          ? 'Recording stopped. Press Replay from start to watch it.'
-          : 'Recording stopped without both audio and video data.';
+        if (!player || player.closed) ui.caption.textContent = 'Call recording stopped.';
         setStatus(`Recording stopped. Stored ${recorderSession.chunks.audio.length} audio and ${recorderSession.chunks.video.length} video chunks.`);
       } catch (error) {
         setStatus(`Could not finish recording: ${error.message}`, true);
@@ -930,11 +949,12 @@
         stopVideoCapture();
         mediaStream?.getTracks().forEach(track => track.stop());
         mediaStream = null;
+        preparedMimeTypes = null;
         ui.camera.srcObject = null;
-        ui.start.disabled = false;
         stoppingPromise = null;
         updateStats();
       }
+      return { audio: recorderSession.chunks.audio.length, video: recorderSession.chunks.video.length };
     })();
     updateStats();
     return stoppingPromise;
@@ -1002,6 +1022,10 @@
     const savedChunks = recorderSession?.chunks;
     if (recording || busy || !finished || !savedChunks?.audio.length || !savedChunks?.video.length) return;
     localLink?.close();
+    remoteLink?.close();
+    remoteLink = null;
+    clearTimeout(remoteFinishTimer);
+    remoteFinishTimer = null;
     player?.close();
     ui.video.srcObject = null;
     ui.video.muted = false;
@@ -1017,6 +1041,96 @@
     }
     updateReplayControls();
   }
+
+  function setPeerMimeTypes(types) {
+    if (!['audio', 'video'].every(kind => typeof types?.[kind] === 'string'
+      && MediaSource.isTypeSupported(types[kind]))) {
+      throw new Error('Peer audio or video format is not supported');
+    }
+    remoteLink?.close();
+    player?.close();
+    clearTimeout(remoteFinishTimer);
+    remoteFinishTimer = null;
+    remoteFinalCounts = null;
+    remotePlaybackFinished = false;
+    remoteReceived = { audio: new Set(), video: new Set() };
+    ui.video.muted = false;
+    ui.video.volume = Number(ui.volume.value) / 100;
+    ui.controls.hidden = false;
+    ui.caption.textContent = 'Waiting for incoming audio and video chunks…';
+    player = new MseReplayPlayer(ui.video, types);
+    remoteLink = new LocalChunkLink(player);
+    updateReplayControls();
+  }
+
+  function receiveRemoteChunk(kind, order, payload) {
+    if (!remoteLink || (kind !== 'audio' && kind !== 'video')) return;
+    remoteReceived[kind].add(order);
+    remoteLink.publishChunk({
+      index: order,
+      mediaType: kind.toUpperCase(),
+      binary: new Uint8Array(payload)
+    });
+    maybeFinishRemote();
+  }
+
+  function maybeFinishRemote() {
+    if (!remoteFinalCounts || !remoteLink) return false;
+    if (remoteReceived.audio.size < remoteFinalCounts.audio
+      || remoteReceived.video.size < remoteFinalCounts.video) return false;
+    clearTimeout(remoteFinishTimer);
+    remoteFinishTimer = null;
+    remoteLink.finishTrack('audio');
+    remoteLink.finishTrack('video');
+    remotePlaybackFinished = true;
+    updateStats();
+    return true;
+  }
+
+  function finishRemote(counts) {
+    if (!['audio', 'video'].every(kind => Number.isSafeInteger(counts?.[kind]) && counts[kind] >= 0)) {
+      throw new Error('Invalid final chunk counts');
+    }
+    if (!remoteLink) return;
+    remoteFinalCounts = counts;
+    if (!maybeFinishRemote() && !remoteFinishTimer) {
+      remoteFinishTimer = setTimeout(() => {
+        remoteFinishTimer = null;
+        remoteLink?.finishTrack('audio');
+        remoteLink?.finishTrack('video');
+        remotePlaybackFinished = true;
+        updateStats();
+      }, 30000);
+    }
+  }
+
+  async function abortPreparedMedia() {
+    if (recording) return stopRecording();
+    stopVideoCapture();
+    mediaStream?.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+    preparedMimeTypes = null;
+    ui.camera.srcObject = null;
+    remoteLink?.close();
+    remoteLink = null;
+    player?.close();
+    player = null;
+    clearTimeout(remoteFinishTimer);
+    remoteFinishTimer = null;
+    await stopPcmCapture();
+    updateStats();
+    return { audio: recorderSession?.chunks.audio.length || 0, video: recorderSession?.chunks.video.length || 0 };
+  }
+
+  window.RemoteCallMedia = {
+    prepare: prepareRecording,
+    start: startRecording,
+    stop: stopRecording,
+    setPeerMimeTypes,
+    receiveChunk: receiveRemoteChunk,
+    finishRemote,
+    abort: abortPreparedMedia
+  };
 
   async function saveCurrentTrack() {
     const savedChunks = recorderSession?.chunks;
@@ -1056,8 +1170,7 @@
     }
   }
 
-  ui.start.addEventListener('click', startRecording);
-  ui.stop.addEventListener('click', stopRecording);
+  ui.stop.addEventListener('click', () => { void window.RemoteCallConnection.stopCall(); });
   ui.cameraEnabled.addEventListener('click', toggleCamera);
   ui.muteMic.addEventListener('click', toggleMicMute);
   ui.saveMic.addEventListener('click', saveRecentMic);
@@ -1080,7 +1193,7 @@
   ui.video.addEventListener('play', updateReplayControls);
   ui.video.addEventListener('pause', updateReplayControls);
   ui.video.addEventListener('ended', () => {
-    if (player && !player.closed) ui.caption.textContent = 'Replay finished. Press Replay from start to watch again.';
+    if (player && !player.closed) ui.caption.textContent = 'Playback finished.';
   });
   ui.video.addEventListener('error', () => {
     if (player && !player.closed) player.fail(new Error(ui.video.error?.message || 'Media element error'));
@@ -1090,6 +1203,8 @@
     clearInterval(elapsedTimer);
     recorderSession?.stopImmediately();
     localLink?.close();
+    remoteLink?.close();
+    clearTimeout(remoteFinishTimer);
     stopVideoCapture();
     mediaStream?.getTracks().forEach(track => track.stop());
     player?.close();

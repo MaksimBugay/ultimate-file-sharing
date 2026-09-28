@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Separate stream call recorder</title>
+  <title>Remote call</title>
   <link rel="icon" type="image/png" href="images/file-sharing32.png">
   <style>
     :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #0d1420; color: #edf3fa; }
@@ -39,6 +39,7 @@
     .connection-indicator { flex: 0 0 12px; width: 12px; height: 12px; border-radius: 50%; background: #ff6868; box-shadow: 0 0 0 3px #ff686830; }
     .joint-link-panel label { font-weight: 700; }
     .joint-link-panel input { flex: 1 1 300px; min-width: 0; padding: 8px; border: 1px solid #4b6078; border-radius: 8px; background: #0d1420; color: #edf3fa; font: inherit; }
+    .joint-link-panel .name-input { flex: 0 1 150px; }
     .joint-link-panel .status { flex-basis: 100%; }
     .stats { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0; }
     .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
@@ -53,20 +54,22 @@
 <body>
 <main>
   <div class="page-heading">
-    <h1>Separate stream call recorder</h1>
+    <h1>Remote call</h1>
     <p id="status" class="status" role="status" aria-live="polite">Ready. Microphone permission is needed; camera is optional.</p>
-    <p class="intro">The left player shows the live camera. The right player automatically replays recorded audio and video chunks five seconds later. Turning the camera off records black video frames; muting the microphone records silent audio chunks. Chunk size is roughly <span data-chunk-seconds>1</span> second.</p>
+    <p class="intro">The left player shows your camera. The right player plays incoming audio and video chunks as they arrive. Turning the camera off sends black video frames; muting the microphone sends silent audio. Chunk size is roughly <span data-chunk-seconds>1</span> second.</p>
   </div>
   <div class="joint-link-panel">
     <span id="connectionIndicator" class="connection-indicator" role="img" aria-label="WebSocket disconnected" title="WebSocket disconnected"></span>
-    <label for="jointLink">Joint link</label>
+    <label id="jointLinkLabel" for="jointLink">Joint link</label>
     <input id="jointLink" type="url" readonly placeholder="Connecting…" aria-label="Joint link">
     <button id="copyJointLinkButton" type="button" disabled>Copy link</button>
+    <label for="callUserName">Your name</label>
+    <input id="callUserName" class="name-input" type="text" maxlength="80" autocomplete="name">
     <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
   </div>
   <div class="viewport-stage">
-    <section class="panel" aria-label="Live camera">
-      <h2>Live camera</h2>
+    <section class="panel" aria-label="Your camera">
+      <h2>Your camera</h2>
       <video id="liveVideo" autoplay muted playsinline></video>
       <p id="cameraCaption" class="caption">Live preview appears here when recording starts.</p>
       <div class="controls">
@@ -78,17 +81,16 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4m-4 0h8"/><path class="off-mark" d="M3 21 21 3"/></svg>
           </button>
         </div>
-        <button id="startButton" type="button">Start recording</button>
-        <button id="stopButton" type="button" class="secondary" disabled>Stop recording</button>
+        <button id="stopButton" type="button" class="secondary" disabled>End call</button>
         <button id="saveRecentMicButton" type="button" class="secondary" disabled>Save audio from 12–5s ago</button>
-        <button id="replayButton" type="button" class="secondary" disabled>Replay from start</button>
+        <button id="replayButton" type="button" class="secondary" disabled>Replay local recording</button>
         <button id="saveButton" type="button" class="secondary" disabled>Save video file</button>
       </div>
     </section>
-    <section class="panel" aria-label="Delayed chunk replay">
-      <h2>Delayed chunk replay</h2>
+    <section class="panel" aria-label="Incoming call">
+      <h2>Incoming call</h2>
       <video id="replayVideo" playsinline></video>
-      <p id="playerCaption" class="caption">Replay begins five seconds after recording starts.</p>
+      <p id="playerCaption" class="caption">Incoming media appears after the first audio and video chunks arrive.</p>
       <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
         <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
         <button id="muteReplayButton" type="button" class="secondary" aria-pressed="false">Mute audio</button>
@@ -100,13 +102,12 @@
   <dl class="stats">
     <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
     <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
-    <div class="stat"><dt>Replay delay</dt><dd>5 s</dd></div>
     <div class="stat"><dt>Audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
     <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
   </dl>
 
   <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-  <p class="details">Turn the camera button off at any time to stop camera capture while the continuous video recorder produces black frames. Turning it back on resumes camera frames without restarting either recorder. The microphone button keeps the audio recorder running and fills its chunks with silence while muted. Delayed replay starts automatically while recording and uses one MediaSource with separate audio and video SourceBuffers. Save audio from 12–5s ago creates a separate <code>.wav</code> microphone clip, including silence during muted periods. Saving after recording creates one video-only <code>.webm</code> file and one audio-only <code>.webm</code> file. Chunk start and end times are milliseconds on a common monotonic clock. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+  <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. You can save a recent microphone clip or save your local audio and video files after the call. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
 </main>
 <script src="js/pushca.min.js" defer></script>
 <script src="js/remote-call-connection.js" defer></script>
