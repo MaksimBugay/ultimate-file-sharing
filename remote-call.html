@@ -35,6 +35,11 @@
     button:disabled { opacity: .45; cursor: not-allowed; }
     button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
     .status { min-height: 24px; margin: 0; color: #c7d8ea; font-size: .88rem; }
+    .joint-link-panel { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
+    .connection-indicator { flex: 0 0 12px; width: 12px; height: 12px; border-radius: 50%; background: #ff6868; box-shadow: 0 0 0 3px #ff686830; }
+    .joint-link-panel label { font-weight: 700; }
+    .joint-link-panel input { flex: 1 1 300px; min-width: 0; padding: 8px; border: 1px solid #4b6078; border-radius: 8px; background: #0d1420; color: #edf3fa; font: inherit; }
+    .joint-link-panel .status { flex-basis: 100%; }
     .stats { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0; }
     .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
     .stat dt { color: #afc0d2; font-size: .78rem; }
@@ -51,6 +56,13 @@
     <h1>Separate stream call recorder</h1>
     <p id="status" class="status" role="status" aria-live="polite">Ready. Microphone permission is needed; camera is optional.</p>
     <p class="intro">The left player shows the live camera. The right player automatically replays recorded audio and video chunks five seconds later. Turning the camera off records black video frames; muting the microphone records silent audio chunks. Chunk size is roughly <span data-chunk-seconds>1</span> second.</p>
+  </div>
+  <div class="joint-link-panel">
+    <span id="connectionIndicator" class="connection-indicator" role="img" aria-label="WebSocket disconnected" title="WebSocket disconnected"></span>
+    <label for="jointLink">Joint link</label>
+    <input id="jointLink" type="url" readonly placeholder="Connecting…" aria-label="Joint link">
+    <button id="copyJointLinkButton" type="button" disabled>Copy link</button>
+    <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
   </div>
   <div class="viewport-stage">
     <section class="panel" aria-label="Live camera">
@@ -96,6 +108,8 @@
   <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
   <p class="details">Turn the camera button off at any time to stop camera capture while the continuous video recorder produces black frames. Turning it back on resumes camera frames without restarting either recorder. The microphone button keeps the audio recorder running and fills its chunks with silence while muted. Delayed replay starts automatically while recording and uses one MediaSource with separate audio and video SourceBuffers. Save audio from 12–5s ago creates a separate <code>.wav</code> microphone clip, including silence during muted periods. Saving after recording creates one video-only <code>.webm</code> file and one audio-only <code>.webm</code> file. Chunk start and end times are milliseconds on a common monotonic clock. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
 </main>
+<script src="js/pushca.min.js" defer></script>
+<script src="js/remote-call-connection.js" defer></script>
 <script src="js/remote-call.js" defer></script>
 </body>
 </html>
