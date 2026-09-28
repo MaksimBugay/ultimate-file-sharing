@@ -31,6 +31,7 @@
     mute: document.getElementById('muteReplayButton'),
     volume: document.getElementById('replayVolume'),
     save: document.getElementById('saveButton'),
+    statusCard: document.getElementById('callStatus'),
     status: document.getElementById('status'),
     elapsed: document.getElementById('elapsed'),
     chunkInterval: document.getElementById('chunkInterval'),
@@ -1178,13 +1179,19 @@
       throw new Error('This browser has no audio and video WebM formats supported for the call and combined recording.');
     }
     busy = true;
+    ui.statusCard.hidden = false;
     setStatus(cameraEnabled()
       ? 'Requesting camera and microphone access…' : 'Requesting microphone access…');
     try {
       resetRecording();
       mediaStream = await acquireMediaStream();
-      await configureEchoCancellation(requireTrack(mediaStream.getAudioTracks()[0],
-        'The required microphone or camera track is unavailable.'));
+      const microphoneTrack = requireTrack(mediaStream.getAudioTracks()[0],
+        'The required microphone or camera track is unavailable.');
+      const initialCameraTrack = mediaStream.getVideoTracks()[0];
+      if (cameraEnabled()) requireTrack(initialCameraTrack,
+        'The required microphone or camera track is unavailable.');
+      ui.statusCard.hidden = true;
+      await configureEchoCancellation(microphoneTrack);
       if (ui.extraEchoCancellation.checked) {
         try {
           await prepareExtraEchoCancellation();
@@ -1193,9 +1200,6 @@
           ui.echoCancellationStatus.textContent += ' Extra processing unavailable.';
         }
       }
-      const initialCameraTrack = mediaStream.getVideoTracks()[0];
-      if (cameraEnabled()) requireTrack(initialCameraTrack,
-        'The required microphone or camera track is unavailable.');
       startVideoCapture();
       if (initialCameraTrack) await enableCameraTrack(initialCameraTrack);
       updateCameraCaption();
@@ -1211,6 +1215,7 @@
       mediaStream = null;
       ui.camera.srcObject = null;
       ui.cameraCaption.textContent = 'Camera preview unavailable.';
+      ui.statusCard.hidden = false;
       setStatus(`Could not prepare media: ${error.message}`, true);
       throw error;
     } finally {

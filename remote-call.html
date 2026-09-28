@@ -41,7 +41,7 @@
     }
     .page-heading {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(240px, auto);
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px 24px;
       align-items: center;
     }
@@ -60,15 +60,36 @@
     .brand-mark svg { width: 27px; height: 27px; }
     h1 { margin: 1px 0 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); line-height: 1.1; }
     .status { min-height: 22px; margin: 0; font-size: .84rem; }
-    .page-heading > .status {
+    .call-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       justify-self: end;
-      max-width: min(100%, 570px);
+      width: min(100%, 480px);
       padding: 8px 12px;
-      border: 1px solid #2b4466;
-      border-radius: 999px;
-      background: #13243b;
-      color: #d2e2f6;
-      text-align: right;
+      border: 1px solid #375477;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #1c314b, #13243b);
+      box-shadow: 0 10px 28px #060d1b50;
+    }
+    .call-status-mark {
+      display: grid;
+      place-items: center;
+      flex: 0 0 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: #244c7c;
+      color: #b4d9ff;
+    }
+    .call-status-mark svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .call-status-copy { min-width: 0; }
+    .call-status-label { display: block; color: #94bff1; font-size: .63rem; font-weight: 800; letter-spacing: .14em; line-height: 1; }
+    .call-status .status {
+      min-height: 0;
+      margin-top: 4px;
+      color: #e0edff;
+      font-size: .82rem;
+      line-height: 1.25;
     }
     .intro {
       display: none;
@@ -391,7 +412,7 @@
       body { height: auto; min-height: 100dvh; overflow: auto; padding: 12px; }
       main { height: auto; min-height: calc(100dvh - 24px); gap: 12px; }
       .page-heading { grid-template-columns: 1fr; }
-      .page-heading > .status { justify-self: stretch; max-width: none; text-align: left; border-radius: 12px; }
+      .call-status { justify-self: stretch; width: 100%; }
       .intro { display: none; }
       .viewport-stage { flex: 1 0 auto; height: min(62dvh, 520px); min-height: 300px; }
     }
@@ -429,7 +450,15 @@
       </span>
       <div><span class="eyebrow">PRIVATE VIDEO ROOM</span><h1>Remote call</h1></div>
     </div>
-    <p id="status" class="status" role="status" aria-live="polite">Ready. Microphone permission is needed; camera is optional.</p>
+    <div id="callStatus" class="call-status">
+      <span class="call-status-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>
+      </span>
+      <div class="call-status-copy">
+        <span class="call-status-label">CALL STATUS</span>
+        <p id="status" class="status" role="status" aria-live="polite">Ready to connect.</p>
+      </div>
+    </div>
     <p class="intro">The main tile shows your counterpart and the smaller tile shows your camera. Camera off sends black video; microphone mute sends silence. Chunks are roughly <span data-chunk-seconds>1</span> second.</p>
   </header>
   <section class="joint-link-panel" aria-label="Call invitation and connection">
