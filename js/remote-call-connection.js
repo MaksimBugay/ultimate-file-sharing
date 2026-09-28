@@ -2,8 +2,8 @@
   'use strict';
 
   const WS_URL = 'wss://secure.fileshare.ovh:31085';
-  const PROTOCOL = 'REMOTE_CALL_V1';
-  const SIGNAL_PREFIX = 'remote-call-v1:';
+  const PROTOCOL = 'REMOTE_CALL_V2';
+  const SIGNAL_PREFIX = 'remote-call-v2:';
   const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER', video: 'REMOTE-CALL-VIDEO', audio: 'REMOTE-CALL-AUDIO' };
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
@@ -27,9 +27,23 @@
   let localStopPromise = null;
   const channels = new Map();
   const localBinaryIds = { audio: uuid.v4().toString(), video: uuid.v4().toString() };
+  let callSecret = null;
+
+  function encodeCallSecret(bytes) {
+    return btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function decodeCallSecret(value) {
+    if (!/^[A-Za-z0-9_-]{43}$/.test(value || '')) throw new Error('Missing or invalid call encryption key');
+    const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + '=');
+    if (binary.length !== 32) throw new Error('Invalid call encryption key');
+    return Uint8Array.from(binary, character => character.charCodeAt(0));
+  }
 
   if (hasSourceHost) {
     try {
+      callSecret = decodeCallSecret(new URLSearchParams(window.location.hash.slice(1)).get('call-key'));
       const source = JSON.parse(decodeFromBase64UrlSafe(sourceHostParam));
       if (source.applicationId === APPLICATIONS.manager
         && ['workSpaceId', 'accountId', 'deviceId'].every(field => typeof source[field] === 'string' && source[field])) {
@@ -44,6 +58,8 @@
     jointLink.hidden = true;
     jointLinkLabel.hidden = true;
     copyButton.hidden = true;
+  } else {
+    callSecret = window.crypto.getRandomValues(new Uint8Array(32));
   }
   nameInput.value = hasSourceHost ? 'Receiver' : 'Caller';
 
@@ -70,6 +86,7 @@
     if (hasSourceHost) return;
     const url = new URL(pageUrl);
     url.searchParams.set('source-host', encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj)));
+    url.hash = new URLSearchParams({ 'call-key': encodeCallSecret(callSecret) }).toString();
     jointLink.value = url.toString();
     copyButton.disabled = false;
   }
@@ -108,7 +125,9 @@
     channels.set(kind, entry);
     updateConnectionHealth();
     iframe.addEventListener('load', () => {
-      iframe.contentWindow.postMessage({ type: 'remote-call:init', kind }, window.location.origin);
+      iframe.contentWindow.postMessage({
+        type: 'remote-call:init', kind, role: hasSourceHost ? 'receiver' : 'caller', callSecret
+      }, window.location.origin);
     }, { once: true });
     iframe.src = new URL(`remote-call-channel.html?kind=${kind}`, pageUrl).toString();
     document.body.append(iframe);

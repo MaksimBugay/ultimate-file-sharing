@@ -7,10 +7,64 @@
   const parentOrigin = window.location.origin;
   const applicationId = `REMOTE-CALL-${kind.toUpperCase()}`;
   const wsUrl = 'wss://secure.fileshare.ovh:31085';
+  const encoder = new TextEncoder();
+  const hkdfSalt = encoder.encode('remote-call-v2/media');
   let initialized = false;
   let aliasAttempt = 0;
   let pendingSends = 0;
   let sendTail = Promise.resolve();
+  let cryptoReady = null;
+  let localRole = null;
+  const mediaKeys = new Map();
+  const lastSentOrders = new Map();
+
+  function mediaKey(sender, binaryId) {
+    const id = `${sender}:${binaryId}`;
+    let promise = mediaKeys.get(id);
+    if (!promise) {
+      promise = cryptoReady.then(baseKey => crypto.subtle.deriveBits({
+        name: 'HKDF', hash: 'SHA-256', salt: hkdfSalt,
+        info: encoder.encode(JSON.stringify(['remote-call-v2', kind, sender, binaryId]))
+      }, baseKey, 288)).then(bits => {
+        const material = new Uint8Array(bits);
+        return {
+          base64Key: arrayBufferToBase64(material.slice(0, 32).buffer),
+          ivPrefix: material.slice(32, 36)
+        };
+      });
+      mediaKeys.set(id, promise);
+    }
+    return promise;
+  }
+
+  async function chunkContract(sender, binaryId, order) {
+    if (typeof binaryId !== 'string' || !binaryId
+      || !Number.isSafeInteger(order) || order < 0) throw new Error('Invalid media chunk metadata');
+    const { base64Key, ivPrefix } = await mediaKey(sender, binaryId);
+    // A key is unique to this sender and binary ID; the increasing order gives each chunk a distinct AES-GCM IV.
+    const iv = new Uint8Array(12);
+    iv.set(ivPrefix);
+    const view = new DataView(iv.buffer);
+    view.setUint32(4, Math.floor(order / 0x100000000));
+    view.setUint32(8, order >>> 0);
+    return new EncryptionContract(base64Key, arrayBufferToBase64(iv.buffer));
+  }
+
+  async function encryptChunk(binaryId, order, payload) {
+    const contract = await chunkContract(localRole, binaryId, order);
+    return encryptWithAESUsingContract(payload, contract);
+  }
+
+  async function decryptChunk(binaryId, order, payload) {
+    if (!(payload instanceof ArrayBuffer) || payload.byteLength < 16) {
+      throw new Error('Invalid encrypted media chunk');
+    }
+    const sender = localRole === 'caller' ? 'receiver' : 'caller';
+    const contract = await chunkContract(sender, binaryId, order);
+    const decrypted = await decryptAESToArrayBuffer(payload, contract.base64Key, contract.base64IV);
+    if (!(decrypted instanceof ArrayBuffer)) throw new Error('Media chunk authentication failed');
+    return decrypted;
+  }
 
   function report(type, fields = {}, transfer = []) {
     window.parent.postMessage({ type, kind, ...fields }, parentOrigin, transfer);
@@ -33,31 +87,39 @@
     if (!PushcaClient.isOpen()) report('remote-call:state', { connected: false });
   };
   PushcaClient.onFileTransferChunkHandler = binaryWithHeader => {
-    const payload = binaryWithHeader.payload;
-    report('remote-call:chunk', {
-      binaryId: binaryWithHeader.binaryId,
-      order: binaryWithHeader.order,
-      payload
-    }, [payload]);
+    if (!cryptoReady) return;
+    void decryptChunk(binaryWithHeader.binaryId, binaryWithHeader.order, binaryWithHeader.payload).then(payload => {
+      report('remote-call:chunk', {
+        binaryId: binaryWithHeader.binaryId,
+        order: binaryWithHeader.order,
+        payload
+      }, [payload]);
+    }).catch(() => report('remote-call:error', { message: `Could not decrypt ${kind} chunk ${binaryWithHeader.order}.` }));
   };
 
   window.addEventListener('message', event => {
     if (event.source !== window.parent || event.origin !== parentOrigin || event.data?.kind !== kind) return;
     const message = event.data;
     if (message.type === 'remote-call:init' && !initialized) {
+      if (!(message.callSecret instanceof Uint8Array) || message.callSecret.length !== 32
+        || !['caller', 'receiver'].includes(message.role)) {
+        report('remote-call:error', { message: 'Invalid call encryption key.' });
+        return;
+      }
       initialized = true;
-      const client = new ClientFilter('remote-call', 'anonymous-sharing', uuid.v4().toString(), applicationId);
-      waitForAlias(client);
-      void PushcaClient.openWsConnection(wsUrl, client, connectedClient => {
-        const refreshed = new ClientFilter(
-          connectedClient.workSpaceId,
-          connectedClient.accountId,
-          connectedClient.deviceId,
-          connectedClient.applicationId
-        );
-        waitForAlias(refreshed);
-        return refreshed;
-      }).then(() => {
+      localRole = message.role;
+      cryptoReady = crypto.subtle.importKey('raw', message.callSecret, 'HKDF', false, ['deriveBits']);
+      void cryptoReady.then(async () => {
+        const client = new ClientFilter('remote-call', 'anonymous-sharing', uuid.v4().toString(), applicationId);
+        waitForAlias(client);
+        await PushcaClient.openWsConnection(wsUrl, client, connectedClient => {
+          const refreshed = new ClientFilter(
+            connectedClient.workSpaceId, connectedClient.accountId,
+            connectedClient.deviceId, connectedClient.applicationId
+          );
+          waitForAlias(refreshed);
+          return refreshed;
+        });
         if (!PushcaClient.isOpen()) report('remote-call:error', { message: `Could not connect ${kind} channel.` });
       }).catch(error => report('remote-call:error', { message: `${kind} channel: ${error.message}` }));
       window.setInterval(() => {
@@ -66,15 +128,22 @@
     }
     if (message.type !== 'remote-call:send' || !initialized) return;
     if (!(message.payload instanceof ArrayBuffer) || !Number.isSafeInteger(message.order)
-      || !Number.isInteger(message.destHashCode) || typeof message.binaryId !== 'string') return;
+      || message.order < 0 || !Number.isInteger(message.destHashCode)
+      || typeof message.binaryId !== 'string' || !message.binaryId) return;
+    if (message.order <= (lastSentOrders.get(message.binaryId) ?? -1)) {
+      report('remote-call:error', { message: `${kind} chunk order was reused.` });
+      return;
+    }
     if (pendingSends >= 16) {
       report('remote-call:error', { message: `${kind} send queue is full.` });
       return;
     }
+    lastSentOrders.set(message.binaryId, message.order);
     pendingSends++;
     sendTail = sendTail.then(async () => {
+      const encryptedPayload = await encryptChunk(message.binaryId, message.order, message.payload);
       const result = await PushcaClient.transferBinaryChunk(
-        message.binaryId, message.order, message.destHashCode, message.payload
+        message.binaryId, message.order, message.destHashCode, encryptedPayload
       );
       if (result.type !== WaiterResponseType.SUCCESS) {
         report('remote-call:error', { message: `${kind} chunk ${message.order} was not delivered.` });
