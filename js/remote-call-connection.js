@@ -2,8 +2,8 @@
   'use strict';
 
   const WS_URL = 'wss://secure.fileshare.ovh:31085';
-  const PROTOCOL = 'REMOTE_CALL_V2';
-  const SIGNAL_PREFIX = 'remote-call-v2:';
+  const PROTOCOL = 'REMOTE_CALL_V3';
+  const SIGNAL_PREFIX = 'remote-call-v3:';
   const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER', video: 'REMOTE-CALL-VIDEO', audio: 'REMOTE-CALL-AUDIO' };
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
@@ -11,6 +11,8 @@
   const connectionStatus = document.getElementById('connectionStatus');
   const connectionIndicator = document.getElementById('connectionIndicator');
   const nameInput = document.getElementById('callUserName');
+  const encryptionToggle = document.getElementById('encryptMedia');
+  const encryptionModeStatus = document.getElementById('encryptionModeStatus');
   const searchParams = new URLSearchParams(window.location.search);
   const pageUrl = new URL(window.location.href);
   pageUrl.search = '';
@@ -27,6 +29,7 @@
   let localStopPromise = null;
   const channels = new Map();
   const localBinaryIds = { audio: uuid.v4().toString(), video: uuid.v4().toString() };
+  let encryptionEnabled = encryptionToggle.checked;
   let callSecret = null;
 
   function encodeCallSecret(bytes) {
@@ -42,25 +45,35 @@
   }
 
   if (hasSourceHost) {
-    try {
-      callSecret = decodeCallSecret(new URLSearchParams(window.location.hash.slice(1)).get('call-key'));
-      const source = JSON.parse(decodeFromBase64UrlSafe(sourceHostParam));
-      if (source.applicationId === APPLICATIONS.manager
-        && ['workSpaceId', 'accountId', 'deviceId'].every(field => typeof source[field] === 'string' && source[field])) {
-        sourceHost = new ClientFilter(source.workSpaceId, source.accountId, source.deviceId, source.applicationId);
-      } else {
+    const linkSettings = new URLSearchParams(window.location.hash.slice(1));
+    const encrypted = linkSettings.get('e2e');
+    if (encrypted !== '0' && encrypted !== '1') {
+      phase = 'invalid';
+    } else {
+      encryptionEnabled = encrypted === '1';
+      try {
+        if (encryptionEnabled) callSecret = decodeCallSecret(linkSettings.get('call-key'));
+        const source = JSON.parse(decodeFromBase64UrlSafe(sourceHostParam));
+        if (source.applicationId === APPLICATIONS.manager
+          && ['workSpaceId', 'accountId', 'deviceId'].every(field => typeof source[field] === 'string' && source[field])) {
+          sourceHost = new ClientFilter(source.workSpaceId, source.accountId, source.deviceId, source.applicationId);
+        } else {
+          phase = 'invalid';
+        }
+      } catch (error) {
+        console.error('Invalid joint link:', error);
         phase = 'invalid';
       }
-    } catch (error) {
-      console.error('Invalid joint link:', error);
-      phase = 'invalid';
     }
     jointLink.hidden = true;
     jointLinkLabel.hidden = true;
     copyButton.hidden = true;
+    encryptionToggle.disabled = true;
   } else {
     callSecret = window.crypto.getRandomValues(new Uint8Array(32));
   }
+  encryptionToggle.checked = encryptionEnabled;
+  encryptionModeStatus.textContent = `End-to-end encryption: ${encryptionEnabled ? 'on' : 'off'}`;
   nameInput.value = hasSourceHost ? 'Receiver' : 'Caller';
 
   function setConnectionStatus(message) {
@@ -86,7 +99,9 @@
     if (hasSourceHost) return;
     const url = new URL(pageUrl);
     url.searchParams.set('source-host', encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj)));
-    url.hash = new URLSearchParams({ 'call-key': encodeCallSecret(callSecret) }).toString();
+    const linkSettings = new URLSearchParams({ e2e: encryptionEnabled ? '1' : '0' });
+    if (encryptionEnabled) linkSettings.set('call-key', encodeCallSecret(callSecret));
+    url.hash = linkSettings.toString();
     jointLink.value = url.toString();
     copyButton.disabled = false;
   }
@@ -99,7 +114,8 @@
     const fields = includeManager ? ['managerAlias', 'videoAlias', 'audioAlias'] : ['videoAlias', 'audioAlias'];
     if (!fields.every(field => typeof message[field] === 'string' && message[field].length > 0)
       || !['audio', 'video'].every(kind => typeof message.mimeTypes?.[kind] === 'string'
-        && typeof message.binaryIds?.[kind] === 'string')) {
+        && typeof message.binaryIds?.[kind] === 'string')
+      || typeof message.encrypted !== 'boolean') {
       throw new Error('Incomplete call message');
     }
   }
@@ -126,7 +142,8 @@
     updateConnectionHealth();
     iframe.addEventListener('load', () => {
       iframe.contentWindow.postMessage({
-        type: 'remote-call:init', kind, role: hasSourceHost ? 'receiver' : 'caller', callSecret
+        type: 'remote-call:init', kind, role: hasSourceHost ? 'receiver' : 'caller',
+        encrypted: encryptionEnabled, callSecret: encryptionEnabled ? callSecret : null
       }, window.location.origin);
     }, { once: true });
     iframe.src = new URL(`remote-call-channel.html?kind=${kind}`, pageUrl).toString();
@@ -227,6 +244,7 @@
 
   async function failCall(error, label) {
     phase = 'error';
+    encryptionToggle.disabled = true;
     setConnectionStatus(`${label}: ${error.message}`);
     console.error(label, error);
     try {
@@ -241,7 +259,21 @@
   async function handleReady(message) {
     if (hasSourceHost || phase !== 'waiting') return;
     validateAliases(message, true);
+    if (message.encrypted !== encryptionEnabled) {
+      setConnectionStatus('The encryption setting changed. Share the current joint link again.');
+      try {
+        const manager = await lookupClient(message.managerAlias, APPLICATIONS.manager);
+        await sendSignal(manager, {
+          type: 'STOP', counts: { audio: 0, video: 0 },
+          reason: 'The caller changed the encryption setting. Ask for a new joint link.'
+        });
+      } catch (error) {
+        console.error('Could not reject an outdated joint link:', error);
+      }
+      return;
+    }
     phase = 'preparing';
+    encryptionToggle.disabled = true;
     setConnectionStatus('Receiver is ready. Preparing your camera and microphone…');
     const [manager, video, audio] = await Promise.all([
       lookupClient(message.managerAlias, APPLICATIONS.manager),
@@ -259,7 +291,7 @@
     setPeerMedia(message, { manager, video, audio, name: message.userName || 'Receiver' });
     await sendSignal(manager, {
       type: 'START', videoAlias: aliases.videoAlias, audioAlias: aliases.audioAlias,
-      userName: userName(), mimeTypes, binaryIds: localBinaryIds
+      userName: userName(), mimeTypes, binaryIds: localBinaryIds, encrypted: encryptionEnabled
     });
     if (phase !== 'preparing') return;
     phase = 'calling';
@@ -271,6 +303,7 @@
   async function handleStart(message) {
     if (!sourceHost || phase !== 'ready') return;
     validateAliases(message, false);
+    if (message.encrypted !== encryptionEnabled) throw new Error('Call encryption setting differs from the joint link');
     phase = 'starting';
     const [video, audio] = await Promise.all([
       lookupClient(message.videoAlias, APPLICATIONS.video),
@@ -296,13 +329,14 @@
         && !remoteStopReceived) {
         remoteStopReceived = true;
         phase = 'ended';
+        encryptionToggle.disabled = true;
         if (peer) {
           window.RemoteCallMedia.finishRemote(message.counts);
           await stopLocalAndNotify();
         } else {
           await window.RemoteCallMedia.abort();
         }
-        setConnectionStatus('Call ended.');
+        setConnectionStatus(message.reason || 'Call ended.');
       }
     })().catch(error => {
       if (phase !== 'ended') void failCall(error, 'Call setup failed');
@@ -341,10 +375,21 @@
     setConnectionStatus(copied ? 'Joint link copied to clipboard.' : 'Copy the joint link from the field.');
   });
 
+  encryptionToggle.addEventListener('change', () => {
+    if (hasSourceHost || !['connecting', 'waiting'].includes(phase)) {
+      encryptionToggle.checked = encryptionEnabled;
+      return;
+    }
+    encryptionEnabled = encryptionToggle.checked;
+    encryptionModeStatus.textContent = `End-to-end encryption: ${encryptionEnabled ? 'on' : 'off'}`;
+    if (PushcaClient.isOpen()) refreshJointLink();
+  });
+
   window.RemoteCallConnection = {
     stopCall: async () => {
       if (phase !== 'calling') return;
       phase = 'ended';
+      encryptionToggle.disabled = true;
       try {
         await stopLocalAndNotify();
         setConnectionStatus(remoteStopReceived ? 'Call ended.' : 'Your recording stopped. Waiting for the peer stream to finish…');
@@ -384,7 +429,8 @@
       phase = 'ready';
       readySignal = {
         type: 'READY', managerAlias, videoAlias: aliases.videoAlias,
-        audioAlias: aliases.audioAlias, userName: userName(), mimeTypes, binaryIds: localBinaryIds
+        audioAlias: aliases.audioAlias, userName: userName(), mimeTypes,
+        binaryIds: localBinaryIds, encrypted: encryptionEnabled
       };
       await sendSignal(sourceHost, readySignal);
       if (phase === 'ready') setConnectionStatus('Ready. Waiting for the caller to start.');

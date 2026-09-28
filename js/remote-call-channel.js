@@ -8,13 +8,14 @@
   const applicationId = `REMOTE-CALL-${kind.toUpperCase()}`;
   const wsUrl = 'wss://secure.fileshare.ovh:31085';
   const encoder = new TextEncoder();
-  const hkdfSalt = encoder.encode('remote-call-v2/media');
+  const hkdfSalt = encoder.encode('remote-call-v3/media');
   let initialized = false;
   let aliasAttempt = 0;
   let pendingSends = 0;
   let sendTail = Promise.resolve();
   let cryptoReady = null;
   let localRole = null;
+  let encryptionEnabled = null;
   const mediaKeys = new Map();
   const lastSentOrders = new Map();
 
@@ -24,7 +25,7 @@
     if (!promise) {
       promise = cryptoReady.then(baseKey => crypto.subtle.deriveBits({
         name: 'HKDF', hash: 'SHA-256', salt: hkdfSalt,
-        info: encoder.encode(JSON.stringify(['remote-call-v2', kind, sender, binaryId]))
+        info: encoder.encode(JSON.stringify(['remote-call-v3', kind, sender, binaryId]))
       }, baseKey, 288)).then(bits => {
         const material = new Uint8Array(bits);
         return {
@@ -87,7 +88,16 @@
     if (!PushcaClient.isOpen()) report('remote-call:state', { connected: false });
   };
   PushcaClient.onFileTransferChunkHandler = binaryWithHeader => {
-    if (!cryptoReady) return;
+    if (encryptionEnabled === null) return;
+    if (!encryptionEnabled) {
+      const payload = binaryWithHeader.payload;
+      report('remote-call:chunk', {
+        binaryId: binaryWithHeader.binaryId,
+        order: binaryWithHeader.order,
+        payload
+      }, [payload]);
+      return;
+    }
     void decryptChunk(binaryWithHeader.binaryId, binaryWithHeader.order, binaryWithHeader.payload).then(payload => {
       report('remote-call:chunk', {
         binaryId: binaryWithHeader.binaryId,
@@ -101,14 +111,18 @@
     if (event.source !== window.parent || event.origin !== parentOrigin || event.data?.kind !== kind) return;
     const message = event.data;
     if (message.type === 'remote-call:init' && !initialized) {
-      if (!(message.callSecret instanceof Uint8Array) || message.callSecret.length !== 32
+      if (typeof message.encrypted !== 'boolean'
+        || (message.encrypted && (!(message.callSecret instanceof Uint8Array) || message.callSecret.length !== 32))
         || !['caller', 'receiver'].includes(message.role)) {
         report('remote-call:error', { message: 'Invalid call encryption key.' });
         return;
       }
       initialized = true;
       localRole = message.role;
-      cryptoReady = crypto.subtle.importKey('raw', message.callSecret, 'HKDF', false, ['deriveBits']);
+      encryptionEnabled = message.encrypted;
+      cryptoReady = encryptionEnabled
+        ? crypto.subtle.importKey('raw', message.callSecret, 'HKDF', false, ['deriveBits'])
+        : Promise.resolve(null);
       void cryptoReady.then(async () => {
         const client = new ClientFilter('remote-call', 'anonymous-sharing', uuid.v4().toString(), applicationId);
         waitForAlias(client);
@@ -141,9 +155,11 @@
     lastSentOrders.set(message.binaryId, message.order);
     pendingSends++;
     sendTail = sendTail.then(async () => {
-      const encryptedPayload = await encryptChunk(message.binaryId, message.order, message.payload);
+      const payload = encryptionEnabled
+        ? await encryptChunk(message.binaryId, message.order, message.payload)
+        : message.payload;
       const result = await PushcaClient.transferBinaryChunk(
-        message.binaryId, message.order, message.destHashCode, encryptedPayload
+        message.binaryId, message.order, message.destHashCode, payload
       );
       if (result.type !== WaiterResponseType.SUCCESS) {
         report('remote-call:error', { message: `${kind} chunk ${message.order} was not delivered.` });

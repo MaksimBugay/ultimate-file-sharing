@@ -40,6 +40,9 @@
     .joint-link-panel label { font-weight: 700; }
     .joint-link-panel input { flex: 1 1 300px; min-width: 0; padding: 8px; border: 1px solid #4b6078; border-radius: 8px; background: #0d1420; color: #edf3fa; font: inherit; }
     .joint-link-panel .name-input { flex: 0 1 150px; }
+    .joint-link-panel .encryption-toggle { display: inline-flex; align-items: center; gap: 8px; }
+    .joint-link-panel .encryption-toggle input { flex: 0 0 auto; width: 18px; height: 18px; min-width: 0; margin: 0; padding: 0; border: 0; background: none; accent-color: #4a9eff; }
+    .encryption-status { color: #afc0d2; font-size: .82rem; }
     .joint-link-panel .status { flex-basis: 100%; }
     .stats { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0; }
     .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
@@ -65,6 +68,8 @@
     <button id="copyJointLinkButton" type="button" disabled>Copy link</button>
     <label for="callUserName">Your name</label>
     <input id="callUserName" class="name-input" type="text" maxlength="80" autocomplete="name">
+    <label class="encryption-toggle"><input id="encryptMedia" type="checkbox" checked> End-to-end encryption</label>
+    <span id="encryptionModeStatus" class="encryption-status" role="status" aria-live="polite">End-to-end encryption: on</span>
     <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
   </div>
   <div class="viewport-stage">
@@ -107,7 +112,7 @@
   </dl>
 
   <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-  <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The link contains the private media encryption key, so share it only with the receiver. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. You can save a recent microphone clip or save your local audio and video files after the call. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+  <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. The link contains a private media key when encryption is enabled, so share it only with the receiver. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. You can save a recent microphone clip or save your local audio and video files after the call. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
 </main>
 <script src="js/pushca.min.js" defer></script>
 <script src="js/remote-call-connection.js" defer></script>
