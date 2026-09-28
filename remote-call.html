@@ -28,6 +28,10 @@
     .controls input { accent-color: #4a9eff; }
     button { padding: 8px 12px; border: 0; border-radius: 9px; background: #4a9eff; color: #081321; font: inherit; font-weight: 700; cursor: pointer; }
     button.secondary { background: #304156; color: #edf3fa; }
+    .device-controls { display: inline-flex; gap: 8px; }
+    .device-button.secondary { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; }
+    .device-button svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .device-button .off-mark { visibility: hidden; }
     button:disabled { opacity: .45; cursor: not-allowed; }
     button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
     .status { min-height: 24px; margin: 0; color: #c7d8ea; font-size: .88rem; }
@@ -46,7 +50,7 @@
   <div class="page-heading">
     <h1>Separate stream call recorder</h1>
     <p id="status" class="status" role="status" aria-live="polite">Ready. Microphone permission is needed; camera is optional.</p>
-    <p class="intro">The left player shows the live camera. The right player automatically replays recorded audio and video chunks five seconds later. Turning the camera off records black video frames while audio continues. Chunk size is roughly <span data-chunk-seconds>1</span> second.</p>
+    <p class="intro">The left player shows the live camera. The right player automatically replays recorded audio and video chunks five seconds later. Turning the camera off records black video frames; muting the microphone records silent audio chunks. Chunk size is roughly <span data-chunk-seconds>1</span> second.</p>
   </div>
   <div class="viewport-stage">
     <section class="panel" aria-label="Live camera">
@@ -54,7 +58,14 @@
       <video id="liveVideo" autoplay muted playsinline></video>
       <p id="cameraCaption" class="caption">Live preview appears here when recording starts.</p>
       <div class="controls">
-        <label for="cameraEnabled"><input id="cameraEnabled" type="checkbox" checked> Camera on</label>
+        <div class="device-controls" role="group" aria-label="Capture devices">
+          <button id="cameraEnabled" type="button" class="secondary device-button" aria-label="Camera" aria-pressed="true" title="Turn camera off">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/><path class="off-mark" d="M3 21 21 3"/></svg>
+          </button>
+          <button id="muteMicButton" type="button" class="secondary device-button" aria-label="Mute microphone" aria-pressed="false" title="Mute microphone" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4m-4 0h8"/><path class="off-mark" d="M3 21 21 3"/></svg>
+          </button>
+        </div>
         <button id="startButton" type="button">Start recording</button>
         <button id="stopButton" type="button" class="secondary" disabled>Stop recording</button>
         <button id="saveRecentMicButton" type="button" class="secondary" disabled>Save audio from 12–5s ago</button>
@@ -83,7 +94,7 @@
   </dl>
 
   <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-  <p class="details">Turn Camera on off at any time to stop camera capture while the continuous video recorder produces black frames. Turning it back on resumes camera frames without restarting either recorder. Delayed replay starts automatically while recording and uses one MediaSource with separate audio and video SourceBuffers. Save audio from 12–5s ago creates a separate <code>.wav</code> microphone clip. Saving after recording creates one video-only <code>.webm</code> file and one audio-only <code>.webm</code> file. Chunk start and end times are milliseconds on a common monotonic clock. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+  <p class="details">Turn the camera button off at any time to stop camera capture while the continuous video recorder produces black frames. Turning it back on resumes camera frames without restarting either recorder. The microphone button keeps the audio recorder running and fills its chunks with silence while muted. Delayed replay starts automatically while recording and uses one MediaSource with separate audio and video SourceBuffers. Save audio from 12–5s ago creates a separate <code>.wav</code> microphone clip, including silence during muted periods. Saving after recording creates one video-only <code>.webm</code> file and one audio-only <code>.webm</code> file. Chunk start and end times are milliseconds on a common monotonic clock. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
 </main>
 <script src="js/remote-call.js" defer></script>
 </body>

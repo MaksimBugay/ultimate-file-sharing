@@ -18,6 +18,7 @@
     video: document.getElementById('replayVideo'),
     cameraCaption: document.getElementById('cameraCaption'),
     cameraEnabled: document.getElementById('cameraEnabled'),
+    muteMic: document.getElementById('muteMicButton'),
     caption: document.getElementById('playerCaption'),
     start: document.getElementById('startButton'),
     stop: document.getElementById('stopButton'),
@@ -46,6 +47,7 @@
   let audioProcessor = null;
   let audioSource = null;
   let silentOutput = null;
+  let micMuted = false;
   let startedAt = 0;
   let elapsedTimer = null;
   let recording = false;
@@ -90,6 +92,7 @@
     ui.count.textContent = `${chunks?.audio.length || 0} / ${chunks?.video.length || 0}`;
     ui.size.textContent = `${((recorderSession?.storedBytes || 0) / 1048576).toFixed(1)} MB`;
     ui.cameraEnabled.disabled = busy || cameraBusy || !!stoppingPromise;
+    ui.muteMic.disabled = !recording || busy || !!stoppingPromise;
     ui.replay.disabled = busy || recording || !finished || !chunks?.audio.length || !chunks?.video.length;
     ui.save.disabled = busy || !finished || saveStage === 'done' || !chunks?.[saveStage]?.length;
     updateMicButton();
@@ -335,6 +338,14 @@
     canvas = null;
   }
 
+  function updateCameraCaption() {
+    ui.cameraCaption.textContent = cameraActive
+      ? micMuted ? 'Live camera preview. Microphone muted; silent audio is recording.'
+        : 'Live camera preview, with audio muted to prevent feedback.'
+      : micMuted ? 'Camera off. Black video frames and silent audio are recording.'
+        : 'Camera off. Black video frames and microphone audio are recording.';
+  }
+
   async function startPcmCapture(track) {
     if (!AudioContextClass) return;
     audioContext = new AudioContextClass();
@@ -367,6 +378,31 @@
     const context = audioContext;
     audioContext = audioProcessor = audioSource = silentOutput = null;
     await context.close();
+  }
+
+  function showDeviceOff(button, off) {
+    button.style.backgroundColor = off ? '#69323b' : '';
+    button.style.color = off ? '#ffe0e3' : '';
+    button.querySelector('.off-mark').style.visibility = off ? 'visible' : '';
+  }
+
+  function setMicMuted(muted) {
+    micMuted = muted;
+    const audioTrack = mediaStream?.getAudioTracks()[0];
+    if (audioTrack) audioTrack.enabled = !muted;
+    ui.muteMic.title = muted ? 'Unmute microphone' : 'Mute microphone';
+    ui.muteMic.setAttribute('aria-pressed', String(muted));
+    showDeviceOff(ui.muteMic, muted);
+  }
+
+  function cameraEnabled() {
+    return ui.cameraEnabled.getAttribute('aria-pressed') === 'true';
+  }
+
+  function setCameraEnabled(enabled) {
+    ui.cameraEnabled.setAttribute('aria-pressed', String(enabled));
+    ui.cameraEnabled.title = enabled ? 'Turn camera off' : 'Turn camera on';
+    showDeviceOff(ui.cameraEnabled, !enabled);
   }
 
   function micRange() {
@@ -785,6 +821,7 @@
     });
     pcmFrames.length = 0;
     pcmSampleRate = 0;
+    setMicMuted(false);
     finished = false;
     saveStage = 'video';
     ui.save.textContent = 'Save video file';
@@ -810,27 +847,25 @@
     }
     busy = true;
     ui.start.disabled = true;
-    setStatus(ui.cameraEnabled.checked
+    setStatus(cameraEnabled()
       ? 'Requesting camera and microphone access…' : 'Requesting microphone access…');
     try {
       resetRecording();
       mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: ui.cameraEnabled.checked
+        video: cameraEnabled()
           ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }
           : false
       });
       const audioTrack = requireTrack(mediaStream.getAudioTracks()[0],
         'The required microphone or camera track is unavailable.');
       const initialCameraTrack = mediaStream.getVideoTracks()[0];
-      if (ui.cameraEnabled.checked) requireTrack(initialCameraTrack,
+      if (cameraEnabled()) requireTrack(initialCameraTrack,
         'The required microphone or camera track is unavailable.');
       await startPcmCapture(audioTrack);
       startVideoCapture();
       if (initialCameraTrack) await enableCameraTrack(initialCameraTrack);
-      ui.cameraCaption.textContent = cameraActive
-        ? 'Live camera preview, with audio muted to prevent feedback.'
-        : 'Camera off. Black video frames and microphone audio are recording.';
+      updateCameraCaption();
       baseName = `recording-${new Date().toISOString().replace(/[:.]/g, '-')}`;
       startedAt = performance.now();
       recording = true;
@@ -912,9 +947,9 @@
     updateStats();
     let requestedTrack = null;
     try {
-      if (!ui.cameraEnabled.checked) {
+      if (!cameraEnabled()) {
         disableCameraTrack();
-        ui.cameraCaption.textContent = 'Camera off. Black video frames and microphone audio continue.';
+        updateCameraCaption();
         setStatus('Camera capture stopped. Continuous video recording now contains black frames.');
       } else {
         const cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -924,7 +959,7 @@
         requestedTrack = requireTrack(cameraStream.getVideoTracks()[0], 'Camera track is unavailable.');
         if (!recording) {
           requestedTrack.stop();
-          ui.cameraEnabled.checked = cameraActive;
+          setCameraEnabled(cameraActive);
           return;
         }
         await enableCameraTrack(requestedTrack);
@@ -933,19 +968,34 @@
           return;
         }
         mediaStream.addTrack(requestedTrack);
-        ui.cameraCaption.textContent = 'Camera on. Live frames are recording with the same video recorder.';
+        updateCameraCaption();
         setStatus('Camera capture resumed without restarting the video stream.');
       }
     } catch (error) {
       if (requestedTrack && requestedTrack !== cameraTrack) requestedTrack.stop();
-      if (ui.cameraEnabled.checked) disableCameraTrack();
-      ui.cameraEnabled.checked = cameraActive;
+      if (cameraEnabled()) disableCameraTrack();
+      setCameraEnabled(cameraActive);
       setStatus(`Could not change camera state: ${error.message}`, true);
     } finally {
       cameraBusy = false;
       ui.stop.disabled = !recording;
       updateStats();
     }
+  }
+
+  function toggleCamera() {
+    if (busy || cameraBusy || stoppingPromise) return;
+    setCameraEnabled(!cameraEnabled());
+    void changeCamera();
+  }
+
+  function toggleMicMute() {
+    if (!recording || busy || stoppingPromise) return;
+    setMicMuted(!micMuted);
+    updateCameraCaption();
+    setStatus(micMuted
+      ? 'Microphone muted. Silent audio chunks continue recording.'
+      : 'Microphone unmuted. Audio recording continues.');
   }
 
   function replayRecording() {
@@ -1008,7 +1058,8 @@
 
   ui.start.addEventListener('click', startRecording);
   ui.stop.addEventListener('click', stopRecording);
-  ui.cameraEnabled.addEventListener('change', changeCamera);
+  ui.cameraEnabled.addEventListener('click', toggleCamera);
+  ui.muteMic.addEventListener('click', toggleMicMute);
   ui.saveMic.addEventListener('click', saveRecentMic);
   ui.replay.addEventListener('click', replayRecording);
   ui.save.addEventListener('click', saveCurrentTrack);
