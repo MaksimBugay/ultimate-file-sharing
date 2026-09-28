@@ -11,6 +11,9 @@
   const connectionStatus = document.getElementById('connectionStatus');
   const connectionIndicator = document.getElementById('connectionIndicator');
   const nameInput = document.getElementById('callUserName');
+  const joinNameDialog = document.getElementById('joinNameDialog');
+  const joinNameForm = document.getElementById('joinNameForm');
+  const joinNameInput = document.getElementById('joinNameInput');
   const localHeading = document.getElementById('localName');
   const counterpartHeading = document.getElementById('counterpartName');
   const encryptionToggle = document.getElementById('encryptMedia');
@@ -133,6 +136,32 @@
 
   function userName() {
     return nameInput.value.trim().slice(0, 80) || (hasSourceHost ? 'Receiver' : 'Caller');
+  }
+
+  function requestReceiverName() {
+    return new Promise(resolve => {
+      setConnectionStatus('Enter your name to join the call.');
+      joinNameInput.value = userName();
+      joinNameDialog.addEventListener('cancel', event => event.preventDefault());
+      const submit = event => {
+        event.preventDefault();
+        const name = joinNameInput.value.trim().slice(0, 80);
+        if (!name) {
+          joinNameInput.value = '';
+          joinNameInput.reportValidity();
+          return;
+        }
+        joinNameForm.removeEventListener('submit', submit);
+        nameInput.value = name;
+        localHeading.textContent = name;
+        joinNameDialog.close();
+        setConnectionStatus('Connecting to call manager…');
+        resolve();
+      };
+      joinNameForm.addEventListener('submit', submit);
+      joinNameDialog.showModal();
+      joinNameInput.select();
+    });
   }
 
   function validateAliases(message, includeManager) {
@@ -532,7 +561,10 @@
     await joinReceiver();
   }
 
-  void connect().catch(error => {
+  void (async () => {
+    if (hasSourceHost && phase !== 'invalid') await requestReceiverName();
+    await connect();
+  })().catch(error => {
     if (['joining', 'ready', 'starting', 'calling', 'ended', 'error'].includes(phase)) return;
     if (!PushcaClient.isOpen()) {
       phase = 'connecting';
