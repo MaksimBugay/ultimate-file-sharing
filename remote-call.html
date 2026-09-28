@@ -356,6 +356,27 @@
     }
     .local-panel video { height: auto; aspect-ratio: 16 / 9; }
     .local-panel .caption { margin: 5px 9px 0; font-size: .7rem; line-height: 1.25; }
+    .call-footer { flex: 0 0 auto; min-width: 0; }
+    .call-footer summary {
+      display: block;
+      width: max-content;
+      margin-left: auto;
+      padding: 4px 10px;
+      border: 1px solid #405573;
+      border-radius: 8px;
+      background: #172334;
+      color: #d8e5f5;
+      font-size: .75rem;
+      font-weight: 700;
+      list-style: none;
+      cursor: pointer;
+    }
+    .call-footer summary::-webkit-details-marker { display: none; }
+    .call-footer summary:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
+    .call-footer summary::before { content: "Show "; }
+    .call-footer[open] summary::before { content: "Hide "; }
+    .call-footer-content { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+    .call-footer:not([open]) > .call-footer-content { display: none; }
     .stats { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 10px; width: 100%; margin: 0; }
     .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
     .stat dt { color: #afc0d2; font-size: .78rem; }
@@ -372,7 +393,7 @@
       .page-heading { grid-template-columns: 1fr; }
       .page-heading > .status { justify-self: stretch; max-width: none; text-align: left; border-radius: 12px; }
       .intro { display: none; }
-      .viewport-stage { flex: none; height: min(62dvh, 520px); min-height: 300px; }
+      .viewport-stage { flex: 1 0 auto; height: min(62dvh, 520px); min-height: 300px; }
     }
     @media (max-width: 560px) {
       #jointLink, #copyJointLinkButton, .name-field, .privacy-field { flex-basis: 100%; }
@@ -480,15 +501,19 @@
     </div>
   </div>
 
-  <dl class="stats">
-    <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
-    <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
-    <div class="stat"><dt>Audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
-    <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
-  </dl>
-
-  <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-  <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. The link contains a private media key when encryption is enabled, so share it only with the receiver. The optional extra echo setting is also included in the link. It uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+  <details class="call-footer" open>
+    <summary>call details</summary>
+    <div class="call-footer-content">
+      <dl class="stats">
+        <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
+        <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
+        <div class="stat"><dt>Audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
+        <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
+      </dl>
+      <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
+      <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. The link contains a private media key when encryption is enabled, so share it only with the receiver. The optional extra echo setting is also included in the link. It uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+    </div>
+  </details>
 </main>
 <script src="js/pushca.min.js" defer></script>
 <script src="js/remote-call-connection.js" defer></script>
