@@ -13,6 +13,7 @@
       color: #edf3fa;
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body {
       margin: 0;
       height: 100dvh;
@@ -112,7 +113,7 @@
     #jointLinkLabel { position: absolute; top: 0; left: 0; }
     #jointLink { flex: 3 1 340px; margin-top: 17px; }
     #copyJointLinkButton { flex: 0 0 auto; height: 36px; margin-top: 17px; padding: 5px 12px; }
-    .name-field { flex: 1 1 160px; min-width: 150px; }
+    .name-field { flex: 0 0 180px; min-width: 150px; }
     .privacy-field { flex: 0 0 230px; min-width: 0; }
     .invite-fields input[type="url"],
     .invite-fields input[type="text"] {
@@ -316,9 +317,8 @@
     .self-view-shell[open] summary { position: absolute; box-shadow: none; }
     .self-view-shell summary::-webkit-details-marker { display: none; }
     .self-view-shell summary:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
-    .self-view-shell .hide-self { display: none; }
-    .self-view-shell[open] .hide-self { display: inline; }
-    .self-view-shell[open] .show-self { display: none; }
+    .self-view-shell summary::before { content: "Show "; }
+    .self-view-shell[open] summary::before { content: "Hide "; }
     .local-panel { height: 100%; overflow: auto; }
     .local-panel .video-frame h2 {
       top: 8px;
@@ -419,7 +419,7 @@
       </div>
     </section>
     <details class="self-view-shell" open>
-      <summary><span class="hide-self">Hide self view</span><span class="show-self">Show self view</span></summary>
+      <summary aria-label="Toggle self view">self view</summary>
       <section class="panel local-panel" aria-labelledby="localName">
         <div class="video-frame">
           <h2 id="localName">Caller</h2>

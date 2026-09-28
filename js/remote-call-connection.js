@@ -30,6 +30,7 @@
   let peer = null;
   let remoteStopReceived = false;
   let localStopPromise = null;
+  let acceptedManagerLookup = null;
   const channels = new Map();
   const localBinaryIds = { audio: uuid.v4().toString(), video: uuid.v4().toString() };
   let encryptionEnabled = encryptionToggle.checked;
@@ -71,9 +72,7 @@
         phase = 'invalid';
       }
     }
-    jointLink.hidden = true;
-    jointLinkLabel.hidden = true;
-    copyButton.hidden = true;
+    hideJointLink();
     encryptionToggle.disabled = true;
   } else {
     callSecret = window.crypto.getRandomValues(new Uint8Array(32));
@@ -90,6 +89,13 @@
 
   function setConnectionStatus(message) {
     connectionStatus.textContent = message;
+  }
+
+  function hideJointLink() {
+    jointLink.hidden = true;
+    jointLinkLabel.hidden = true;
+    copyButton.hidden = true;
+    copyButton.disabled = true;
   }
 
   function setCounterpartName(name) {
@@ -113,7 +119,7 @@
   }
 
   function refreshJointLink() {
-    if (hasSourceHost) return;
+    if (hasSourceHost || !['connecting', 'waiting'].includes(phase)) return;
     const url = new URL(pageUrl);
     url.searchParams.set('source-host', encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj)));
     const linkSettings = new URLSearchParams({ e2e: encryptionEnabled ? '1' : '0' });
@@ -143,6 +149,26 @@
     const result = await PushcaClient.connectionAliasLookup(alias);
     if (!result || result.client.applicationId !== applicationId) throw new Error(`Invalid ${applicationId} alias`);
     return result.client;
+  }
+
+  function sameClient(first, second) {
+    return first && second && ['workSpaceId', 'accountId', 'deviceId', 'applicationId']
+      .every(field => first[field] === second[field]);
+  }
+
+  async function rejectAdditionalReceiver(message) {
+    if (typeof message.managerAlias !== 'string' || !message.managerAlias) return;
+    try {
+      const candidate = await lookupClient(message.managerAlias, APPLICATIONS.manager);
+      const accepted = await acceptedManagerLookup?.catch(() => null);
+      if (sameClient(candidate, accepted) || sameClient(candidate, peer?.manager)) return;
+      await sendSignal(candidate, {
+        type: 'STOP', counts: { audio: 0, video: 0 },
+        reason: 'This call is already in progress. Ask the caller for a new joint link.'
+      });
+    } catch (error) {
+      console.warn('Could not reject an additional receiver:', error);
+    }
   }
 
   function channel(kind) {
@@ -286,7 +312,13 @@
   }
 
   async function handleReady(message) {
-    if (hasSourceHost || phase !== 'waiting') return;
+    if (hasSourceHost) return;
+    if (phase !== 'waiting') {
+      if (['preparing', 'calling', 'ended', 'error'].includes(phase)) {
+        await rejectAdditionalReceiver(message);
+      }
+      return;
+    }
     validateAliases(message, true);
     if (message.encrypted !== encryptionEnabled) {
       setConnectionStatus('The encryption setting changed. Share the current joint link again.');
@@ -304,8 +336,9 @@
     phase = 'preparing';
     encryptionToggle.disabled = true;
     setConnectionStatus('Receiver is ready. Preparing your camera and microphone…');
+    acceptedManagerLookup = lookupClient(message.managerAlias, APPLICATIONS.manager);
     const [manager, video, audio] = await Promise.all([
-      lookupClient(message.managerAlias, APPLICATIONS.manager),
+      acceptedManagerLookup,
       lookupClient(message.videoAlias, APPLICATIONS.video),
       lookupClient(message.audioAlias, APPLICATIONS.audio)
     ]);
@@ -326,6 +359,7 @@
     phase = 'calling';
     await window.RemoteCallMedia.start(sendChunk);
     if (phase !== 'calling') return;
+    hideJointLink();
     setConnectionStatus(`Call started with ${peer.name}.`);
   }
 
@@ -375,8 +409,8 @@
   PushcaClient.onOpenHandler = () => {
     updateConnectionHealth();
     if (!hasSourceHost) {
-      refreshJointLink();
       if (phase === 'connecting') phase = 'waiting';
+      refreshJointLink();
       if (phase === 'waiting') setConnectionStatus('Connected. Share the joint link to start a call.');
       else if (phase === 'calling') setConnectionStatus(`Call manager reconnected. Call with ${peer.name}.`);
     } else if (phase === 'connecting') {
