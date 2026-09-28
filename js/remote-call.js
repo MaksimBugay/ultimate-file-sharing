@@ -700,6 +700,7 @@
     close() {
       if (this.closed) return;
       this.closed = true;
+      ui.controls.hidden = true;
       clearInterval(this.progressTimer);
       this.video.pause();
       this.video.removeEventListener('timeupdate', this.onTimeUpdate);
@@ -1356,7 +1357,7 @@
     remoteChunkTimings = { audio: new Map(), video: new Map() };
     ui.video.muted = false;
     ui.video.volume = Number(ui.volume.value) / 100;
-    ui.controls.hidden = false;
+    ui.controls.hidden = true;
     ui.caption.textContent = 'Waiting for incoming audio and video chunks…';
     player = new MseReplayPlayer(ui.video, types);
     remoteLink = new LocalChunkLink(player);
@@ -1505,7 +1506,10 @@
   }, { capture: true });
   ui.video.addEventListener('pause', updateReplayControls);
   ui.video.addEventListener('ended', () => {
-    if (player && !player.closed) ui.caption.textContent = 'Playback finished.';
+    if (player && !player.closed) {
+      ui.caption.textContent = 'Playback finished.';
+      ui.controls.hidden = true;
+    }
   });
   ui.video.addEventListener('error', () => {
     if (player && !player.closed) player.fail(new Error(ui.video.error?.message || 'Media element error'));
