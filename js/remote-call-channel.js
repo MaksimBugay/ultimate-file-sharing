@@ -13,10 +13,18 @@
   // (peer chunk number and play time; -1 when nothing from the peer was playing).
   const CHUNK_HEADER_BYTES = 60;
   const CHUNK_MAGIC = 0x364d4352; // "RCM6" in little-endian byte order.
+  const MAX_PENDING_SENDS = 512;
+  const MAX_PENDING_BYTES = (kind === 'video' ? 64 : 8) * 1048576;
+  // Keep transfers ordered so a delayed chunk cannot leave a large gap in the receiver's MSE inbox.
+  const MAX_ACTIVE_SENDS = 1;
   let initialized = false;
   let aliasAttempt = 0;
   let pendingSends = 0;
-  let sendTail = Promise.resolve();
+  let pendingBytes = 0;
+  let activeSends = 0;
+  let connectionEpoch = 0;
+  const sendQueue = [];
+  const connectionWaiters = [];
   let cryptoReady = null;
   let localRole = null;
   let encryptionEnabled = null;
@@ -165,7 +173,57 @@
     });
   }
 
-  PushcaClient.onOpenHandler = () => report('remote-call:state', { connected: true });
+  function waitForConnection() {
+    if (PushcaClient.isOpen()) return Promise.resolve();
+    return new Promise(resolve => connectionWaiters.push(resolve));
+  }
+
+  async function transmitChunk(message) {
+    const wrapped = packChunk(message.payload, message.startTime, message.endTime,
+      message.createdAtEpochMs, message.playStart, message.playEnd);
+    const payload = encryptionEnabled
+      ? await encryptChunk(message.binaryId, message.order, wrapped)
+      : wrapped;
+    for (;;) {
+      await waitForConnection();
+      const attemptEpoch = connectionEpoch;
+      let result;
+      try {
+        result = await PushcaClient.transferBinaryChunk(
+          message.binaryId, message.order, message.destHashCode, payload
+        );
+      } catch (error) {
+        if (PushcaClient.isOpen() && connectionEpoch === attemptEpoch) throw error;
+        continue;
+      }
+      if (result.type === WaiterResponseType.SUCCESS) return;
+      if (PushcaClient.isOpen() && connectionEpoch === attemptEpoch) {
+        throw new Error(`${kind} chunk ${message.order} was not delivered.`);
+      }
+    }
+  }
+
+  function pumpSends() {
+    while (PushcaClient.isOpen() && activeSends < MAX_ACTIVE_SENDS && sendQueue.length) {
+      const message = sendQueue.shift();
+      activeSends++;
+      void transmitChunk(message)
+        .catch(error => report('remote-call:error', { message: `${kind} channel: ${error.message}` }))
+        .finally(() => {
+          activeSends--;
+          pendingSends--;
+          pendingBytes -= message.payload.byteLength;
+          pumpSends();
+        });
+    }
+  }
+
+  PushcaClient.onOpenHandler = () => {
+    connectionEpoch++;
+    for (const resolve of connectionWaiters.splice(0)) resolve();
+    pumpSends();
+    report('remote-call:state', { connected: true });
+  };
   PushcaClient.onCloseHandler = () => {
     if (!PushcaClient.isOpen()) report('remote-call:state', { connected: false });
   };
@@ -226,25 +284,14 @@
       report('remote-call:error', { message: `${kind} chunk order was reused.` });
       return;
     }
-    if (pendingSends >= 16) {
+    if (pendingSends >= MAX_PENDING_SENDS || pendingBytes + message.payload.byteLength > MAX_PENDING_BYTES) {
       report('remote-call:error', { message: `${kind} send queue is full.` });
       return;
     }
     lastSentOrders.set(message.binaryId, message.order);
     pendingSends++;
-    sendTail = sendTail.then(async () => {
-      const wrapped = packChunk(message.payload, message.startTime, message.endTime,
-        message.createdAtEpochMs, message.playStart, message.playEnd);
-      const payload = encryptionEnabled
-        ? await encryptChunk(message.binaryId, message.order, wrapped)
-        : wrapped;
-      const result = await PushcaClient.transferBinaryChunk(
-        message.binaryId, message.order, message.destHashCode, payload
-      );
-      if (result.type !== WaiterResponseType.SUCCESS) {
-        report('remote-call:error', { message: `${kind} chunk ${message.order} was not delivered.` });
-      }
-    }).catch(error => report('remote-call:error', { message: `${kind} channel: ${error.message}` }))
-      .finally(() => { pendingSends--; });
+    pendingBytes += message.payload.byteLength;
+    sendQueue.push(message);
+    pumpSends();
   });
 })();
