@@ -56,13 +56,15 @@
   let elapsedTimer = null;
   let recording = false;
   let finished = false;
+  let callEnded = false;
   let busy = false;
   let stoppingPromise = null;
   let recordingSaved = false;
   let baseName = '';
   let player = null;
   let recorderSession = null;
-  let localLink = null;
+  let localReplayUrl = null;
+  let localReplayActive = false;
   let remoteLink = null;
   let remoteReceived = { audio: new Set(), video: new Set() };
   let remoteChunkTimings = { audio: new Map(), video: new Map() };
@@ -101,8 +103,8 @@
     ui.extraEchoCancellation.disabled = new URLSearchParams(window.location.search).has('source-host')
       || busy || !!stoppingPromise || !!preparedMimeTypes || recording;
     ui.muteMic.disabled = !recording || busy || !!stoppingPromise;
-    ui.replay.disabled = busy || recording || !finished || !remotePlaybackFinished
-      || !chunks?.audio.length || !chunks?.video.length;
+    ui.replay.disabled = busy || recording || !finished || !callEnded || !remotePlaybackFinished
+      || !recorderSession?.recordingChunks.length;
     ui.save.disabled = busy || !finished || recordingSaved || !recorderSession?.recordingChunks.length;
   }
 
@@ -529,7 +531,7 @@
       this.playingAudioChunk = null;
       this.started = false;
       this.syncHold = true;
-      this.userPaused = false;
+      this.playbackFinished = false;
       this.closed = false;
       this.onOpen = () => this.open();
       this.onTimeUpdate = () => this.progress();
@@ -626,7 +628,7 @@
     }
 
     progress() {
-      if (this.closed || !this.queues) return;
+      if (this.closed || this.playbackFinished || !this.queues) return;
       this.flushOrdered('audio');
       this.flushOrdered('video');
       for (const queue of Object.values(this.queues)) {
@@ -647,27 +649,6 @@
         this.started = true;
         this.video.currentTime = initialRange.start;
       }
-      if (this.started && !(fullyAppended && !this.syncHold
-        && this.video.currentTime >= sharedEnd - 0.03)) {
-        const minimumAhead = fullyAppended
-          ? Math.min(0.15, Math.max(0.02, sharedEnd - this.video.currentTime - 0.01)) : 0.15;
-        const ready = hasCommonBufferAt(audio, video, this.video.currentTime, minimumAhead)
-          && this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-          && !this.video.seeking;
-        if (!ready) {
-          this.syncHold = true;
-          this.video.pause();
-          ui.caption.textContent = 'Waiting for synchronized audio and video.';
-        } else if (this.syncHold) {
-          this.syncHold = false;
-          ui.caption.textContent = 'Playing synchronized audio and video.';
-          if (!this.userPaused) this.video.play().catch(() => {
-            ui.caption.textContent = 'Playback needs a click. Press Play below the player.';
-          });
-        }
-        updateReplayControls();
-      }
-      this.updatePlayingAudioChunk();
       if (this.mediaSource.readyState === 'open' && fullyAppended) {
         if (!this.started) {
           this.fail(new Error('Audio and video MSE timelines have no overlapping buffered range'));
@@ -675,23 +656,53 @@
         }
         try {
           this.mediaSource.endOfStream();
-        } catch (error) { this.fail(error); }
+        } catch (error) {
+          this.fail(error);
+          return;
+        }
       }
+      if (this.started && fullyAppended && this.video.currentTime >= sharedEnd - 0.05) {
+        this.finishPlayback();
+        return;
+      }
+      if (this.started) {
+        const minimumAhead = fullyAppended
+          ? Math.min(0.15, Math.max(0.02, sharedEnd - this.video.currentTime - 0.01)) : 0.15;
+        const ready = hasCommonBufferAt(audio, video, this.video.currentTime, minimumAhead)
+          && this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
+          && !this.video.seeking;
+        if (!ready) {
+          if (fullyAppended && this.video.currentTime >= sharedEnd - 0.15) {
+            this.finishPlayback();
+            return;
+          }
+          this.syncHold = true;
+          this.video.pause();
+          ui.caption.textContent = 'Waiting for synchronized audio and video.';
+        } else if (this.syncHold) {
+          this.syncHold = false;
+          ui.caption.textContent = 'Playing synchronized audio and video.';
+          this.video.play().catch(() => {
+            ui.caption.textContent = 'Playback needs a click. Press Play below the player.';
+          });
+        }
+        updateReplayControls();
+      }
+      this.updatePlayingAudioChunk();
     }
 
-    togglePause() {
-      if (!this.userPaused && !this.video.paused) {
-        this.userPaused = true;
-        this.video.pause();
-      } else {
-        this.userPaused = false;
-        if (!this.syncHold) this.video.play().catch(() => setStatus('Could not resume replay.', true));
-      }
-      updateReplayControls();
+    finishPlayback() {
+      if (this.closed || this.playbackFinished) return;
+      this.playbackFinished = true;
+      clearInterval(this.progressTimer);
+      this.video.pause();
+      this.playingAudioChunk = null;
+      ui.caption.textContent = 'Playback finished.';
+      ui.controls.hidden = true;
     }
 
     fail(error) {
-      if (this.closed) return;
+      if (this.closed || this.playbackFinished) return;
       setStatus(`MSE replay failed: ${error.message}`, true);
       ui.caption.textContent = 'This browser could not replay the separate audio and video streams.';
       this.close();
@@ -740,21 +751,31 @@
   }
 
   function updateReplayControls() {
-    ui.pause.textContent = player?.syncHold ? 'Buffering…' : ui.video.paused ? 'Play' : 'Pause';
-    ui.pause.disabled = !!player?.syncHold;
+    ui.pause.textContent = ui.video.paused ? 'Play' : 'Pause';
+    ui.pause.disabled = false;
     ui.mute.textContent = ui.video.muted ? 'Unmute audio' : 'Mute audio';
     ui.mute.setAttribute('aria-pressed', String(ui.video.muted));
   }
 
+  function releaseLocalReplay() {
+    localReplayActive = false;
+    if (!localReplayUrl) return;
+    ui.video.pause();
+    ui.video.removeAttribute('src');
+    ui.video.load();
+    URL.revokeObjectURL(localReplayUrl);
+    localReplayUrl = null;
+  }
+
   function resetRecording() {
-    localLink?.close();
-    localLink = null;
+    releaseLocalReplay();
     remoteLink?.close();
     remoteLink = null;
     clearTimeout(remoteFinishTimer);
     remoteFinishTimer = null;
     remoteFinalCounts = null;
     remotePlaybackFinished = false;
+    callEnded = false;
     remoteReceived = { audio: new Set(), video: new Set() };
     remoteChunkTimings = { audio: new Map(), video: new Map() };
     player?.close();
@@ -1318,28 +1339,31 @@
   }
 
   function replayRecording() {
-    const savedChunks = recorderSession?.chunks;
-    if (recording || busy || !finished || !savedChunks?.audio.length || !savedChunks?.video.length) return;
+    const savedChunks = recorderSession?.recordingChunks;
+    if (recording || busy || !finished || !callEnded || !remotePlaybackFinished
+      || !savedChunks?.length) return;
     bypassEchoProcessing();
-    localLink?.close();
     remoteLink?.close();
     remoteLink = null;
     clearTimeout(remoteFinishTimer);
     remoteFinishTimer = null;
     player?.close();
+    player = null;
+    releaseLocalReplay();
     ui.video.srcObject = null;
     ui.video.muted = false;
     ui.video.volume = Number(ui.volume.value) / 100;
+    localReplayUrl = URL.createObjectURL(new Blob(savedChunks, { type: recorderSession.recordingMimeType }));
+    localReplayActive = true;
+    ui.video.src = localReplayUrl;
+    ui.video.load();
     ui.controls.hidden = false;
-    ui.caption.textContent = 'Preparing separate audio and video buffers…';
-    player = new MseReplayPlayer(ui.video, recorderSession.mimeTypes);
-    localLink = new LocalChunkLink(player);
-    recorderSession.setPublisher(localLink);
-    for (const kind of ['audio', 'video']) {
-      for (const chunk of savedChunks[kind]) recorderSession.publishChunk(chunk);
-      localLink.finishTrack(kind);
-    }
+    ui.caption.textContent = 'Replaying local recording.';
+    ui.diagnostics.textContent = 'Local replay uses the completed audio and video recording.';
     updateReplayControls();
+    void ui.video.play().catch(() => {
+      if (localReplayActive) ui.caption.textContent = 'Playback needs a click. Press Play below the player.';
+    });
   }
 
   function setPeerMimeTypes(types) {
@@ -1347,6 +1371,7 @@
       && MediaSource.isTypeSupported(types[kind]))) {
       throw new Error('Peer audio or video format is not supported');
     }
+    releaseLocalReplay();
     remoteLink?.close();
     player?.close();
     clearTimeout(remoteFinishTimer);
@@ -1423,6 +1448,7 @@
 
   async function abortPreparedMedia() {
     if (recording) return stopRecording();
+    releaseLocalReplay();
     stopVideoCapture();
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
@@ -1447,6 +1473,10 @@
     receiveChunk: receiveRemoteChunk,
     getReceivedChunkTiming: (kind, order) => remoteChunkTimings[kind]?.get(order) || null,
     finishRemote,
+    markCallEnded: () => {
+      callEnded = true;
+      updateStats();
+    },
     abort: abortPreparedMedia
   };
 
@@ -1487,17 +1517,19 @@
   ui.replay.addEventListener('click', replayRecording);
   ui.save.addEventListener('click', saveRecording);
   ui.pause.addEventListener('click', () => {
-    if (!player || player.closed) return;
-    player.togglePause();
+    if (!localReplayActive) return;
+    if (ui.video.paused) {
+      void ui.video.play().catch(() => setStatus('Could not resume replay.', true));
+    } else ui.video.pause();
   });
   ui.mute.addEventListener('click', () => {
-    if (!player || player.closed) return;
+    if (!localReplayActive) return;
     ui.video.muted = !ui.video.muted;
     updateReplayControls();
   });
   ui.volume.addEventListener('input', () => {
     ui.video.volume = Number(ui.volume.value) / 100;
-    if (ui.video.volume > 0 && player && !player.closed) ui.video.muted = false;
+    if (ui.video.volume > 0 && localReplayActive) ui.video.muted = false;
     updateReplayControls();
   });
   ui.video.addEventListener('play', updateReplayControls);
@@ -1506,19 +1538,25 @@
   }, { capture: true });
   ui.video.addEventListener('pause', updateReplayControls);
   ui.video.addEventListener('ended', () => {
-    if (player && !player.closed) {
-      ui.caption.textContent = 'Playback finished.';
+    if (localReplayActive) {
+      localReplayActive = false;
       ui.controls.hidden = true;
-    }
+      ui.caption.textContent = 'Playback finished.';
+    } else player?.finishPlayback();
   });
   ui.video.addEventListener('error', () => {
-    if (player && !player.closed) player.fail(new Error(ui.video.error?.message || 'Media element error'));
+    if (localReplayActive) {
+      localReplayActive = false;
+      ui.controls.hidden = true;
+      ui.caption.textContent = 'This browser could not replay the local recording.';
+      setStatus(`Could not replay local recording: ${ui.video.error?.message || 'Media element error'}`, true);
+    } else if (player && !player.closed) player.fail(new Error(ui.video.error?.message || 'Media element error'));
   });
   window.addEventListener('pagehide', () => {
     recording = false;
     clearInterval(elapsedTimer);
     recorderSession?.stopImmediately();
-    localLink?.close();
+    releaseLocalReplay();
     remoteLink?.close();
     clearTimeout(remoteFinishTimer);
     stopVideoCapture();

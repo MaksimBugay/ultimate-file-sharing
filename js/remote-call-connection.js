@@ -422,7 +422,11 @@
         encryptionToggle.disabled = true;
         if (peer) {
           window.RemoteCallMedia.finishRemote(message.counts);
-          await stopLocalAndNotify();
+          try {
+            await stopLocalAndNotify();
+          } finally {
+            window.RemoteCallMedia.markCallEnded();
+          }
         } else {
           await window.RemoteCallMedia.abort();
         }
@@ -494,6 +498,8 @@
       } catch (error) {
         setConnectionStatus(`Could not notify the peer that the call ended: ${error.message}`);
         console.error('Could not finish call:', error);
+      } finally {
+        if (remoteStopReceived) window.RemoteCallMedia.markCallEnded();
       }
     }
   };
