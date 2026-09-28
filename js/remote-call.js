@@ -8,8 +8,6 @@
     ? Math.round(requestedChunkSeconds * 1000) : 1000;
   const WINDOW_MS = CHUNK_MS;
   const INITIAL_COMMON_BUFFER_SECONDS = 0.5;
-  const ECHO_START_MS = 12000;
-  const ECHO_END_MS = 5000;
   const MAX_RECORDING_BYTES = 512 * 1048576;
   // Opus needs decoded packets ahead of a snippet before its output settles.
   const ECHO_REFERENCE_PREROLL_MS = 120;
@@ -27,7 +25,6 @@
     muteMic: document.getElementById('muteMicButton'),
     caption: document.getElementById('playerCaption'),
     stop: document.getElementById('stopButton'),
-    saveMic: document.getElementById('saveRecentMicButton'),
     replay: document.getElementById('replayButton'),
     controls: document.getElementById('replayControls'),
     pause: document.getElementById('pauseReplayButton'),
@@ -48,10 +45,6 @@
   ui.chunkInterval.textContent = `${CHUNK_MS / 1000} s`;
 
   let mediaStream = null;
-  let audioContext = null;
-  let audioProcessor = null;
-  let audioSource = null;
-  let silentOutput = null;
   let echoContext = null;
   let echoPlayerSource = null;
   let echoNode = null;
@@ -65,8 +58,7 @@
   let finished = false;
   let busy = false;
   let stoppingPromise = null;
-  let micSaving = false;
-  let saveStage = 'video';
+  let recordingSaved = false;
   let baseName = '';
   let player = null;
   let recorderSession = null;
@@ -86,9 +78,6 @@
   let canvasContext = null;
   let canvasStream = null;
   let drawTimer = null;
-  const pcmFrames = [];
-  let pcmSampleRate = 0;
-
   function setStatus(message, error = false) {
     ui.status.textContent = message;
     ui.status.style.color = error ? '#ffb2b2' : '';
@@ -102,7 +91,6 @@
     if (!startedAt) return;
     const seconds = Math.floor(relativeMs() / 1000);
     ui.elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
-    updateMicButton();
   }
 
   function updateStats() {
@@ -115,8 +103,7 @@
     ui.muteMic.disabled = !recording || busy || !!stoppingPromise;
     ui.replay.disabled = busy || recording || !finished || !remotePlaybackFinished
       || !chunks?.audio.length || !chunks?.video.length;
-    ui.save.disabled = busy || !finished || saveStage === 'done' || !chunks?.[saveStage]?.length;
-    updateMicButton();
+    ui.save.disabled = busy || !finished || recordingSaved || !recorderSession?.recordingChunks.length;
   }
 
   function pickMime(kind) {
@@ -124,6 +111,13 @@
       ? ['audio/webm;codecs=opus']
       : ['video/webm;codecs=vp9', 'video/webm;codecs=vp8'];
     return candidates.find(type => MediaRecorder.isTypeSupported(type) && MediaSource.isTypeSupported(type));
+  }
+
+  function pickRecordingMime(videoMime) {
+    const preferred = videoMime.includes('vp9') ? 'vp9' : 'vp8';
+    const other = preferred === 'vp9' ? 'vp8' : 'vp9';
+    return [`video/webm;codecs=${preferred},opus`, `video/webm;codecs=${other},opus`, 'video/webm']
+      .find(mimeType => MediaRecorder.isTypeSupported(mimeType)) || null;
   }
 
   function requireTrack(track, message) {
@@ -192,8 +186,10 @@
       this.onLimit = onLimit;
       this.onError = onError;
       this.publisher = null;
-      this.recorders = { audio: null, video: null };
+      this.recorders = { audio: null, video: null, recording: null };
       this.chunks = { audio: [], video: [] };
+      this.recordingChunks = [];
+      this.recordingMimeType = '';
       this.mimeTypes = { audio: '', video: '' };
       this.lastEndMs = { audio: 0, video: 0 };
       this.nextSequence = { audio: 0, video: 0 };
@@ -287,6 +283,28 @@
       this.mimeTypes[kind] = recorder.mimeType || mimeType;
     }
 
+    startCombined(audioTrack, videoTrack, mimeType) {
+      const recorder = new MediaRecorder(new MediaStream([videoTrack, audioTrack]), {
+        mimeType, audioBitsPerSecond: 64000, videoBitsPerSecond: 1500000
+      });
+      let resolveStopped;
+      const stopped = new Promise(resolve => { resolveStopped = resolve; });
+      recorder.addEventListener('dataavailable', event => {
+        if (!event.data?.size) return;
+        this.recordingChunks.push(event.data);
+        this.storedBytes += event.data.size;
+        this.onUpdate();
+        if (this.storedBytes >= MAX_RECORDING_BYTES) this.onLimit();
+      });
+      recorder.addEventListener('error', event => {
+        this.onError('combined', event.error || new Error('unknown recorder error'));
+      });
+      recorder.addEventListener('stop', resolveStopped, { once: true });
+      recorder.start(CHUNK_MS);
+      this.recorders.recording = { recorder, stopped };
+      this.recordingMimeType = recorder.mimeType || mimeType;
+    }
+
     stopImmediately() {
       for (const current of Object.values(this.recorders)) {
         if (current && current.recorder.state !== 'inactive') current.recorder.stop();
@@ -378,40 +396,6 @@
         : 'Camera off. Black video frames and microphone audio are recording.';
   }
 
-  async function startPcmCapture(track) {
-    if (!AudioContextClass) return;
-    audioContext = new AudioContextClass();
-    pcmSampleRate = audioContext.sampleRate;
-    audioSource = audioContext.createMediaStreamSource(new MediaStream([track]));
-    audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-    silentOutput = audioContext.createGain();
-    silentOutput.gain.value = 0;
-    audioProcessor.onaudioprocess = event => {
-      if (!recording) return;
-      const samples = new Float32Array(event.inputBuffer.getChannelData(0));
-      const endTime = relativeMs();
-      const startTime = endTime - samples.length * 1000 / pcmSampleRate;
-      pcmFrames.push({ startTime, endTime, samples });
-      const oldest = endTime - 14000;
-      while (pcmFrames.length && pcmFrames[0].endTime < oldest) pcmFrames.shift();
-    };
-    audioSource.connect(audioProcessor);
-    audioProcessor.connect(silentOutput);
-    silentOutput.connect(audioContext.destination);
-    await audioContext.resume();
-  }
-
-  async function stopPcmCapture() {
-    if (!audioContext) return;
-    audioProcessor.onaudioprocess = null;
-    audioSource.disconnect();
-    audioProcessor.disconnect();
-    silentOutput.disconnect();
-    const context = audioContext;
-    audioContext = audioProcessor = audioSource = silentOutput = null;
-    await context.close();
-  }
-
   function showDeviceOff(button, off) {
     button.style.backgroundColor = off ? '#69323b' : '';
     button.style.color = off ? '#ffe0e3' : '';
@@ -437,68 +421,6 @@
     showDeviceOff(ui.cameraEnabled, !enabled);
   }
 
-  function micRange() {
-    const now = relativeMs();
-    return { startTime: now - ECHO_START_MS, endTime: now - ECHO_END_MS };
-  }
-
-  function coversRange(range, frames) {
-    if (!frames.length || range.startTime < 0) return false;
-    let until = range.startTime;
-    for (const frame of frames) {
-      if (frame.endTime <= until) continue;
-      if (frame.startTime > until + 120) return false;
-      until = Math.max(until, frame.endTime);
-      if (until >= range.endTime) return true;
-    }
-    return false;
-  }
-
-  function updateMicButton() {
-    const range = startedAt ? micRange() : { startTime: -1, endTime: -1 };
-    ui.saveMic.disabled = !recording || busy || micSaving || !pcmSampleRate || !coversRange(range, pcmFrames);
-  }
-
-  function encodeWav(samples, sampleRate) {
-    const bytes = new ArrayBuffer(44 + samples.length * 2);
-    const view = new DataView(bytes);
-    const writeText = (offset, value) => {
-      for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
-    };
-    writeText(0, 'RIFF');
-    view.setUint32(4, bytes.byteLength - 8, true);
-    writeText(8, 'WAVE');
-    writeText(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeText(36, 'data');
-    view.setUint32(40, samples.length * 2, true);
-    for (let i = 0; i < samples.length; i++) {
-      const sample = Math.max(-1, Math.min(1, samples[i]));
-      view.setInt16(44 + 2 * i, sample < 0 ? sample * 32768 : sample * 32767, true);
-    }
-    return new Blob([bytes], { type: 'audio/wav' });
-  }
-
-  function makeMicClip(range, frames) {
-    const samples = new Float32Array(Math.round((range.endTime - range.startTime) * pcmSampleRate / 1000));
-    for (const frame of frames) {
-      const from = Math.max(range.startTime, frame.startTime);
-      const to = Math.min(range.endTime, frame.endTime);
-      if (to <= from) continue;
-      const output = Math.max(0, Math.round((from - range.startTime) * pcmSampleRate / 1000));
-      const input = Math.max(0, Math.round((from - frame.startTime) * pcmSampleRate / 1000));
-      const count = Math.min(Math.round((to - from) * pcmSampleRate / 1000), frame.samples.length - input, samples.length - output);
-      if (count > 0) samples.set(frame.samples.subarray(input, input + count), output);
-    }
-    return encodeWav(samples, pcmSampleRate);
-  }
-
   function downloadFallback(blob, fileName) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -508,36 +430,6 @@
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-  }
-
-  async function saveRecentMic() {
-    if (!recording || micSaving || !pcmSampleRate) return;
-    const range = micRange();
-    const frames = pcmFrames.filter(frame => frame.endTime > range.startTime && frame.startTime < range.endTime);
-    if (!coversRange(range, frames)) return;
-    const fileName = `${baseName}-mic-${Math.round(range.startTime)}-${Math.round(range.endTime)}.wav`;
-    micSaving = true;
-    updateMicButton();
-    try {
-      const handlePromise = window.showSaveFilePicker
-        ? window.showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{ description: 'Microphone audio snippet', accept: { 'audio/wav': ['.wav'] } }]
-          })
-        : Promise.resolve(null);
-      const [handle, blob] = await Promise.all([handlePromise, Promise.resolve().then(() => makeMicClip(range, frames))]);
-      if (handle) {
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-      } else downloadFallback(blob, fileName);
-      setStatus(`Saved microphone audio from ${(range.startTime / 1000).toFixed(1)}s to ${(range.endTime / 1000).toFixed(1)}s.`);
-    } catch (error) {
-      setStatus(error.name === 'AbortError' ? 'Microphone snippet save canceled.' : `Could not save microphone snippet: ${error.message}`, error.name !== 'AbortError');
-    } finally {
-      micSaving = false;
-      updateMicButton();
-    }
   }
 
   class SourceBufferQueue {
@@ -885,12 +777,10 @@
         if (recording) void window.RemoteCallConnection.stopCall();
       }
     });
-    pcmFrames.length = 0;
-    pcmSampleRate = 0;
     setMicMuted(false);
     finished = false;
-    saveStage = 'video';
-    ui.save.textContent = 'Save video file';
+    recordingSaved = false;
+    ui.save.textContent = 'Save recording';
     ui.controls.hidden = true;
     ui.cameraCaption.textContent = 'Live preview appears here when recording starts.';
     ui.echoCancellationStatus.textContent = 'Echo cancellation will be checked when the microphone opens.';
@@ -1254,8 +1144,9 @@
     }
     const audioMime = pickMime('audio');
     const videoMime = pickMime('video');
-    if (!audioMime || !videoMime) {
-      throw new Error('This browser has no audio and video WebM formats supported by both MediaRecorder and MediaSource.');
+    const recordingMime = videoMime && pickRecordingMime(videoMime);
+    if (!audioMime || !videoMime || !recordingMime) {
+      throw new Error('This browser has no audio and video WebM formats supported for the call and combined recording.');
     }
     busy = true;
     setStatus(cameraEnabled()
@@ -1280,7 +1171,7 @@
       if (initialCameraTrack) await enableCameraTrack(initialCameraTrack);
       updateCameraCaption();
       baseName = `recording-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-      preparedMimeTypes = { audio: audioMime, video: videoMime };
+      preparedMimeTypes = { audio: audioMime, video: videoMime, recording: recordingMime };
       setStatus(cameraActive ? 'Camera and microphone are ready for the call.'
         : 'Microphone is ready. Black video will be sent.');
       return preparedMimeTypes;
@@ -1311,9 +1202,9 @@
     echoReference = echoNode ? new LocalEchoReference(recorderSession.chunks.audio) : null;
     try {
       recorderSession.setPublisher({ publishChunk: sendChunk });
+      recorderSession.startCombined(audioTrack, videoTrack, preparedMimeTypes.recording);
       recorderSession.start('audio', audioTrack, preparedMimeTypes.audio);
       recorderSession.start('video', videoTrack, preparedMimeTypes.video);
-      void startPcmCapture(audioTrack).catch(error => console.warn('Microphone clip capture is unavailable:', error));
       elapsedTimer = setInterval(updateElapsed, 250);
       ui.stop.disabled = false;
       setStatus('Recording and sending live audio and video.');
@@ -1341,8 +1232,6 @@
     stoppingPromise = (async () => {
       try {
         await recorderSession.stop();
-        await stopPcmCapture();
-        pcmFrames.length = 0;
         finished = true;
         ui.cameraCaption.textContent = 'Recording stopped.';
         if (!player || player.closed) ui.caption.textContent = 'Call recording stopped.';
@@ -1541,7 +1430,6 @@
     player = null;
     clearTimeout(remoteFinishTimer);
     remoteFinishTimer = null;
-    await stopPcmCapture();
     updateStats();
     return { audio: recorderSession?.chunks.audio.length || 0, video: recorderSession?.chunks.video.length || 0 };
   }
@@ -1557,38 +1445,31 @@
     abort: abortPreparedMedia
   };
 
-  async function saveCurrentTrack() {
-    const savedChunks = recorderSession?.chunks;
-    if (busy || !finished || saveStage === 'done' || !savedChunks?.[saveStage]?.length) return;
-    const kind = saveStage;
-    const fileName = `${baseName}-${kind}.webm`;
+  async function saveRecording() {
+    const savedChunks = recorderSession?.recordingChunks;
+    if (busy || !finished || recordingSaved || !savedChunks?.length) return;
+    const fileName = `${baseName}.webm`;
     busy = true;
     updateStats();
     try {
       const handle = window.showSaveFilePicker
         ? await window.showSaveFilePicker({
             suggestedName: fileName,
-            types: [{ description: `${kind} recording`, accept: { [`${kind}/webm`]: ['.webm'] } }]
+            types: [{ description: 'Audio and video recording', accept: { 'video/webm': ['.webm'] } }]
           })
         : null;
-      const blob = new Blob(savedChunks[kind].map(chunk => chunk.binary),
-        { type: recorderSession.mimeTypes[kind] });
+      const blob = new Blob(savedChunks, { type: recorderSession.recordingMimeType });
       if (handle) {
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();
       } else downloadFallback(blob, fileName);
-      if (kind === 'video') {
-        saveStage = 'audio';
-        ui.save.textContent = 'Save audio file';
-        setStatus('Video saved. Click Save audio file to save the microphone stream.');
-      } else {
-        saveStage = 'done';
-        ui.save.textContent = 'Both files saved';
-        setStatus('Video and audio files saved.');
-      }
+      recordingSaved = true;
+      ui.save.textContent = 'Recording saved';
+      setStatus('Audio and video recording saved.');
     } catch (error) {
-      setStatus(error.name === 'AbortError' ? `${kind} save canceled.` : `Could not save ${kind}: ${error.message}`, error.name !== 'AbortError');
+      setStatus(error.name === 'AbortError' ? 'Recording save canceled.'
+        : `Could not save recording: ${error.message}`, error.name !== 'AbortError');
     } finally {
       busy = false;
       updateStats();
@@ -1598,9 +1479,8 @@
   ui.stop.addEventListener('click', () => { void window.RemoteCallConnection.stopCall(); });
   ui.cameraEnabled.addEventListener('click', toggleCamera);
   ui.muteMic.addEventListener('click', toggleMicMute);
-  ui.saveMic.addEventListener('click', saveRecentMic);
   ui.replay.addEventListener('click', replayRecording);
-  ui.save.addEventListener('click', saveCurrentTrack);
+  ui.save.addEventListener('click', saveRecording);
   ui.pause.addEventListener('click', () => {
     if (!player || player.closed) return;
     player.togglePause();
@@ -1638,6 +1518,5 @@
     if (echoContext) void echoContext.close().catch(() => {});
     mediaStream?.getTracks().forEach(track => track.stop());
     player?.close();
-    if (audioContext) void stopPcmCapture();
   });
 })();
