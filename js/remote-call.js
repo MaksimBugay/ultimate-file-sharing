@@ -16,6 +16,7 @@
     camera: document.getElementById('liveVideo'),
     video: document.getElementById('replayVideo'),
     cameraCaption: document.getElementById('cameraCaption'),
+    echoCancellationStatus: document.getElementById('echoCancellationStatus'),
     cameraEnabled: document.getElementById('cameraEnabled'),
     muteMic: document.getElementById('muteMicButton'),
     caption: document.getElementById('playerCaption'),
@@ -608,7 +609,6 @@
       this.started = false;
       this.syncHold = true;
       this.userPaused = false;
-      this.durationClamped = false;
       this.closed = false;
       this.onOpen = () => this.open();
       this.onTimeUpdate = () => this.progress();
@@ -722,11 +722,6 @@
           return;
         }
         try {
-          if (!this.durationClamped && sharedEnd > 0 && this.mediaSource.duration > sharedEnd) {
-            this.durationClamped = true;
-            this.mediaSource.duration = sharedEnd;
-            if (!this.queues.audio.idle() || !this.queues.video.idle()) return;
-          }
           this.mediaSource.endOfStream();
         } catch (error) { this.fail(error); }
       }
@@ -834,6 +829,7 @@
     ui.save.textContent = 'Save video file';
     ui.controls.hidden = true;
     ui.cameraCaption.textContent = 'Live preview appears here when recording starts.';
+    ui.echoCancellationStatus.textContent = 'Echo cancellation will be checked when the microphone opens.';
     ui.caption.textContent = 'Incoming audio and video appear here during the call.';
     ui.diagnostics.textContent = 'Audio and video buffer diagnostics appear during replay.';
     updateStats();
@@ -850,6 +846,48 @@
       setCameraEnabled(false);
       return stream;
     });
+  }
+
+  async function configureEchoCancellation(track) {
+    const modes = track.getCapabilities?.()?.echoCancellation;
+    // This call plays remote audio through MediaSource, so "remote-only" (WebRTC
+    // tracks) is insufficient. Request cancellation of all system output when offered.
+    if (Array.isArray(modes) && modes.includes('all')
+      && track.applyConstraints) {
+      try {
+        await track.applyConstraints({
+          echoCancellation: { exact: 'all' },
+          noiseSuppression: true,
+          autoGainControl: true
+        });
+      } catch (error) {
+        console.warn('Full-system echo cancellation could not be enabled:', error);
+      }
+    }
+    let setting = track.getSettings?.()?.echoCancellation;
+    if (setting === false && track.applyConstraints) {
+      try {
+        await track.applyConstraints({
+          echoCancellation: { exact: true },
+          noiseSuppression: true,
+          autoGainControl: true
+        });
+        setting = track.getSettings?.()?.echoCancellation;
+      } catch (error) {
+        console.warn('Microphone echo cancellation could not be enabled:', error);
+      }
+    }
+    if (setting === 'all') {
+      ui.echoCancellationStatus.textContent = 'Echo cancellation: all system audio.';
+    } else if (setting === true) {
+      ui.echoCancellationStatus.textContent = 'Echo cancellation: on (browser mode).';
+    } else if (setting === false) {
+      ui.echoCancellationStatus.textContent = 'Echo cancellation is unavailable. Use headphones to prevent echo.';
+    } else if (setting === 'remote-only') {
+      ui.echoCancellationStatus.textContent = 'Echo cancellation may not cover incoming audio. Use headphones if you hear echo.';
+    } else {
+      ui.echoCancellationStatus.textContent = 'Echo cancellation requested; use headphones if you hear echo.';
+    }
   }
 
   async function prepareRecording() {
@@ -870,8 +908,8 @@
     try {
       resetRecording();
       mediaStream = await acquireMediaStream();
-      requireTrack(mediaStream.getAudioTracks()[0],
-        'The required microphone or camera track is unavailable.');
+      await configureEchoCancellation(requireTrack(mediaStream.getAudioTracks()[0],
+        'The required microphone or camera track is unavailable.'));
       const initialCameraTrack = mediaStream.getVideoTracks()[0];
       if (cameraEnabled()) requireTrack(initialCameraTrack,
         'The required microphone or camera track is unavailable.');
@@ -950,6 +988,7 @@
         mediaStream?.getTracks().forEach(track => track.stop());
         mediaStream = null;
         preparedMimeTypes = null;
+        ui.echoCancellationStatus.textContent = 'Microphone released.';
         ui.camera.srcObject = null;
         stoppingPromise = null;
         updateStats();
@@ -1110,6 +1149,7 @@
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
     preparedMimeTypes = null;
+    ui.echoCancellationStatus.textContent = 'Microphone released.';
     ui.camera.srcObject = null;
     remoteLink?.close();
     remoteLink = null;
