@@ -83,6 +83,7 @@
     }
     .call-status-mark svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .call-status-copy { min-width: 0; }
+    .call-status .connection-indicator { margin-left: auto; }
     .call-status-label { display: block; color: #94bff1; font-size: .63rem; font-weight: 800; letter-spacing: .14em; line-height: 1; }
     .call-status .status {
       min-height: 0;
@@ -105,8 +106,21 @@
       background: linear-gradient(140deg, #1a2a40, #142035);
       box-shadow: 0 15px 34px #060d1b50;
     }
-    .invite-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 6px; }
-    .invite-heading .eyebrow { display: none; }
+    .invite-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; list-style: none; cursor: pointer; }
+    .joint-link-panel[open] .invite-heading { margin-bottom: 6px; }
+    .invite-heading::-webkit-details-marker { display: none; }
+    .invite-heading:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
+    .invite-heading::after {
+      content: "Show";
+      padding: 4px 10px;
+      border: 1px solid #405573;
+      border-radius: 8px;
+      background: #172334;
+      color: #d8e5f5;
+      font-size: .75rem;
+      font-weight: 700;
+    }
+    .joint-link-panel[open] .invite-heading::after { content: "Hide"; }
     .invite-heading h2 { margin: 0; font-size: .88rem; }
     .connection-indicator {
       flex: 0 0 12px;
@@ -458,14 +472,12 @@
         <span class="call-status-label">CALL STATUS</span>
         <p id="status" class="status" role="status" aria-live="polite">Ready to connect.</p>
       </div>
+      <span id="connectionIndicator" class="connection-indicator" role="img" aria-label="WebSocket disconnected" title="WebSocket disconnected"></span>
     </div>
     <p class="intro">The main tile shows your counterpart and the smaller tile shows your camera. Camera off sends black video; microphone mute sends silence. Chunks are roughly <span data-chunk-seconds>1</span> second.</p>
   </header>
-  <section class="joint-link-panel" aria-label="Call invitation and connection">
-    <div class="invite-heading">
-      <div><span class="eyebrow">YOUR CALL SPACE</span><h2>Invite &amp; connect</h2></div>
-      <span id="connectionIndicator" class="connection-indicator" role="img" aria-label="WebSocket disconnected" title="WebSocket disconnected"></span>
-    </div>
+  <details id="invitePanel" class="joint-link-panel">
+    <summary class="invite-heading"><h2>Invite &amp; connect</h2></summary>
     <div class="invite-fields">
       <div class="link-field">
         <label id="jointLinkLabel" for="jointLink">Joint link</label>
@@ -487,7 +499,7 @@
       </div>
     </div>
     <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
-  </section>
+  </details>
   <div class="viewport-stage">
     <section class="panel remote-panel" aria-labelledby="counterpartName">
       <div class="video-frame">

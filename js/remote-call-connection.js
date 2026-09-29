@@ -8,6 +8,7 @@
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
   const copyButton = document.getElementById('copyJointLinkButton');
+  const invitePanel = document.getElementById('invitePanel');
   const connectionStatus = document.getElementById('connectionStatus');
   const connectionIndicator = document.getElementById('connectionIndicator');
   const nameInput = document.getElementById('callUserName');
@@ -23,6 +24,7 @@
   pageUrl.search = '';
   pageUrl.hash = '';
   const hasSourceHost = searchParams.has('source-host');
+  invitePanel.open = !hasSourceHost;
   const sourceHostParam = searchParams.get('source-host');
   let sourceHost = null;
   let managerAlias = null;
