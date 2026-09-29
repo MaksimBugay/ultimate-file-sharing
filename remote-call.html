@@ -121,6 +121,21 @@
       font-weight: 700;
     }
     .joint-link-panel[open] .invite-heading::after { content: "Hide"; }
+    .verification-panel {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      padding: 10px 14px;
+      border: 1px solid #52a995;
+      border-radius: 16px;
+      background: #15332f;
+    }
+    .verification-panel strong { color: #e9fff7; font-size: .85rem; }
+    .verification-panel p { flex: 1 1 260px; margin: 0; font-size: .78rem; }
+    .verification-code { color: #81efce; font: 800 1.15rem/1.2 ui-monospace, monospace; letter-spacing: .12em; }
+    .verification-panel button { flex: 0 0 auto; }
     .invite-heading h2 { margin: 0; font-size: .88rem; }
     .connection-indicator {
       flex: 0 0 12px;
@@ -500,6 +515,12 @@
     </div>
     <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
   </details>
+  <section id="verificationPanel" class="verification-panel" aria-label="Verify call security" hidden>
+    <strong>Verify this call</strong>
+    <span id="verificationCode" class="verification-code" aria-label="Security code"></span>
+    <p>Compare this code with the other person through another trusted channel. Confirm only if both codes match.</p>
+    <button id="verifyCallButton" type="button">Codes match</button>
+  </section>
   <div class="viewport-stage">
     <section class="panel remote-panel" aria-labelledby="counterpartName">
       <div class="video-frame">
@@ -552,12 +573,13 @@
         <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
       </dl>
       <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-      <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. The link contains a private media key when encryption is enabled, so share it only with the receiver. The optional extra echo setting is also included in the link. It uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Recording starts automatically when both sides are ready. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+      <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. With encryption enabled, the link contains the caller's public key. Each browser keeps its private key on that device and derives a shared media secret after the receiver joins. Compare the security codes through another trusted channel before both people confirm the call. The optional extra echo setting is also included in the link. It uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Recording starts automatically after both people confirm the security code. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
     </div>
   </details>
 </main>
 <script src="js/pushca.min.js" defer></script>
-<script src="js/remote-call-connection.js" defer></script>
+<script src="js/remote-call-crypto.js?v=7" defer></script>
+<script src="js/remote-call-connection.js?v=7" defer></script>
 <script src="js/remote-call.js" defer></script>
 </body>
 </html>

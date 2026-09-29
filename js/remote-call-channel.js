@@ -8,7 +8,7 @@
   const applicationId = `REMOTE-CALL-${kind.toUpperCase()}`;
   const wsUrl = 'wss://secure.fileshare.ovh:31085';
   const encoder = new TextEncoder();
-  const hkdfSalt = encoder.encode('remote-call-v6/media');
+  const hkdfSalt = encoder.encode('remote-call-v7/media');
   // Magic, start, end and creation time, then the playback marks at start and end
   // (peer chunk number and play time; -1 when nothing from the peer was playing).
   const CHUNK_HEADER_BYTES = 60;
@@ -37,7 +37,7 @@
     if (!promise) {
       promise = cryptoReady.then(baseKey => crypto.subtle.deriveBits({
         name: 'HKDF', hash: 'SHA-256', salt: hkdfSalt,
-        info: encoder.encode(JSON.stringify(['remote-call-v6', kind, sender, binaryId]))
+        info: encoder.encode(JSON.stringify(['remote-call-v7', kind, sender, binaryId]))
       }, baseKey, 288)).then(bits => {
         const material = new Uint8Array(bits);
         return {
@@ -244,7 +244,7 @@
     const message = event.data;
     if (message.type === 'remote-call:init' && !initialized) {
       if (typeof message.encrypted !== 'boolean'
-        || (message.encrypted && (!(message.callSecret instanceof Uint8Array) || message.callSecret.length !== 32))
+        || (message.encrypted && (!(message.mediaSecret instanceof Uint8Array) || message.mediaSecret.length !== 32))
         || !['caller', 'receiver'].includes(message.role)) {
         report('remote-call:error', { message: 'Invalid call encryption key.' });
         return;
@@ -253,7 +253,7 @@
       localRole = message.role;
       encryptionEnabled = message.encrypted;
       cryptoReady = encryptionEnabled
-        ? crypto.subtle.importKey('raw', message.callSecret, 'HKDF', false, ['deriveBits'])
+        ? crypto.subtle.importKey('raw', message.mediaSecret, 'HKDF', false, ['deriveBits'])
         : Promise.resolve(null);
       void cryptoReady.then(async () => {
         const client = new ClientFilter('remote-call', 'anonymous-sharing', uuid.v4().toString(), applicationId);
