@@ -441,6 +441,7 @@
     if (phase !== 'calling') return;
     releaseInviteWakeLock();
     hideJointLink();
+    invitePanel.open = false;
     setConnectionStatus(`Call started with ${peer.name}.`);
   }
 
