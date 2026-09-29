@@ -92,6 +92,13 @@
     connectionStatus.textContent = message;
   }
 
+  function isMobile() {
+    const userAgent = /Mobi|Android/i.test(navigator.userAgent);
+    const smallScreen = window.innerWidth <= 800 && window.innerHeight <= 1280;
+    const touchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    return userAgent && smallScreen && touchDevice;
+  }
+
   function hideJointLink() {
     jointLink.hidden = true;
     jointLinkLabel.hidden = true;
@@ -459,9 +466,20 @@
 
   copyButton.addEventListener('click', async () => {
     if (copyButton.disabled || !jointLink.value) return;
-    let copied = navigator.clipboard?.writeText
-      ? await navigator.clipboard.writeText(jointLink.value).then(() => true, () => false)
-      : false;
+    const link = jointLink.value;
+    const copyPromise = navigator.clipboard?.writeText
+      ? navigator.clipboard.writeText(link).then(() => true, () => false)
+      : Promise.resolve(false);
+    if (isMobile() && navigator.share) {
+      navigator.share({
+        title: 'Remote call',
+        text: 'Join my remote call',
+        url: link
+      }).catch(error => {
+        if (error.name !== 'AbortError') console.error('Error sharing:', error);
+      });
+    }
+    let copied = await copyPromise;
     if (!copied) {
       jointLink.select();
       copied = document.execCommand('copy');
