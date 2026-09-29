@@ -39,6 +39,9 @@
   const localBinaryIds = { audio: uuid.v4().toString(), video: uuid.v4().toString() };
   let encryptionEnabled = encryptionToggle.checked;
   let callSecret = null;
+  let waitingForCallStart = false;
+  let inviteWakeLock = null;
+  let inviteWakeLockTask = null;
 
   function encodeCallSecret(bytes) {
     return btoa(String.fromCharCode(...bytes))
@@ -100,6 +103,46 @@
     const touchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     return userAgent && smallScreen && touchDevice;
   }
+
+  function shouldHoldInviteWakeLock() {
+    return waitingForCallStart && !['ended', 'error'].includes(phase)
+      && document.visibilityState === 'visible';
+  }
+
+  function requestInviteWakeLock() {
+    if (!isMobile() || !navigator.wakeLock?.request || !shouldHoldInviteWakeLock()
+      || inviteWakeLock || inviteWakeLockTask) return inviteWakeLockTask;
+    inviteWakeLockTask = (async () => {
+      try {
+        const lock = await navigator.wakeLock.request('screen');
+        inviteWakeLock = lock;
+        lock.addEventListener('release', () => {
+          if (inviteWakeLock === lock) inviteWakeLock = null;
+        });
+        if (!shouldHoldInviteWakeLock()) {
+          inviteWakeLock = null;
+          await lock.release();
+        }
+      } catch (error) {
+        console.warn('Could not keep the screen awake while waiting for the call:', error);
+      }
+    })().finally(() => { inviteWakeLockTask = null; });
+    return inviteWakeLockTask;
+  }
+
+  function releaseInviteWakeLock() {
+    waitingForCallStart = false;
+    if (!inviteWakeLock) return;
+    const lock = inviteWakeLock;
+    inviteWakeLock = null;
+    void lock.release().catch(error => console.warn('Could not release the screen wake lock:', error));
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    void (inviteWakeLockTask || Promise.resolve()).then(requestInviteWakeLock);
+  });
+  window.addEventListener('pagehide', releaseInviteWakeLock);
 
   function hideJointLink() {
     jointLink.hidden = true;
@@ -335,6 +378,7 @@
 
   async function failCall(error, label) {
     phase = 'error';
+    releaseInviteWakeLock();
     encryptionToggle.disabled = true;
     setConnectionStatus(`${label}: ${error.message}`);
     console.error(label, error);
@@ -395,6 +439,7 @@
     phase = 'calling';
     await window.RemoteCallMedia.start(sendChunk);
     if (phase !== 'calling') return;
+    releaseInviteWakeLock();
     hideJointLink();
     setConnectionStatus(`Call started with ${peer.name}.`);
   }
@@ -428,6 +473,7 @@
         && !remoteStopReceived) {
         remoteStopReceived = true;
         phase = 'ended';
+        releaseInviteWakeLock();
         encryptionToggle.disabled = true;
         if (peer) {
           window.RemoteCallMedia.finishRemote(message.counts);
@@ -469,6 +515,10 @@
   copyButton.addEventListener('click', async () => {
     if (copyButton.disabled || !jointLink.value) return;
     const link = jointLink.value;
+    if (isMobile()) {
+      waitingForCallStart = true;
+      void requestInviteWakeLock();
+    }
     const copyPromise = navigator.clipboard?.writeText
       ? navigator.clipboard.writeText(link).then(() => true, () => false)
       : Promise.resolve(false);
@@ -511,6 +561,7 @@
     stopCall: async () => {
       if (phase !== 'calling') return;
       phase = 'ended';
+      releaseInviteWakeLock();
       encryptionToggle.disabled = true;
       try {
         await stopLocalAndNotify();
