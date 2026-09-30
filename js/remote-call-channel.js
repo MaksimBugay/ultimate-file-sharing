@@ -8,7 +8,7 @@
   const applicationId = `REMOTE-CALL-${kind.toUpperCase()}`;
   const wsUrl = 'wss://secure.fileshare.ovh:31085';
   const encoder = new TextEncoder();
-  const hkdfSalt = encoder.encode('remote-call-v7/media');
+  const hkdfSalt = encoder.encode('remote-call-v8/media');
   // Magic, start, end and creation time, then the playback marks at start and end
   // (peer chunk number and play time; -1 when nothing from the peer was playing).
   const CHUNK_HEADER_BYTES = 60;
@@ -37,7 +37,7 @@
     if (!promise) {
       promise = cryptoReady.then(baseKey => crypto.subtle.deriveBits({
         name: 'HKDF', hash: 'SHA-256', salt: hkdfSalt,
-        info: encoder.encode(JSON.stringify(['remote-call-v7', kind, sender, binaryId]))
+        info: encoder.encode(JSON.stringify(['remote-call-v8', kind, sender, binaryId]))
       }, baseKey, 288)).then(bits => {
         const material = new Uint8Array(bits);
         return {

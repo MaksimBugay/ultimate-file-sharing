@@ -573,13 +573,12 @@
         <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
       </dl>
       <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-      <p class="details">Opening the joint link connects the receiver and requests camera and microphone permission. The caller chooses end-to-end encryption before sharing the link; the setting stays fixed during the call. With encryption enabled, the link contains the caller's public key. Each browser keeps its private key on that device and derives a shared media secret after the receiver joins. Compare the security codes through another trusted channel before both people confirm the call. The optional extra echo setting is also included in the link. It uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Recording starts automatically after both people confirm the security code. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. Compare the security codes through another trusted channel before both people confirm the call. Camera and microphone permission is then requested, and recording starts after both people confirm. If encryption is turned off, permission is requested during call setup and no security code is shown. The optional extra echo setting uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
     </div>
   </details>
 </main>
 <script src="js/pushca.min.js" defer></script>
-<script src="js/remote-call-crypto.js?v=7" defer></script>
-<script src="js/remote-call-connection.js?v=7" defer></script>
+<script src="js/remote-call-connection.js?v=8" defer></script>
 <script src="js/remote-call.js" defer></script>
 </body>
 </html>

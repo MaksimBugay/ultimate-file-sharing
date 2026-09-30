@@ -2,8 +2,8 @@
   'use strict';
 
   const WS_URL = 'wss://secure.fileshare.ovh:31085';
-  const PROTOCOL = 'REMOTE_CALL_V7';
-  const SIGNAL_PREFIX = 'remote-call-v7:';
+  const PROTOCOL = 'REMOTE_CALL_V8';
+  const SIGNAL_PREFIX = 'remote-call-v8:';
   const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER', video: 'REMOTE-CALL-VIDEO', audio: 'REMOTE-CALL-AUDIO' };
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
@@ -22,7 +22,69 @@
   const verificationPanel = document.getElementById('verificationPanel');
   const verificationCode = document.getElementById('verificationCode');
   const verifyCallButton = document.getElementById('verifyCallButton');
-  const callCrypto = window.RemoteCallCrypto;
+  const callCrypto = (() => {
+    const encoder = new TextEncoder();
+    const saltPrefix = encoder.encode('REMOTE_CALL_V8');
+    const toBase64 = value => btoa(String.fromCharCode(...value));
+    const fromBase64 = value => Uint8Array.from(atob(value), character => character.charCodeAt(0));
+
+    async function generateKeyPair() {
+      const pair = await generateRSAKeyPair();
+      return { privateKey: pair.privateKey, publicKeyString: await exportPublicKey(pair.publicKey) };
+    }
+
+    async function deriveSession(secret, publicKeyString) {
+      if (!(secret instanceof Uint8Array) || secret.length !== 32) throw new Error('Invalid call secret');
+      const publicBytes = encoder.encode(publicKeyString);
+      const transcript = new Uint8Array(saltPrefix.length + publicBytes.length);
+      transcript.set(saltPrefix);
+      transcript.set(publicBytes, saltPrefix.length);
+      const salt = await crypto.subtle.digest('SHA-256', transcript);
+      const material = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveBits', 'deriveKey']);
+      const mediaSecret = new Uint8Array(await crypto.subtle.deriveBits({
+        name: 'HKDF', hash: 'SHA-256', salt, info: encoder.encode('remote-call-v8/media-secret')
+      }, material, 256));
+      const controlKey = await crypto.subtle.deriveKey({
+        name: 'HKDF', hash: 'SHA-256', salt, info: encoder.encode('remote-call-v8/control')
+      }, material, { name: 'HMAC', hash: 'SHA-256', length: 256 }, false, ['sign', 'verify']);
+      const digest = new Uint8Array(await crypto.subtle.sign('HMAC', controlKey,
+        encoder.encode(`remote-call-v8/verification/${publicKeyString}`)));
+      const number = ((digest[0] * 0x1000000 + digest[1] * 0x10000 + digest[2] * 0x100 + digest[3]) % 100000000)
+        .toString().padStart(8, '0');
+      return { mediaSecret, controlKey, verificationCode: `${number.slice(0, 4)} ${number.slice(4)}` };
+    }
+
+    async function createSession(publicKeyString) {
+      const publicKey = await importPublicKeyFromString(publicKeyString);
+      const secret = crypto.getRandomValues(new Uint8Array(32));
+      const wrappedSecret = await encryptWithPublicKey(publicKey, toBase64(secret));
+      return { wrappedSecret, session: await deriveSession(secret, publicKeyString) };
+    }
+
+    async function openSession(pair, wrappedSecret) {
+      const secret = fromBase64(await decryptWithPrivateKey(pair.privateKey, wrappedSecret));
+      return deriveSession(secret, pair.publicKeyString);
+    }
+
+    function unsigned(message) {
+      const { auth, ...value } = message;
+      return value;
+    }
+
+    async function signSignal(key, message) {
+      const tag = new Uint8Array(await crypto.subtle.sign('HMAC', key,
+        encoder.encode(JSON.stringify(unsigned(message)))));
+      return toBase64(tag).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    async function verifySignal(key, message) {
+      if (!/^[A-Za-z0-9_-]{43}$/.test(message?.auth || '')) return false;
+      const tag = fromBase64(message.auth.replace(/-/g, '+').replace(/_/g, '/') + '=');
+      return crypto.subtle.verify('HMAC', key, tag, encoder.encode(JSON.stringify(unsigned(message))));
+    }
+
+    return { generateKeyPair, createSession, openSession, signSignal, verifySignal };
+  })();
   const searchParams = new URLSearchParams(window.location.search);
   const pageUrl = new URL(window.location.href);
   pageUrl.search = '';
@@ -39,11 +101,13 @@
   let remoteStopReceived = false;
   let localStopPromise = null;
   let acceptedManagerLookup = null;
+  let acceptedManagerAlias = null;
+  let offerSignal = null;
+  let joinSignal = null;
   const channels = new Map();
   const localBinaryIds = { audio: uuid.v4().toString(), video: uuid.v4().toString() };
   let encryptionEnabled = encryptionToggle.checked;
   let localKeyPair = null;
-  let callerPublicKey = null;
   let session = null;
   let verificationDestination = null;
   let verificationPromise = null;
@@ -61,23 +125,19 @@
     extraEchoToggle.checked = linkSettings.get('extra-echo') === '1';
     extraEchoToggle.disabled = true;
     const encrypted = linkSettings.get('e2e');
-    if (encrypted !== '0' && encrypted !== '1') {
-      phase = 'invalid';
-    } else {
-      encryptionEnabled = encrypted === '1';
-      try {
-        if (encryptionEnabled) callerPublicKey = callCrypto.decodePublicKey(linkSettings.get('call-public-key'));
-        const source = JSON.parse(decodeFromBase64UrlSafe(sourceHostParam));
-        if (source.applicationId === APPLICATIONS.manager
-          && ['workSpaceId', 'accountId', 'deviceId'].every(field => typeof source[field] === 'string' && source[field])) {
-          sourceHost = new ClientFilter(source.workSpaceId, source.accountId, source.deviceId, source.applicationId);
-        } else {
-          phase = 'invalid';
-        }
-      } catch (error) {
-        console.error('Invalid joint link:', error);
+    if (encrypted !== '0' && encrypted !== '1') phase = 'invalid';
+    else encryptionEnabled = encrypted === '1';
+    try {
+      const source = JSON.parse(decodeFromBase64UrlSafe(sourceHostParam));
+      if (source.applicationId === APPLICATIONS.manager
+        && ['workSpaceId', 'accountId', 'deviceId'].every(field => typeof source[field] === 'string' && source[field])) {
+        sourceHost = new ClientFilter(source.workSpaceId, source.accountId, source.deviceId, source.applicationId);
+      } else {
         phase = 'invalid';
       }
+    } catch (error) {
+      console.error('Invalid joint link:', error);
+      phase = 'invalid';
     }
     hideJointLink();
     encryptionToggle.disabled = true;
@@ -95,8 +155,8 @@
     connectionStatus.textContent = message;
   }
 
-  async function establishSession(callerPublic, receiverPublic, role, destination) {
-    session = await callCrypto.deriveSession(localKeyPair, callerPublic, receiverPublic, role);
+  async function establishSession(derivedSession, destination) {
+    session = derivedSession;
     verificationDestination = destination;
     verificationCode.textContent = session.verificationCode;
     verificationPromise = new Promise(resolve => { resolveVerification = resolve; });
@@ -207,13 +267,11 @@
 
   function refreshJointLink() {
     if (hasSourceHost || !['connecting', 'waiting'].includes(phase)) return;
-    if (encryptionEnabled && !localKeyPair) return;
     const url = new URL(pageUrl);
     url.searchParams.set('source-host', encodeToBase64UrlSafe(JSON.stringify(PushcaClient.ClientObj)));
     const linkSettings = new URLSearchParams({ e2e: encryptionEnabled ? '1' : '0' });
     linkSettings.set('extra-echo', extraEchoToggle.checked ? '1' : '0');
     linkSettings.set('caller-name', userName());
-    if (encryptionEnabled) linkSettings.set('call-public-key', callCrypto.encode(localKeyPair.publicKey));
     url.hash = linkSettings.toString();
     jointLink.value = url.toString();
     copyButton.disabled = false;
@@ -306,7 +364,7 @@
         encrypted: encryptionEnabled, mediaSecret: encryptionEnabled ? session.mediaSecret : null
       }, window.location.origin);
     }, { once: true });
-    iframe.src = new URL(`remote-call-channel.html?kind=${kind}&v=7`, pageUrl).toString();
+    iframe.src = new URL(`remote-call-channel.html?kind=${kind}&v=8`, pageUrl).toString();
     document.body.append(iframe);
     return entry;
   }
@@ -399,7 +457,7 @@
   async function sendSignal(destination, message) {
     if (!PushcaClient.isOpen()) throw new Error('Call manager connection is unavailable');
     const signed = { protocol: PROTOCOL, ...message };
-    if (encryptionEnabled && ['VERIFY', 'START', 'STOP'].includes(message.type)) {
+    if (encryptionEnabled && ['VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
       if (!session && message.type !== 'STOP') throw new Error('Call keys are not ready');
       if (session) signed.auth = await callCrypto.signSignal(session.controlKey, signed);
     }
@@ -418,6 +476,7 @@
   }
 
   async function failCall(error, label) {
+    const failedPhase = phase;
     phase = 'error';
     releaseInviteWakeLock();
     verificationPanel.hidden = true;
@@ -427,54 +486,139 @@
     try {
       const counts = await window.RemoteCallMedia.abort();
       const destination = peer?.manager || verificationDestination || sourceHost;
-      if (destination && PushcaClient.isOpen()) await sendSignal(destination, { type: 'STOP', counts });
+      if (destination && PushcaClient.isOpen()) await sendSignal(destination,
+        session && !['negotiating', 'awaiting-offer'].includes(failedPhase)
+          ? { type: 'STOP', counts } : { type: 'REJECT', reason: `${label}: ${error.message}` });
     } catch (cleanupError) {
       console.error('Could not clean up failed call:', cleanupError);
     }
   }
 
-  async function handleReady(message) {
+  async function handleJoin(message) {
     if (hasSourceHost) return;
     if (phase !== 'waiting') {
-      if (['verifying', 'preparing', 'calling', 'ended', 'error'].includes(phase)) {
+      if (message.managerAlias === acceptedManagerAlias && offerSignal && acceptedManagerLookup
+        && ['verifying', 'waiting-ready'].includes(phase)) {
+        await sendSignal(await acceptedManagerLookup, offerSignal);
+        return;
+      }
+      if (['negotiating', 'verifying', 'waiting-ready', 'preparing', 'calling', 'ended', 'error'].includes(phase)) {
         await rejectAdditionalReceiver(message);
       }
       return;
     }
-    validateAliases(message, true);
-    if (message.encrypted !== encryptionEnabled) {
-      setConnectionStatus('The encryption setting changed. Share the current joint link again.');
-      try {
-        const manager = await lookupClient(message.managerAlias, APPLICATIONS.manager);
-        await sendSignal(manager, {
-          type: 'REJECT',
-          reason: 'The caller changed the encryption setting. Ask for a new joint link.'
-        });
-      } catch (error) {
-        console.error('Could not reject an outdated joint link:', error);
-      }
+    if (typeof message.managerAlias !== 'string' || !message.managerAlias) return;
+    let manager;
+    try {
+      manager = await lookupClient(message.managerAlias, APPLICATIONS.manager);
+    } catch (error) {
+      console.warn('Ignoring invalid call manager alias:', error);
       return;
     }
-    phase = encryptionEnabled ? 'verifying' : 'preparing';
+    if (phase !== 'waiting') return;
+    if (message.encrypted !== encryptionEnabled || (encryptionEnabled && typeof message.publicKey !== 'string')) {
+      await sendSignal(manager, {
+        type: 'REJECT', reason: 'The call settings changed. Ask the caller for a new joint link.'
+      });
+      return;
+    }
+    phase = 'negotiating';
     encryptionToggle.disabled = true;
-    setConnectionStatus('Receiver is ready. Establishing call security…');
-    acceptedManagerLookup = lookupClient(message.managerAlias, APPLICATIONS.manager);
+    extraEchoToggle.disabled = true;
+    acceptedManagerAlias = message.managerAlias;
+    setConnectionStatus('Receiver joined. Establishing call security…');
+    acceptedManagerLookup = Promise.resolve(manager);
+    verificationDestination = manager;
+    let wrappedSecret = null;
+    if (encryptionEnabled) {
+      let agreement;
+      try {
+        agreement = await callCrypto.createSession(message.publicKey);
+      } catch (error) {
+        console.warn('Ignoring invalid receiver public key:', error);
+        await sendSignal(manager, { type: 'REJECT', reason: 'Invalid call public key. Open a fresh joint link.' });
+        if (phase === 'negotiating') {
+          phase = 'waiting';
+          acceptedManagerAlias = null;
+          acceptedManagerLookup = null;
+          verificationDestination = null;
+          encryptionToggle.disabled = false;
+          extraEchoToggle.disabled = false;
+          refreshJointLink();
+          setConnectionStatus('Connected. Share the joint link to start a call.');
+        }
+        return;
+      }
+      wrappedSecret = agreement.wrappedSecret;
+      await establishSession(agreement.session, manager);
+    }
+    if (phase !== 'negotiating') return;
+    phase = encryptionEnabled ? 'verifying' : 'waiting-ready';
+    offerSignal = {
+      type: 'OFFER', encrypted: encryptionEnabled,
+      ...(encryptionEnabled ? { wrappedSecret } : {})
+    };
+    await sendSignal(manager, offerSignal);
+    if (phase !== 'verifying') return;
+    showVerification();
+    await verificationPromise;
+    if (phase === 'verifying') {
+      phase = 'waiting-ready';
+      setConnectionStatus('Security confirmed. Waiting for the receiver’s camera and microphone…');
+    }
+  }
+
+  async function handleOffer(message) {
+    if (!hasSourceHost || phase !== 'awaiting-offer') return;
+    if (message.encrypted !== encryptionEnabled) throw new Error('Call encryption setting differs from the joint link');
+    phase = encryptionEnabled ? 'verifying' : 'joining';
+    if (encryptionEnabled) {
+      const derived = await callCrypto.openSession(localKeyPair, message.wrappedSecret);
+      await establishSession(derived, sourceHost);
+      if (phase !== 'verifying') return;
+      showVerification();
+      await verificationPromise;
+      if (phase !== 'verifying') return;
+      phase = 'joining';
+    }
+    setConnectionStatus('Connecting audio and video channels…');
+    const aliases = await openMediaChannels();
+    if (phase !== 'joining') return;
+    setConnectionStatus('Requesting camera and microphone access…');
+    const mimeTypes = await window.RemoteCallMedia.prepare();
+    if (phase !== 'joining') {
+      await window.RemoteCallMedia.abort();
+      return;
+    }
+    phase = 'ready';
+    readySignal = {
+      type: 'READY', managerAlias, videoAlias: aliases.videoAlias,
+      audioAlias: aliases.audioAlias, userName: userName(), mimeTypes,
+      binaryIds: localBinaryIds, encrypted: encryptionEnabled
+    };
+    await sendSignal(sourceHost, readySignal);
+    if (phase === 'ready') setConnectionStatus('Ready. Waiting for the caller to start.');
+  }
+
+  async function handleReady(message) {
+    if (hasSourceHost || !['waiting-ready', 'verifying'].includes(phase)) return;
+    validateAliases(message, true);
+    if (message.managerAlias !== acceptedManagerAlias || message.encrypted !== encryptionEnabled) {
+      throw new Error('Call receiver or encryption setting changed during setup');
+    }
+    if (phase === 'verifying') await verificationPromise;
+    if (!['waiting-ready', 'verifying'].includes(phase)) return;
+    phase = 'preparing';
+    setConnectionStatus('Receiver is ready. Preparing your camera and microphone…');
     const [manager, video, audio] = await Promise.all([
       acceptedManagerLookup,
       lookupClient(message.videoAlias, APPLICATIONS.video),
       lookupClient(message.audioAlias, APPLICATIONS.audio)
     ]);
-    if (!['verifying', 'preparing'].includes(phase)) return;
-    if (encryptionEnabled) {
-      const receiverPublic = callCrypto.decodePublicKey(message.publicKey);
-      await establishSession(localKeyPair.publicKey, receiverPublic, 'caller', manager);
-      if (phase !== 'verifying') return;
-      showVerification();
-      await verificationPromise;
-      if (phase !== 'verifying') return;
-      phase = 'preparing';
-    }
-    setConnectionStatus('Security confirmed. Preparing your camera and microphone…');
+    if (phase !== 'preparing') return;
+    setConnectionStatus(encryptionEnabled
+      ? 'Security confirmed. Preparing your camera and microphone…'
+      : 'Preparing your camera and microphone…');
     const aliases = await openMediaChannels();
     if (phase !== 'preparing') return;
     const mimeTypes = await window.RemoteCallMedia.prepare();
@@ -525,26 +669,28 @@
     if (message?.protocol !== PROTOCOL) return;
     void (async () => {
       if (encryptionEnabled && message.type === 'VERIFY' && !session
-        && ['waiting', 'verifying'].includes(phase)) {
+        && ['negotiating', 'verifying'].includes(phase)) {
         if (pendingVerifications.length < 8) pendingVerifications.push(message);
         return;
       }
-      if (encryptionEnabled && ['VERIFY', 'START', 'STOP'].includes(message.type)) {
+      if (encryptionEnabled && ['VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
         if (!session || !await callCrypto.verifySignal(session.controlKey, message)) return;
       }
+      if (message.type === 'JOIN') await handleJoin(message);
+      if (message.type === 'OFFER') await handleOffer(message);
       if (message.type === 'READY') await handleReady(message);
       if (message.type === 'VERIFY' && session && ['ready', 'verifying'].includes(phase)) {
         remoteVerified = true;
         finishVerificationIfReady();
       }
       if (message.type === 'START') await handleStart(message);
-      if (message.type === 'REJECT' && phase === 'ready') {
+      if (message.type === 'REJECT' && ['negotiating', 'awaiting-offer', 'verifying', 'waiting-ready', 'joining', 'ready'].includes(phase)) {
         phase = 'error';
         verificationPanel.hidden = true;
         setConnectionStatus(message.reason || 'The invitation was rejected.');
         await window.RemoteCallMedia.abort();
       }
-      if (message.type === 'STOP' && ['ready', 'verifying', 'preparing', 'starting', 'calling', 'ended'].includes(phase)
+      if (message.type === 'STOP' && ['ready', 'verifying', 'waiting-ready', 'preparing', 'starting', 'calling', 'ended'].includes(phase)
         && !remoteStopReceived) {
         remoteStopReceived = true;
         phase = 'ended';
@@ -658,6 +804,9 @@
     if (phase === 'ready' && readySignal && sourceHost) {
       readySignal.managerAlias = managerAlias;
       await sendSignal(sourceHost, readySignal);
+    } else if (phase === 'awaiting-offer' && joinSignal && sourceHost) {
+      joinSignal.managerAlias = managerAlias;
+      await sendSignal(sourceHost, joinSignal);
     } else if (phase === 'connecting' && sourceHost) {
       void joinReceiver().catch(error => { void failCall(error, 'Call connection failed'); });
     }
@@ -666,32 +815,15 @@
 
   function joinReceiver() {
     if (joinPromise) return joinPromise;
-    phase = 'joining';
+    phase = 'awaiting-offer';
     joinPromise = (async () => {
-      if (encryptionEnabled) {
-        await establishSession(callerPublicKey, localKeyPair.publicKey, 'receiver', sourceHost);
-      }
-      setConnectionStatus('Connecting audio and video channels…');
-      const aliases = await openMediaChannels();
-      if (phase !== 'joining') return;
-      setConnectionStatus('Requesting camera and microphone access…');
-      const mimeTypes = await window.RemoteCallMedia.prepare();
-      if (phase !== 'joining') {
-        await window.RemoteCallMedia.abort();
-        return;
-      }
-      phase = 'ready';
-      readySignal = {
-        type: 'READY', managerAlias, videoAlias: aliases.videoAlias,
-        audioAlias: aliases.audioAlias, userName: userName(), mimeTypes,
-        binaryIds: localBinaryIds, encrypted: encryptionEnabled,
-        ...(encryptionEnabled ? { publicKey: callCrypto.encode(localKeyPair.publicKey) } : {})
+      joinSignal = {
+        type: 'JOIN', managerAlias, userName: userName(), encrypted: encryptionEnabled,
+        ...(encryptionEnabled ? { publicKey: localKeyPair.publicKeyString } : {})
       };
-      await sendSignal(sourceHost, readySignal);
-      if (phase === 'ready') {
-        if (encryptionEnabled) showVerification();
-        else setConnectionStatus('Ready. Waiting for the caller to start.');
-      }
+      setConnectionStatus(encryptionEnabled
+        ? 'Requesting the call keys from the caller…' : 'Joining the call…');
+      await sendSignal(sourceHost, joinSignal);
     })();
     return joinPromise;
   }
@@ -720,10 +852,10 @@
 
   void (async () => {
     if (hasSourceHost && phase !== 'invalid') await requestReceiverName();
-    if (encryptionEnabled && phase !== 'invalid') localKeyPair = await callCrypto.generateKeyPair();
+    if (hasSourceHost && encryptionEnabled && phase !== 'invalid') localKeyPair = await callCrypto.generateKeyPair();
     await connect();
   })().catch(error => {
-    if (['joining', 'ready', 'starting', 'calling', 'ended', 'error'].includes(phase)) return;
+    if (['awaiting-offer', 'joining', 'ready', 'starting', 'calling', 'ended', 'error'].includes(phase)) return;
     if (!PushcaClient.isOpen()) {
       phase = 'connecting';
       setConnectionStatus('Call manager connection unavailable. Retrying…');
