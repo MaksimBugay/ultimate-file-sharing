@@ -62,6 +62,7 @@
   let stoppingPromise = null;
   let recordingSaved = false;
   let memoryLimitReached = false;
+  let conversationMemoryLimitReached = false;
   let baseName = '';
   let player = null;
   let recorderSession = null;
@@ -115,17 +116,23 @@
   }
 
   function checkRecordingMemoryLimit() {
-    const storedBytes = (recorderSession?.storedBytes || 0) + (conversationRecorder?.storedBytes || 0);
-    if (storedBytes < MAX_RECORDING_BYTES) return false;
+    if ((recorderSession?.storedBytes || 0) < MAX_RECORDING_BYTES) return false;
     if (memoryLimitReached) return true;
     memoryLimitReached = true;
     if (recording) {
-      setStatus('Recordings reached the 512 MB in-memory limit. Finishing…');
+      setStatus('Local recording reached the 512 MB in-memory limit. Finishing…');
       void window.RemoteCallConnection.stopCall();
-    } else {
-      setStatus('Conversation recording reached the 512 MB in-memory limit.', true);
-      void conversationRecorder?.stop();
     }
+    return true;
+  }
+
+  function checkConversationMemoryLimit() {
+    const storedBytes = (recorderSession?.storedBytes || 0) + (conversationRecorder?.storedBytes || 0);
+    if (storedBytes < MAX_RECORDING_BYTES) return false;
+    if (conversationMemoryLimitReached) return true;
+    conversationMemoryLimitReached = true;
+    setStatus('Conversation recording reached the 512 MB in-memory limit.', true);
+    void conversationRecorder?.stop();
     return true;
   }
 
@@ -796,6 +803,7 @@
     conversationRecorder = null;
     conversationStoppingPromise = null;
     memoryLimitReached = false;
+    conversationMemoryLimitReached = false;
     releaseLocalReplay();
     remoteLink?.close();
     remoteLink = null;
@@ -917,6 +925,7 @@
     if (!echoContext) {
       const context = new AudioContextClass();
       try {
+        await resumeEchoContext(context);
         const source = context.createMediaElementSource(ui.video);
         source.connect(context.destination);
         echoContext = context;
@@ -1209,10 +1218,8 @@
   async function prepareRecording() {
     if (preparedMimeTypes) return preparedMimeTypes;
     if (busy || recording || stoppingPromise) throw new Error('Media is busy');
-    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.MediaSource
-      || !window.RemoteCallConversationRecorder || !AudioContextClass
-      || !HTMLCanvasElement.prototype.captureStream) {
-      throw new Error('MediaRecorder, MediaSource, Web Audio and canvas capture are required. Use HTTPS or localhost in a Chromium browser.');
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.MediaSource) {
+      throw new Error('MediaRecorder and MediaSource are required. Use HTTPS or localhost in a Chromium browser.');
     }
     const audioMime = pickMime('audio');
     const videoMime = pickMime('video');
@@ -1272,7 +1279,6 @@
     }
     const audioTrack = requireTrack(mediaStream.getAudioTracks()[0], 'Microphone track is unavailable');
     const videoTrack = requireTrack(canvasStream?.getVideoTracks()[0], 'Video track is unavailable');
-    await prepareConversationAudio();
     startedAt = performance.now();
     recording = true;
     // Kept after recording stops: the peer's buffered chunks still refer to our audio.
@@ -1282,28 +1288,40 @@
       recorderSession.startCombined(audioTrack, videoTrack, preparedMimeTypes.recording);
       recorderSession.start('audio', audioTrack, preparedMimeTypes.audio);
       recorderSession.start('video', videoTrack, preparedMimeTypes.video);
-      conversationRecorder = new window.RemoteCallConversationRecorder({
-        video: ui.video,
-        microphoneTrack: audioTrack,
-        audioContext: echoContext,
-        playbackSource: echoPlayerSource,
-        mimeType: preparedMimeTypes.recording,
-        chunkMs: CHUNK_MS,
-        onUpdate: () => { updateStats(); checkRecordingMemoryLimit(); },
-        onLimit: checkRecordingMemoryLimit,
-        onError: error => {
-          setStatus(`Conversation recorder failed: ${error.message}`, true);
-          if (recording) void window.RemoteCallConnection.stopCall();
-        }
-      }).start();
       elapsedTimer = setInterval(updateElapsed, 250);
       ui.stop.disabled = false;
       setStatus('Recording and sending live audio and video.');
       updateStats();
     } catch (error) {
-      await conversationRecorder?.stop();
       await stopRecording();
       throw error;
+    }
+    void startConversationRecording(audioTrack, recorderSession, preparedMimeTypes.recording);
+  }
+
+  async function startConversationRecording(microphoneTrack, session, mimeType) {
+    if (!window.RemoteCallConversationRecorder || !AudioContextClass
+      || !window.HTMLCanvasElement?.prototype.captureStream) {
+      console.warn('Conversation recording is unavailable in this browser.');
+      return;
+    }
+    try {
+      await prepareConversationAudio();
+      if (!recording || recorderSession !== session) return;
+      conversationRecorder = new window.RemoteCallConversationRecorder({
+        video: ui.video,
+        microphoneTrack,
+        audioContext: echoContext,
+        playbackSource: echoPlayerSource,
+        mimeType,
+        chunkMs: CHUNK_MS,
+        onUpdate: () => { updateStats(); checkConversationMemoryLimit(); },
+        onLimit: checkConversationMemoryLimit,
+        onError: error => console.warn('Conversation recorder failed:', error)
+      }).start();
+      updateStats();
+    } catch (error) {
+      console.warn('Conversation recording could not start; the call continues:', error);
     }
   }
 
