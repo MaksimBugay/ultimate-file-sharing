@@ -531,30 +531,14 @@ body.demo-widget-page {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(4, minmax(250px, auto));
     aspect-ratio: unset;
-    max-height: 80vh;
-    overflow-y: auto;
-    scroll-snap-type: y mandatory;
-    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
     padding: 12px;
     gap: 12px;
   }
 
-  .demo-widget-container::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  .demo-widget-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 3px;
-  }
-
-  .demo-widget-container::-webkit-scrollbar-thumb {
-    background: var(--dw-primary);
-    border-radius: 3px;
-  }
-
   .demo-widget-cell {
-    scroll-snap-align: start;
     min-height: 250px;
   }
 
@@ -572,8 +556,6 @@ body.demo-widget-page {
   .demo-widget-container {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, minmax(180px, 1fr));
-    max-height: none;
-    scroll-snap-type: none;
   }
 
   .demo-widget-cell {
