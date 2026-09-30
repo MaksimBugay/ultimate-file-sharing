@@ -1,12 +1,11 @@
 /**
- * Demo Widget - Modern Ad Container with Donate Section
- * Creates an attractive 2x2 (desktop) / 1x4 (mobile) widget layout
+ * Demo Widget - four feature tiles with a collapsible support banner
  */
 
 /**
  * Creates and injects a demo widget into the specified container.
  * 
- * @param {Array<{title: string, srcUrl: string, link: string}>} adItems - Array of ad items (up to 3) 
+ * @param {Array<{title: string, srcUrl: string, link: string}>} adItems - Array of ad items (up to 4)
  *        containing title, source URL for iframes, and link URL for redirections
  * @param {Array<{cryptoCurrency: string, walletAddress: string}>} wallets - Array of 
  *        cryptocurrency wallet information for donations
@@ -36,23 +35,22 @@ function addDemoWidget(adItems, wallets, container) {
   const widget = document.createElement('div');
   widget.className = 'demo-widget-container';
 
-  // Take up to 3 ad items for the first 3 cells
-  const displayItems = adItems.slice(0, 3);
+  // Keep support visible above the tiles, including when the mobile grid scrolls.
+  container.appendChild(createSupportBanner(wallets));
 
-  // Pad with empty items if less than 3
-  while (displayItems.length < 3) {
+  // Take up to 4 feature items for the grid.
+  const displayItems = adItems.slice(0, 4);
+
+  // Fill unused cells for callers that supply fewer than four items.
+  while (displayItems.length < 4) {
     displayItems.push(adItems[displayItems.length % adItems.length]);
   }
 
-  // Create ad cells (first 3 cells)
-  displayItems.forEach((item, index) => {
-    const cell = createAdCell(item, index);
+  // Create the four feature cells.
+  displayItems.forEach(item => {
+    const cell = createAdCell(item);
     widget.appendChild(cell);
   });
-
-  // Create donate cell (4th cell)
-  const donateCell = createDonateCell(wallets);
-  widget.appendChild(donateCell);
 
   // Inject widget into container
   container.appendChild(widget);
@@ -87,7 +85,7 @@ function loadWidgetFont() {
 }
 
 /**
- * Creates an ad cell with iframe and title
+ * Creates a feature cell with its media preview and title.
  * @param {{title: string, srcUrl: string, link: string}} item - Ad item data
  * @returns {HTMLElement} The created cell element
  */
@@ -116,63 +114,131 @@ function createAdCell(item) {
   titleHeader.appendChild(titleIcon);
   titleHeader.appendChild(titleLink);
 
-  // iFrame wrapper
-  const iframeWrapper = document.createElement('div');
-  iframeWrapper.className = 'demo-widget-iframe-wrapper';
+  const mediaWrapper = document.createElement('div');
+  mediaWrapper.className = 'demo-widget-iframe-wrapper';
 
-  const iframe = document.createElement('iframe');
-  iframe.className = 'demo-widget-iframe';
-  iframe.src = item.srcUrl;
-  iframe.loading = 'lazy';
-  iframe.sandbox = 'allow-scripts allow-same-origin';
-  iframe.title = item.title || 'Advertisement content';
-  iframe.setAttribute('aria-label', item.title || 'Advertisement');
-  iframe.setAttribute('allowfullscreen', '');
-  iframe.setAttribute('webkitallowfullscreen', '');
-  iframe.setAttribute('mozallowfullscreen', '');
+  if (/\.webm(?:[?#]|$)/i.test(item.srcUrl)) {
+    mediaWrapper.classList.add('demo-widget-video-wrapper');
+    mediaWrapper.tabIndex = 0;
+    mediaWrapper.setAttribute('role', 'button');
+    mediaWrapper.setAttribute('aria-label', `Play ${item.title || 'video'} with sound from the beginning`);
 
-  iframeWrapper.appendChild(iframe);
+    const video = document.createElement('video');
+    video.className = 'demo-widget-iframe demo-widget-video';
+    video.src = item.srcUrl;
+    video.autoplay = true;
+    video.loop = true;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.preload = 'auto';
+    video.playsInline = true;
+    video.setAttribute('muted', '');
+    video.setAttribute('aria-label', item.title || 'Video preview');
+    mediaWrapper.appendChild(video);
+
+    let soundEnabled = false;
+    const playWithSound = () => {
+      if (soundEnabled) return;
+      soundEnabled = true;
+      video.muted = false;
+      video.defaultMuted = false;
+      video.removeAttribute('muted');
+      video.currentTime = 0;
+      video.controls = true;
+      mediaWrapper.classList.add('is-audible');
+      mediaWrapper.removeAttribute('role');
+      mediaWrapper.removeAttribute('aria-label');
+      mediaWrapper.tabIndex = -1;
+      video.play().catch(() => {});
+    };
+
+    cell.addEventListener('click', event => {
+      if (!titleLink.contains(event.target)) playWithSound();
+    });
+    mediaWrapper.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        playWithSound();
+      }
+    });
+  } else {
+    const iframe = document.createElement('iframe');
+    iframe.className = 'demo-widget-iframe';
+    iframe.src = item.srcUrl;
+    iframe.loading = 'lazy';
+    iframe.sandbox = 'allow-scripts allow-same-origin';
+    iframe.title = item.title || 'Advertisement content';
+    iframe.setAttribute('aria-label', item.title || 'Advertisement');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('webkitallowfullscreen', '');
+    iframe.setAttribute('mozallowfullscreen', '');
+    mediaWrapper.appendChild(iframe);
+  }
 
   cell.appendChild(titleHeader);
-  cell.appendChild(iframeWrapper);
+  cell.appendChild(mediaWrapper);
 
   return cell;
 }
 
 /**
- * Creates the donate cell with wallet information
+ * Creates the collapsible support banner with wallet information.
  * @param {Array<{cryptoCurrency: string, walletAddress: string}>} wallets - Wallet data
- * @returns {HTMLElement} The created donate cell element
+ * @returns {HTMLElement} The created support banner
  */
-function createDonateCell(wallets) {
-  const cell = document.createElement('div');
-  cell.className = 'demo-widget-cell';
+function createSupportBanner(wallets) {
+  const banner = document.createElement('section');
+  banner.className = 'demo-widget-support';
 
-  const donateContainer = document.createElement('div');
-  donateContainer.className = 'demo-widget-donate';
-
-  // Header
-  const header = document.createElement('div');
-  header.className = 'demo-widget-donate-header';
+  const toggle = document.createElement('button');
+  toggle.className = 'demo-widget-support-toggle';
+  toggle.type = 'button';
+  toggle.setAttribute('aria-expanded', 'false');
+  toggle.setAttribute('aria-controls', 'demo-widget-support-panel');
 
   const icon = document.createElement('span');
-  icon.className = 'demo-widget-donate-icon';
+  icon.className = 'demo-widget-support-icon';
   icon.textContent = '💜';
   icon.setAttribute('aria-hidden', 'true');
 
-  const title = document.createElement('h3');
-  title.className = 'demo-widget-donate-title';
+  const copy = document.createElement('span');
+  copy.className = 'demo-widget-support-copy';
+
+  const title = document.createElement('span');
+  title.className = 'demo-widget-support-title';
   title.textContent = 'Support Us';
 
-  const subtitle = document.createElement('p');
-  subtitle.className = 'demo-widget-donate-subtitle';
-  subtitle.textContent = 'Click to copy wallet address';
+  const subtitle = document.createElement('span');
+  subtitle.className = 'demo-widget-support-subtitle';
+  subtitle.textContent = 'Help bring real privacy to everyone';
 
-  header.appendChild(icon);
-  header.appendChild(title);
-  header.appendChild(subtitle);
+  const chevron = document.createElement('span');
+  chevron.className = 'demo-widget-support-chevron';
+  chevron.textContent = '⌄';
+  chevron.setAttribute('aria-hidden', 'true');
 
-  // Wallets list
+  copy.appendChild(title);
+  copy.appendChild(subtitle);
+  toggle.appendChild(icon);
+  toggle.appendChild(copy);
+  toggle.appendChild(chevron);
+
+  const panel = document.createElement('div');
+  panel.id = 'demo-widget-support-panel';
+  panel.className = 'demo-widget-support-panel';
+  panel.setAttribute('aria-hidden', 'true');
+  panel.inert = true;
+
+  const panelContent = document.createElement('div');
+  panelContent.className = 'demo-widget-support-panel-content';
+
+  const details = document.createElement('div');
+  details.className = 'demo-widget-support-details';
+
+  const hint = document.createElement('p');
+  hint.className = 'demo-widget-support-hint';
+  hint.textContent = 'Choose a cryptocurrency to copy its wallet address.';
+
   const walletsList = document.createElement('div');
   walletsList.className = 'demo-widget-wallets';
 
@@ -181,11 +247,21 @@ function createDonateCell(wallets) {
     walletsList.appendChild(walletItem);
   });
 
-  donateContainer.appendChild(header);
-  donateContainer.appendChild(walletsList);
-  cell.appendChild(donateContainer);
+  details.appendChild(hint);
+  details.appendChild(walletsList);
+  panelContent.appendChild(details);
+  panel.appendChild(panelContent);
+  banner.appendChild(toggle);
+  banner.appendChild(panel);
 
-  return cell;
+  toggle.addEventListener('click', () => {
+    const isOpen = banner.classList.toggle('is-open');
+    toggle.setAttribute('aria-expanded', String(isOpen));
+    panel.setAttribute('aria-hidden', String(!isOpen));
+    panel.inert = !isOpen;
+  });
+
+  return banner;
 }
 
 /**
@@ -194,10 +270,9 @@ function createDonateCell(wallets) {
  * @returns {HTMLElement} The created wallet item element
  */
 function createWalletItem(wallet) {
-  const item = document.createElement('div');
+  const item = document.createElement('button');
   item.className = 'demo-widget-wallet';
-  item.tabIndex = 0;
-  item.setAttribute('role', 'button');
+  item.type = 'button';
   item.setAttribute('aria-label', `Copy ${wallet.cryptoCurrency} wallet address`);
 
   const crypto = document.createElement('div');
@@ -254,13 +329,6 @@ function createWalletItem(wallet) {
   };
 
   item.addEventListener('click', copyAddress);
-  item.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      copyAddress();
-    }
-  });
-
   return item;
 }
 
@@ -273,5 +341,3 @@ if (typeof module !== 'undefined' && module.exports) {
 if (typeof window !== 'undefined') {
   window.addDemoWidget = addDemoWidget;
 }
-
-
