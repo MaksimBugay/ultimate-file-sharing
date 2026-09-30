@@ -164,7 +164,7 @@
     #jointLink { flex: 3 1 180px; margin-top: 17px; }
     #copyJointLinkButton { flex: 0 0 auto; height: 36px; margin-top: 17px; padding: 5px 12px; }
     .name-field { flex: 0 0 180px; min-width: 150px; }
-    .privacy-field { flex: 0 0 auto; min-width: 0; }
+    .privacy-field, .echo-field { flex: 0 0 auto; min-width: 0; }
     .invite-fields input[type="url"],
     .invite-fields input[type="text"] {
       width: 100%;
@@ -207,18 +207,22 @@
     }
     .join-name-dialog input:focus-visible { outline: 3px solid #79a9ff; outline-offset: 2px; }
     .join-name-dialog button { margin-top: 9px; }
-    .privacy-field { align-self: start; }
-    .security-options { display: flex; gap: 6px; }
-    .invite-fields .encryption-toggle {
+    .privacy-field, .echo-field { align-self: start; }
+    .security-options {
       display: flex;
       align-items: center;
-      gap: 8px;
-      height: 36px;
-      margin: 0;
+      gap: 14px;
+      min-height: 36px;
       padding: 6px 10px;
       border: 1px solid #49617e;
       border-radius: 10px;
       background: #0c1729;
+    }
+    .invite-fields .security-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
       white-space: nowrap;
     }
     .invite-fields .echo-toggle {
@@ -236,7 +240,7 @@
       line-height: 1.2;
       white-space: nowrap;
     }
-    .encryption-toggle input, .echo-toggle input { flex: 0 0 17px; width: 17px; height: 17px; margin: 0; accent-color: #619cff; }
+    .security-toggle input, .echo-toggle input { flex: 0 0 17px; width: 17px; height: 17px; margin: 0; accent-color: #619cff; }
     #connectionStatus {
       margin-top: 6px;
       padding-top: 6px;
@@ -446,7 +450,7 @@
       .viewport-stage { flex: 1 0 auto; height: min(62dvh, 520px); min-height: 300px; }
     }
     @media (max-width: 560px) {
-      #jointLink, #copyJointLinkButton, .name-field, .privacy-field { flex-basis: 100%; }
+      #jointLink, #copyJointLinkButton, .name-field, .privacy-field, .echo-field { flex-basis: 100%; }
       #copyJointLinkButton { margin-top: 0; }
       .security-options { flex-wrap: wrap; }
       .controls { width: 100%; border-radius: 16px; }
@@ -508,9 +512,13 @@
       <div class="privacy-field">
         <span class="field-label">Security</span>
         <div class="security-options">
-          <label class="encryption-toggle"><input id="encryptMedia" type="checkbox" checked> End-to-end encryption</label>
-          <label class="echo-toggle"><input id="extraEchoCancellation" type="checkbox"> Extra echo cancellation (experimental)</label>
+          <label class="security-toggle"><input id="encryptMedia" type="checkbox" checked> End-to-end encryption</label>
+          <label class="security-toggle"><input id="extraSecurity" type="checkbox"> 2FA</label>
         </div>
+      </div>
+      <div class="echo-field">
+        <span class="field-label">Audio</span>
+        <label class="echo-toggle"><input id="extraEchoCancellation" type="checkbox"> Advanced echo cancellation</label>
       </div>
     </div>
     <p id="connectionStatus" class="status" role="status" aria-live="polite">Connecting to call manager…</p>
@@ -573,12 +581,12 @@
         <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
       </dl>
       <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. Compare the security codes through another trusted channel before both people confirm the call. Camera and microphone permission is then requested, and recording starts after both people confirm. If encryption is turned off, permission is requested during call setup and no security code is shown. The optional extra echo setting uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
     </div>
   </details>
 </main>
 <script src="js/pushca.min.js" defer></script>
-<script src="js/remote-call-connection.js?v=8" defer></script>
+<script src="js/remote-call-connection.js?v=9" defer></script>
 <script src="js/remote-call.js" defer></script>
 </body>
 </html>

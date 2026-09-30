@@ -95,12 +95,12 @@ function makePage(urlString) {
       return { client };
     },
     async broadcastMessage(_from, to, _secure, message) {
-      const signal = JSON.parse(Buffer.from(message.slice('remote-call-v8:'.length), 'base64url').toString());
+      const signal = JSON.parse(Buffer.from(message.slice('remote-call-v9:'.length), 'base64url').toString());
       page.signals.push(signal);
       const target = clients.get(to.hashCode());
       if (!target) throw new Error('Unknown destination');
       const delivered = page.transformSignal ? await page.transformSignal(signal) : signal;
-      const payload = `remote-call-v8:${Buffer.from(JSON.stringify(delivered)).toString('base64url')}`;
+      const payload = `remote-call-v9:${Buffer.from(JSON.stringify(delivered)).toString('base64url')}`;
       queueMicrotask(() => target.PushcaClient.onMessageHandler(null, payload));
     }
   };
@@ -136,7 +136,7 @@ async function until(predicate, label) {
   }
 }
 
-test('joint link contains no key and the call secret is wrapped for the receiver', async () => {
+test('default encrypted call wraps its secret without displaying a comparison code', async () => {
   const caller = makePage('https://example.test/remote-call.html');
   await until(() => !!caller.byId('jointLink').value, 'invitation');
   const link = new URL(caller.byId('jointLink').value);
@@ -144,26 +144,48 @@ test('joint link contains no key and the call secret is wrapped for the receiver
   assert.deepEqual(Object.keys(JSON.parse(Buffer.from(link.searchParams.get('source-host'), 'base64url').toString())),
     ['workSpaceId', 'accountId', 'deviceId', 'applicationId']);
   assert.doesNotMatch(link.href, /call-public-key|call-key|callSecret|privateKey|wrappedSecret/);
+  assert.equal(new URLSearchParams(link.hash.slice(1)).get('extra-security'), '0');
 
   const receiver = makePage(link.href);
   await until(() => !!receiver.byId('joinNameForm').addEventListener, 'receiver form');
   await receiver.byId('joinNameForm').emit('submit');
-  await until(() => !caller.byId('verificationPanel').hidden && !receiver.byId('verificationPanel').hidden, 'both verification codes');
+  await until(() => caller.started && receiver.started, 'encrypted call');
   const join = receiver.signals.find(signal => signal.type === 'JOIN');
   const offer = caller.signals.find(signal => signal.type === 'OFFER');
   assert.equal(typeof join.publicKey, 'string');
   assert.equal(typeof offer.wrappedSecret, 'string');
+  assert.equal(join.extraSecurity, false);
+  assert.equal(offer.extraSecurity, false);
   assert.doesNotMatch(JSON.stringify([...caller.signals, ...receiver.signals]), /privateKey|mediaSecret/);
+  assert.equal(caller.byId('verificationPanel').hidden, true);
+  assert.equal(receiver.byId('verificationPanel').hidden, true);
+  assert.deepEqual(caller.mediaSecrets[0], receiver.mediaSecrets[0]);
+  assert.deepEqual(caller.errors, []);
+  assert.deepEqual(receiver.errors, []);
+});
+
+test('extra security requires matching code confirmation from both people', async () => {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  caller.byId('extraSecurity').checked = true;
+  await caller.byId('extraSecurity').emit('change');
+  const link = new URL(caller.byId('jointLink').value);
+  assert.equal(new URLSearchParams(link.hash.slice(1)).get('extra-security'), '1');
+  const receiver = makePage(link.href);
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => !receiver.byId('verificationPanel').hidden && !caller.byId('verificationPanel').hidden,
+    'both verification codes');
+  assert.equal(receiver.byId('extraSecurity').checked, true);
+  assert.equal(receiver.byId('extraSecurity').disabled, true);
   assert.equal(caller.byId('verificationCode').textContent, receiver.byId('verificationCode').textContent);
   assert.equal(caller.started, false);
   assert.equal(receiver.started, false);
-
   await caller.byId('verifyCallButton').emit('click');
   await new Promise(resolve => setTimeout(resolve, 20));
   assert.equal(caller.started, false);
   assert.equal(receiver.started, false);
   await receiver.byId('verifyCallButton').emit('click');
-  await until(() => caller.started && receiver.started, 'both call streams');
+  await until(() => caller.started && receiver.started, 'verified call');
   assert.equal(caller.byId('verificationPanel').hidden, true);
   assert.equal(receiver.byId('verificationPanel').hidden, true);
   assert.deepEqual(caller.mediaSecrets[0], receiver.mediaSecrets[0]);
@@ -174,14 +196,16 @@ test('joint link contains no key and the call secret is wrapped for the receiver
 test('a forged start is ignored before both people confirm', async () => {
   const caller = makePage('https://example.test/remote-call.html');
   await until(() => !!caller.byId('jointLink').value, 'public invitation');
+  caller.byId('extraSecurity').checked = true;
+  await caller.byId('extraSecurity').emit('change');
   const receiver = makePage(caller.byId('jointLink').value);
   await receiver.byId('joinNameForm').emit('submit');
   await until(() => !receiver.byId('verificationPanel').hidden && !caller.byId('verificationPanel').hidden,
     'both verification codes');
 
-  const forged = { protocol: 'REMOTE_CALL_V8', type: 'START', encrypted: true,
+  const forged = { protocol: 'REMOTE_CALL_V9', type: 'START', encrypted: true,
     videoAlias: 'attacker', audioAlias: 'attacker', auth: 'A'.repeat(43) };
-  receiver.PushcaClient.onMessageHandler(null, `remote-call-v8:${Buffer.from(JSON.stringify(forged)).toString('base64url')}`);
+  receiver.PushcaClient.onMessageHandler(null, `remote-call-v9:${Buffer.from(JSON.stringify(forged)).toString('base64url')}`);
   assert.equal(caller.started, false);
   assert.equal(receiver.started, false);
   await receiver.byId('verifyCallButton').emit('click');
@@ -198,6 +222,8 @@ test('an unencrypted invitation still joins without exchanging call keys', async
   await caller.byId('encryptMedia').emit('change');
   const link = caller.byId('jointLink').value;
   assert.match(link, /e2e=0/);
+  assert.equal(caller.byId('extraSecurity').checked, false);
+  assert.equal(caller.byId('extraSecurity').disabled, true);
   const receiver = makePage(link);
   await receiver.byId('joinNameForm').emit('submit');
   await until(() => caller.started && receiver.started, 'unencrypted call');
@@ -217,6 +243,8 @@ test('substituting the receiver public key produces different security codes', a
   const attackerPublic = Buffer.from(await webcrypto.subtle.exportKey('spki', attacker.publicKey)).toString('base64');
   const caller = makePage('https://example.test/remote-call.html');
   await until(() => !!caller.byId('jointLink').value, 'invitation');
+  caller.byId('extraSecurity').checked = true;
+  await caller.byId('extraSecurity').emit('change');
   const receiver = makePage(caller.byId('jointLink').value);
   receiver.transformSignal = signal => signal.type === 'JOIN'
     ? { ...signal, publicKey: attackerPublic } : signal;
@@ -242,11 +270,39 @@ test('an invitation with mismatched encryption is rejected without ending the ca
   const caller = makePage('https://example.test/remote-call.html');
   await until(() => !!caller.byId('jointLink').value, 'invitation');
   const link = new URL(caller.byId('jointLink').value);
-  link.hash = 'e2e=0';
+  link.hash = 'e2e=0&extra-security=0';
   const receiver = makePage(link.href);
   await receiver.byId('joinNameForm').emit('submit');
   await until(() => receiver.byId('connectionStatus').textContent.includes('settings changed'), 'rejection');
   assert.equal(caller.byId('copyJointLinkButton').disabled, false);
   assert.equal(caller.started, false);
   assert.equal(receiver.started, false);
+});
+
+test('an invitation with a changed extra-security setting is rejected', async () => {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  caller.byId('extraSecurity').checked = true;
+  await caller.byId('extraSecurity').emit('change');
+  const link = new URL(caller.byId('jointLink').value);
+  link.hash = new URLSearchParams({ e2e: '1', 'extra-security': '0' }).toString();
+  const receiver = makePage(link.href);
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => receiver.byId('connectionStatus').textContent.includes('settings changed'), 'rejection');
+  assert.equal(caller.started, false);
+  assert.equal(receiver.started, false);
+});
+
+test('turning encryption off also turns extra security off', async () => {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  caller.byId('extraSecurity').checked = true;
+  await caller.byId('extraSecurity').emit('change');
+  caller.byId('encryptMedia').checked = false;
+  await caller.byId('encryptMedia').emit('change');
+  const settings = new URLSearchParams(new URL(caller.byId('jointLink').value).hash.slice(1));
+  assert.equal(settings.get('e2e'), '0');
+  assert.equal(settings.get('extra-security'), '0');
+  assert.equal(caller.byId('extraSecurity').checked, false);
+  assert.equal(caller.byId('extraSecurity').disabled, true);
 });
