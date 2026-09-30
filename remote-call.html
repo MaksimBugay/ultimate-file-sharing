@@ -566,8 +566,8 @@
       </div>
       <button id="stopButton" type="button" class="secondary" disabled>End call</button>
       <span class="control-divider" aria-hidden="true"></span>
-      <button id="replayButton" type="button" class="secondary" disabled>Replay local recording</button>
-      <button id="saveButton" type="button" class="secondary" disabled>Save recording</button>
+      <button id="replayButton" type="button" class="secondary" disabled>Replay conversation</button>
+      <button id="saveButton" type="button" class="secondary" disabled>Save conversation</button>
     </div>
   </div>
 
@@ -577,16 +577,17 @@
       <dl class="stats">
         <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
         <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
-        <div class="stat"><dt>Audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
+        <div class="stat"><dt>Sent audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
         <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
       </dl>
       <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. After the call, save one local recording with both audio and video. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
     </div>
   </details>
 </main>
 <script src="js/pushca.min.js" defer></script>
 <script src="js/remote-call-connection.js?v=9" defer></script>
-<script src="js/remote-call.js" defer></script>
+<script src="js/remote-call-conversation.js?v=1" defer></script>
+<script src="js/remote-call.js?v=2" defer></script>
 </body>
 </html>

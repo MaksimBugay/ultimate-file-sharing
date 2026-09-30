@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the Remote Call promo with the V8 key exchange."""
+"""Render the Remote Call promo with the current optional 2FA flow."""
 from pathlib import Path
 import importlib.util
 import sys
@@ -20,14 +20,14 @@ for scene in promo.SCENES:
     if scene["id"] == "invite":
         scene["lines"] = [
             "Open the page and share your joint link privately.",
-            "Compare security codes together before camera and microphone access.",
+            "For extra assurance, turn on 2FA and compare security codes before the call starts.",
         ]
     elif scene["id"] == "key":
         scene["title"] = ["No key in the link.", "Private keys stay private."]
         scene["sub"] = "The key exchange begins after the receiver joins."
         scene["lines"] = [
-            "Your joint link contains no encryption key. After joining, the receiver sends a temporary public key.",
-            "A fresh call secret returns encrypted to that key.",
+            "Your joint link contains no encryption key. The key exchange starts only after the other person joins.",
+            "A fresh call secret is encrypted for that participant, never placed in the link.",
         ]
 promo.p.SCENES = promo.SCENES
 
@@ -58,12 +58,12 @@ def documents(scenes, cues, total):
     note = ROOT / "production-notes.md"
     body = note.read_text()
     note.write_text(body +
-                    "\n## V8 security wording\n\n"
+                    "\n## Current security wording\n\n"
                     "The invitation contains routing details and call settings, but no cryptographic key. "
-                    "After joining, the receiver sends a temporary RSA public key. The caller wraps a "
-                    "fresh call secret to that key; the receiver's private key remains local. "
-                    "Participants compare security codes through another trusted channel before "
-                    "starting media. No private key or symmetric media secret appears in the link.\n")
+                    "The caller encrypts a fresh call secret for the receiver after they join. "
+                    "The receiver's private key remains local. Optional 2FA asks both people to "
+                    "compare security codes through another trusted channel before starting media. "
+                    "No private key or symmetric media secret appears in the link.\n")
     html = ROOT / "preview.html"
     html.write_text(html.read_text().replace("English narration", "English neural narration"))
 
@@ -76,4 +76,4 @@ if __name__ == "__main__":
         (promo.p.BUILD / "picture.webm").unlink(missing_ok=True)
     promo.main()
     if "--render" in sys.argv:
-        print(f"KEY-EXCHANGE PROMO: {ROOT / 'remote-call-key-exchange-promo.webm'}", flush=True)
+        print(f"CORRECTED PROMO: {ROOT / 'remote-call-promo-v3-voice-fixed.webm'}", flush=True)
