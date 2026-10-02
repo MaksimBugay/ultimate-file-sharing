@@ -8,6 +8,11 @@ function isPureText(str) {
     return doc.body.textContent === str;
 }
 async function getReadMeText() {
+    // A closed optional editor still uses the original default description.
+    const descriptionEditor = document.getElementById('descriptionEditor');
+    if (descriptionEditor && descriptionEditor.hidden) {
+        return FileSharing.defaultReadMeText;
+    }
     //return readMeTextMemo.innerText;
     if (isPureText(readMeTextMemo.innerText)) {
         return readMeTextMemo.innerText;

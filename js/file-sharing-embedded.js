@@ -46,6 +46,7 @@ const selectFilesBtn = document.getElementById('selectFilesBtn');
 const fileTransferProgressBtn = document.getElementById('fileTransferProgressBtn');
 const readMeTextMemo = document.getElementById("readMeTextMemo");
 const fileInput = document.getElementById('fileInput');
+const toolBarPasteArea = document.getElementById('toolBarPasteArea');
 fileInput.removeAttribute('webkitdirectory');
 fileInput.setAttribute('multiple', '');
 
@@ -262,28 +263,13 @@ function initEventsForCopyPasteArea() {
         }
     );
 
-    if (document.getElementById('selectFilesSection')) {
-        document.getElementById('selectFilesSection').addEventListener(
-            'mousemove', function (event) {
-                if (dateTimeInputActive() || passwordInputIsActive() || readMeMemoIsActive() || urlInputIsActive(event.target)) {
-                    event.stopPropagation();
-                    event.preventDefault();
-                    return;
-                }
-                if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
-                    return;
-                }
-                if (toolBarPasteArea) {
-                    toolBarPasteArea.focus();
-                    toolBarPasteArea.style.border = "0 none transparent";
-                }
-            }
-        );
-    }
-
-    document.addEventListener('mousemove', containerWithCopyPastElementMouseMoveEventHandler);
+    dropZone.addEventListener('mousemove', focusPasteAreaForDropZone);
 
     toolBarPasteArea.addEventListener('paste', async function (event) {
+        if (!canPasteSharedContent()) {
+            event.preventDefault();
+            return;
+        }
         const clipboardItems = event.clipboardData.items;
 
         event.stopPropagation();
@@ -382,19 +368,25 @@ async function readTextFromClipboardItem(item) {
     }
 }
 
-function containerWithCopyPastElementMouseMoveEventHandler(event) {
-    if (!hasParentWithIdOrClass(event.target, ['main-flow-container'])) {
+function canPasteSharedContent() {
+    return toolBarPasteArea && !toolBarPasteArea.disabled && !toolBarPasteArea.readOnly
+        && !selectFilesBtn.disabled && !dropZone.disabled
+        && !dropZone.classList.contains('disabled-zone')
+        && !document.querySelector('.consent-dialog.visible');
+}
+
+function focusPasteAreaForDropZone(event) {
+    if (!canPasteSharedContent() || event.buttons || document.activeElement === toolBarPasteArea) {
         return;
     }
-    if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
+    // Keep selected text available for Ctrl+C, including selections inside inputs.
+    const activeElement = document.activeElement;
+    if (window.getSelection()?.toString()
+        || (typeof activeElement.selectionStart === 'number'
+            && activeElement.selectionStart !== activeElement.selectionEnd)) {
         return;
     }
-    if (dateTimeInputActive() || passwordInputIsActive() || readMeMemoIsActive() || urlInputIsActive()) {
-        return;
-    }
-    if (toolBarPasteArea) {
-        toolBarPasteArea.focus();
-    }
+    toolBarPasteArea.focus({preventScroll: true});
 }
 
 //======================================================================================================================
@@ -412,6 +404,34 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     selectFilesBtn.addEventListener('click', function () {
         fileInput.click();
+    });
+    const descriptionEditor = document.getElementById('descriptionEditor');
+    const toggleDescriptionBtn = document.getElementById('toggleDescriptionBtn');
+    toggleDescriptionBtn.addEventListener('click', function () {
+        if (descriptionEditor.hidden) {
+            descriptionEditor.hidden = false;
+            toggleDescriptionBtn.textContent = 'Remove description';
+            toggleDescriptionBtn.setAttribute('aria-expanded', 'true');
+            readMeTextMemo.focus({preventScroll: true});
+        } else {
+            readMeTextMemo.textContent = FileSharing.defaultReadMeText;
+            descriptionEditor.hidden = true;
+            toggleDescriptionBtn.textContent = 'Add description';
+            toggleDescriptionBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
+    const dropZoneHeading = document.querySelector('.drop-zone-heading');
+    // Keep paste focus from dropping between mouse down and click.
+    dropZoneHeading.addEventListener('mousedown', function (event) {
+        if (canPasteSharedContent()) {
+            event.preventDefault();
+            toolBarPasteArea.focus({preventScroll: true});
+        }
+    });
+    dropZoneHeading.addEventListener('click', function () {
+        if (canPasteSharedContent()) {
+            toolBarPasteArea.focus({preventScroll: true});
+        }
     });
     fileInput.addEventListener('change', async function (event) {
         if (event.target.files && fileInput.value && event.target.files.length > 0) {
@@ -432,7 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     initEventsForCopyPasteArea();
     if (toolBarPasteArea) {
-        toolBarPasteArea.focus();
+        toolBarPasteArea.focus({preventScroll: true});
     }
 
     if (additionalRulesContainer && (typeof SFSPDateTimePicker === 'function')) {
