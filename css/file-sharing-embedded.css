@@ -244,9 +244,7 @@ h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 4vw, 1.9rem); line-height: 1.15;
 .drop-zone span { color: #afc0d2; font-size: .75rem; }
 .drop-zone .paste-hint { display: none; color: inherit; font: inherit; pointer-events: auto; cursor: help; }
 /* The actual focused element determines visibility, including inside an iframe. */
-body:not(:has(.consent-dialog.visible)),
-.device-container:has(#toolBarPasteArea:focus:enabled:not([readonly])):has(#selectFilesBtn:enabled),
-.drop-zone:not(.disabled-zone) .paste-hint { display: inline; }
+body:not(:has(.consent-dialog.visible)) .device-container:has(#toolBarPasteArea:focus:enabled:not([readonly])):has(#selectFilesBtn:enabled) .drop-zone:not(.disabled-zone) .paste-hint { display: inline; }
 .drop-zone:hover { border-color: #83aef2; background: #152a46; }
 .drop-zone.dragover { border-color: #81efce; background: #15332f; color: #e9fff7; }
 kbd { padding: 3px 5px; border: 1px solid #405573; border-radius: 5px; background: #172334; color: #d8e5f5; font: inherit; }
