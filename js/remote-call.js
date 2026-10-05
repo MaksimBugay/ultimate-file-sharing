@@ -1605,6 +1605,7 @@
     const shell = document.getElementById('selfView');
     const stage = shell?.parentElement;
     if (!stage) return;
+    const incomingLabel = document.getElementById('counterpartName');
     let pointer = null;
     let position = null;
     let suppressClick = false;
@@ -1625,7 +1626,28 @@
     }
 
     function keepInBounds() {
-      if (position) place(position.left, position.top);
+      if (shell.open) {
+        shell.style.width = '';
+        shell.style.height = '';
+      }
+      if (!shell.open && incomingLabel) {
+        const bounds = stage.getBoundingClientRect();
+        const labelBounds = incomingLabel.getBoundingClientRect();
+        shell.style.width = `${labelBounds.width}px`;
+        shell.style.height = `${labelBounds.height}px`;
+        shell.style.left = `${Math.max(0, labelBounds.left - bounds.left)}px`;
+        shell.style.top = `${labelBounds.bottom - bounds.top + 8}px`;
+        shell.style.right = 'auto';
+        shell.style.bottom = 'auto';
+      } else if (position) {
+        place(position.left, position.top);
+      } else {
+        shell.style.left = '';
+        shell.style.top = '';
+        shell.style.right = '';
+        shell.style.bottom = '';
+      }
+      shell.title = shell.open ? 'Drag to move self view' : 'Show self view';
     }
 
     function finishDrag(event) {
@@ -1658,7 +1680,8 @@
     }
 
     function beginDrag(point, event, kind, id) {
-      if (pointer || event.target.closest('a, button, input, select, textarea, [contenteditable="true"]')) {
+      if (!shell.open || pointer
+        || event.target.closest('a, button, input, select, textarea, [contenteditable="true"]')) {
         return false;
       }
       suppressClick = false;
@@ -1725,14 +1748,19 @@
       event.preventDefault();
       event.stopPropagation();
     }, { capture: true });
-    shell.addEventListener('toggle', keepInBounds);
+    shell.addEventListener('toggle', () => {
+      if (!shell.open) finishDrag();
+      keepInBounds();
+    });
     window.addEventListener('resize', keepInBounds);
     window.addEventListener('pagehide', () => finishDrag());
     if (window.ResizeObserver) {
       const observer = new window.ResizeObserver(keepInBounds);
       observer.observe(stage);
       observer.observe(shell);
+      if (incomingLabel) observer.observe(incomingLabel);
     }
+    keepInBounds();
   }
 
   enableSelfViewDragging();

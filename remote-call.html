@@ -422,8 +422,6 @@
     #stopButton:hover:not(:disabled) { background: #e6596c; }
     .control-divider { width: 1px; height: 26px; margin: 0 3px; background: #49617f; }
     .self-view-shell {
-      cursor: grab;
-      touch-action: none;
       -webkit-user-select: none;
       user-select: none;
       position: absolute;
@@ -434,6 +432,8 @@
       height: auto;
     }
     .self-view-shell[open] {
+      cursor: grab;
+      touch-action: none;
       width: clamp(190px, 22vw, 300px);
       height: min(280px, calc(100% - 28px));
     }
@@ -453,6 +453,18 @@
       cursor: pointer;
       box-shadow: 0 4px 18px #000a;
     }
+    .self-view-shell:not([open]) summary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 7px 8px;
+      border-radius: 999px;
+      font-size: .85rem;
+      white-space: nowrap;
+    }
+    .self-view-shell:not([open]) summary::before { white-space: pre; }
     .self-view-shell[open] summary { position: absolute; box-shadow: none; }
     .self-view-shell summary::-webkit-details-marker { display: none; }
     .self-view-shell summary:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
@@ -652,7 +664,7 @@
 <script src="js/pushca.min.js?v=remote-call-10" defer></script>
 <script src="js/remote-call-connection.js?v=11" defer></script>
 <script src="js/remote-call-conversation.js?v=1" defer></script>
-<script src="js/remote-call.js?v=7" defer></script>
+<script src="js/remote-call.js?v=8" defer></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
   window.dataLayer = window.dataLayer || [];

@@ -33,10 +33,10 @@ function harness() {
   const stage = { clientWidth: 360, clientHeight: 500,
     getBoundingClientRect: () => ({ left: 10, top: 100 }) };
   const shell = byId('selfView');
-  Object.assign(shell, { parentElement: stage, offsetWidth: 190, offsetHeight: 250,
+  Object.assign(shell, { open: true, parentElement: stage, offsetWidth: 190, offsetHeight: 250,
     getBoundingClientRect: () => ({
-      left: stage.getBoundingClientRect().left + parseFloat(shell.style.left ?? '160'),
-      top: stage.getBoundingClientRect().top + parseFloat(shell.style.top ?? '240')
+      left: stage.getBoundingClientRect().left + parseFloat(shell.style.left || '160'),
+      top: stage.getBoundingClientRect().top + parseFloat(shell.style.top || '240')
     }) });
   const window = Object.assign(new Events(), { location: { search: '' } });
   vm.runInNewContext(source, {
