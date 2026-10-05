@@ -1601,6 +1601,94 @@
     }
   }
 
+  function enableSelfViewDragging() {
+    const shell = document.getElementById('selfView');
+    const stage = shell?.parentElement;
+    if (!stage) return;
+    let pointer = null;
+    let position = null;
+    let suppressClick = false;
+
+    function place(left, top) {
+      const maxLeft = Math.max(0, stage.clientWidth - shell.offsetWidth);
+      const maxTop = Math.max(0, stage.clientHeight - shell.offsetHeight);
+      const marginX = Math.min(8, maxLeft / 2);
+      const marginY = Math.min(8, maxTop / 2);
+      position = {
+        left: Math.max(marginX, Math.min(left, maxLeft - marginX)),
+        top: Math.max(marginY, Math.min(top, maxTop - marginY))
+      };
+      shell.style.left = `${position.left}px`;
+      shell.style.top = `${position.top}px`;
+      shell.style.right = 'auto';
+      shell.style.bottom = 'auto';
+    }
+
+    function keepInBounds() {
+      if (position) place(position.left, position.top);
+    }
+
+    function finishDrag(event) {
+      if (!pointer || (event && event.pointerId !== pointer.id)) return;
+      const current = pointer;
+      pointer = null;
+      suppressClick = event?.type === 'pointerup' && current.moved;
+      shell.style.cursor = '';
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', finishDrag);
+      window.removeEventListener('pointercancel', finishDrag);
+      if (shell.hasPointerCapture(current.id)) shell.releasePointerCapture(current.id);
+    }
+
+    function move(event) {
+      if (!pointer || event.pointerId !== pointer.id) return;
+      if (!pointer.moved) {
+        if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) < 6) return;
+        pointer.moved = true;
+        shell.setPointerCapture(pointer.id);
+        shell.style.cursor = 'grabbing';
+      }
+      event.preventDefault();
+      const bounds = stage.getBoundingClientRect();
+      place(event.clientX - bounds.left - pointer.offsetX, event.clientY - bounds.top - pointer.offsetY);
+    }
+
+    shell.addEventListener('pointerdown', event => {
+      if (pointer || !event.isPrimary || event.button !== 0
+        || event.target.closest('a, button, input, select, textarea, [contenteditable="true"]')) return;
+      suppressClick = false;
+      const bounds = shell.getBoundingClientRect();
+      pointer = {
+        id: event.pointerId, startX: event.clientX, startY: event.clientY,
+        offsetX: event.clientX - bounds.left, offsetY: event.clientY - bounds.top, moved: false
+      };
+      // Capture only after movement, so an ordinary summary tap still toggles details.
+      window.addEventListener('pointermove', move, { passive: false });
+      window.addEventListener('pointerup', finishDrag);
+      window.addEventListener('pointercancel', finishDrag);
+    });
+    // Touch initially captures the child; its capture loss must not end the tile drag.
+    shell.addEventListener('lostpointercapture', event => {
+      if (event.target === shell) finishDrag(event);
+    });
+    shell.addEventListener('click', event => {
+      if (!suppressClick) return;
+      suppressClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, { capture: true });
+    shell.addEventListener('toggle', keepInBounds);
+    window.addEventListener('resize', keepInBounds);
+    window.addEventListener('pagehide', () => finishDrag());
+    if (window.ResizeObserver) {
+      const observer = new window.ResizeObserver(keepInBounds);
+      observer.observe(stage);
+      observer.observe(shell);
+    }
+  }
+
+  enableSelfViewDragging();
+
   ui.disableVideo.addEventListener('click', () => player?.disableVideo());
   ui.stop.addEventListener('click', () => { void window.RemoteCallConnection.stopCall(); });
   ui.cameraEnabled.addEventListener('click', toggleCamera);

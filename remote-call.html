@@ -422,6 +422,10 @@
     #stopButton:hover:not(:disabled) { background: #e6596c; }
     .control-divider { width: 1px; height: 26px; margin: 0 3px; background: #49617f; }
     .self-view-shell {
+      cursor: grab;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
       position: absolute;
       z-index: 3;
       right: 14px;
@@ -454,7 +458,7 @@
     .self-view-shell summary:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
     .self-view-shell summary::before { content: "Show "; }
     .self-view-shell[open] summary::before { content: "Hide "; }
-    .local-panel { height: 100%; overflow: auto; }
+    .local-panel { height: 100%; overflow: auto; touch-action: none; }
     .local-panel .video-frame h2 {
       top: 8px;
       left: 8px;
@@ -602,7 +606,7 @@
         <label for="replayVolume">Volume <input id="replayVolume" type="range" min="0" max="100" value="100"></label>
       </div>
     </section>
-    <details class="self-view-shell" open>
+    <details id="selfView" class="self-view-shell" title="Drag to move self view" open>
       <summary aria-label="Toggle self view">self view</summary>
       <section class="panel local-panel" aria-labelledby="localName">
         <div class="video-frame">
@@ -648,7 +652,7 @@
 <script src="js/pushca.min.js?v=remote-call-10" defer></script>
 <script src="js/remote-call-connection.js?v=11" defer></script>
 <script src="js/remote-call-conversation.js?v=1" defer></script>
-<script src="js/remote-call.js?v=5" defer></script>
+<script src="js/remote-call.js?v=6" defer></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
