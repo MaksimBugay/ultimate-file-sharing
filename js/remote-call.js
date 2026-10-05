@@ -5,7 +5,7 @@
   const requestedChunkSeconds = chunkSecondsParam === null ? NaN : Number(chunkSecondsParam);
   const CHUNK_MS = Number.isFinite(requestedChunkSeconds)
     && requestedChunkSeconds >= 0.1 && requestedChunkSeconds <= 60
-    ? Math.round(requestedChunkSeconds * 1000) : 1000;
+    ? Math.round(requestedChunkSeconds * 1000) : 500;
   const WINDOW_MS = CHUNK_MS;
   const INITIAL_COMMON_BUFFER_SECONDS = 0.5;
   const MAX_RECORDING_BYTES = 512 * 1048576;

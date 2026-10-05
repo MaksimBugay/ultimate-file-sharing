@@ -542,7 +542,7 @@
       </div>
       <span id="connectionIndicator" class="connection-indicator" role="img" aria-label="WebSocket disconnected" title="WebSocket disconnected"></span>
     </div>
-    <p class="intro">The main tile shows your counterpart and the smaller tile shows your camera. Camera off sends black video; microphone mute sends silence. Chunks are roughly <span data-chunk-seconds>1</span> second.</p>
+    <p class="intro">The main tile shows your counterpart and the smaller tile shows your camera. Camera off sends black video; microphone mute sends silence. Chunks are roughly <span data-chunk-seconds>0.5</span> seconds.</p>
   </header>
   <details id="invitePanel" class="joint-link-panel">
     <summary class="invite-heading"><h2>Invite &amp; connect</h2></summary>
@@ -630,14 +630,14 @@
         <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
       </dl>
       <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 1 second. Recording needs HTTPS or localhost.</p>
+      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 0.5 seconds. Recording needs HTTPS or localhost.</p>
     </div>
   </details>
 </main>
-<script src="js/pushca.min.js" defer></script>
-<script src="js/remote-call-connection.js?v=9" defer></script>
+<script src="js/pushca.min.js?v=remote-call-10" defer></script>
+<script src="js/remote-call-connection.js?v=10" defer></script>
 <script src="js/remote-call-conversation.js?v=1" defer></script>
-<script src="js/remote-call.js?v=3" defer></script>
+<script src="js/remote-call.js?v=4" defer></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
   window.dataLayer = window.dataLayer || [];

@@ -15,7 +15,7 @@
   const CHUNK_MAGIC = 0x364d4352; // "RCM6" in little-endian byte order.
   const MAX_PENDING_SENDS = 512;
   const MAX_PENDING_BYTES = (kind === 'video' ? 64 : 8) * 1048576;
-  // Keep transfers ordered so a delayed chunk cannot leave a large gap in the receiver's MSE inbox.
+  // Serialize encryption and socket writes to preserve chunk order without waiting for acknowledgements.
   const MAX_ACTIVE_SENDS = 1;
   let initialized = false;
   let aliasAttempt = 0;
@@ -189,7 +189,7 @@
       const attemptEpoch = connectionEpoch;
       let result;
       try {
-        result = await PushcaClient.transferBinaryChunk(
+        result = await PushcaClient.transferBinaryChunkWithoutAcknowledge(
           message.binaryId, message.order, message.destHashCode, payload
         );
       } catch (error) {
@@ -198,7 +198,7 @@
       }
       if (result.type === WaiterResponseType.SUCCESS) return;
       if (PushcaClient.isOpen() && connectionEpoch === attemptEpoch) {
-        throw new Error(`${kind} chunk ${message.order} was not delivered.`);
+        throw new Error(`${kind} chunk ${message.order} could not be sent.`);
       }
     }
   }

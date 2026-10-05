@@ -1323,6 +1323,33 @@ PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode
     return result;
 }
 
+// Success means the chunk was queued on the socket, without waiting for a delivery response.
+PushcaClient.transferBinaryChunkWithoutAcknowledge = function (binaryId, order, destHashCode, arrayBuffer) {
+    if (isEmpty(PushcaClient.ws)) {
+        return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
+    }
+    if (PushcaClient.ws.readyState !== window.WebSocket.OPEN) {
+        const errorMsg = `WebSocket is not open. State: ${PushcaClient.ws.readyState}`;
+        console.error(errorMsg);
+        return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
+    }
+
+    const customHeader = buildPushcaBinaryHeader(
+        BinaryType.FILE_TRANSFER, destHashCode, false, binaryId, order
+    );
+    const combinedBuffer = new ArrayBuffer(customHeader.length + arrayBuffer.byteLength);
+    const combinedView = new Uint8Array(combinedBuffer);
+    combinedView.set(customHeader, 0);
+    combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
+
+    try {
+        PushcaClient.ws.send(combinedBuffer);
+        return new WaiterResponse(WaiterResponseType.SUCCESS, null);
+    } catch (error) {
+        return new WaiterResponse(WaiterResponseType.ERROR, error);
+    }
+}
+
 PushcaClient.restoreBrokenWsConnection = async function () {
     if (!PushcaClient.isOpen()) {
         PushcaClient.stopWebSocket();

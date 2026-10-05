@@ -5,7 +5,7 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(require.resolve('../js/remote-call.js'), 'utf8');
 
-function callHarness(withUnavailableAudioContext) {
+function callHarness(withUnavailableAudioContext, search = '') {
   const elements = new Map();
   const startedRecorders = [];
   let stoppedCalls = 0;
@@ -37,7 +37,7 @@ function callHarness(withUnavailableAudioContext) {
       this.handlers = new Map();
     }
     addEventListener(type, handler) { this.handlers.set(type, handler); }
-    start() { this.state = 'recording'; startedRecorders.push(this); }
+    start(chunkMs) { this.chunkMs = chunkMs; this.state = 'recording'; startedRecorders.push(this); }
     stop() { this.state = 'inactive'; this.handlers.get('stop')?.(); }
   }
   class MediaSource {
@@ -49,7 +49,7 @@ function callHarness(withUnavailableAudioContext) {
     close() { return Promise.resolve(); }
   }
   const window = {
-    location: { search: '' }, MediaRecorder, MediaSource,
+    location: { search }, MediaRecorder, MediaSource,
     HTMLCanvasElement: { prototype: { captureStream() {} } },
     RemoteCallConversationRecorder: withUnavailableAudioContext ? class {} : undefined,
     AudioContext: withUnavailableAudioContext ? UnavailableAudioContext : undefined,
@@ -94,4 +94,15 @@ test('call starts when optional Web Audio cannot resume', async () => {
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(h.startedRecorders.length, 3);
   assert.equal(h.stoppedCalls(), 0);
+});
+
+
+test('recorders default to half-second chunks and respect valid overrides', async () => {
+  for (const [search, expected] of [['', 500], ['?chunkSeconds=invalid', 500], ['?chunkSeconds=0.05', 500], ['?chunkSeconds=0.25', 250]]) {
+    const h = callHarness(false, search);
+    await h.media.prepare();
+    await h.media.start(() => {});
+    assert.deepEqual(h.startedRecorders.map(recorder => recorder.chunkMs), [expected, expected, expected]);
+    await h.media.stop();
+  }
 });
