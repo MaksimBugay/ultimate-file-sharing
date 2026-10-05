@@ -9,6 +9,7 @@ const EPOCH = 1800000000000;
 // SourceBuffers. Execute the complete application through its public receiver API.
 function harness(options = {}) {
   let now = EPOCH;
+  let wallClockJumpMs = 0;
   let nextTimer = 0;
   let stoppedCalls = 0;
   let videoReceptionStops = 0;
@@ -106,7 +107,7 @@ function harness(options = {}) {
     removeSourceBuffer(buffer) { assert.equal(buffer, this.buffer); this.removed = true; this.buffer = null; }
     endOfStream() { assert.equal(this.buffer.updating, false); this.readyState = 'ended'; this.endedAt = now; }
   }
-  class FakeDate extends Date { static now() { return now; } }
+  class FakeDate extends Date { static now() { return now + (options.localClockOffsetMs || 0) + wallClockJumpMs; } }
   const window = new Events();
   Object.assign(window, { location: { search: '' }, MediaSource,
     RemoteCallConnection: { stopCall() { stoppedCalls++; }, disableRemoteVideoReception() { videoReceptionStops++; } } });
@@ -115,7 +116,8 @@ function harness(options = {}) {
     MediaSource, Uint8Array, Date: FakeDate, URLSearchParams,
     URL: { createObjectURL(source) { const url = `blob:${urls.size}`; urls.set(url, source); return url; },
       revokeObjectURL(url) { revoked.push(url); } },
-    performance: { timeOrigin: EPOCH, now: () => now - EPOCH },
+    performance: { timeOrigin: EPOCH + (options.localClockOffsetMs || 0) - (options.pageAgeMs || 0),
+      now: () => (options.pageAgeMs || 0) + now - EPOCH },
     HTMLMediaElement: { HAVE_CURRENT_DATA: 2, HAVE_FUTURE_DATA: 3 },
     setInterval: (fn, ms) => schedule(fn, ms, ms), clearInterval: id => timers.delete(id),
     setTimeout: (fn, ms) => schedule(fn, ms), clearTimeout: id => timers.delete(id),
@@ -148,13 +150,14 @@ function harness(options = {}) {
     await flushPromises();
   }
   function chunk(kind, index, { duration = 500, captureEnd = (index + 1) * duration, createdAt,
-    receivedAt = now, decryptedAt = now } = {}) {
+    receivedAt = now + (options.localClockOffsetMs || 0),
+    decryptedAt = now + (options.localClockOffsetMs || 0) } = {}) {
     const payload = new ArrayBuffer(8);
     const view = new DataView(payload);
     view.setUint32(0, index); view.setUint32(4, duration);
     media.receiveChunk(kind, index, payload, {
-      senderStartTimeMs: index * duration, senderEndTimeMs: (index + 1) * duration,
-      createdAtEpochMs: createdAt ?? EPOCH + captureEnd,
+      senderStartTimeMs: captureEnd - duration, senderEndTimeMs: captureEnd,
+      createdAtEpochMs: createdAt ?? EPOCH + (options.remoteClockOffsetMs || 0) + captureEnd,
       arrivedAtEpochMs: receivedAt, decryptedAtEpochMs: decryptedAt, playStart: null, playEnd: null
     });
   }
@@ -162,7 +165,8 @@ function harness(options = {}) {
     scheduleAt: (ms, fn) => schedule(fn, EPOCH + ms - now),
     diagnostics: () => media.getPlaybackDiagnostics(),
     stoppedCalls: () => stoppedCalls, videoReceptionStops: () => videoReceptionStops,
-    time: () => now - EPOCH };
+    time: () => now - EPOCH,
+    jumpWallClock: ms => { wallClockJumpMs += ms; } };
 }
 
 function scheduleStream(h, kind, count, deliveryDelay = 30) {
@@ -240,19 +244,19 @@ for (const [audio, video, state] of [[30, 3300, 'VIDEO_DELAYED'], [3100, 30, 'AU
   });
 }
 
-test('delay maps the playing chunk, interpolates capture end timestamps, and retains stalled age', async () => {
+test('delay maps the playing chunk on the relative call timeline and retains stalled age', async () => {
   const h = harness();
   await h.advanceTo(4000);
-  h.chunk('video', 0, { createdAt: EPOCH + 500, receivedAt: EPOCH + 3990, decryptedAt: EPOCH + 3995 });
-  h.chunk('video', 1, { createdAt: EPOCH + 3800 });
+  h.chunk('video', 0, { captureEnd: 500, receivedAt: EPOCH + 3990, decryptedAt: EPOCH + 3995 });
+  h.chunk('video', 1, { captureEnd: 3800 });
   await h.advanceTo(4250);
   const d = h.diagnostics().video;
   assert.equal(d.currentlyPlaying.index, 0);
   assert.equal(d.lastAppended.index, 1);
-  assert.equal(d.currentlyPlaying.creationTime, EPOCH + 500);
-  assert.equal(d.currentlyPlaying.receivedAtEpochMs, EPOCH + 3990);
-  assert.equal(d.currentlyPlaying.decryptedAtEpochMs, EPOCH + 3995);
-  assert.equal(d.currentlyPlaying.appendedAtEpochMs, EPOCH + 4000);
+  assert.equal(d.currentlyPlaying.creationTime, 500);
+  assert.equal(d.currentlyPlaying.receivedAtCallTimeMs, 3990);
+  assert.equal(d.currentlyPlaying.decryptedAtCallTimeMs, 3995);
+  assert.equal(d.currentlyPlaying.appendedAtCallTimeMs, 4000);
   assert.ok(Math.abs(d.playbackDelayMs - 4005) < 1, `actual ${d.playbackDelayMs}`);
   assert.ok(d.bufferedAheadMs > 700);
   await h.advanceTo(8000);
@@ -260,24 +264,24 @@ test('delay maps the playing chunk, interpolates capture end timestamps, and ret
 });
 
 test('warning hysteresis recovers below 2500 ms and red overrides blue', async () => {
-  // Artificial timestamp offsets exercise the monitor through the actual player;
-  // changing the clock moves both wall clocks equally without touching scheduling.
+  // Artificial capture offsets exercise the monitor through the actual player
+  // without changing the independent media clocks or scheduling.
   const h = harness();
   await h.advanceTo(5000);
-  h.chunk('audio', 0, { createdAt: EPOCH + 5000 });
-  h.chunk('video', 0, { createdAt: EPOCH + 1900 });
+  h.chunk('audio', 0, { captureEnd: 5000 });
+  h.chunk('video', 0, { captureEnd: 1900 });
   await h.advanceTo(5250);
   assert.equal(h.diagnostics().state, 'VIDEO_DELAYED');
-  h.chunk('audio', 1, { createdAt: EPOCH + 5500 });
-  h.chunk('video', 1, { createdAt: EPOCH + 3200 }); // 2805 ms: still blue
+  h.chunk('audio', 1, { captureEnd: 5500 });
+  h.chunk('video', 1, { captureEnd: 3200 }); // 2805 ms: still blue
   await h.advanceTo(5750);
   assert.equal(h.diagnostics().state, 'VIDEO_DELAYED');
-  h.chunk('audio', 2, { createdAt: EPOCH + 6000 });
-  h.chunk('video', 2, { createdAt: EPOCH + 4100 }); // 2405 ms: recovered
+  h.chunk('audio', 2, { captureEnd: 6000 });
+  h.chunk('video', 2, { captureEnd: 4100 }); // 2405 ms: recovered
   await h.advanceTo(6250);
   assert.equal(h.diagnostics().state, 'NORMAL');
-  h.chunk('audio', 3, { createdAt: EPOCH + 3000 });
-  h.chunk('video', 3, { createdAt: EPOCH + 3000 });
+  h.chunk('audio', 3, { captureEnd: 3000 });
+  h.chunk('video', 3, { captureEnd: 3000 });
   await h.advanceTo(6750);
   assert.equal(h.diagnostics().state, 'AUDIO_DELAYED');
 });
@@ -432,3 +436,56 @@ test('missing audio does not stall video ordering, appends or playback', async (
   assert.ok(d.videoPlaybackDelayMs < 600);
   assert.equal(h.byId('replayVideo').pauseCalls, 0);
 });
+
+
+test('caller and callee measure the same delay despite different device clocks and page ages', async () => {
+  const caller = harness({ localClockOffsetMs: 5000, remoteClockOffsetMs: 0, pageAgeMs: 60000 });
+  const callee = harness({ localClockOffsetMs: 0, remoteClockOffsetMs: 5000, pageAgeMs: 20000 });
+  for (const h of [caller, callee]) {
+    scheduleStream(h, 'audio', 30, 1000);
+    scheduleStream(h, 'video', 30, 1000);
+    await h.advanceTo(10000);
+    const d = h.diagnostics();
+    assert.equal(d.state, 'NORMAL');
+    assert.ok(d.audioPlaybackDelayMs > 1000 && d.audioPlaybackDelayMs < 2000);
+    assert.equal(h.byId('playbackDelayWarning').hidden, true);
+    const timing = h.media.getReceivedChunkTiming('audio', 0);
+    assert.equal(timing.createdAtCallTimeMs, 500);
+    assert.equal(timing.arrivedAtCallTimeMs, 1500);
+    assert.equal(timing.estimatedDeliveryDelayMs, 1000);
+    assert.equal(d.audio.currentlyPlaying.queuedAtCallTimeMs,
+      d.audio.currentlyPlaying.receivedAtCallTimeMs);
+  }
+  assert.equal(caller.diagnostics().audioPlaybackDelayMs, callee.diagnostics().audioPlaybackDelayMs);
+});
+
+test('changing a device wall clock during a call does not change playback delay', async () => {
+  const h = harness();
+  scheduleStream(h, 'audio', 40, 30); scheduleStream(h, 'video', 40, 30);
+  await h.advanceTo(8000);
+  const before = h.diagnostics().audioPlaybackDelayMs;
+  h.jumpWallClock(60000);
+  await h.advanceTo(8500);
+  assert.ok(Math.abs(h.diagnostics().audioPlaybackDelayMs - before) < 2);
+  assert.equal(h.diagnostics().state, 'NORMAL');
+  h.jumpWallClock(-120000);
+  await h.advanceTo(9000);
+  assert.ok(Math.abs(h.diagnostics().audioPlaybackDelayMs - before) < 2);
+  assert.equal(h.diagnostics().state, 'NORMAL');
+});
+
+for (const remoteClockOffsetMs of [-86400000, 86400000]) {
+  test(`real delayed audio still warns with sender clock offset ${remoteClockOffsetMs} ms`, async () => {
+    const h = harness({ remoteClockOffsetMs });
+    scheduleStream(h, 'audio', 40, 3100); scheduleStream(h, 'video', 40, 30);
+    await h.advanceTo(18000);
+    const d = h.diagnostics();
+    assert.equal(d.state, 'AUDIO_DELAYED');
+    assert.ok(d.audioPlaybackDelayMs > 3000);
+    assert.ok(d.videoPlaybackDelayMs < 1000);
+    assert.equal(h.byId('remoteAudio').pauseCalls, 0);
+    assert.equal(h.byId('replayVideo').pauseCalls, 0);
+    assert.equal(h.byId('playbackDelayMessage').textContent,
+      `Audio is delayed by network conditions. Audio delay: ${Math.round(d.audioPlaybackDelayMs)} ms.`);
+  });
+}

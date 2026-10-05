@@ -424,11 +424,12 @@
   // One instance owns one element, inbox, MediaSource, append operation and playhead.
   // No method reads the other stream or the delay monitor.
   class MediaPlaybackPipeline {
-    constructor(kind, element, mimeType, onState) {
+    constructor(kind, element, mimeType, onState, clock) {
       this.kind = kind;
       this.element = element;
       this.mimeType = mimeType;
       this.onState = onState;
+      this.clock = clock;
       this.pending = new Map();
       this.next = 0;
       this.queuedBytes = 0;
@@ -486,7 +487,7 @@
         this.fail(new Error(`Playback queue limit exceeded at chunk ${chunk.index}`));
         return false;
       }
-      chunk = { ...chunk, duration, queuedAtEpochMs: Date.now() };
+      chunk = { ...chunk, duration, queuedAtCallTimeMs: this.clock() };
       this.pending.set(chunk.index, chunk);
       this.queuedBytes += chunk.binary.byteLength;
       this.queuedDurationMs += duration;
@@ -504,7 +505,7 @@
       const operation = this.operation;
       this.operation = null;
       if (operation?.type === 'append') {
-        const { chunk, start, appendedAtEpochMs } = operation;
+        const { chunk, start, appendedAtCallTimeMs } = operation;
         this.pending.delete(chunk.index);
         this.next++;
         this.queuedBytes -= chunk.binary.byteLength;
@@ -513,15 +514,15 @@
         const ranges = this.buffer.buffered;
         const mediaStartTime = ranges.length ? Math.max(start, ranges.start(0)) : start;
         if (end > mediaStartTime) {
-          // createdAtEpochMs is stamped by dataavailable at the END of capture.
-          // Normalize it to the start before interpolating along the MSE interval.
+          // Capture times are relative to the sender's recording start, so device
+          // wall-clock offsets never enter the playing-media age calculation.
           this.timeline.push({
             index: chunk.index, mediaStartTime, mediaEndTime: end,
-            creationTime: chunk.createdAtEpochMs,
-            captureStartEpochMs: chunk.createdAtEpochMs - chunk.duration,
-            receivedAtEpochMs: chunk.arrivedAtEpochMs,
-            decryptedAtEpochMs: chunk.decryptedAtEpochMs,
-            queuedAtEpochMs: chunk.queuedAtEpochMs, appendedAtEpochMs
+            creationTime: chunk.createdAtCallTimeMs,
+            captureStartTimeMs: chunk.senderStartTimeMs,
+            receivedAtCallTimeMs: chunk.arrivedAtCallTimeMs,
+            decryptedAtCallTimeMs: chunk.decryptedAtCallTimeMs,
+            queuedAtCallTimeMs: chunk.queuedAtCallTimeMs, appendedAtCallTimeMs
           });
         }
         this.lastAppended = this.timeline[this.timeline.length - 1] || null;
@@ -555,7 +556,7 @@
         }
         const chunk = this.pending.get(this.next);
         if (!chunk || this.bufferedEnd() - this.element.currentTime >= MAX_BUFFERED_AHEAD_SECONDS) return;
-        this.operation = { type: 'append', chunk, start: this.bufferedEnd(), appendedAtEpochMs: Date.now() };
+        this.operation = { type: 'append', chunk, start: this.bufferedEnd(), appendedAtCallTimeMs: this.clock() };
         this.buffer.appendBuffer(chunk.binary);
       } catch (error) { this.fail(error); }
     }
@@ -580,15 +581,15 @@
 
     getCurrentPlaybackCreationTime() {
       const entry = this.getPlayingMetadata();
-      if (!entry || !Number.isFinite(entry.captureStartEpochMs)) return null;
+      if (!entry || !Number.isFinite(entry.captureStartTimeMs)) return null;
       const offset = Math.min(entry.mediaEndTime - entry.mediaStartTime,
         Math.max(0, this.element.currentTime - entry.mediaStartTime));
-      return entry.captureStartEpochMs + offset * 1000;
+      return entry.captureStartTimeMs + offset * 1000;
     }
 
-    getPlaybackDelayMs(now = Date.now()) {
+    getPlaybackDelayMs(now = this.clock()) {
       const creationTime = this.getCurrentPlaybackCreationTime();
-      return creationTime === null ? null : now - creationTime;
+      return creationTime === null ? null : Math.max(0, now - creationTime);
     }
 
     getBufferedAheadMs() {
@@ -600,7 +601,7 @@
       return 0;
     }
 
-    getDiagnostics(now = Date.now()) {
+    getDiagnostics(now = this.clock()) {
       return {
         playbackDelayMs: this.getPlaybackDelayMs(now),
         currentPlaybackPosition: this.element.currentTime,
@@ -668,7 +669,7 @@
   class CallDelayMonitor {
     constructor() { this.audioDelayed = false; this.videoDelayed = false; }
 
-    evaluate(audio, video, now = Date.now()) {
+    evaluate(audio, video, now) {
       const audioPlaybackDelayMs = audio.getPlaybackDelayMs(now);
       const videoPlaybackDelayMs = video?.getPlaybackDelayMs(now) ?? null;
       const delayed = (previous, delay) => delay !== null
@@ -691,9 +692,41 @@
       this.playbackFinished = false;
       this.videoDisabled = false;
       this.monitor = new CallDelayMonitor();
-      this.audio = new MediaPlaybackPipeline('audio', audio, types.audio, () => this.trackStateChanged());
-      this.video = new MediaPlaybackPipeline('video', video, types.video, () => this.trackStateChanged());
+      // A provisional origin supports receiving while START is in flight. Local
+      // recording establishes the actual origin before publishing its first chunk.
+      this.callStartTime = performance.now();
+      this.clock = () => Math.max(0, performance.now() - this.callStartTime);
+      this.audio = new MediaPlaybackPipeline('audio', audio, types.audio, () => this.trackStateChanged(), this.clock);
+      this.video = new MediaPlaybackPipeline('video', video, types.video, () => this.trackStateChanged(), this.clock);
       this.monitorTimer = setInterval(() => this.observe(), PLAYBACK_MONITOR_INTERVAL_MS);
+      this.observe();
+    }
+
+    toCallTime(epochMs) {
+      return Number.isFinite(epochMs) ? epochMs - performance.timeOrigin - this.callStartTime : null;
+    }
+
+    setCallStartTime(time) {
+      const shift = this.callStartTime - time;
+      this.callStartTime = time;
+      // Preserve early arrivals when recording starts after the peer begins sending.
+      const shiftTimes = (entry, keys) => {
+        for (const key of keys) if (Number.isFinite(entry[key])) entry[key] += shift;
+      };
+      for (const track of [this.audio, this.video]) {
+        for (const chunk of track.pending.values()) {
+          shiftTimes(chunk, ['arrivedAtCallTimeMs', 'decryptedAtCallTimeMs', 'queuedAtCallTimeMs']);
+        }
+        for (const entry of track.timeline) {
+          shiftTimes(entry, ['receivedAtCallTimeMs', 'decryptedAtCallTimeMs', 'queuedAtCallTimeMs', 'appendedAtCallTimeMs']);
+        }
+        if (track.operation) shiftTimes(track.operation, ['appendedAtCallTimeMs']);
+      }
+      for (const timings of Object.values(remoteChunkTimings)) {
+        for (const entry of timings.values()) {
+          shiftTimes(entry, ['arrivedAtCallTimeMs', 'decryptedAtCallTimeMs', 'estimatedDeliveryDelayMs']);
+        }
+      }
       this.observe();
     }
 
@@ -713,7 +746,7 @@
 
     observe() {
       if (this.closed) return;
-      const now = Date.now();
+      const now = this.clock();
       this.diagnostics = {
         ...this.monitor.evaluate(this.audio, this.videoDisabled ? null : this.video, now),
         audio: this.audio.getDiagnostics(now), video: this.video.getDiagnostics(now)
@@ -727,7 +760,7 @@
         : 'Video is delayed by network conditions.';
       ui.disableVideo.hidden = state !== 'VIDEO_DELAYED' || this.videoDisabled;
       const describe = (name, data) => `${name}: delay ${metric(data.playbackDelayMs)} · queue ${data.queueLength} / ${Math.round(data.queuedDurationMs)} ms · ahead ${Math.round(data.bufferedAheadMs)} ms · position ${data.currentPlaybackPosition.toFixed(2)}s${data.waitingForIndex === null ? '' : ` · waiting for chunk ${data.waitingForIndex}`}${data.failure ? ` · failed: ${data.failure}` : ''}`;
-      ui.diagnostics.textContent = `${describe('AUDIO', audio)} | ${describe('VIDEO', video)} | A/V delay difference ${metric(avDelayDifferenceMs)} · clocks uncorrected`;
+      ui.diagnostics.textContent = `${describe('AUDIO', audio)} | ${describe('VIDEO', video)} | A/V delay difference ${metric(avDelayDifferenceMs)} · call-relative timing`;
       const failures = ['audio', 'video'].filter(kind => this[kind].failure);
       ui.caption.textContent = failures.length
         ? failures.map(kind => `${kind} playback stopped: ${this[kind].failure}`).join('. ')
@@ -1269,6 +1302,7 @@
     const audioTrack = requireTrack(mediaStream.getAudioTracks()[0], 'Microphone track is unavailable');
     const videoTrack = requireTrack(canvasStream?.getVideoTracks()[0], 'Video track is unavailable');
     startedAt = performance.now();
+    player?.setCallStartTime(startedAt);
     recording = true;
     // Kept after recording stops: the peer's buffered chunks still refer to our audio.
     echoReference = echoNode ? new LocalEchoReference(recorderSession.chunks.audio) : null;
@@ -1473,16 +1507,16 @@
 
   function receiveRemoteChunk(kind, order, payload, timing) {
     if (!player || player.closed || (kind !== 'audio' && kind !== 'video') || player[kind].closed) return;
-    // Start/end are relative to the sender's recording start. Creation is stamped at
-    // dataavailable (capture end). All epoch timestamps are milliseconds, uncorrected
-    // for sender/receiver clock skew: no offset is established by the call protocol.
+    // Sender capture times and receiver delivery times use their respective call
+    // starts. The legacy epoch creation field is retained only for wire compatibility.
+    const arrivedAtCallTimeMs = player.toCallTime(timing.arrivedAtEpochMs);
     const metadata = {
       senderStartTimeMs: timing.senderStartTimeMs,
       senderEndTimeMs: timing.senderEndTimeMs,
-      createdAtEpochMs: timing.createdAtEpochMs,
-      arrivedAtEpochMs: timing.arrivedAtEpochMs,
-      decryptedAtEpochMs: timing.decryptedAtEpochMs,
-      estimatedDeliveryDelayMs: timing.arrivedAtEpochMs - timing.createdAtEpochMs,
+      createdAtCallTimeMs: timing.senderEndTimeMs,
+      arrivedAtCallTimeMs,
+      decryptedAtCallTimeMs: player.toCallTime(timing.decryptedAtEpochMs),
+      estimatedDeliveryDelayMs: arrivedAtCallTimeMs === null ? null : arrivedAtCallTimeMs - timing.senderEndTimeMs,
       playStart: timing.playStart,
       playEnd: timing.playEnd
     };
