@@ -150,8 +150,13 @@
                 </fieldset>
             </div>
 
+            <div id="progressBarContainer" style="display: none; width: 100%" role="status" aria-live="polite">
+                <progress id="uploadProgress" value="0" max="100" style="width: 100%" aria-label="Upload progress"></progress>
+                <span id="uploadProgressPercentage">0%</span>
+            </div>
+
             <div id="selectFilesContainer">
-                <fieldset class="file-share-fieldset upload-panel">
+                <fieldset id="selectFilesSection" class="file-share-fieldset upload-panel">
                     <legend class="file-share-legend">Select files</legend>
                     <div id="selectFilesSubContainer">
                         <div id="dropZone" class="drop-zone multi-line-text">
@@ -177,10 +182,6 @@
                 <textarea class="tb-copy-past-memo"
                           id="toolBarPasteArea" tabindex="-1" rows="1" cols="100" spellcheck="false" aria-label="Paste content to share"></textarea>
             </div>
-            <div id="progressBarContainer" style="display: none; width: 100%" role="status" aria-live="polite">
-                <progress id="uploadProgress" value="0" max="100" style="width: 100%" aria-label="Upload progress"></progress>
-                <span id="uploadProgressPercentage">0%</span>
-            </div>
         </div>
         <div class="hidden-element">
             <button id="fileTransferProgressBtn" class="transfer-files-button transfer-files-button-size"
@@ -192,7 +193,7 @@
 
 <script src="js/datetime-picker.js?v=<?= time(); ?>"></script>
 <script src="js/url-input.js?v=<?= time(); ?>"></script>
-<script src="js/file.sharing.min.js?v=description-password-9"></script>
+<script src="js/file.sharing.min.js?v=protected-image-remote-progress-10"></script>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>

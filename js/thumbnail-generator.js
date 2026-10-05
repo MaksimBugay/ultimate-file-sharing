@@ -57,41 +57,51 @@ ThumbnailGenerator.buildAndSaveThumbnail = async function (
     type,
     readMeText,
     saveInCloudProcessor,
-    expiredAt
+    expiredAt,
+    passwordProtected = false
 ) {
     const thumbnailName = buildThumbnailName(binaryId);
     const thumbnailId = buildThumbnailId(binaryId);
     let thumbnailBlob;
-    try {
-        if (isImageContentType(type)) {
-            thumbnailBlob = await createImageThumbnailFromSource(
-                source,
-                type,
-                300,
-                null,
-                'image/png',
-                0.8
-            );
-        } else if (isVideoContentType(type)) {
-            thumbnailBlob = await createVideoThumbnailFromSource(
-                source,
-                type,
-                300,
-                null,
-                2,
-                'image/png',
-                0.8
+    if (passwordProtected && isImageContentType(type)) {
+        // Preserve the placeholder bytes exactly; never render protected images to canvas.
+        const response = await fetch('https://secure.fileshare.ovh/images/protected-image-thumbnail.png');
+        if (!response.ok) {
+            throw new Error(`Cannot load protected image thumbnail: HTTP ${response.status}`);
+        }
+        thumbnailBlob = await response.blob();
+    } else {
+        try {
+            if (isImageContentType(type)) {
+                thumbnailBlob = await createImageThumbnailFromSource(
+                    source,
+                    type,
+                    300,
+                    null,
+                    'image/png',
+                    0.8
+                );
+            } else if (isVideoContentType(type)) {
+                thumbnailBlob = await createVideoThumbnailFromSource(
+                    source,
+                    type,
+                    300,
+                    null,
+                    2,
+                    'image/png',
+                    0.8
+                );
+            }
+        } catch (err) {
+            console.error(`Cannot create thumbnail for file ${name}: ${err.message}`);
+            //alert(`Cannot create thumbnail for file ${file.name}: ${err.message}`);
+        }
+        if (!thumbnailBlob) {
+            thumbnailBlob = await createDefaultTextThumbnail(
+                readMeText,
+                ThumbnailGenerator.thumbnailBackgroundImage
             );
         }
-    } catch (err) {
-        console.error(`Cannot create thumbnail for file ${name}: ${err.message}`);
-        //alert(`Cannot create thumbnail for file ${file.name}: ${err.message}`);
-    }
-    if (!thumbnailBlob) {
-        thumbnailBlob = await createDefaultTextThumbnail(
-            readMeText,
-            ThumbnailGenerator.thumbnailBackgroundImage
-        );
     }
     if (typeof saveInCloudProcessor === 'function') {
         await saveInCloudProcessor(

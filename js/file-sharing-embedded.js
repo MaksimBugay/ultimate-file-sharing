@@ -42,6 +42,7 @@ const passwordInputContainer = document.getElementById("passwordInputContainer")
 const readMeContainer = document.getElementById("readMeContainer");
 const remoteStreamUrlSection = document.getElementById('remoteStreamUrlSection');
 const passwordInput = document.getElementById("passwordInput");
+const selectFilesSection = document.getElementById('selectFilesSection');
 const selectFilesBtn = document.getElementById('selectFilesBtn');
 const fileTransferProgressBtn = document.getElementById('fileTransferProgressBtn');
 const readMeTextMemo = document.getElementById("readMeTextMemo");
@@ -66,16 +67,23 @@ FileSharing.progressBarWidget = new ProgressBarWidget(
 FileSharing.defaultReadMeText = "Default description";
 
 async function shareContent(processContentFunction) {
+    if (remoteStreamUrlSection.disabled) {
+        return;
+    }
     fileTransferProgressBtn.style.display = 'block';
     selectFilesBtn.disabled = true;
     dropZone.disabled = true;
     dropZone.classList.add('disabled-zone');
 
-    if (typeof processContentFunction === 'function') {
-        await processContentFunction();
+    try {
+        if (typeof processContentFunction === 'function') {
+            await processContentFunction();
+        }
+    } catch (error) {
+        showErrorMsg(`Failed file sharing attempt: ${error.message}`, null);
+    } finally {
+        await afterAllCleanup(null, false);
     }
-
-    await afterAllCleanup(null, false);
 }
 
 async function afterAllCleanup(binaryId, withPageRefresh) {
@@ -483,19 +491,24 @@ document.addEventListener('DOMContentLoaded', function () {
             async function (url) {
                 disableRemoteStreamUrlSection();
                 let dataIsReady = false;
-                showInfiniteProgress(FileSharing.progressBarWidget, () => dataIsReady);
-                await requestWakeLock(FileSharing);
-                const protectionAttributes = getProtectionAttributes();
-                const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
-                const publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(
-                    url,
-                    forHuman,
-                    getBinaryLinkExpirationTime()
-                );
-                dataIsReady = true;
-                remoteStreamUrlInput.clear();
-                enableRemoteStreamUrlSection();
-                releaseWakeLock(FileSharing);
+                const progressPromise = showInfiniteProgress(FileSharing.progressBarWidget, () => dataIsReady);
+                let publicUrl;
+                try {
+                    await requestWakeLock(FileSharing);
+                    const protectionAttributes = getProtectionAttributes();
+                    const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
+                    publicUrl = await sendDownloadRemoteStreamRequestToBinaryProxy(
+                        url,
+                        forHuman,
+                        getBinaryLinkExpirationTime()
+                    );
+                } finally {
+                    dataIsReady = true;
+                    await progressPromise;
+                    remoteStreamUrlInput.clear();
+                    enableRemoteStreamUrlSection();
+                    releaseWakeLock(FileSharing);
+                }
                 if (publicUrl) {
                     const dialogId = uuid.v4().toString();
                     const dialogResult = await CallableFuture.callAsynchronously(
@@ -571,11 +584,17 @@ async function showInfiniteProgress(progressBarWidget, stopWhenFunction) {
 }
 
 function enableRemoteStreamUrlSection() {
-    document.getElementById('remoteStreamUrlSection').disabled = false;
+    remoteStreamUrlSection.disabled = false;
+    selectFilesSection.style.display = '';
+    selectFilesSection.disabled = false;
+    toolBarPasteArea.disabled = false;
 }
 
 function disableRemoteStreamUrlSection() {
-    document.getElementById('remoteStreamUrlSection').disabled = true;
+    remoteStreamUrlSection.disabled = true;
+    selectFilesSection.style.display = 'none';
+    selectFilesSection.disabled = true;
+    toolBarPasteArea.disabled = true;
 }
 
 //==================================File sharing implementation=========================================================
@@ -589,7 +608,8 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
         file.type,
         `name = ${file.name}; size = ${calculateDisplaySizeMb(file.size)} Mb; content-type = ${file.type}`,
         FileSharing.saveInCloudProcessor,
-        expiredAt
+        expiredAt,
+        Boolean(password)
     );
     return await FileSharing.saveContentInCloud(
         binaryId,
@@ -615,7 +635,8 @@ FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, fo
         type,
         `name = ${name}; size = ${calculateDisplaySizeMb(blob.size)} Mb; content-type = ${type}`,
         FileSharing.saveInCloudProcessor,
-        expiredAt
+        expiredAt,
+        Boolean(password)
     );
     return await FileSharing.saveBlobWithIdInCloud(
         binaryId,
