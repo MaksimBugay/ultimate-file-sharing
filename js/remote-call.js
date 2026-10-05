@@ -1629,47 +1629,95 @@
     }
 
     function finishDrag(event) {
-      if (!pointer || (event && event.pointerId !== pointer.id)) return;
+      if (!pointer) return;
       const current = pointer;
       pointer = null;
-      suppressClick = event?.type === 'pointerup' && current.moved;
+      suppressClick = current.moved && (event?.type === 'pointerup' || event?.type === 'touchend');
       shell.style.cursor = '';
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', finishDrag);
-      window.removeEventListener('pointercancel', finishDrag);
-      if (shell.hasPointerCapture(current.id)) shell.releasePointerCapture(current.id);
+      window.removeEventListener('pointermove', movePointer);
+      window.removeEventListener('pointerup', finishPointer);
+      window.removeEventListener('pointercancel', finishPointer);
+      window.removeEventListener('touchmove', moveTouch, true);
+      window.removeEventListener('touchend', finishTouch, true);
+      window.removeEventListener('touchcancel', finishTouch, true);
+      if (current.kind === 'pointer' && shell.hasPointerCapture(current.id)) {
+        shell.releasePointerCapture(current.id);
+      }
     }
 
-    function move(event) {
-      if (!pointer || event.pointerId !== pointer.id) return;
+    function move(point, event) {
       if (!pointer.moved) {
-        if (Math.hypot(event.clientX - pointer.startX, event.clientY - pointer.startY) < 6) return;
+        if (Math.hypot(point.clientX - pointer.startX, point.clientY - pointer.startY) < 6) return;
         pointer.moved = true;
-        shell.setPointerCapture(pointer.id);
+        if (pointer.kind === 'pointer') shell.setPointerCapture(pointer.id);
         shell.style.cursor = 'grabbing';
       }
-      event.preventDefault();
+      if (event.cancelable) event.preventDefault();
       const bounds = stage.getBoundingClientRect();
-      place(event.clientX - bounds.left - pointer.offsetX, event.clientY - bounds.top - pointer.offsetY);
+      place(point.clientX - bounds.left - pointer.offsetX, point.clientY - bounds.top - pointer.offsetY);
     }
 
-    shell.addEventListener('pointerdown', event => {
-      if (pointer || !event.isPrimary || event.button !== 0
-        || event.target.closest('a, button, input, select, textarea, [contenteditable="true"]')) return;
+    function beginDrag(point, event, kind, id) {
+      if (pointer || event.target.closest('a, button, input, select, textarea, [contenteditable="true"]')) {
+        return false;
+      }
       suppressClick = false;
       const bounds = shell.getBoundingClientRect();
       pointer = {
-        id: event.pointerId, startX: event.clientX, startY: event.clientY,
-        offsetX: event.clientX - bounds.left, offsetY: event.clientY - bounds.top, moved: false
+        kind, id, startX: point.clientX, startY: point.clientY,
+        offsetX: point.clientX - bounds.left, offsetY: point.clientY - bounds.top, moved: false
       };
+      return true;
+    }
+
+    function movePointer(event) {
+      if (pointer?.kind === 'pointer' && event.pointerId === pointer.id) move(event, event);
+    }
+
+    function finishPointer(event) {
+      if (pointer?.kind === 'pointer' && event.pointerId === pointer.id) finishDrag(event);
+    }
+
+    function moveTouch(event) {
+      if (pointer?.kind !== 'touch') return;
+      if (event.touches.length !== 1) {
+        finishDrag();
+        return;
+      }
+      const touch = Array.from(event.touches).find(item => item.identifier === pointer.id);
+      if (touch) move(touch, event);
+    }
+
+    function finishTouch(event) {
+      if (pointer?.kind !== 'touch'
+        || !Array.from(event.changedTouches).some(item => item.identifier === pointer.id)) return;
+      // Prevent a drag from generating a summary click; leave ordinary taps untouched.
+      if (pointer.moved && event.cancelable) event.preventDefault();
+      finishDrag(event);
+    }
+
+    shell.addEventListener('pointerdown', event => {
+      // Touch has its own non-passive handlers, including on browsers without Pointer Events.
+      if (event.pointerType === 'touch' || !event.isPrimary || event.button !== 0
+        || !beginDrag(event, event, 'pointer', event.pointerId)) return;
       // Capture only after movement, so an ordinary summary tap still toggles details.
-      window.addEventListener('pointermove', move, { passive: false });
-      window.addEventListener('pointerup', finishDrag);
-      window.addEventListener('pointercancel', finishDrag);
+      window.addEventListener('pointermove', movePointer, { passive: false });
+      window.addEventListener('pointerup', finishPointer);
+      window.addEventListener('pointercancel', finishPointer);
     });
-    // Touch initially captures the child; its capture loss must not end the tile drag.
+    shell.addEventListener('touchstart', event => {
+      if (event.touches.length !== 1) {
+        if (pointer?.kind === 'touch') finishDrag();
+        return;
+      }
+      const touch = event.touches[0];
+      if (!beginDrag(touch, event, 'touch', touch.identifier)) return;
+      window.addEventListener('touchmove', moveTouch, { capture: true, passive: false });
+      window.addEventListener('touchend', finishTouch, { capture: true, passive: false });
+      window.addEventListener('touchcancel', finishTouch, { capture: true, passive: false });
+    }, { passive: false });
     shell.addEventListener('lostpointercapture', event => {
-      if (event.target === shell) finishDrag(event);
+      if (event.target === shell) finishPointer(event);
     });
     shell.addEventListener('click', event => {
       if (!suppressClick) return;
