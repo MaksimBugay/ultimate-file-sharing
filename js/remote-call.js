@@ -718,13 +718,14 @@
         ...this.monitor.evaluate(this.audio, this.videoDisabled ? null : this.video, now),
         audio: this.audio.getDiagnostics(now), video: this.video.getDiagnostics(now)
       };
-      const { state, audio, video, avDelayDifferenceMs } = this.diagnostics;
+      const { state, audio, video, audioPlaybackDelayMs, avDelayDifferenceMs } = this.diagnostics;
       ui.remotePanel.dataset.playbackState = state;
       ui.delayWarning.hidden = state === 'NORMAL';
-      ui.delayMessage.textContent = state === 'AUDIO_DELAYED'
-        ? 'Audio is delayed by network conditions.' : 'Video is delayed by network conditions.';
-      ui.disableVideo.hidden = state !== 'VIDEO_DELAYED' || this.videoDisabled;
       const metric = value => value === null ? 'unknown' : `${Math.round(value)} ms`;
+      ui.delayMessage.textContent = state === 'AUDIO_DELAYED'
+        ? `Audio is delayed by network conditions. Audio delay: ${metric(audioPlaybackDelayMs)}.`
+        : 'Video is delayed by network conditions.';
+      ui.disableVideo.hidden = state !== 'VIDEO_DELAYED' || this.videoDisabled;
       const describe = (name, data) => `${name}: delay ${metric(data.playbackDelayMs)} · queue ${data.queueLength} / ${Math.round(data.queuedDurationMs)} ms · ahead ${Math.round(data.bufferedAheadMs)} ms · position ${data.currentPlaybackPosition.toFixed(2)}s${data.waitingForIndex === null ? '' : ` · waiting for chunk ${data.waitingForIndex}`}${data.failure ? ` · failed: ${data.failure}` : ''}`;
       ui.diagnostics.textContent = `${describe('AUDIO', audio)} | ${describe('VIDEO', video)} | A/V delay difference ${metric(avDelayDifferenceMs)} · clocks uncorrected`;
       const failures = ['audio', 'video'].filter(kind => this[kind].failure);
@@ -1606,6 +1607,7 @@
     const stage = shell?.parentElement;
     if (!stage) return;
     const incomingLabel = document.getElementById('counterpartName');
+    const selfViewToggle = shell.querySelector('summary');
     let pointer = null;
     let position = null;
     let suppressClick = false;
@@ -1629,11 +1631,18 @@
       if (shell.open) {
         shell.style.width = '';
         shell.style.height = '';
+        if (incomingLabel) incomingLabel.style.width = '';
       }
       if (!shell.open && incomingLabel) {
         const bounds = stage.getBoundingClientRect();
+        // Measure both labels at their natural widths before assigning a shared size.
+        incomingLabel.style.width = '';
+        selfViewToggle.style.width = 'max-content';
         const labelBounds = incomingLabel.getBoundingClientRect();
-        shell.style.width = `${labelBounds.width}px`;
+        const width = Math.ceil(Math.max(labelBounds.width, selfViewToggle.getBoundingClientRect().width));
+        selfViewToggle.style.width = '';
+        incomingLabel.style.width = `${width}px`;
+        shell.style.width = `${width}px`;
         shell.style.height = `${labelBounds.height}px`;
         shell.style.left = `${Math.max(0, labelBounds.left - bounds.left)}px`;
         shell.style.top = `${labelBounds.bottom - bounds.top + 8}px`;
