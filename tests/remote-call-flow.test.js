@@ -46,6 +46,12 @@ function makePage(urlString) {
     addEventListener(type, fn) { windowHandlers.set(type, fn); }
   };
   page.window = window;
+  page.mediaFrames = new Map();
+  page.streamFailures = [];
+  page.emitChannel = (kind, fields) => windowHandlers.get('message')({
+    source: page.mediaFrames.get(kind).contentWindow, origin: url.origin,
+    data: { kind, ...fields }
+  });
   const document = {
     visibilityState: 'visible',
     getElementById: byId,
@@ -67,6 +73,7 @@ function makePage(urlString) {
         queueMicrotask(() => {
           iframe.emit('load');
           const kind = new URL(iframe.src).searchParams.get('kind');
+          page.mediaFrames.set(kind, iframe);
           const client = new ClientFilter('remote-call', 'anonymous-sharing', `media-${++nextId}`, `REMOTE-CALL-${kind.toUpperCase()}`);
           const alias = `alias:${client.hashCode()}`;
           aliases.set(alias, client);
@@ -110,7 +117,8 @@ function makePage(urlString) {
     async start() { page.started = true; },
     async stop() { return { audio: 0, video: 0 }; },
     async abort() { return { audio: 0, video: 0 }; },
-    setPeerMimeTypes() {}, receiveChunk() {}, finishRemote() {}, markCallEnded() {}
+    setPeerMimeTypes() {}, receiveChunk() {}, finishRemote() {}, markCallEnded() {},
+    failRemoteStream(kind, message) { page.streamFailures.push({ kind, message }); }
   };
   const context = vm.createContext({
     window, document, navigator: { userAgent: 'Test', maxTouchPoints: 0 },
@@ -305,4 +313,18 @@ test('turning encryption off also turns extra security off', async () => {
   assert.equal(settings.get('extra-security'), '0');
   assert.equal(caller.byId('extraSecurity').checked, false);
   assert.equal(caller.byId('extraSecurity').disabled, true);
+});
+
+
+test('a corrupt received video chunk stops only remote video and preserves the connected call', async () => {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  const receiver = makePage(caller.byId('jointLink').value);
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => caller.started && receiver.started, 'call');
+  receiver.emitChannel('video', { type: 'remote-call:error', scope: 'receive', message: 'Video authentication failed' });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  assert.deepEqual(receiver.streamFailures, [{ kind: 'video', message: 'Video authentication failed' }]);
+  assert.equal(receiver.signals.some(signal => signal.type === 'STOP'), false);
+  assert.equal(caller.signals.some(signal => signal.type === 'STOP'), false);
 });

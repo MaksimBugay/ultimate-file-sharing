@@ -355,6 +355,11 @@
       background: #050910;
       object-fit: contain;
     }
+    .remote-panel[data-playback-state="VIDEO_DELAYED"] { border: 3px solid #409cff; }
+    .remote-panel[data-playback-state="AUDIO_DELAYED"] { border: 3px solid #ff5252; }
+    .playback-delay-warning { padding: 8px 14px; background: #172334; }
+    .playback-delay-warning button { margin-left: 10px; }
+    .remote-video-placeholder { display: grid; height: 100%; place-items: center; color: #afc0d2; }
     .remote-panel { display: flex; flex-direction: column; height: 100%; }
     .remote-panel .video-frame { flex: 1 1 auto; min-height: 0; }
     .remote-panel video { height: 100%; min-height: 0; aspect-ratio: auto; }
@@ -579,12 +584,18 @@
     <button id="verifyCallButton" type="button">Codes match</button>
   </section>
   <div class="viewport-stage">
-    <section class="panel remote-panel" aria-labelledby="counterpartName">
+    <section id="remotePanel" class="panel remote-panel" aria-labelledby="counterpartName">
       <div class="video-frame">
         <h2 id="counterpartName">Incoming call</h2>
-        <video id="replayVideo" playsinline></video>
+        <video id="replayVideo" muted playsinline></video>
+        <audio id="remoteAudio"></audio>
+        <div id="remoteVideoPlaceholder" class="remote-video-placeholder" hidden>Remote video disabled</div>
       </div>
-      <p id="playerCaption" class="caption">Incoming media appears after the first audio and video chunks arrive.</p>
+      <div id="playbackDelayWarning" class="playback-delay-warning" role="status" aria-live="polite" hidden>
+        <span id="playbackDelayMessage"></span>
+        <button id="disableRemoteVideo" type="button" class="secondary" hidden>Disable video</button>
+      </div>
+      <p id="playerCaption" class="caption">Incoming audio and video start independently as their chunks arrive.</p>
       <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
         <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
         <button id="muteReplayButton" type="button" class="secondary" aria-pressed="false">Mute audio</button>
@@ -630,14 +641,14 @@
         <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
       </dl>
       <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming chunks play through one MediaSource with separate audio and video buffers. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 0.5 seconds. Recording needs HTTPS or localhost.</p>
+      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming audio and video play independently through separate MediaSources. A blue border indicates delayed video and offers Disable video; red indicates delayed audio. Delay estimates include any difference between the devices’ clocks. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 0.5 seconds. Recording needs HTTPS or localhost.</p>
     </div>
   </details>
 </main>
 <script src="js/pushca.min.js?v=remote-call-10" defer></script>
-<script src="js/remote-call-connection.js?v=10" defer></script>
+<script src="js/remote-call-connection.js?v=11" defer></script>
 <script src="js/remote-call-conversation.js?v=1" defer></script>
-<script src="js/remote-call.js?v=4" defer></script>
+<script src="js/remote-call.js?v=5" defer></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
   window.dataLayer = window.dataLayer || [];

@@ -7,7 +7,13 @@
     && requestedChunkSeconds >= 0.1 && requestedChunkSeconds <= 60
     ? Math.round(requestedChunkSeconds * 1000) : 500;
   const WINDOW_MS = CHUNK_MS;
-  const INITIAL_COMMON_BUFFER_SECONDS = 0.5;
+  const PLAYBACK_DELAY_WARNING_MS = 3000;
+  const PLAYBACK_DELAY_RECOVERY_MS = 2500;
+  const PLAYBACK_MONITOR_INTERVAL_MS = 250;
+  const MAX_PLAYBACK_QUEUED_DURATION_MS = 30000;
+  const MAX_PLAYBACK_QUEUED_CHUNKS = 256;
+  // Existing append ceiling, not a startup target: play as soon as data is available.
+  const MAX_BUFFERED_AHEAD_SECONDS = 12;
   const MAX_RECORDING_BYTES = 512 * 1048576;
   // Opus needs decoded packets ahead of a snippet before its output settles.
   const ECHO_REFERENCE_PREROLL_MS = 120;
@@ -18,6 +24,12 @@
   const ui = {
     camera: document.getElementById('liveVideo'),
     video: document.getElementById('replayVideo'),
+    audio: document.getElementById('remoteAudio'),
+    remotePanel: document.getElementById('remotePanel'),
+    delayWarning: document.getElementById('playbackDelayWarning'),
+    delayMessage: document.getElementById('playbackDelayMessage'),
+    disableVideo: document.getElementById('disableRemoteVideo'),
+    videoPlaceholder: document.getElementById('remoteVideoPlaceholder'),
     cameraCaption: document.getElementById('cameraCaption'),
     echoCancellationStatus: document.getElementById('echoCancellationStatus'),
     extraEchoCancellation: document.getElementById('extraEchoCancellation'),
@@ -70,7 +82,6 @@
   let conversationStoppingPromise = null;
   let localReplayUrl = null;
   let localReplayActive = false;
-  let remoteLink = null;
   let remoteReceived = { audio: new Set(), video: new Set() };
   let remoteChunkTimings = { audio: new Map(), video: new Map() };
   let remoteFinalCounts = null;
@@ -153,58 +164,6 @@
   function requireTrack(track, message) {
     if (!track) throw new Error(message);
     return track;
-  }
-
-  // Queue chunks until the MSE receiver has room for them.
-  class LocalChunkLink {
-    constructor(receiver) {
-      this.receiver = receiver;
-      this.tracks = {
-        audio: { queue: [], ended: false, notified: false },
-        video: { queue: [], ended: false, notified: false }
-      };
-      this.closed = false;
-      this.pumpTimer = setInterval(() => this.flush(), 50);
-    }
-
-    publishChunk(chunk) {
-      const kind = chunk.mediaType.toLowerCase();
-      if (!this.tracks[kind] || this.closed) return;
-      this.tracks[kind].queue.push(chunk);
-      this.flush();
-    }
-
-    finishTrack(kind) {
-      if (!this.tracks[kind] || this.closed) return;
-      this.tracks[kind].ended = true;
-      this.flush();
-    }
-
-    flush() {
-      if (this.closed || this.receiver.closed) return;
-      try {
-        for (const kind of ['audio', 'video']) {
-          const track = this.tracks[kind];
-          let sent = 0;
-          while (sent < track.queue.length && this.receiver.receiveChunk(track.queue[sent])) sent++;
-          if (sent) track.queue.splice(0, sent);
-          if (track.ended && !track.queue.length && !track.notified) {
-            track.notified = true;
-            this.receiver.finishTrack(kind);
-          }
-        }
-      } catch (error) {
-        setStatus(`Chunk delivery failed: ${error.message}`, true);
-        this.close();
-      }
-    }
-
-    close() {
-      if (this.closed) return;
-      this.closed = true;
-      clearInterval(this.pumpTimer);
-      for (const track of Object.values(this.tracks)) track.queue.length = 0;
-    }
   }
 
   class CallRecorder {
@@ -462,323 +421,354 @@
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
-  class SourceBufferQueue {
-    constructor(sourceBuffer, video, maxQueuedBytes, onProgress, onError) {
-      this.buffer = sourceBuffer;
-      this.video = video;
-      this.maxQueuedBytes = maxQueuedBytes;
-      this.onProgress = onProgress;
-      this.onError = onError;
-      this.fragments = [];
+  // One instance owns one element, inbox, MediaSource, append operation and playhead.
+  // No method reads the other stream or the delay monitor.
+  class MediaPlaybackPipeline {
+    constructor(kind, element, mimeType, onState) {
+      this.kind = kind;
+      this.element = element;
+      this.mimeType = mimeType;
+      this.onState = onState;
+      this.pending = new Map();
+      this.next = 0;
       this.queuedBytes = 0;
-      this.operations = [];
-      this.trimQueued = false;
-      this.currentOperation = null;
-      this.closed = false;
-      this.onUpdateEnd = () => {
-        const completed = this.currentOperation;
-        this.currentOperation = null;
-        if (completed?.type === 'append') {
-          this.queuedBytes -= completed.bytes.byteLength;
-          completed.onAppended();
-        }
-        if (completed?.type === 'remove') this.trimQueued = false;
-        this.fill();
-        this.pump();
-        this.onProgress();
-      };
-      this.onBufferError = () => this.onError(new Error('MSE SourceBuffer error'));
-      sourceBuffer.addEventListener('updateend', this.onUpdateEnd);
-      sourceBuffer.addEventListener('error', this.onBufferError);
-    }
-
-    bufferedEnd() {
-      const ranges = this.buffer.buffered;
-      return ranges.length ? ranges.end(ranges.length - 1) : 0;
-    }
-
-    enqueue(bytes, onAppended) {
-      if (this.closed || this.queuedBytes + bytes.byteLength > this.maxQueuedBytes) return false;
-      this.fragments.push({ bytes, onAppended });
-      this.queuedBytes += bytes.byteLength;
-      return true;
-    }
-
-    fill() {
-      if (this.closed) return;
-      const ahead = this.bufferedEnd() - this.video.currentTime;
-      if (ahead < 12 && this.operations.length < 4 && this.fragments.length) {
-        this.operations.push({ type: 'append', ...this.fragments.shift() });
-      }
-      const ranges = this.buffer.buffered;
-      const cutoff = this.video.currentTime - 20;
-      if (!this.trimQueued && ranges.length && ranges.start(0) < cutoff - 10) {
-        this.operations.unshift({ type: 'remove', start: ranges.start(0), end: cutoff });
-        this.trimQueued = true;
-      }
-    }
-
-    pump() {
-      if (this.closed || this.buffer.updating || !this.operations.length) return;
-      const operation = this.operations.shift();
-      try {
-        this.currentOperation = operation;
-        if (operation.type === 'append') this.buffer.appendBuffer(operation.bytes);
-        else this.buffer.remove(operation.start, operation.end);
-      } catch (error) {
-        this.currentOperation = null;
-        this.onError(error);
-      }
-    }
-
-    idle() {
-      return !this.fragments.length && !this.operations.length && !this.buffer.updating;
-    }
-
-    close() {
-      this.closed = true;
-      this.fragments.length = 0;
-      this.operations.length = 0;
-      this.buffer.removeEventListener('updateend', this.onUpdateEnd);
-      this.buffer.removeEventListener('error', this.onBufferError);
-    }
-  }
-
-  class MseReplayPlayer {
-    constructor(video, types, onPlaybackEnd) {
-      this.video = video;
-      this.types = types;
-      this.onPlaybackEnd = onPlaybackEnd;
-      this.inbox = {
-        audio: { next: 0, pending: new Map(), bytes: 0, finished: false },
-        video: { next: 0, pending: new Map(), bytes: 0, finished: false }
-      };
-      this.mediaSource = new MediaSource();
-      this.url = URL.createObjectURL(this.mediaSource);
-      this.queues = null;
-      this.audioChunkEnds = [];
-      this.playingAudioChunk = null;
+      this.queuedDurationMs = 0;
+      this.maxQueuedBytes = (kind === 'audio' ? 8 : 32) * 1048576;
+      this.timeline = [];
+      this.operation = null;
       this.started = false;
-      this.syncHold = true;
+      this.finished = false;
       this.playbackFinished = false;
       this.closed = false;
+      this.failure = null;
+      this.playPending = false;
+      this.needsGesture = false;
       this.onOpen = () => this.open();
-      this.onTimeUpdate = () => this.progress();
+      this.onUpdateEnd = () => this.completeOperation();
+      this.onBufferError = () => this.fail(new Error('SourceBuffer error'));
+      this.onElementError = () => this.fail(new Error(element.error?.message || 'Media element error'));
+      this.onTimeUpdate = () => this.pump();
+      this.onEnded = () => this.finishPlayback();
+      this.mediaSource = new MediaSource();
       this.mediaSource.addEventListener('sourceopen', this.onOpen, { once: true });
-      video.addEventListener('timeupdate', this.onTimeUpdate);
-      this.progressTimer = setInterval(() => this.progress(), 50);
-      video.src = this.url;
+      element.addEventListener('timeupdate', this.onTimeUpdate);
+      element.addEventListener('ended', this.onEnded);
+      element.addEventListener('error', this.onElementError);
+      this.url = URL.createObjectURL(this.mediaSource);
+      element.src = this.url;
+      this.pumpTimer = setInterval(() => this.pump(), 100);
     }
 
     open() {
       if (this.closed) return;
       try {
-        this.queues = {
-          audio: new SourceBufferQueue(this.mediaSource.addSourceBuffer(this.types.audio), this.video,
-            8 * 1048576, () => this.progress(), error => this.fail(error)),
-          video: new SourceBufferQueue(this.mediaSource.addSourceBuffer(this.types.video), this.video,
-            32 * 1048576, () => this.progress(), error => this.fail(error))
-        };
-        this.progress();
-      } catch (error) {
-        this.fail(error);
+        this.buffer = this.mediaSource.addSourceBuffer(this.mimeType);
+        this.buffer.addEventListener('updateend', this.onUpdateEnd);
+        this.buffer.addEventListener('error', this.onBufferError);
+        this.pump();
+      } catch (error) { this.fail(error); }
+    }
+
+    enqueue(chunk) {
+      if (this.closed || this.playbackFinished) return false;
+      if (!Number.isSafeInteger(chunk.index) || chunk.index < 0
+        || !(chunk.binary instanceof Uint8Array)) {
+        this.fail(new Error('Invalid media chunk'));
+        return false;
       }
-    }
-
-    // This is the receiver entry point: each chunk may arrive independently and out of order.
-    receiveChunk(chunk) {
-      const accepted = this.ingestChunk(chunk);
-      if (accepted) this.progress();
-      return accepted;
-    }
-
-    ingestChunk(chunk) {
-      const kind = chunk?.mediaType?.toLowerCase();
-      if (!this.inbox[kind] || !Number.isSafeInteger(chunk.index) || chunk.index < 0
-        || !(chunk.binary instanceof Uint8Array)) throw new Error('Invalid media chunk');
-      const inbox = this.inbox[kind];
-      if (this.closed || inbox.finished) throw new Error('Media stream is closed');
-      if (chunk.index < inbox.next || inbox.pending.has(chunk.index)) return true;
-      const maxBytes = kind === 'audio' ? 8 * 1048576 : 32 * 1048576;
-      if (inbox.bytes + chunk.binary.byteLength > maxBytes) return false;
-      inbox.pending.set(chunk.index, chunk);
-      inbox.bytes += chunk.binary.byteLength;
-      this.flushOrdered(kind);
+      if (chunk.index < this.next || this.pending.has(chunk.index)) return true;
+      const duration = Math.max(0, chunk.senderEndTimeMs - chunk.senderStartTimeMs);
+      if (this.pending.size >= MAX_PLAYBACK_QUEUED_CHUNKS
+        || this.queuedBytes + chunk.binary.byteLength > this.maxQueuedBytes
+        || this.queuedDurationMs + duration > Math.max(MAX_PLAYBACK_QUEUED_DURATION_MS, duration)) {
+        // Continuation WebM chunks cannot safely be dropped. Fail this stream explicitly
+        // and release its resources instead of moving an unbounded backlog upstream.
+        this.fail(new Error(`Playback queue limit exceeded at chunk ${chunk.index}`));
+        return false;
+      }
+      chunk = { ...chunk, duration, queuedAtEpochMs: Date.now() };
+      this.pending.set(chunk.index, chunk);
+      this.queuedBytes += chunk.binary.byteLength;
+      this.queuedDurationMs += duration;
+      this.pump();
       return true;
     }
 
-    flushOrdered(kind) {
-      const queue = this.queues?.[kind];
-      if (!queue) return;
-      const inbox = this.inbox[kind];
-      while (inbox.pending.has(inbox.next)) {
-        const chunk = inbox.pending.get(inbox.next);
-        if (!queue.enqueue(chunk.binary, () => {
-          if (inbox.pending.delete(chunk.index)) inbox.bytes -= chunk.binary.byteLength;
-          if (kind === 'audio') this.recordAudioChunkEnd(chunk.index, queue.bufferedEnd());
-        })) break;
-        inbox.next++;
-      }
+    bufferedEnd() {
+      const ranges = this.buffer?.buffered;
+      return ranges?.length ? ranges.end(ranges.length - 1) : 0;
     }
 
-    // Chunk i holds the audio buffered after chunk i - 1 and up to its recorded end.
-    recordAudioChunkEnd(index, endSeconds) {
-      this.audioChunkEnds.push({ index, endMs: endSeconds * 1000 });
-      if (this.audioChunkEnds.length > 120) this.audioChunkEnds.shift();
-    }
-
-    // Returns the incoming audio chunk and media time being heard now, or null when
-    // nothing is audible, so the local recorder can tag its chunks with it.
-    updatePlayingAudioChunk() {
-      const video = this.video;
-      this.playingAudioChunk = null;
-      if (this.closed || !this.started || this.syncHold || video.paused || video.seeking
-        || video.muted || video.volume === 0
-        || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
-      const timeMs = video.currentTime * 1000;
-      const ranges = this.queues?.audio.buffer.buffered;
-      let audioBuffered = false;
-      for (let index = 0; index < (ranges?.length || 0); index++) {
-        if (ranges.start(index) * 1000 <= timeMs && timeMs < ranges.end(index) * 1000) {
-          audioBuffered = true;
-          break;
-        }
-      }
-      if (!audioBuffered) return null;
-      const appended = this.audioChunkEnds.find(entry => entry.endMs > timeMs);
-      if (appended) this.playingAudioChunk = { chunk: appended.index, timeMs };
-      return this.playingAudioChunk;
-    }
-
-    finishTrack(kind) {
-      if (!this.inbox[kind]) throw new Error('Invalid media stream');
-      this.inbox[kind].finished = true;
-      this.progress();
-    }
-
-    progress() {
-      if (this.closed || this.playbackFinished || !this.queues) return;
-      this.flushOrdered('audio');
-      this.flushOrdered('video');
-      for (const queue of Object.values(this.queues)) {
-        queue.fill();
-        queue.pump();
-      }
-      const audio = this.queues.audio.buffer.buffered;
-      const video = this.queues.video.buffer.buffered;
-      const audioEnd = this.queues.audio.bufferedEnd();
-      const videoEnd = this.queues.video.bufferedEnd();
-      const fullyAppended = Object.values(this.inbox).every(inbox => inbox.finished && !inbox.pending.size)
-        && this.queues.audio.idle() && this.queues.video.idle();
-      const sharedEnd = Math.min(audioEnd, videoEnd);
-      const initialRange = !this.started && findCommonBufferedRange(audio, video,
-        fullyAppended ? 0.05 : INITIAL_COMMON_BUFFER_SECONDS);
-      ui.diagnostics.textContent = `MSE · audio ${formatRanges(audio)} · video ${formatRanges(video)} · playhead ${this.video.currentTime.toFixed(2)}s · buffered end gap ${Math.abs(audioEnd - videoEnd).toFixed(2)}s${this.syncHold ? ' · waiting for both streams' : ''}`;
-      if (initialRange) {
-        this.started = true;
-        this.video.currentTime = initialRange.start;
-      }
-      if (this.mediaSource.readyState === 'open' && fullyAppended) {
-        if (!this.started) {
-          this.fail(new Error('Audio and video MSE timelines have no overlapping buffered range'));
-          return;
-        }
-        try {
-          this.mediaSource.endOfStream();
-        } catch (error) {
-          this.fail(error);
-          return;
-        }
-      }
-      if (this.started && fullyAppended && this.video.currentTime >= sharedEnd - 0.05) {
-        this.finishPlayback();
-        return;
-      }
-      if (this.started) {
-        const minimumAhead = fullyAppended
-          ? Math.min(0.15, Math.max(0.02, sharedEnd - this.video.currentTime - 0.01)) : 0.15;
-        const ready = hasCommonBufferAt(audio, video, this.video.currentTime, minimumAhead)
-          && this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA
-          && !this.video.seeking;
-        if (!ready) {
-          if (fullyAppended && this.video.currentTime >= sharedEnd - 0.15) {
-            this.finishPlayback();
-            return;
-          }
-          this.syncHold = true;
-          this.video.pause();
-          ui.caption.textContent = 'Waiting for synchronized audio and video.';
-        } else if (this.syncHold) {
-          this.syncHold = false;
-          ui.caption.textContent = 'Playing synchronized audio and video.';
-          this.video.play().catch(() => {
-            ui.caption.textContent = 'Playback needs a click. Press Play below the player.';
+    completeOperation() {
+      if (this.closed) return;
+      const operation = this.operation;
+      this.operation = null;
+      if (operation?.type === 'append') {
+        const { chunk, start, appendedAtEpochMs } = operation;
+        this.pending.delete(chunk.index);
+        this.next++;
+        this.queuedBytes -= chunk.binary.byteLength;
+        this.queuedDurationMs -= chunk.duration;
+        const end = this.bufferedEnd();
+        const ranges = this.buffer.buffered;
+        const mediaStartTime = ranges.length ? Math.max(start, ranges.start(0)) : start;
+        if (end > mediaStartTime) {
+          // createdAtEpochMs is stamped by dataavailable at the END of capture.
+          // Normalize it to the start before interpolating along the MSE interval.
+          this.timeline.push({
+            index: chunk.index, mediaStartTime, mediaEndTime: end,
+            creationTime: chunk.createdAtEpochMs,
+            captureStartEpochMs: chunk.createdAtEpochMs - chunk.duration,
+            receivedAtEpochMs: chunk.arrivedAtEpochMs,
+            decryptedAtEpochMs: chunk.decryptedAtEpochMs,
+            queuedAtEpochMs: chunk.queuedAtEpochMs, appendedAtEpochMs
           });
         }
-        updateReplayControls();
+        this.lastAppended = this.timeline[this.timeline.length - 1] || null;
       }
-      this.updatePlayingAudioChunk();
+      this.pump();
     }
+
+    pump() {
+      if (this.closed || this.playbackFinished || !this.buffer) return;
+      try {
+        const ranges = this.buffer.buffered;
+        if (!this.started && ranges.length) {
+          this.started = true;
+          this.element.currentTime = ranges.start(0);
+        }
+        if (this.started) this.tryPlay();
+        // Keep metadata for the playing (including stalled) chunk and recent history.
+        const cutoff = this.element.currentTime - 20;
+        while (this.timeline.length > 1 && this.timeline[0].mediaEndTime < cutoff) this.timeline.shift();
+        if (this.finished && !this.pending.size && !this.buffer.updating && !this.operation
+          && this.mediaSource.readyState === 'open') {
+          this.mediaSource.endOfStream();
+          if (!this.started) this.finishPlayback();
+          return;
+        }
+        if (this.buffer.updating || this.operation || this.mediaSource.readyState !== 'open') return;
+        if (ranges.length && ranges.start(0) < cutoff - 10) {
+          this.operation = { type: 'remove' };
+          this.buffer.remove(ranges.start(0), cutoff);
+          return;
+        }
+        const chunk = this.pending.get(this.next);
+        if (!chunk || this.bufferedEnd() - this.element.currentTime >= MAX_BUFFERED_AHEAD_SECONDS) return;
+        this.operation = { type: 'append', chunk, start: this.bufferedEnd(), appendedAtEpochMs: Date.now() };
+        this.buffer.appendBuffer(chunk.binary);
+      } catch (error) { this.fail(error); }
+    }
+
+    tryPlay(fromGesture = false) {
+      if (this.closed || this.playbackFinished || !this.started || !this.element.paused
+        || this.playPending || (this.needsGesture && !fromGesture)) return;
+      this.playPending = true;
+      Promise.resolve(this.element.play()).then(() => { this.needsGesture = false; }).catch(() => {
+        this.needsGesture = true;
+      }).finally(() => { this.playPending = false; });
+    }
+
+    getPlayingMetadata() {
+      if (!this.started || this.closed || this.playbackFinished) return null;
+      const time = this.element.currentTime;
+      return this.timeline.find(entry => time >= entry.mediaStartTime && time < entry.mediaEndTime)
+        // When stalled exactly at the buffered end, observe the last consumed chunk.
+        || [...this.timeline].reverse().find(entry => time >= entry.mediaStartTime
+          && Math.abs(time - entry.mediaEndTime) < 0.05) || null;
+    }
+
+    getCurrentPlaybackCreationTime() {
+      const entry = this.getPlayingMetadata();
+      if (!entry || !Number.isFinite(entry.captureStartEpochMs)) return null;
+      const offset = Math.min(entry.mediaEndTime - entry.mediaStartTime,
+        Math.max(0, this.element.currentTime - entry.mediaStartTime));
+      return entry.captureStartEpochMs + offset * 1000;
+    }
+
+    getPlaybackDelayMs(now = Date.now()) {
+      const creationTime = this.getCurrentPlaybackCreationTime();
+      return creationTime === null ? null : now - creationTime;
+    }
+
+    getBufferedAheadMs() {
+      const ranges = this.element.buffered;
+      const current = this.element.currentTime;
+      for (let i = 0; i < (ranges?.length || 0); i++) {
+        if (current >= ranges.start(i) && current <= ranges.end(i)) return (ranges.end(i) - current) * 1000;
+      }
+      return 0;
+    }
+
+    getDiagnostics(now = Date.now()) {
+      return {
+        playbackDelayMs: this.getPlaybackDelayMs(now),
+        currentPlaybackPosition: this.element.currentTime,
+        currentlyPlaying: this.getPlayingMetadata(),
+        lastAppended: this.lastAppended,
+        queueLength: this.pending.size, queuedBytes: this.queuedBytes,
+        queuedDurationMs: this.queuedDurationMs, bufferedAheadMs: this.getBufferedAheadMs(),
+        waitingForIndex: this.pending.size && !this.pending.has(this.next) ? this.next : null,
+        needsGesture: this.needsGesture, failure: this.failure, closed: this.closed
+      };
+    }
+
+    finishTrack() { this.finished = true; this.pump(); }
 
     finishPlayback() {
       if (this.closed || this.playbackFinished) return;
       this.playbackFinished = true;
-      clearInterval(this.progressTimer);
-      this.video.pause();
-      this.playingAudioChunk = null;
-      ui.caption.textContent = 'Playback finished.';
-      ui.controls.hidden = true;
-      this.onPlaybackEnd?.();
+      clearInterval(this.pumpTimer);
+      this.element.pause();
+      this.onState();
     }
 
     fail(error) {
-      if (this.closed || this.playbackFinished) return;
-      setStatus(`MSE replay failed: ${error.message}`, true);
-      ui.caption.textContent = 'This browser could not replay the separate audio and video streams.';
+      if (this.closed) return;
+      this.failure = error.message;
       this.close();
-      this.onPlaybackEnd?.();
+      this.onState();
     }
 
     close() {
       if (this.closed) return;
       this.closed = true;
-      ui.controls.hidden = true;
-      clearInterval(this.progressTimer);
-      this.video.pause();
-      this.video.removeEventListener('timeupdate', this.onTimeUpdate);
+      clearInterval(this.pumpTimer);
+      this.pending.clear();
+      this.queuedBytes = 0;
+      this.queuedDurationMs = 0;
+      this.timeline.length = 0;
+      this.lastAppended = null;
+      this.operation = null;
+      this.element.pause();
+      this.element.removeEventListener('timeupdate', this.onTimeUpdate);
+      this.element.removeEventListener('ended', this.onEnded);
+      this.element.removeEventListener('error', this.onElementError);
       this.mediaSource.removeEventListener('sourceopen', this.onOpen);
-      if (this.queues) Object.values(this.queues).forEach(queue => queue.close());
-      for (const inbox of Object.values(this.inbox)) inbox.pending.clear();
-      this.video.removeAttribute('src');
-      this.video.load();
+      if (this.buffer) {
+        this.buffer.removeEventListener('updateend', this.onUpdateEnd);
+        this.buffer.removeEventListener('error', this.onBufferError);
+        try {
+          if (this.mediaSource.readyState === 'open') {
+            if (this.buffer.updating) this.buffer.abort();
+            this.mediaSource.removeSourceBuffer(this.buffer);
+          }
+        } catch { /* The browser may already have detached the source. */ }
+      }
+      this.element.removeAttribute('src');
+      this.element.load();
       URL.revokeObjectURL(this.url);
+      this.buffer = null;
+      this.mediaSource = null;
+      this.url = null;
     }
   }
 
-  function formatRanges(ranges) {
-    if (!ranges.length) return 'empty';
-    return `${ranges.start(0).toFixed(2)}–${ranges.end(ranges.length - 1).toFixed(2)}s`;
+  // Pure observer: samples playheads and timestamps; never schedules or alters media.
+  class CallDelayMonitor {
+    constructor() { this.audioDelayed = false; this.videoDelayed = false; }
+
+    evaluate(audio, video, now = Date.now()) {
+      const audioPlaybackDelayMs = audio.getPlaybackDelayMs(now);
+      const videoPlaybackDelayMs = video?.getPlaybackDelayMs(now) ?? null;
+      const delayed = (previous, delay) => delay !== null
+        && (previous ? delay >= PLAYBACK_DELAY_RECOVERY_MS : delay > PLAYBACK_DELAY_WARNING_MS);
+      this.audioDelayed = delayed(this.audioDelayed, audioPlaybackDelayMs);
+      this.videoDelayed = delayed(this.videoDelayed, videoPlaybackDelayMs);
+      return {
+        state: this.audioDelayed ? 'AUDIO_DELAYED' : this.videoDelayed ? 'VIDEO_DELAYED' : 'NORMAL',
+        audioPlaybackDelayMs, videoPlaybackDelayMs,
+        avDelayDifferenceMs: audioPlaybackDelayMs === null || videoPlaybackDelayMs === null
+          ? null : videoPlaybackDelayMs - audioPlaybackDelayMs
+      };
+    }
   }
 
-  function findCommonBufferedRange(audio, video, minimumSeconds) {
-    for (let a = 0; a < audio.length; a++) {
-      for (let v = 0; v < video.length; v++) {
-        const start = Math.max(audio.start(a), video.start(v));
-        const end = Math.min(audio.end(a), video.end(v));
-        if (end - start >= minimumSeconds) return { start, end };
+  class MseReplayPlayer {
+    constructor(audio, video, types, onPlaybackEnd) {
+      this.onPlaybackEnd = onPlaybackEnd;
+      this.closed = false;
+      this.playbackFinished = false;
+      this.videoDisabled = false;
+      this.monitor = new CallDelayMonitor();
+      this.audio = new MediaPlaybackPipeline('audio', audio, types.audio, () => this.trackStateChanged());
+      this.video = new MediaPlaybackPipeline('video', video, types.video, () => this.trackStateChanged());
+      this.monitorTimer = setInterval(() => this.observe(), PLAYBACK_MONITOR_INTERVAL_MS);
+      this.observe();
+    }
+
+    receiveChunk(chunk) { return this[chunk.mediaType.toLowerCase()]?.enqueue(chunk) || false; }
+    finishTrack(kind) { this[kind]?.finishTrack(); }
+    failTrack(kind, error) { this[kind]?.fail(error); }
+
+    updatePlayingAudioChunk() {
+      const audio = this.audio;
+      const element = audio.element;
+      if (element.paused || element.seeking || element.muted || element.volume === 0
+        || audio.getBufferedAheadMs() === 0
+        || element.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return null;
+      const entry = audio.getPlayingMetadata();
+      return entry ? { chunk: entry.index, timeMs: element.currentTime * 1000 } : null;
+    }
+
+    observe() {
+      if (this.closed) return;
+      const now = Date.now();
+      this.diagnostics = {
+        ...this.monitor.evaluate(this.audio, this.videoDisabled ? null : this.video, now),
+        audio: this.audio.getDiagnostics(now), video: this.video.getDiagnostics(now)
+      };
+      const { state, audio, video, avDelayDifferenceMs } = this.diagnostics;
+      ui.remotePanel.dataset.playbackState = state;
+      ui.delayWarning.hidden = state === 'NORMAL';
+      ui.delayMessage.textContent = state === 'AUDIO_DELAYED'
+        ? 'Audio is delayed by network conditions.' : 'Video is delayed by network conditions.';
+      ui.disableVideo.hidden = state !== 'VIDEO_DELAYED' || this.videoDisabled;
+      const metric = value => value === null ? 'unknown' : `${Math.round(value)} ms`;
+      const describe = (name, data) => `${name}: delay ${metric(data.playbackDelayMs)} · queue ${data.queueLength} / ${Math.round(data.queuedDurationMs)} ms · ahead ${Math.round(data.bufferedAheadMs)} ms · position ${data.currentPlaybackPosition.toFixed(2)}s${data.waitingForIndex === null ? '' : ` · waiting for chunk ${data.waitingForIndex}`}${data.failure ? ` · failed: ${data.failure}` : ''}`;
+      ui.diagnostics.textContent = `${describe('AUDIO', audio)} | ${describe('VIDEO', video)} | A/V delay difference ${metric(avDelayDifferenceMs)} · clocks uncorrected`;
+      const failures = ['audio', 'video'].filter(kind => this[kind].failure);
+      ui.caption.textContent = failures.length
+        ? failures.map(kind => `${kind} playback stopped: ${this[kind].failure}`).join('. ')
+        : this.videoDisabled ? 'Remote video disabled. Audio continues.'
+        : this.audio.needsGesture || this.video.needsGesture ? 'Click the call area to start playback.'
+        : this.playbackFinished ? 'Playback finished.' : 'Audio and video play independently.';
+    }
+
+    disableVideo() {
+      if (this.closed || this.videoDisabled) return;
+      this.videoDisabled = true;
+      this.video.close();
+      window.RemoteCallConnection?.disableRemoteVideoReception?.();
+      ui.video.hidden = true;
+      ui.videoPlaceholder.hidden = false;
+      this.observe();
+      this.trackStateChanged();
+      maybeFinishRemote();
+    }
+
+    trackStateChanged() {
+      // Aggregation is only for completing the optional conversation recording.
+      // End-of-stream and playback completion happen inside each pipeline separately.
+      if (!this.audio || !this.video || this.closed || this.playbackFinished) return;
+      if ([this.audio, this.video].every(track => track.closed || track.playbackFinished)) {
+        this.playbackFinished = true;
+        clearInterval(this.monitorTimer);
+        this.observe();
+        this.onPlaybackEnd?.();
       }
     }
-    return null;
-  }
 
-  function hasCommonBufferAt(audio, video, time, minimumAhead) {
-    for (let a = 0; a < audio.length; a++) {
-      if (audio.start(a) > time + 0.05 || audio.end(a) < time + minimumAhead) continue;
-      for (let v = 0; v < video.length; v++) {
-        if (video.start(v) <= time + 0.05 && video.end(v) >= time + minimumAhead) return true;
-      }
+    close() {
+      if (this.closed) return;
+      this.closed = true;
+      clearInterval(this.monitorTimer);
+      this.audio.close();
+      this.video.close();
+      ui.remotePanel.dataset.playbackState = 'NORMAL';
+      ui.delayWarning.hidden = true;
+      ui.disableVideo.hidden = true;
     }
-    return false;
   }
 
   function updateReplayControls() {
@@ -805,8 +795,6 @@
     memoryLimitReached = false;
     conversationMemoryLimitReached = false;
     releaseLocalReplay();
-    remoteLink?.close();
-    remoteLink = null;
     clearTimeout(remoteFinishTimer);
     remoteFinishTimer = null;
     remoteFinalCounts = null;
@@ -823,7 +811,7 @@
     preparedMimeTypes = null;
     recorderSession = new CallRecorder({
       clock: relativeMs,
-      playbackMark: () => (remoteLink && player && !player.closed ? player.updatePlayingAudioChunk() : null),
+      playbackMark: () => (player && !player.closed ? player.updatePlayingAudioChunk() : null),
       onUpdate: () => { updateStats(); checkRecordingMemoryLimit(); },
       onLimit: checkRecordingMemoryLimit,
       onError: (kind, error) => {
@@ -926,7 +914,7 @@
       const context = new AudioContextClass();
       try {
         await resumeEchoContext(context);
-        const source = context.createMediaElementSource(ui.video);
+        const source = context.createMediaElementSource(ui.audio);
         source.connect(context.destination);
         echoContext = context;
         echoPlayerSource = source;
@@ -1140,12 +1128,12 @@
   // own clock to that time from these samples.
   function postEchoClock() {
     if (!echoNode) return;
-    const video = ui.video;
+    const audio = ui.audio;
     echoNode.port.postMessage({
       type: 'clock',
-      mediaMs: video.currentTime * 1000,
+      mediaMs: audio.currentTime * 1000,
       contextTime: echoContext.currentTime,
-      playing: !video.paused && !video.seeking && video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+      playing: !audio.paused && !audio.seeking && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
     });
   }
 
@@ -1182,7 +1170,7 @@
         await context.audioWorklet.addModule('js/remote-call-echo-worklet.js');
         await resumeEchoContext(context);
         // Captured last: from here on the element is audible only through this context.
-        echoPlayerSource = context.createMediaElementSource(ui.video);
+        echoPlayerSource = context.createMediaElementSource(ui.audio);
         echoPlayerSource.connect(context.destination);
       } catch (error) {
         void context.close().catch(() => {});
@@ -1437,14 +1425,14 @@
     if (recording || busy || !finished || !callEnded || !remotePlaybackFinished
       || !conversationRecorder?.finished || !savedChunks?.length) return;
     bypassEchoProcessing();
-    remoteLink?.close();
-    remoteLink = null;
     clearTimeout(remoteFinishTimer);
     remoteFinishTimer = null;
     player?.close();
     player = null;
     releaseLocalReplay();
     ui.video.srcObject = null;
+    ui.video.hidden = false;
+    ui.videoPlaceholder.hidden = true;
     ui.video.muted = false;
     ui.video.volume = Number(ui.volume.value) / 100;
     localReplayUrl = URL.createObjectURL(new Blob(savedChunks, { type: conversationRecorder.recordingMimeType }));
@@ -1461,12 +1449,10 @@
   }
 
   function setPeerMimeTypes(types) {
-    if (!['audio', 'video'].every(kind => typeof types?.[kind] === 'string'
-      && MediaSource.isTypeSupported(types[kind]))) {
-      throw new Error('Peer audio or video format is not supported');
+    if (!['audio', 'video'].every(kind => typeof types?.[kind] === 'string')) {
+      throw new Error('Invalid peer media formats');
     }
     releaseLocalReplay();
-    remoteLink?.close();
     player?.close();
     clearTimeout(remoteFinishTimer);
     remoteFinishTimer = null;
@@ -1474,24 +1460,27 @@
     remotePlaybackFinished = false;
     remoteReceived = { audio: new Set(), video: new Set() };
     remoteChunkTimings = { audio: new Map(), video: new Map() };
-    ui.video.muted = false;
-    ui.video.volume = Number(ui.volume.value) / 100;
+    ui.audio.muted = false;
+    ui.audio.volume = Number(ui.volume.value) / 100;
+    ui.video.muted = true;
+    ui.video.hidden = false;
+    ui.videoPlaceholder.hidden = true;
     ui.controls.hidden = true;
-    ui.caption.textContent = 'Waiting for incoming audio and video chunks…';
-    player = new MseReplayPlayer(ui.video, types, finishConversationIfReady);
-    remoteLink = new LocalChunkLink(player);
+    player = new MseReplayPlayer(ui.audio, ui.video, types, finishConversationIfReady);
     updateReplayControls();
   }
 
   function receiveRemoteChunk(kind, order, payload, timing) {
-    if (!remoteLink || (kind !== 'audio' && kind !== 'video')) return;
-    // Start/end are relative to the sender's recording start. Creation and arrival
-    // use epoch milliseconds; their difference also includes any device clock skew.
+    if (!player || player.closed || (kind !== 'audio' && kind !== 'video') || player[kind].closed) return;
+    // Start/end are relative to the sender's recording start. Creation is stamped at
+    // dataavailable (capture end). All epoch timestamps are milliseconds, uncorrected
+    // for sender/receiver clock skew: no offset is established by the call protocol.
     const metadata = {
       senderStartTimeMs: timing.senderStartTimeMs,
       senderEndTimeMs: timing.senderEndTimeMs,
       createdAtEpochMs: timing.createdAtEpochMs,
       arrivedAtEpochMs: timing.arrivedAtEpochMs,
+      decryptedAtEpochMs: timing.decryptedAtEpochMs,
       estimatedDeliveryDelayMs: timing.arrivedAtEpochMs - timing.createdAtEpochMs,
       playStart: timing.playStart,
       playEnd: timing.playEnd
@@ -1500,42 +1489,42 @@
     timings.set(order, metadata);
     if (timings.size > 180) timings.delete(timings.keys().next().value);
     remoteReceived[kind].add(order);
-    remoteLink.publishChunk({
-      index: order,
-      mediaType: kind.toUpperCase(),
-      ...metadata,
-      binary: new Uint8Array(payload)
-    });
-    if (kind === 'audio') queueEchoReference(metadata);
+    player.receiveChunk({ index: order, mediaType: kind.toUpperCase(), ...metadata, binary: new Uint8Array(payload) });
+    if (kind === 'audio' && !player.audio.closed) queueEchoReference(metadata);
     maybeFinishRemote();
   }
 
   function maybeFinishRemote() {
-    if (!remoteFinalCounts || !remoteLink) return false;
-    if (remoteReceived.audio.size < remoteFinalCounts.audio
-      || remoteReceived.video.size < remoteFinalCounts.video) return false;
-    clearTimeout(remoteFinishTimer);
-    remoteFinishTimer = null;
-    remoteLink.finishTrack('audio');
-    remoteLink.finishTrack('video');
-    remotePlaybackFinished = true;
-    updateStats();
-    return true;
+    if (!remoteFinalCounts || !player) return false;
+    // Finish each source as soon as ITS final chunks arrive. The other stream's
+    // delivery must never hold endOfStream or its buffered playback hostage.
+    for (const kind of ['audio', 'video']) {
+      if (player[kind].closed || remoteReceived[kind].size >= remoteFinalCounts[kind]) player.finishTrack(kind);
+    }
+    const complete = ['audio', 'video'].every(kind => player[kind].closed
+      || remoteReceived[kind].size >= remoteFinalCounts[kind]);
+    if (complete) {
+      clearTimeout(remoteFinishTimer);
+      remoteFinishTimer = null;
+      remotePlaybackFinished = true;
+      updateStats();
+    }
+    return complete;
   }
 
   function finishRemote(counts) {
     if (!['audio', 'video'].every(kind => Number.isSafeInteger(counts?.[kind]) && counts[kind] >= 0)) {
       throw new Error('Invalid final chunk counts');
     }
-    if (!remoteLink) return;
+    if (!player) return;
     remoteFinalCounts = counts;
     if (!maybeFinishRemote() && !remoteFinishTimer) {
       remoteFinishTimer = setTimeout(() => {
         remoteFinishTimer = null;
-        remoteLink?.finishTrack('audio');
-        remoteLink?.finishTrack('video');
+        for (const kind of ['audio', 'video']) {
+          if (remoteReceived[kind].size < counts[kind]) player?.failTrack(kind, new Error('Some remote chunks were not received'));
+        }
         remotePlaybackFinished = true;
-        player?.fail(new Error('Some remote chunks were not received'));
         updateStats();
       }, 30000);
     }
@@ -1554,8 +1543,6 @@
     preparedMimeTypes = null;
     ui.echoCancellationStatus.textContent = 'Microphone released.';
     ui.camera.srcObject = null;
-    remoteLink?.close();
-    remoteLink = null;
     player?.close();
     player = null;
     clearTimeout(remoteFinishTimer);
@@ -1570,6 +1557,9 @@
     stop: stopRecording,
     setPeerMimeTypes,
     receiveChunk: receiveRemoteChunk,
+    disableRemoteVideo: () => player?.disableVideo(),
+    failRemoteStream: (kind, message) => player?.failTrack(kind, new Error(message)),
+    getPlaybackDiagnostics: () => player?.diagnostics || null,
     getReceivedChunkTiming: (kind, order) => remoteChunkTimings[kind]?.get(order) || null,
     finishRemote,
     markCallEnded: () => {
@@ -1611,6 +1601,7 @@
     }
   }
 
+  ui.disableVideo.addEventListener('click', () => player?.disableVideo());
   ui.stop.addEventListener('click', () => { void window.RemoteCallConnection.stopCall(); });
   ui.cameraEnabled.addEventListener('click', toggleCamera);
   ui.muteMic.addEventListener('click', toggleMicMute);
@@ -1628,6 +1619,7 @@
     updateReplayControls();
   });
   ui.volume.addEventListener('input', () => {
+    ui.audio.volume = Number(ui.volume.value) / 100;
     ui.video.volume = Number(ui.volume.value) / 100;
     if (ui.video.volume > 0 && localReplayActive) ui.video.muted = false;
     updateReplayControls();
@@ -1635,6 +1627,8 @@
   ui.video.addEventListener('play', updateReplayControls);
   window.addEventListener('pointerdown', () => {
     if (echoContext?.state === 'suspended') void echoContext.resume().catch(() => {});
+    player?.audio.tryPlay(true);
+    player?.video.tryPlay(true);
   }, { capture: true });
   ui.video.addEventListener('pause', updateReplayControls);
   ui.video.addEventListener('ended', () => {
@@ -1642,7 +1636,7 @@
       localReplayActive = false;
       ui.controls.hidden = true;
       ui.caption.textContent = 'Playback finished.';
-    } else player?.finishPlayback();
+    }
   });
   ui.video.addEventListener('error', () => {
     if (localReplayActive) {
@@ -1650,7 +1644,7 @@
       ui.controls.hidden = true;
       ui.caption.textContent = 'This browser could not replay the local recording.';
       setStatus(`Could not replay local recording: ${ui.video.error?.message || 'Media element error'}`, true);
-    } else if (player && !player.closed) player.fail(new Error(ui.video.error?.message || 'Media element error'));
+    }
   });
   window.addEventListener('pagehide', () => {
     recording = false;
@@ -1658,7 +1652,6 @@
     recorderSession?.stopImmediately();
     void conversationRecorder?.stop();
     releaseLocalReplay();
-    remoteLink?.close();
     clearTimeout(remoteFinishTimer);
     stopVideoCapture();
     clearInterval(echoClockTimer);

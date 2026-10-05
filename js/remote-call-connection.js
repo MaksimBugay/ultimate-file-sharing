@@ -382,7 +382,7 @@
         encrypted: encryptionEnabled, mediaSecret: encryptionEnabled ? session.mediaSecret : null
       }, window.location.origin);
     }, { once: true });
-    iframe.src = new URL(`remote-call-channel.html?kind=${kind}&v=10`, pageUrl).toString();
+    iframe.src = new URL(`remote-call-channel.html?kind=${kind}&v=11`, pageUrl).toString();
     document.body.append(iframe);
     return entry;
   }
@@ -410,11 +410,13 @@
           ? `Call with ${peer.name}.` : `${message.kind} channel disconnected. Reconnecting…`);
       }
     } else if (message.type === 'remote-call:error') {
-      entry.reject(new Error(message.message));
+      if (message.scope !== 'receive') entry.reject(new Error(message.message));
       setConnectionStatus(message.message);
       console.error(message.message);
-      if (phase === 'calling') {
-        void window.RemoteCallConnection.stopCall()
+      if (message.scope === 'receive') {
+        window.RemoteCallMedia?.failRemoteStream(message.kind, message.message);
+      } else if (phase === 'calling') {
+        void stopCall()
           .catch(error => console.error('Could not notify peer of stopped call:', error))
           .finally(() => setConnectionStatus(message.message));
       }
@@ -820,23 +822,30 @@
     if (!hasSourceHost && phase === 'waiting' && PushcaClient.isOpen()) refreshJointLink();
   });
 
-  window.RemoteCallConnection = {
-    stopCall: async () => {
-      if (phase !== 'calling') return;
-      phase = 'ended';
-      releaseInviteWakeLock();
-      encryptionToggle.disabled = true;
-      extraSecurityToggle.disabled = true;
-      try {
-        await stopLocalAndNotify();
-        setConnectionStatus(remoteStopReceived ? 'Call ended.' : 'Your recording stopped. Waiting for the peer stream to finish…');
-      } catch (error) {
-        setConnectionStatus(`Could not notify the peer that the call ended: ${error.message}`);
-        console.error('Could not finish call:', error);
-      } finally {
-        if (remoteStopReceived) window.RemoteCallMedia.markCallEnded();
-      }
+  /** @returns {Promise<void>} */
+  async function stopCall() {
+    if (phase !== 'calling') return;
+    phase = 'ended';
+    releaseInviteWakeLock();
+    encryptionToggle.disabled = true;
+    extraSecurityToggle.disabled = true;
+    try {
+      await stopLocalAndNotify();
+      setConnectionStatus(remoteStopReceived ? 'Call ended.' : 'Your recording stopped. Waiting for the peer stream to finish…');
+    } catch (error) {
+      setConnectionStatus(`Could not notify the peer that the call ended: ${error.message}`);
+      console.error('Could not finish call:', error);
+    } finally {
+      if (remoteStopReceived) window.RemoteCallMedia.markCallEnded();
     }
+  }
+
+  window.RemoteCallConnection = {
+    disableRemoteVideoReception: () => {
+      const entry = channels.get('video');
+      entry?.iframe.contentWindow.postMessage({ type: 'remote-call:disable-receive', kind: 'video' }, window.location.origin);
+    },
+    stopCall
   };
 
   async function waitForManagerAlias(client) {

@@ -18,6 +18,7 @@
   // Serialize encryption and socket writes to preserve chunk order without waiting for acknowledgements.
   const MAX_ACTIVE_SENDS = 1;
   let initialized = false;
+  let receiveDisabled = false;
   let aliasAttempt = 0;
   let pendingSends = 0;
   let pendingBytes = 0;
@@ -143,6 +144,7 @@
   }
 
   function reportReceivedChunk(binaryWithHeader, payload, arrivedAtEpochMs) {
+    if (receiveDisabled) return;
     try {
       const chunk = unpackChunk(payload);
       report('remote-call:chunk', {
@@ -152,12 +154,13 @@
         senderEndTimeMs: chunk.senderEndTimeMs,
         createdAtEpochMs: chunk.createdAtEpochMs,
         arrivedAtEpochMs,
+        decryptedAtEpochMs: performance.timeOrigin + performance.now(),
         playStart: chunk.playStart,
         playEnd: chunk.playEnd,
         payload: chunk.payload
       }, [chunk.payload]);
     } catch (error) {
-      report('remote-call:error', { message: `${kind} chunk ${binaryWithHeader.order}: ${error.message}` });
+      report('remote-call:error', { scope: 'receive', message: `${kind} chunk ${binaryWithHeader.order}: ${error.message}` });
     }
   }
 
@@ -228,7 +231,7 @@
     if (!PushcaClient.isOpen()) report('remote-call:state', { connected: false });
   };
   PushcaClient.onFileTransferChunkHandler = binaryWithHeader => {
-    if (encryptionEnabled === null) return;
+    if (encryptionEnabled === null || receiveDisabled) return;
     const arrivedAtEpochMs = performance.timeOrigin + performance.now();
     if (!encryptionEnabled) {
       reportReceivedChunk(binaryWithHeader, binaryWithHeader.payload, arrivedAtEpochMs);
@@ -236,12 +239,18 @@
     }
     void decryptChunk(binaryWithHeader.binaryId, binaryWithHeader.order, binaryWithHeader.payload).then(payload => {
       reportReceivedChunk(binaryWithHeader, payload, arrivedAtEpochMs);
-    }).catch(() => report('remote-call:error', { message: `Could not decrypt ${kind} chunk ${binaryWithHeader.order}.` }));
+    }).catch(() => {
+      if (!receiveDisabled) report('remote-call:error', { scope: 'receive', message: `Could not decrypt ${kind} chunk ${binaryWithHeader.order}.` });
+    });
   };
 
   window.addEventListener('message', event => {
     if (event.source !== window.parent || event.origin !== parentOrigin || event.data?.kind !== kind) return;
     const message = event.data;
+    if (message.type === 'remote-call:disable-receive' && kind === 'video') {
+      receiveDisabled = true;
+      return;
+    }
     if (message.type === 'remote-call:init' && !initialized) {
       if (typeof message.encrypted !== 'boolean'
         || (message.encrypted && (!(message.mediaSecret instanceof Uint8Array) || message.mediaSecret.length !== 32))
