@@ -66,11 +66,20 @@ for (const failure of ['http', 'network']) {
 function sharingHarness() {
     const elements = new Map();
     const element = id => {
-        if (!elements.has(id)) elements.set(id, {
-            id, style: {}, disabled: false, checked: false, value: '',
-            classList: {add() {}, remove() {}, contains: () => false},
-            addEventListener() {}, removeAttribute() {}, setAttribute() {}, focus() {}
-        });
+        if (!elements.has(id)) {
+            const listeners = new Map();
+            const attributes = new Map();
+            elements.set(id, {
+                id, style: {}, disabled: false, checked: false, value: '', hidden: false,
+                classList: {add() {}, remove() {}, contains: () => false},
+                addEventListener: (event, callback) => listeners.set(event, callback),
+                dispatch: (event, detail = {}) => listeners.get(event)?.(detail),
+                removeAttribute: name => attributes.delete(name),
+                setAttribute: (name, value) => attributes.set(name, value),
+                getAttribute: name => attributes.get(name),
+                focus() { context.document.activeElement = this; }
+            });
+        }
         return elements.get(id);
     };
     let init, remoteCallback, finishDownload;
@@ -100,8 +109,14 @@ for (const result of [null, 'https://example.com/shared']) {
     test(`remote download hides file selection until completion (${result ? 'success' : 'failure'})`, async () => {
         const h = sharingHarness();
         vm.runInContext('CallableFuture = {callAsynchronously: async () => ({type: "success"})}; WaiterResponseType = {SUCCESS: "success"};', h.context);
+        h.element('remoteStreamTab').dispatch('click');
         const pending = h.remote();
-        assert.equal(h.element('selectFilesSection').style.display, 'none');
+        assert.equal(h.element('selectFilesSection').hidden, true);
+        assert.equal(h.element('remoteStreamUrlSection').hidden, false);
+        assert.equal(h.element('selectFilesTab').disabled, true);
+        assert.equal(h.element('remoteStreamTab').disabled, true);
+        h.element('selectFilesTab').dispatch('click');
+        assert.equal(h.element('selectFilesSection').hidden, true);
         assert.equal(h.element('selectFilesSection').disabled, true);
         assert.equal(h.element('toolBarPasteArea').disabled, true);
         assert.equal(h.element('remoteStreamUrlSection').disabled, true);
@@ -112,8 +127,15 @@ for (const result of [null, 'https://example.com/shared']) {
         assert.equal(shared, false);
         h.finishDownload(result);
         await pending;
-        assert.equal(h.element('selectFilesSection').style.display, '');
+        assert.equal(h.element('selectFilesSection').hidden, true);
+        assert.equal(h.element('remoteStreamUrlSection').hidden, false);
+        assert.equal(h.element('selectFilesTab').disabled, false);
+        assert.equal(h.element('remoteStreamTab').disabled, false);
         assert.equal(h.element('selectFilesSection').disabled, false);
+        assert.equal(h.element('toolBarPasteArea').disabled, true);
+        h.element('selectFilesTab').dispatch('click');
+        assert.equal(h.element('selectFilesSection').hidden, false);
+        assert.equal(h.element('remoteStreamUrlSection').hidden, true);
         assert.equal(h.element('toolBarPasteArea').disabled, false);
         assert.equal(h.element('remoteStreamUrlSection').disabled, false);
         assert.equal(h.element('progressBarContainer').style.display, 'none');
@@ -148,4 +170,73 @@ test('failed protected thumbnail fetch restores upload controls and shows the er
     assert.equal(h.element('dropZone').disabled, false);
     assert.equal(h.element('fileTransferProgressBtn').style.display, 'none');
     assert.match(h.element('errorMsg').textContent, /Cannot load protected image thumbnail: HTTP 404/);
+});
+
+
+test('sharing tabs default to files and show only the selected panel', () => {
+    const h = sharingHarness();
+    const assertSelection = filesSelected => {
+        assert.equal(h.element('selectFilesSection').hidden, !filesSelected);
+        assert.equal(h.element('remoteStreamUrlSection').hidden, filesSelected);
+        assert.equal(h.element('selectFilesTab').getAttribute('aria-selected'), String(filesSelected));
+        assert.equal(h.element('remoteStreamTab').getAttribute('aria-selected'), String(!filesSelected));
+        assert.equal(h.element('selectFilesTab').tabIndex, filesSelected ? 0 : -1);
+        assert.equal(h.element('remoteStreamTab').tabIndex, filesSelected ? -1 : 0);
+        assert.equal(h.element('toolBarPasteArea').disabled, !filesSelected);
+    };
+    assertSelection(true);
+    h.element('remoteStreamTab').dispatch('click');
+    assertSelection(false);
+    h.element('selectFilesTab').dispatch('click');
+    assertSelection(true);
+});
+
+test('sharing tabs support arrow keys, Home and End with focus following selection', () => {
+    const h = sharingHarness();
+    for (const [from, key, to] of [
+        ['selectFilesTab', 'ArrowRight', 'remoteStreamTab'],
+        ['remoteStreamTab', 'ArrowRight', 'selectFilesTab'],
+        ['selectFilesTab', 'ArrowLeft', 'remoteStreamTab'],
+        ['remoteStreamTab', 'Home', 'selectFilesTab'],
+        ['selectFilesTab', 'End', 'remoteStreamTab']
+    ]) {
+        let prevented = false;
+        h.element(from).dispatch('keydown', {key, preventDefault: () => { prevented = true; }});
+        assert.equal(prevented, true);
+        assert.equal(h.context.document.activeElement, h.element(to));
+        assert.equal(h.element(to).getAttribute('aria-selected'), 'true');
+        assert.notEqual(h.element('selectFilesSection').hidden, h.element('remoteStreamUrlSection').hidden);
+    }
+});
+
+test('password protection returns to files and disables the remote stream tab', () => {
+    const h = sharingHarness();
+    h.element('remoteStreamTab').dispatch('click');
+    vm.runInContext('makeShareWithPasswordUiAdjustments()', h.context);
+    assert.equal(h.element('remoteStreamTab').disabled, true);
+    assert.equal(h.element('selectFilesSection').hidden, false);
+    assert.equal(h.element('remoteStreamUrlSection').hidden, true);
+    h.element('remoteStreamTab').dispatch('click');
+    assert.equal(h.element('remoteStreamUrlSection').hidden, true);
+    vm.runInContext('makeSharePublicUiAdjustments()', h.context);
+    assert.equal(h.element('remoteStreamTab').disabled, false);
+    assert.equal(h.element('remoteStreamUrlSection').hidden, true);
+    h.element('remoteStreamTab').dispatch('click');
+    assert.equal(h.element('remoteStreamUrlSection').hidden, false);
+});
+
+test('file sharing locks tab switching until cleanup', async () => {
+    const h = sharingHarness();
+    let finishUpload;
+    h.context.processAttempt = () => new Promise(resolve => { finishUpload = resolve; });
+    const pending = vm.runInContext('shareContent(processAttempt)', h.context);
+    assert.equal(h.element('selectFilesTab').disabled, true);
+    assert.equal(h.element('remoteStreamTab').disabled, true);
+    h.element('remoteStreamTab').dispatch('click');
+    assert.equal(h.element('selectFilesSection').hidden, false);
+    finishUpload();
+    await pending;
+    assert.equal(h.element('selectFilesTab').disabled, false);
+    assert.equal(h.element('remoteStreamTab').disabled, false);
+    assert.equal(h.element('toolBarPasteArea').disabled, false);
 });

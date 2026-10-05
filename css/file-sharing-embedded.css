@@ -4,6 +4,8 @@
     font: 16px/1.45 system-ui, sans-serif;
     color: #edf3fa;
     background: #0d1420;
+    --sharing-vertical-padding: 24px;
+    --sharing-calendar-overflow: 0px;
     --sfsp-primary-bg: linear-gradient(140deg, #1a2a40, #142035);
     --sfsp-secondary-bg: #142035;
     --sfsp-accent-color: #3977d5;
@@ -38,7 +40,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, [contenteditable]:fo
     outline-offset: 3px;
 }
 ::selection { background: #3977d580; color: #fff; }
-.sharing-shell { width: min(100%, 860px); margin: 0 auto; }
+.sharing-shell {
+    width: min(100%, 912px);
+    margin: 0 auto;
+    padding: 24px;
+    border: 2px solid transparent;
+    border-radius: 28px;
+    background:
+        linear-gradient(145deg, #192b43f2, #101c2ef5) padding-box,
+        linear-gradient(145deg, #8baed2b0, #47648790 45%, #1d304c) border-box;
+    box-shadow:
+        inset 0 1px 0 #e0edff20,
+        inset 0 -2px 0 #060d1b80,
+        0 24px 60px #03091470,
+        0 4px 12px #03091450;
+}
 .main-flow-container {
     display: block;
     width: 100%;
@@ -64,9 +80,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, [contenteditable]:fo
     font-weight: 400;
 }
 .device-container > * { min-width: 0; }
-.sharing-header, .sharing-intro, #readMeContainer, #selectFilesContainer, #progressBarContainer { grid-column: 1 / -1; }
+.sharing-header, #readMeContainer, #selectFilesContainer, #progressBarContainer { grid-column: 1 / -1; }
 .sharing-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.sharing-brand { display: flex; align-items: center; gap: 12px; }
+.sharing-brand { display: flex; align-items: center; flex: 1; min-width: 0; gap: 12px; }
+.sharing-brand > div { min-width: 0; }
 .brand-mark {
     display: grid;
     place-items: center;
@@ -80,9 +97,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, [contenteditable]:fo
 }
 svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .brand-mark svg { width: 28px; height: 28px; }
-.eyebrow { display: block; color: #83aef2; font-size: .62rem; font-weight: 800; letter-spacing: .17em; }
+.eyebrow { display: block; margin-top: 6px; color: #83aef2; font-size: clamp(.5rem, 1.5vw, .62rem); font-weight: 800; letter-spacing: .17em; }
 h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 4vw, 1.9rem); line-height: 1.15; letter-spacing: -.035em; }
-.sharing-intro { margin: -4px 0 2px; color: #afc0d2; font-size: .85rem; }
 .sharing-tools { display: flex; gap: 8px; }
 .utility-button {
     display: grid;
@@ -193,6 +209,28 @@ h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 4vw, 1.9rem); line-height: 1.15;
 .fancy-password-input-with-warning::placeholder { color: #ff9d9d; }
 #selectFilesContainer { display: grid; gap: 18px; }
 .upload-panel { background: linear-gradient(135deg, #1c314b, #13243b); }
+.sharing-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid #314664; }
+.sharing-tab {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: #afc0d2;
+    text-align: left;
+    font-size: .85rem;
+    font-weight: 700;
+}
+#remoteStreamTab[aria-selected="false"] { border-color: #68717d; }
+.sharing-tab:hover:enabled { background: #243e60; color: #edf3fa; }
+.sharing-tab[aria-selected="true"] { border-color: #659aeb; background: #1d3a60; color: #edf3fa; }
+.sharing-tab .experimental-badge { margin-left: 0; }
+.sharing-tab-panel { min-width: 0; width: 100%; margin: 0; padding: 0; border: 0; }
+.sharing-tab-panel[hidden] { display: none; }
 #selectFilesSubContainer { display: flex; width: 100%; }
 .label-text { position: static; color: #e0edff; font-size: .95rem; font-weight: 700; white-space: normal; }
 .select-files-button svg { flex: 0 0 20px; width: 20px; height: 20px; }
@@ -262,6 +300,8 @@ kbd { padding: 3px 5px; border: 1px solid #405573; border-radius: 5px; backgroun
 .sfsp-month-year, .sfsp-weekday, .sfsp-time-label, .sfsp-time-separator { color: #a7c7ff; }
 .sfsp-nav-btn, .sfsp-btn-today { background: #284567; color: #e0edff; }
 .sfsp-nav-btn:hover, .sfsp-btn-today:hover, .sfsp-month-year:hover { background: #375477; }
+/* Closed calendars must not extend the page scroll area. */
+.sfsp-dropdown:not(.sfsp-open) { display: none; }
 .sfsp-dropdown { box-shadow: 0 18px 48px #0008; }
 /* Clipping keeps the existing JS focus/paste behavior active, including on mobile. */
 #tbCopyPastMemo, #toolBarPasteArea, .visually-hidden {
@@ -306,8 +346,19 @@ kbd { padding: 3px 5px; border: 1px solid #405573; border-radius: 5px; backgroun
 #qrcode img { max-width: 100%; height: auto; }
 .dropdown-button, .dropdown-list { border-color: #49617e; border-radius: 8px; background: #17263b; color: #edf3fa; }
 .dropdown-list li:hover { background: #243e60; }
+@media (min-width: 621px) {
+    body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 100dvh;
+        padding-block: var(--sharing-vertical-padding, 24px);
+    }
+    .sharing-shell { flex-shrink: 0; margin-bottom: var(--sharing-calendar-overflow, 0px); }
+}
 @media (max-width: 620px) {
     body { padding: 18px 14px; }
+    .sharing-shell { padding: 16px; border-radius: 22px; }
     .device-container { grid-template-columns: minmax(0, 1fr); gap: 16px; }
     .sharing-header { gap: 8px; }
     .sharing-brand { gap: 10px; }
@@ -317,9 +368,12 @@ kbd { padding: 3px 5px; border: 1px solid #405573; border-radius: 5px; backgroun
 }
 @media (max-width: 400px) {
     body { padding: 16px 10px; }
+    .sharing-shell { padding: 12px; border-radius: 20px; }
+    .sharing-header { flex-wrap: wrap; }
+    .sharing-tools { margin-left: auto; }
     .brand-mark { flex-basis: 40px; height: 40px; border-radius: 12px; }
     .utility-button { width: 32px; height: 34px; padding: 5px; }
-    .eyebrow { font-size: .55rem; }
+    .eyebrow { font-size: clamp(.45rem, 2vw, .55rem); }
     h1 { font-size: 1.25rem; }
     .drop-zone { min-height: 200px; padding: 22px 12px; }
     .sfsp-dropdown { max-height: calc(100dvh - 24px); }

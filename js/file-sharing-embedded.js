@@ -48,6 +48,59 @@ const fileTransferProgressBtn = document.getElementById('fileTransferProgressBtn
 const readMeTextMemo = document.getElementById("readMeTextMemo");
 const fileInput = document.getElementById('fileInput');
 const toolBarPasteArea = document.getElementById('toolBarPasteArea');
+const selectFilesTab = document.getElementById('selectFilesTab');
+const remoteStreamTab = document.getElementById('remoteStreamTab');
+let activeSharingTab = 'files';
+
+function updateSharingTabs() {
+    if (protectWithPasswordChoice.checked) {
+        activeSharingTab = 'files';
+    }
+    const busy = remoteStreamUrlSection.disabled || selectFilesBtn.disabled;
+    selectFilesTab.disabled = busy;
+    remoteStreamTab.disabled = busy || protectWithPasswordChoice.checked;
+    const filesSelected = activeSharingTab === 'files';
+    selectFilesTab.setAttribute('aria-selected', String(filesSelected));
+    remoteStreamTab.setAttribute('aria-selected', String(!filesSelected));
+    selectFilesTab.tabIndex = filesSelected ? 0 : -1;
+    remoteStreamTab.tabIndex = filesSelected ? -1 : 0;
+    selectFilesSection.hidden = !filesSelected;
+    remoteStreamUrlSection.hidden = filesSelected;
+    toolBarPasteArea.disabled = busy || !filesSelected;
+}
+
+function selectSharingTab(tab) {
+    const button = tab === 'stream' ? remoteStreamTab : selectFilesTab;
+    if (button.disabled) {
+        return;
+    }
+    activeSharingTab = tab;
+    updateSharingTabs();
+}
+
+function initSharingTabs() {
+    [[selectFilesTab, 'files'], [remoteStreamTab, 'stream']].forEach(([button, tab]) => {
+        button.addEventListener('click', () => selectSharingTab(tab));
+        button.addEventListener('keydown', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                return;
+            }
+            event.preventDefault();
+            const enabledTabs = [selectFilesTab, remoteStreamTab].filter(item => !item.disabled);
+            if (!enabledTabs.length) {
+                return;
+            }
+            const index = enabledTabs.indexOf(button);
+            const next = event.key === 'Home' ? enabledTabs[0]
+                : event.key === 'End' ? enabledTabs[enabledTabs.length - 1]
+                : enabledTabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + enabledTabs.length) % enabledTabs.length];
+            selectSharingTab(next === remoteStreamTab ? 'stream' : 'files');
+            next.focus();
+        });
+    });
+    updateSharingTabs();
+}
+
 fileInput.removeAttribute('webkitdirectory');
 fileInput.setAttribute('multiple', '');
 
@@ -74,6 +127,7 @@ async function shareContent(processContentFunction) {
     selectFilesBtn.disabled = true;
     dropZone.disabled = true;
     dropZone.classList.add('disabled-zone');
+    updateSharingTabs();
 
     try {
         if (typeof processContentFunction === 'function') {
@@ -106,6 +160,7 @@ async function afterAllCleanup(binaryId, withPageRefresh) {
     selectFilesBtn.disabled = false;
     dropZone.disabled = false;
     dropZone.classList.remove('disabled-zone');
+    updateSharingTabs();
 
     if (withPageRefresh) {
         window.location.assign(window.location.href);
@@ -156,7 +211,7 @@ function makeShareWithPasswordUiAdjustments() {
     protectWithCaptchaChoice.checked = false;
     passwordInputContainer.style.display = 'block';
     readMeContainer.style.display = 'block';
-    remoteStreamUrlSection.style.display = 'none';
+    updateSharingTabs();
     passwordInput.focus();
 }
 
@@ -165,12 +220,7 @@ function makeSharePublicUiAdjustments(protectWithCaptcha = true) {
     protectWithPasswordChoice.checked = false;
     passwordInputContainer.style.display = 'none';
     readMeContainer.style.display = 'none';
-    if (remoteStreamUrlSection) {
-        remoteStreamUrlSection.style.display = 'flex';
-        if (urlInputContainer) {
-            urlInputContainer.focus();
-        }
-    }
+    updateSharingTabs();
 }
 
 function setProtectionTypeChoice(choiceName) {
@@ -378,7 +428,7 @@ async function readTextFromClipboardItem(item) {
 
 function canPasteSharedContent() {
     return toolBarPasteArea && !toolBarPasteArea.disabled && !toolBarPasteArea.readOnly
-        && !selectFilesBtn.disabled && !dropZone.disabled
+        && !selectFilesSection.hidden && !selectFilesBtn.disabled && !dropZone.disabled
         && !dropZone.classList.contains('disabled-zone')
         && !document.querySelector('.consent-dialog.visible');
 }
@@ -399,7 +449,39 @@ function focusPasteAreaForDropZone(event) {
 
 //======================================================================================================================
 
+// Include the open calendar's overflow in desktop centering without moving it into the form flow.
+function initDateTimePickerCentering(dropdown) {
+    const shell = document.querySelector('.sharing-shell');
+    const desktop = window.matchMedia('(min-width: 621px)');
+
+    function update() {
+        let overflow = 0;
+        let verticalPadding = 24;
+        if (desktop.matches && dropdown.classList.contains('sfsp-open') && dropdown.offsetParent) {
+            const shellBounds = shell.getBoundingClientRect();
+            const parent = dropdown.offsetParent;
+            // Measure the final position without the opening animation's vertical translation.
+            const dropdownBottom = parent.getBoundingClientRect().top + parent.clientTop
+                + parseFloat(window.getComputedStyle(dropdown).top) + dropdown.getBoundingClientRect().height;
+            overflow = Math.max(0, Math.ceil(dropdownBottom - shellBounds.bottom));
+            const combinedHeight = shellBounds.height + overflow;
+            verticalPadding = Math.max(0, Math.min(24, (window.innerHeight - combinedHeight) / 2));
+        }
+        shell.style.setProperty('--sharing-calendar-overflow', `${overflow}px`);
+        document.body.style.setProperty('--sharing-vertical-padding', `${verticalPadding}px`);
+    }
+
+    new MutationObserver(update).observe(dropdown, {attributes: true, attributeFilter: ['class']});
+    const sizeObserver = new ResizeObserver(update);
+    sizeObserver.observe(shell);
+    sizeObserver.observe(dropdown);
+    window.addEventListener('resize', update);
+    desktop.addEventListener('change', update);
+    update();
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+    initSharingTabs();
     document.querySelectorAll('input[name="protectWithPasswordChoice"]').forEach((element) => {
         element.addEventListener('change', function () {
             setProtectionTypeChoice(this.value);
@@ -464,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (additionalRulesContainer && (typeof SFSPDateTimePicker === 'function')) {
-        new SFSPDateTimePicker(
+        const dateTimePicker = new SFSPDateTimePicker(
             {
                 container: additionalRulesContainer,
                 label: '',
@@ -479,6 +561,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         );
+        initDateTimePickerCentering(dateTimePicker.elements.dropdown);
     }
 
     if (urlInputContainer) {
@@ -585,16 +668,14 @@ async function showInfiniteProgress(progressBarWidget, stopWhenFunction) {
 
 function enableRemoteStreamUrlSection() {
     remoteStreamUrlSection.disabled = false;
-    selectFilesSection.style.display = '';
     selectFilesSection.disabled = false;
-    toolBarPasteArea.disabled = false;
+    updateSharingTabs();
 }
 
 function disableRemoteStreamUrlSection() {
     remoteStreamUrlSection.disabled = true;
-    selectFilesSection.style.display = 'none';
     selectFilesSection.disabled = true;
-    toolBarPasteArea.disabled = true;
+    updateSharingTabs();
 }
 
 //==================================File sharing implementation=========================================================

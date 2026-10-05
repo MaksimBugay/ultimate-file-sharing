@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/datetime-picker.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
     <link rel="stylesheet" href="css/url-input.css">
-    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=description-toggle-5">
+    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=calendar-centering-12">
     <meta name="theme-color" content="#0d1420">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
@@ -80,8 +80,8 @@
                         <svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"/><path d="M12 16V8m-3 3 3-3 3 3"/></svg>
                     </span>
                     <div>
-                        <span class="eyebrow">SECURE FILESHARE</span>
-                        <h1>Share your files</h1>
+                        <h1>SECURE FILESHARE</h1>
+                        <span class="eyebrow">Choose protection, then add your content.</span>
                     </div>
                 </div>
                 <nav class="sharing-tools" aria-label="Help and privacy">
@@ -95,7 +95,6 @@
                     </button>
                 </nav>
             </header>
-            <p class="sharing-intro">Your files. Your rules. Choose protection, then add your content.</p>
 
             <div id="readMeContainer">
                 <fieldset class="file-share-fieldset description-panel">
@@ -155,10 +154,18 @@
                 <span id="uploadProgressPercentage">0%</span>
             </div>
 
-            <div id="selectFilesContainer">
-                <fieldset id="selectFilesSection" class="file-share-fieldset upload-panel">
-                    <legend class="file-share-legend">Select files</legend>
-                    <div id="selectFilesSubContainer">
+            <div id="selectFilesContainer" class="file-share-fieldset upload-panel">
+                <div class="sharing-tabs" role="tablist" aria-label="Content to share">
+                    <button type="button" id="selectFilesTab" class="sharing-tab" role="tab"
+                            aria-controls="selectFilesSubContainer" aria-selected="true" tabindex="0">Select files</button>
+                    <button type="button" id="remoteStreamTab" class="sharing-tab" role="tab"
+                            aria-controls="urlInputContainer" aria-selected="false" tabindex="-1">
+                        Remote stream <span class="experimental-badge">Experimental</span>
+                    </button>
+                </div>
+                <fieldset id="selectFilesSection" class="sharing-tab-panel"
+                          aria-labelledby="selectFilesTab">
+                    <div id="selectFilesSubContainer" role="tabpanel" aria-labelledby="selectFilesTab">
                         <div id="dropZone" class="drop-zone multi-line-text">
                             <div class="drop-zone-heading">
                                 <span id="selectFileLabel" class="label-text">Select FILES from your device</span> or simply Drop<span id="pasteHint" class="paste-hint" title="⌘+V on Mac; Ctrl+V on Windows and Linux">/Paste</span> them here.
@@ -172,10 +179,11 @@
                     <input type="file" id="fileInput" style="display:none" multiple>
                 </fieldset>
 
-                <fieldset id="remoteStreamUrlSection" class="file-share-fieldset centered-container">
-                    <legend class="file-share-legend">Remote stream <span class="experimental-badge">Experimental</span></legend>
-                    <p class="field-hint">Paste a remote stream URL to share it.</p>
-                    <div id="urlInputContainer"></div>
+                <fieldset id="remoteStreamUrlSection" class="sharing-tab-panel centered-container"
+                          aria-labelledby="remoteStreamTab" hidden>
+                    <div id="urlInputContainer" role="tabpanel" aria-labelledby="remoteStreamTab">
+                        <p class="field-hint">Paste a remote stream URL to share it.</p>
+                    </div>
                 </fieldset>
             </div>
             <div class="tb-copy-past" id="tbCopyPastMemo">
@@ -193,7 +201,7 @@
 
 <script src="js/datetime-picker.js?v=<?= time(); ?>"></script>
 <script src="js/url-input.js?v=<?= time(); ?>"></script>
-<script src="js/file.sharing.min.js?v=protected-image-remote-progress-10"></script>
+<script src="js/file.sharing.min.js?v=calendar-centering-12"></script>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
