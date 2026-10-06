@@ -98,6 +98,14 @@ body.demo-widget-page {
   transform: translateY(-2px);
 }
 
+/* Keep the tile still while the browser's native video controls are visible. */
+.demo-widget-cell:has(.demo-widget-video[controls]) {
+  animation: none;
+  transition-property: border-color, box-shadow;
+  backdrop-filter: none;
+  transform: none;
+}
+
 .demo-widget-cell::before {
   content: '';
   position: absolute;
@@ -213,7 +221,7 @@ body.demo-widget-page {
 }
 
 .demo-widget-video-wrapper::after {
-  content: 'Click for sound';
+  content: 'Unmute for sound';
   position: absolute;
   right: 14px;
   top: 14px;

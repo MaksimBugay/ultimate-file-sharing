@@ -119,14 +119,12 @@ function createAdCell(item) {
 
   if (/\.webm(?:[?#]|$)/i.test(item.srcUrl)) {
     mediaWrapper.classList.add('demo-widget-video-wrapper');
-    mediaWrapper.tabIndex = 0;
-    mediaWrapper.setAttribute('role', 'button');
-    mediaWrapper.setAttribute('aria-label', `Play ${item.title || 'video'} with sound from the beginning`);
 
     const video = document.createElement('video');
     video.className = 'demo-widget-iframe demo-widget-video';
     video.src = item.srcUrl;
     video.autoplay = true;
+    video.controls = true;
     video.loop = true;
     video.muted = true;
     video.defaultMuted = true;
@@ -136,30 +134,8 @@ function createAdCell(item) {
     video.setAttribute('aria-label', item.title || 'Video preview');
     mediaWrapper.appendChild(video);
 
-    let soundEnabled = false;
-    const playWithSound = () => {
-      if (soundEnabled) return;
-      soundEnabled = true;
-      video.muted = false;
-      video.defaultMuted = false;
-      video.removeAttribute('muted');
-      video.currentTime = 0;
-      video.controls = true;
-      mediaWrapper.classList.add('is-audible');
-      mediaWrapper.removeAttribute('role');
-      mediaWrapper.removeAttribute('aria-label');
-      mediaWrapper.tabIndex = -1;
-      video.play().catch(() => {});
-    };
-
-    cell.addEventListener('click', event => {
-      if (!titleLink.contains(event.target)) playWithSound();
-    });
-    mediaWrapper.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        playWithSound();
-      }
+    video.addEventListener('volumechange', () => {
+      mediaWrapper.classList.toggle('is-audible', !video.muted && video.volume > 0);
     });
   } else {
     const iframe = document.createElement('iframe');
