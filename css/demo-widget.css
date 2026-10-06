@@ -31,12 +31,6 @@ body.demo-widget-page {
   overflow: visible;
 }
 
-/* Prevent the injected centered overlay from covering the promo controls. */
-.demo-widget-page #centeredContainer {
-  display: none !important;
-  pointer-events: none !important;
-}
-
 .demo-widget-container {
   font-family: 'Outfit', 'SF Pro Display', -apple-system, sans-serif;
   display: grid;

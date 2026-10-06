@@ -3,6 +3,12 @@
 /* Import modern font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
+/* Prevent the injected centered overlay from covering page controls. */
+#centeredContainer {
+    display: none !important;
+    pointer-events: none !important;
+}
+
 /* Root variables for consistent theming */
 :root {
     --primary-color: #4F46E5;
