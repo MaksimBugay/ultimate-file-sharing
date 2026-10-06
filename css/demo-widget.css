@@ -220,27 +220,8 @@ body.demo-widget-page {
   outline-offset: -3px;
 }
 
-.demo-widget-video-wrapper::after {
-  content: 'Unmute for sound';
-  position: absolute;
-  right: 14px;
-  top: 14px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  background: rgba(13, 17, 23, 0.8);
-  color: var(--dw-text);
-  font-size: 12px;
-  font-weight: 600;
-  pointer-events: none;
-  transition: opacity var(--dw-transition);
-}
-
 .demo-widget-video-wrapper.is-audible {
   cursor: default;
-}
-
-.demo-widget-video-wrapper.is-audible::after {
-  opacity: 0;
 }
 
 /* Support banner */
