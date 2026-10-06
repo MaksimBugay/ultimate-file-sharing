@@ -132,6 +132,7 @@ function createAdCell(item) {
     video.playsInline = true;
     video.setAttribute('muted', '');
     video.setAttribute('aria-label', item.title || 'Video preview');
+    keepNativeVideoControlsVisible(video);
     mediaWrapper.appendChild(video);
 
     video.addEventListener('volumechange', () => {
@@ -155,6 +156,42 @@ function createAdCell(item) {
   cell.appendChild(mediaWrapper);
 
   return cell;
+}
+
+/**
+ * Keep native controls active without changing playback, sound, or focus.
+ * Chromium also fades an internal button row, so panel CSS alone is insufficient.
+ */
+function keepNativeVideoControlsVisible(video) {
+  let refreshTimer = null;
+
+  const refreshControls = () => {
+    if (video.isConnected && video.controls) {
+      video.dispatchEvent(new PointerEvent('pointermove', {pointerType: 'mouse'}));
+    }
+  };
+
+  const stopRefreshing = () => {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  };
+
+  video.addEventListener('playing', () => {
+    stopRefreshing();
+    refreshControls();
+    refreshTimer = setInterval(() => {
+      if (!video.isConnected || video.paused) {
+        stopRefreshing();
+        return;
+      }
+      refreshControls();
+    }, 1000);
+  });
+
+  video.addEventListener('pointerout', () => requestAnimationFrame(refreshControls));
+  video.addEventListener('pause', stopRefreshing);
+  video.addEventListener('ended', stopRefreshing);
+  video.addEventListener('emptied', stopRefreshing);
 }
 
 /**
