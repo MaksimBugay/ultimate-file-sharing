@@ -103,7 +103,7 @@ userLang = translations.destinationHintString[userLang] ? userLang : 'en';
 
 function localizePage(lang) {
     const destinationHint = document.getElementById("destinationHint");
-    if (destinationHint) {
+    if (destinationHint && destinationHint.dataset.localize !== 'false') {
         destinationHint.innerText = translations.destinationHintString[lang] || translations.destinationHintString['en'];
     }
 

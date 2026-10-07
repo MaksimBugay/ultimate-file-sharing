@@ -7,6 +7,8 @@
     <title>Ultimate file transfer</title>
     <link rel="stylesheet" href="css/consent-dialog.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
+    <link rel="stylesheet" href="css/file-transfer-embedded-theme.css?v=warning-cleanup-1">
+    <meta name="theme-color" content="#0d1420">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -24,7 +26,7 @@
     <meta name="twitter:description" content="Simple file transfer with Zero trust ultimate security">
     <meta name="twitter:image" content="https://secure.fileshare.ovh/images/public-binary-thumbnail.png">
 </head>
-<body style="padding: 0;margin: 0;">
+<body>
 <div id="errorDialog" class="consent-dialog" style="z-index: 10050">
     <div class="error-content">
         <div class="error-caption">
@@ -128,7 +130,7 @@
         <div class="info-caption">
             <div class="dialog-title">Info</div>
             <div class="close-btn-container">
-                <span id="closeInfoBtn" class="close-btn" style="color: darkblue">&times;</span>
+                <span id="closeInfoBtn" class="close-btn">&times;</span>
             </div>
         </div>
         <div id="qrcode" class="centered-container"></div>
@@ -141,120 +143,166 @@
         <div class="info-caption">
             <div class="dialog-title">QR Code Scanner</div>
             <div class="close-btn-container">
-                <span id="closeQrScannerBtn" class="close-btn" style="color: darkblue">&times;</span>
+                <span id="closeQrScannerBtn" class="close-btn">&times;</span>
             </div>
         </div>
         <video id="video" autoplay></video>
         <div class="centered-container">
             <div id="output">Scanned Result: <span id="result">None</span></div>
-            <button id="qrScanBtn" class="qr-code-button scan-qr-code-button-img" title="Scan QR code"></button>
+            <button id="qrScanBtn" class="qr-code-button scan-qr-code-button-img" title="Scan QR code" aria-label="Scan QR code">
+                <svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><path d="M14 14h3v3m-3 0h.01"/></svg>
+            </button>
         </div>
     </div>
 </div>
 
-<div style="transform: scale(0.9)">
+<main class="transfer-shell">
     <div id="mainFlowContainer" class="main-flow-container">
-        <div class="device-container container-max-width" style="min-width: 400px">
-            <span style="display: none; flex-direction: row; margin-left: 5px">
-                <a href="https://www.youtube.com/watch?v=wiZbkBZiFag" class="nav-link" id="transferFileDemoButton"
-                   target="_blank" rel="noopener noreferrer">
-                     <img src="https://secure.fileshare.ovh/images/youtube.png" alt="Transfer file"
-                          class="custom-button-img"
-                          style="border-radius: 12px">
-                     Demo
-                </a>
-                <img id="howToButton" src="images/help.png" alt="How to" class="help-button" title="Documentation">
-            </span>
+        <div class="device-container container-max-width transfer-device">
+            <header class="transfer-header">
+                <div class="transfer-brand">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg class="transfer-icon" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"/><path d="M8 10h8m-2-2 2 2-2 2m2 2H8m2-2-2 2 2 2"/></svg>
+                    </span>
+                    <div>
+                        <h1>SECURE FILE TRANSFER</h1>
+                        <span class="eyebrow">Ultimate security without compromise</span>
+                    </div>
+                </div>
+                <nav class="transfer-tools" aria-label="Help and privacy">
+                    <button type="button" id="howToButton" class="utility-button" title="Documentation" aria-label="Documentation"
+                            onclick="window.open('https://secure.fileshare.ovh/manual/secure-fileshare-documentation.html', '_blank')">
+                        <svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 1.5-2.5 2-2.5 3.5m0 3h.01"/></svg>
+                    </button>
+                    <button type="button" id="privacyButton" class="utility-button" title="Privacy policy" aria-label="Privacy policy"
+                            onclick="window.open('https://secure.fileshare.ovh/privacy/file-sharing-privacy.html', '_blank')">
+                        <svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>
+                    </button>
+                </nav>
+            </header>
+
+            <section id="transferIntro" class="transfer-intro" aria-labelledby="transferHeading">
+                <div id="transferIntroContent" class="transfer-intro-content" hidden>
+                    <div class="transfer-intro-text">
+                        <h2 id="transferHeading">Device to device - a direct path for your files</h2>
+                        <p class="intro-copy">Establish a secure connection first, then send with confidence</p>
+                    </div>
+                    <svg class="connection-illustration" viewBox="0 0 240 88" fill="none" aria-hidden="true">
+                        <rect x="8" y="19" width="60" height="40" rx="7" fill="#142842" stroke="#648bbd"/>
+                        <path d="M31 59v9m-11 0h36" stroke="#83aef2" stroke-width="2" stroke-linecap="round"/>
+                        <rect x="17" y="28" width="42" height="22" rx="3" fill="#284b77"/>
+                        <path d="M78 40h26m34 0h29" stroke="#52749c" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round"/>
+                        <circle cx="121" cy="40" r="17" fill="#1d3a60" stroke="#496f9d"/>
+                        <path d="M116 39v-3a5 5 0 0 1 10 0v3m-11 0h12v9h-12v-9Z" stroke="#9bc2ff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        <rect x="178" y="12" width="37" height="62" rx="8" fill="#142842" stroke="#648bbd"/>
+                        <rect x="185" y="22" width="23" height="35" rx="3" fill="#284b77"/>
+                        <path d="M193 65h7" stroke="#83aef2" stroke-width="2" stroke-linecap="round"/>
+                        <path d="m155 36 4 4-4 4" stroke="#83aef2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <button type="button" id="transferIntroToggle" class="transfer-intro-toggle"
+                        aria-expanded="false" aria-controls="transferIntroContent"
+                        aria-label="Toggle introduction" title="Expand or collapse introduction"></button>
+            </section>
+
             <div class="running-line" style="display: none">
                 <span id="runningLine">We have developed a dedicated website that empowers every internet user with the essential ability to seamlessly transfer files between devices, backed by robust protection against data theft and unauthorized access.</span>
             </div>
+
             <div id="transOwnerContainer">
-                <fieldset class="file-share-fieldset">
-                    <!--<legend id="deviceCaptionHint" class="file-share-legend">$deviceCaptionHintString$</legend>-->
+                <fieldset class="file-share-fieldset connection-panel">
                     <legend id="deviceCaptionHint0" class="file-share-legend">Your virtual host name</legend>
-                    <label for="ownerVirtualHost"></label>
-                    <div class="centered-container">
-                        <input class="fancy-input  fancy-input-with-warning" type="text" readonly id="ownerVirtualHost"
+                    <label for="ownerVirtualHost" class="visually-hidden">Your virtual host name</label>
+                    <div class="centered-container host-input-row">
+                        <input class="fancy-input fancy-input-with-warning" type="text" readonly id="ownerVirtualHost"
                                placeholder="data channel is broken"/>
-                        <div style="display: flex; flex-direction: column">
-                            <button id="ownerQrCodeBtn" class="qr-code-button qr-code-button-img"
-                                    title="show as QR code"></button>
-                            <button id="copyJointLinkBtn" class="qr-code-button joint-link-button-img"
-                                    style="margin-top: 7px; display: none" title="Copy joint link"></button>
+                        <div class="host-actions">
+                            <button type="button" id="ownerQrCodeBtn" class="qr-code-button qr-code-button-img"
+                                    title="show as QR code" aria-label="Show your virtual host name as a QR code">
+                                <svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><path d="M15 15h3v3h3m-6 3h3m3-6v-3M3 12h3m6-9v3m0 6v3"/></svg>
+                            </button>
+                            <button type="button" id="copyJointLinkBtn" class="qr-code-button joint-link-button-img"
+                                    style="display: none" title="Copy joint link" aria-label="Copy a joint link to this device">
+                                <svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2m3 6a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2"/></svg>
+                            </button>
                         </div>
                     </div>
                 </fieldset>
             </div>
+
             <div id="transReceiverContainer">
-                <fieldset class="file-share-fieldset">
+                <fieldset class="file-share-fieldset connection-panel receiver-panel">
                     <legend class="file-share-legend">Receiver virtual host name</legend>
-                    <label for="receiverVirtualHost"></label>
-                    <div class="centered-container">
+                    <label for="receiverVirtualHost" class="visually-hidden">Receiver virtual host name</label>
+                    <div class="centered-container host-input-row">
                         <input class="fancy-input" type="text" id="receiverVirtualHost"
-                               placeholder="Start typing receiver virtual host name"/>
-                        <button id="scanQrCodeBtn" class="qr-code-button scan-qr-code-button-img"
-                                title="Scan QR code"></button>
+                               placeholder="Enter receiver virtual host name" aria-describedby="destinationHint"/>
+                        <button type="button" id="scanQrCodeBtn" class="qr-code-button scan-qr-code-button-img"
+                                title="Scan QR code" aria-label="Scan the receiver's QR code">
+                            <svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="7" y="7" width="3" height="3"/><rect x="14" y="7" width="3" height="3"/><rect x="7" y="14" width="3" height="3"/><path d="M14 14h3v3m-3 0h.01"/></svg>
+                        </button>
                     </div>
-                    <div style="margin-left: 15px; margin-right: 15px; padding-left: 10px; padding-right: 10px">
-                        <div id="destinationHint" class="fancy-text">$destinationHintString$</div>
-                    </div>
+                    <div id="destinationHint" class="fancy-text" data-localize="false">Ask the receiver to open our website and share their virtual host name with you.</div>
+                    <p class="receiver-ready"><svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Receiver connected. You're ready to send.</p>
                 </fieldset>
             </div>
-            <div id="selectFilesContainer">
-                <fieldset class="file-share-fieldset centered-container">
-                    <legend class="file-share-legend">Select files and start transfer</legend>
-                    <div id="selectFilesSubContainer" style="display: flex;margin-top: 5px">
-                        <div>
-                            <div style="width: 100%; text-align: left; padding-left: 30px">
-                                <label id="selectFileLabel" for="fileInput" class="label-text">Browse</label>
-                            </div>
-                            <button id="selectFilesBtn" class="select-files-button select-files-button-size"
-                                    style="display: none; margin-left: 15px"></button>
-                        </div>
-                        <span class="or-sign label-text">OR</span>
+
+            <div id="selectFilesContainer" class="file-share-fieldset upload-panel">
+                <h3 id="selectFilesTitle" class="file-share-legend">Select files to start transfer</h3>
+                <fieldset id="selectFilesSection" class="file-selection-panel" aria-labelledby="selectFilesTitle">
+                    <div id="selectFilesSubContainer">
                         <div id="dropZone" class="drop-zone multi-line-text disabled-zone">
-                            Drag and Drop your files here / press Ctrl + V to paste from buffer
+                            <div class="drop-zone-heading">
+                                <span id="selectFileLabel" class="label-text">Select FILES from your device</span> or simply Drop<span id="pasteHint" class="paste-hint" title="⌘+V on Mac; Ctrl+V on Windows and Linux">/Paste</span> them here.
+                            </div>
+                            <button type="button" id="selectFilesBtn" class="select-files-button select-files-button-size" disabled>
+                                <svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 10h18"/></svg>
+                                Browse files
+                            </button>
                         </div>
                     </div>
                     <input type="file" id="fileInput" style="display:none" multiple>
                 </fieldset>
             </div>
+
             <div class="tb-copy-past" id="tbCopyPastMemo">
-                    <textarea class="tb-copy-past-memo"
-                              id="toolBarPasteArea" rows="1" cols="100" spellcheck="false"></textarea>
+                <textarea class="tb-copy-past-memo" id="toolBarPasteArea" tabindex="-1" rows="1" cols="100"
+                          spellcheck="false" aria-label="Paste files or text to transfer" disabled></textarea>
             </div>
-            <div id="progressBarContainer" style="display: none; width: 100%">
-                <progress id="uploadProgress" value="0" max="100" style="width: 100%"></progress>
-                <span id="uploadProgressPercentage">0%</span>
+            <div id="progressBarContainer" style="display: none; width: 100%" role="status" aria-live="polite">
+                <div class="progress-caption">Transferring your files<span id="uploadProgressPercentage">0%</span></div>
+                <progress id="uploadProgress" value="0" max="100" style="width: 100%" aria-label="File transfer progress"></progress>
             </div>
+
+            <footer class="transfer-footer">
+                <span class="security-note"><svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"/><path d="m8 12 3 3 5-6"/></svg>Encrypted file transfer</span>
+                <span>Keep this page open on both devices.</span>
+            </footer>
 
             <img id="deviceFromImage" class="device-image image-max-width hidden-element" alt="Device From">
         </div>
 
         <div class="hidden-element">
-            <button id="fileTransferBtn" class="fancy-button fancy-button-view"></button>
+            <button id="fileTransferBtn" class="fancy-button fancy-button-view" aria-label="Transfer files"></button>
             <button id="fileTransferProgressBtn" class="transfer-files-button transfer-files-button-size"
-                    style="display: none"></button>
+                    style="display: none" aria-label="File transfer progress"></button>
         </div>
 
         <div id="destinationContainer" class="device-container container-max-width hidden-element">
             <div class="centered-container">
                 <div class="dialog-title"> TO</div>
             </div>
-            <!--<div class="device-caption">TO (receiver virtual host name)</div>-->
-
-            <!--<a href="https://secure.fileshare.ovh/file-transfer.html" target="_blank">link</a>-->
             <div id="deviceToImageBox" class="device-to-image-box">
                 <img id="deviceToImage" class="device-image image-max-width" src="images/device2.png"
                      alt="Device To">
             </div>
         </div>
     </div>
-</div>
+</main>
 </body>
 
 <!--<script src="https://secure.fileshare.ovh/js/pushca.file-transfer.min.js?v=<?= time(); ?>"></script>-->
-<script src="js/pushca.file-transfer.min.js?v=<?= time(); ?>"></script>
+<script src="js/pushca.file-transfer.min.js?v=warning-cleanup-1"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];

@@ -3,6 +3,7 @@ FileTransfer.applicationId = 'DIRECT_TRANSFER';
 FileTransfer.wsUrl = 'wss://secure.fileshare.ovh:31085';
 FileTransfer.scanQrCodeWaiterId = 'scan-qr-code-result';
 FileTransfer.preparedJointLink = null;
+FileTransfer.isTransferring = false;
 FileTransfer.jointLinkPrefix = 'joint-link::destination-alias::';
 FileTransfer.pingIntervalId = window.setInterval(function () {
     PushcaClient.sendPing();
@@ -56,12 +57,15 @@ FileTransfer.progressBarWidget = new ProgressBarWidget(
     uploadProgressPercentage
 );
 
-howToButton.addEventListener('click', function () {
-    const url = isMobile() ?
-        'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=cce24836-7e24-4694-bc6c-f832089249fe' :
-        'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=d866b398-77be-40e6-9435-0a437de7c099';
-    window.open(url, '_blank');
-});
+// The embedded page supplies the reference documentation link directly.
+if (!howToButton.onclick) {
+    howToButton.addEventListener('click', function () {
+        const url = isMobile() ?
+            'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=cce24836-7e24-4694-bc6c-f832089249fe' :
+            'https://secure.fileshare.ovh/public-binary.html?w=85fb3881ad15bf9ae956cb30f22c5855&id=d866b398-77be-40e6-9435-0a437de7c099';
+        window.open(url, '_blank');
+    });
+}
 
 FileTransfer.reBindControls = function (force = false) {
     if (dropZone.style.display === 'none') {
@@ -70,8 +74,8 @@ FileTransfer.reBindControls = function (force = false) {
         }
     }
     if (document.getElementById("selectFilesContainer")) {
-        selectFilesBtn.style.display = 'block';
-        dropZone.style.display = 'block';
+        selectFilesBtn.style.display = 'inline-flex';
+        dropZone.style.display = 'flex';
         receiverVirtualHost.style.cursor = "pointer";
         ownerVirtualHost.style.cursor = "pointer";
         return;
@@ -112,6 +116,19 @@ FileTransfer.reBindControls = function (force = false) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    const transferIntro = document.getElementById('transferIntro');
+    if (transferIntro) {
+        const introToggle = document.getElementById('transferIntroToggle');
+        const introContent = document.getElementById('transferIntroContent');
+        const setIntroExpanded = expanded => {
+            transferIntro.classList.toggle('is-expanded', expanded);
+            introToggle.setAttribute('aria-expanded', String(expanded));
+            introContent.hidden = !expanded;
+        };
+        setIntroExpanded(!isMobile() && !window.matchMedia('(max-width: 700px), (pointer: coarse)').matches);
+        introToggle.addEventListener('click', () => setIntroExpanded(introContent.hidden));
+    }
+    focusUnresolvedReceiverVirtualHost();
     const runningLine = document.getElementById('runningLine');
     if (runningLine) {
         runningLine.style.animationPlayState = 'running';
@@ -157,16 +174,32 @@ function getCopyPastName(mimeType, blobName) {
 }
 
 toolBarPasteArea.addEventListener('paste', async function (event) {
-    const clipboardItems = event.clipboardData.items;
-
+    if (!canPasteTransferredContent()) {
+        event.preventDefault();
+        return;
+    }
+    // Capture clipboard data during the paste event, before restoring the connection.
+    const clipboardItems = Array.from(event.clipboardData.items, item => {
+        if (item.kind === 'file') {
+            return {kind: 'file', file: item.getAsFile()};
+        }
+        if (item.kind === 'string') {
+            return {kind: 'string', text: readTextFromClipboardItem(item)};
+        }
+        return {kind: item.kind};
+    });
     event.stopPropagation();
     event.preventDefault();
 
+    await transferContent(() => processClipboardItems(clipboardItems));
+});
+
+async function processClipboardItems(clipboardItems) {
     let textItems = null;
 
     for (let item of clipboardItems) {
         if (item.kind === 'file') {
-            const blob = item.getAsFile();
+            const blob = item.file;
             console.log('item.getAsFile');
             console.log(blob);
             const mimeType = blob.type;
@@ -180,9 +213,9 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
             showInfoMsg("File was successfully transferred: " + name);
         } else if (item.kind === 'string') {
             if (textItems) {
-                textItems = textItems + " " + await readTextFromClipboardItem(item);
+                textItems = textItems + " " + await item.text;
             } else {
-                textItems = await readTextFromClipboardItem(item);
+                textItems = await item.text;
             }
         }
     }
@@ -202,7 +235,7 @@ toolBarPasteArea.addEventListener('paste', async function (event) {
             showInfoMsg("File was successfully transferred: " + name);
         }
     }
-});
+}
 
 async function readTextFromClipboardItem(item) {
     const getClipboardTextItemResult = await CallableFuture.callAsynchronously(
@@ -227,31 +260,90 @@ function holdFocus(event) {
 }
 
 
-if (document.getElementById('selectFilesSubContainer')) {
-    document.getElementById('selectFilesSubContainer').addEventListener(
-        'mousemove', function () {
-            if (!receiverVirtualHost.readOnly) {
-                return;
-            }
-            if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
-                return;
-            }
-            if (toolBarPasteArea) {
-                toolBarPasteArea.focus();
-                toolBarPasteArea.style.border = "0 none transparent";
-            }
+const dropZoneHeading = document.querySelector('.drop-zone-heading');
+
+function updateFileSelectionState() {
+    const disabled = FileTransfer.isTransferring || !receiverVirtualHost.readOnly
+        || !receiverVirtualHost.value || !ownerVirtualHost.value;
+    selectFilesBtn.disabled = disabled;
+    dropZone.disabled = disabled;
+    dropZone.classList.toggle('disabled-zone', disabled);
+    toolBarPasteArea.disabled = disabled;
+}
+
+function canPasteTransferredContent() {
+    return toolBarPasteArea && !toolBarPasteArea.disabled && !toolBarPasteArea.readOnly
+        && receiverVirtualHost.readOnly && !!receiverVirtualHost.value && !!ownerVirtualHost.value
+        && !selectFilesBtn.disabled && !dropZone.disabled
+        && !dropZone.classList.contains('disabled-zone')
+        && !document.querySelector('.consent-dialog.visible');
+}
+
+function focusPasteAreaForDropZone(event) {
+    if (!canPasteTransferredContent() || event.buttons || document.activeElement === toolBarPasteArea) {
+        return;
+    }
+    // Preserve text selected for copying, including a host name selected inside an input.
+    const activeElement = document.activeElement;
+    if (window.getSelection()?.toString()
+        || (typeof activeElement.selectionStart === 'number'
+            && activeElement.selectionStart !== activeElement.selectionEnd)) {
+        return;
+    }
+    toolBarPasteArea.focus({preventScroll: true});
+}
+
+if (dropZoneHeading) {
+    dropZone.addEventListener('mousemove', focusPasteAreaForDropZone);
+    // Match the sharing page: retain paste focus through the heading's mouse down and click.
+    dropZoneHeading.addEventListener('mousedown', function (event) {
+        if (canPasteTransferredContent()) {
+            event.preventDefault();
+            toolBarPasteArea.focus({preventScroll: true});
         }
-    );
+    });
+    dropZoneHeading.addEventListener('click', function () {
+        if (canPasteTransferredContent()) {
+            toolBarPasteArea.focus({preventScroll: true});
+        }
+    });
+} else {
+    if (document.getElementById('selectFilesSubContainer')) {
+        document.getElementById('selectFilesSubContainer').addEventListener(
+            'mousemove', function () {
+                if (!receiverVirtualHost.readOnly) {
+                    return;
+                }
+                if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
+                    return;
+                }
+                if (toolBarPasteArea) {
+                    toolBarPasteArea.focus();
+                    toolBarPasteArea.style.border = "0 none transparent";
+                }
+            }
+        );
+    }
+
 }
 
 document.addEventListener('mousemove', containerWithCopyPastElementMouseMoveEventHandler);
+
+function focusUnresolvedReceiverVirtualHost() {
+    if (!receiverVirtualHost.readOnly && !document.querySelector('.consent-dialog.visible')) {
+        receiverVirtualHost.focus({preventScroll: true});
+    }
+}
 
 function containerWithCopyPastElementMouseMoveEventHandler(event) {
     if (!hasParentWithIdOrClass(event.target, ['main-flow-container'])) {
         return;
     }
     if (!receiverVirtualHost.readOnly) {
-        receiverVirtualHost.focus();
+        focusUnresolvedReceiverVirtualHost();
+        return;
+    }
+    if (dropZoneHeading) {
         return;
     }
     if (toolBarPasteArea && document.activeElement === toolBarPasteArea) {
@@ -261,6 +353,8 @@ function containerWithCopyPastElementMouseMoveEventHandler(event) {
         toolBarPasteArea.focus();
     }
 }
+
+updateFileSelectionState();
 
 //==================================== Show owner QR code ==============================================================
 const ownerQrCodeBtn = document.getElementById('ownerQrCodeBtn');
@@ -554,7 +648,11 @@ function initDropZone(dzElement) {
 
 // Add visual feedback for when file is being dragged over the drop zone
     ['dragenter', 'dragover'].forEach(eventName => {
-        dzElement.addEventListener(eventName, () => dzElement.classList.add('dragover'), false);
+        dzElement.addEventListener(eventName, () => {
+            if (!dzElement.disabled) {
+                dzElement.classList.add('dragover');
+            }
+        }, false);
     });
 
     ['dragleave', 'drop'].forEach(eventName => {
@@ -565,6 +663,9 @@ function initDropZone(dzElement) {
 initDropZone(dropZone);
 
 dropZone.addEventListener('drop', async function (event) {
+    if (dropZone.disabled) {
+        return;
+    }
     await processSelectedFiles(event.dataTransfer.files);
     delay(500).then(() => {
         event.dataTransfer.clearData();
@@ -581,48 +682,67 @@ fileInput.addEventListener('change', async function (event) {
     }
 });
 
-async function processSelectedFiles(files) {
-    if (!receiverVirtualHost.readOnly) {
+async function transferContent(processContentFunction) {
+    if (FileTransfer.isTransferring) {
+        return;
+    }
+    if (!receiverVirtualHost.readOnly || !receiverVirtualHost.value) {
         showErrorMsg("Receiver's virtual host was not provided", function () {
             receiverVirtualHost.focus();
         });
         return;
     }
 
-    await PushcaClient.restoreBrokenWsConnection();
-
+    FileTransfer.isTransferring = true;
+    updateFileSelectionState();
     fileTransferBtn.style.display = 'none';
     fileTransferProgressBtn.style.display = 'block';
-    selectFilesSubContainer.style.display = 'none';
-    let i = 0;
-    FileTransfer.extraProgressHandler = function () {
-        i += 1;
-        if (i % 5 === 0) {
-            if (fileTransferProgressBtn.style.transform === 'scale(0.95)') {
-                fileTransferProgressBtn.style.transform = 'scale(1.1)';
-            } else {
-                fileTransferProgressBtn.style.transform = 'scale(0.95)';
-            }
+    try {
+        await PushcaClient.restoreBrokenWsConnection();
+        for (let attempt = 0; !ownerVirtualHost.value && attempt < 100; attempt++) {
+            await delay(100);
         }
+        if (!ownerVirtualHost.value) {
+            showErrorMsg('Failed file transfer attempt: Data channel is unavailable. Please reconnect.', null);
+            return;
+        }
+        await processContentFunction();
+    } catch (error) {
+        showErrorMsg(`Failed file transfer attempt: ${error.message}`, null);
+    } finally {
+        FileTransfer.extraProgressHandler = null;
+        FileTransfer.isTransferring = false;
+        fileTransferBtn.style.display = 'block';
+        fileTransferProgressBtn.style.display = 'none';
+        afterTransferDoneHandler();
+        FileTransfer.reBindControls(true);
+        updateFileSelectionState();
     }
-    await PushcaClient.restoreBrokenWsConnection();
-    while (!ownerVirtualHost.value) {
-        delay(100);
-    }
-    for (let i = 0; i < files.length; i++) {
-        await TransferFileHelper.transferFileToVirtualHostBase(
-            files[i],
-            receiverVirtualHost.value,
-            ownerVirtualHost.value,
-            "Failed file transfer attempt: receiver is not unavailable",
-            FileTransfer
-        );
-    }
-    FileTransfer.extraProgressHandler = null;
-    fileTransferBtn.style.display = 'block';
-    fileTransferProgressBtn.style.display = 'none';
-    selectFilesSubContainer.style.display = 'flex';
-    FileTransfer.reBindControls(true);
+}
+
+async function processSelectedFiles(files) {
+    await transferContent(async function () {
+        let i = 0;
+        FileTransfer.extraProgressHandler = function () {
+            i += 1;
+            if (i % 5 === 0) {
+                if (fileTransferProgressBtn.style.transform === 'scale(0.95)') {
+                    fileTransferProgressBtn.style.transform = 'scale(1.1)';
+                } else {
+                    fileTransferProgressBtn.style.transform = 'scale(0.95)';
+                }
+            }
+        };
+        for (let i = 0; i < files.length; i++) {
+            await TransferFileHelper.transferFileToVirtualHostBase(
+                files[i],
+                receiverVirtualHost.value,
+                ownerVirtualHost.value,
+                "Failed file transfer attempt: receiver is not unavailable",
+                FileTransfer
+            );
+        }
+    });
 }
 
 function afterTransferDoneHandler() {
@@ -683,6 +803,7 @@ function setDeviceFromVirtualHost(alias) {
     }
     ownerVirtualHost.value = alias;
     ownerVirtualHost.classList.add('embedded-link');
+    updateFileSelectionState();
 }
 
 //===================================Receiver virtual host lookup =================================
@@ -713,7 +834,10 @@ function performReceiverAliasLookup(subject, str) {
                 document.querySelector('.fancy-input-container').classList.remove('fancy-input-container');
             }
             FileTransfer.reBindControls(true);
-            toolBarPasteArea.focus();
+            updateFileSelectionState();
+            if (canPasteTransferredContent()) {
+                toolBarPasteArea.focus({preventScroll: true});
+            }
         }
     });
 }
