@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="244" viewBox="0 0 560 244" fill="none">
+<defs>
+  <radialGradient id="bg"><stop offset="0" stop-color="#3b3842"/><stop offset="1" stop-color="#1a2232"/></radialGradient>
+  <linearGradient id="window" x1="143" y1="68" x2="428" y2="216" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#344158"/><stop offset="1" stop-color="#1a2a40"/></linearGradient>
+  <linearGradient id="tile" x1="335" y1="97" x2="403" y2="179" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8c894"/><stop offset="1" stop-color="#b99057"/></linearGradient>
+  <linearGradient id="shield" x1="178" y1="121" x2="205" y2="159" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6c9ce8"/><stop offset="1" stop-color="#3861a0"/></linearGradient>
+  <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M34 0H0v34" stroke="#e5c7a1" stroke-opacity=".035"/></pattern>
+  <filter id="shadow" x="-50%" y="-50%" width="200%" height="220%"><feDropShadow dy="9" stdDeviation="9" flood-color="#090e1b" flood-opacity=".55"/></filter>
+</defs>
+<path fill="url(#bg)" d="M0 0h560v244H0z"/><path fill="url(#grid)" d="M0 0h560v244H0z"/>
+<ellipse cx="280" cy="150" rx="204" ry="71" stroke="#e1c69f" stroke-opacity=".08" transform="rotate(-9 280 150)"/>
+<g filter="url(#shadow)" transform="rotate(-5 280 141)">
+  <rect x="123" y="64" width="307" height="151" rx="13" fill="url(#window)" stroke="#71819a"/>
+  <path d="M124 91h305" stroke="#627087" stroke-opacity=".6"/>
+  <circle cx="138" cy="78" r="2.5" fill="#ad8791"/><circle cx="148" cy="78" r="2.5" fill="#b6a27d"/><circle cx="158" cy="78" r="2.5" fill="#819c94"/>
+  <rect x="180" y="72" width="173" height="13" rx="4" fill="#172638"/><path d="M189 77v-1a2 2 0 0 1 4 0v1m-5 0h6v5h-6v-5Z" stroke="#8196b0" stroke-width=".8"/><text x="201" y="81" fill="#9fb0c9" font-family="system-ui,sans-serif" font-size="7">secure.fileshare.ovh</text>
+  <rect x="382" y="70" width="17" height="17" rx="4" fill="#cbb187" fill-opacity=".18" stroke="#cbb187" stroke-opacity=".5"/><path d="m390.5 74-4 1.5v3c0 2.5 4 4.5 4 4.5s4-2 4-4.5v-3l-4-1.5Z" stroke="#e5c999"/>
+  <path d="M409 75h7m-7 4h7m-7 4h7" stroke="#8d9bb2" stroke-linecap="round"/>
+  <rect x="145" y="111" width="167" height="82" rx="9" fill="#16253b" stroke="#42536d"/>
+  <rect x="158" y="124" width="36" height="36" rx="10" fill="url(#shield)" stroke="#759bd3"/><path d="m176 131-10 4v7c0 6 10 11 10 11s10-5 10-11v-7l-10-4Z" stroke="#ddeaff" stroke-width="1.2"/><path d="M176 146v-9m-3 3 3-3 3 3" stroke="#ddeaff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="205" y="138" fill="#dfebfc" font-family="system-ui,sans-serif" font-size="12" font-weight="600">FileShare</text><text x="205" y="153" fill="#9daec7" font-family="system-ui,sans-serif" font-size="8">Ready when you are.</text>
+  <rect x="158" y="172" width="59" height="7" rx="3.5" fill="#425b80"/><rect x="224" y="172" width="38" height="7" rx="3.5" fill="#334865"/>
+</g>
+<g filter="url(#shadow)" transform="rotate(10 366 150)">
+  <rect x="323" y="104" width="88" height="87" rx="23" fill="url(#tile)" stroke="#f3dbae"/>
+  <path d="M342 130h12v-4a7 7 0 0 1 14 0v4h14v13h-4a7 7 0 0 0 0 14h4v14h-14v-4a7 7 0 0 0-14 0v4h-12v-14h4a7 7 0 0 0 0-14h-4v-13Z" fill="#785d38" fill-opacity=".3" stroke="#fff0d0" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M337 113h54" stroke="#fff0d0" stroke-opacity=".3" stroke-linecap="round"/>
+</g>
+<rect x="267" y="199" width="131" height="24" rx="12" fill="#303343" stroke="#766c62"/><circle cx="281" cy="211" r="3" fill="#a5c5ab"/><text x="292" y="214" fill="#e4d5be" font-family="system-ui,sans-serif" font-size="9">One click. Right here.</text>
+<path d="m104 151 4-4m-4 0 4 4m350 15 4-4m-4 0 4 4" stroke="#ddc29a" stroke-opacity=".45" stroke-linecap="round"/>
+</svg>

@@ -1,178 +1,219 @@
-<!DOCTYPE html>
-<html lang="en" class="demo-widget-page">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-
-    <title>Secure File Sharing & File Transfer | Secure FileShare</title>
-
-    <meta name="description"
-          content="Secure FileShare offers a seamless and secure way to share and transfer files, ensuring complete anonymity and no restrictions. Share directly from your device or through the cloud, with advanced encryption and password protection to keep your files safe and private.">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
-
-    <meta name="robots"
-          content="index, follow">
-
-    <meta name="theme-color"
-          content="#ffffff">
-
-    <!-- Canonical URL -->
-    <link rel="canonical"
-          href="https://secure.fileshare.ovh/">
-
-    <!-- Favicons -->
-    <link rel="icon"
-          type="image/png"
-          sizes="32x32"
-          href="/images/file-sharing32.png">
-
-    <link rel="icon"
-          type="image/png"
-          sizes="16x16"
-          href="/images/file-sharing16.png">
-
-    <link rel="apple-touch-icon"
-          sizes="180x180"
-          href="/images/file-sharing180.png">
-
-    <!-- Web App Manifest -->
-    <link rel="manifest"
-          href="/file-sharing-manifest.json">
-
-    <!-- Stylesheets -->
-    <link rel="stylesheet"
-          href="/css/demo-widget.css?v=20261006-shared-overlay-fix">
-
-    <link rel="stylesheet"
-          href="/css/modern-public-binary.css?v=20261006-no-centered-overlay">
-
-    <!-- Open Graph -->
-    <meta property="og:type"
-          content="website">
-
-    <meta property="og:title"
-          content="Secure File Sharing & File Transfer | Secure FileShare">
-
-    <meta property="og:description"
-          content="Share and transfer files securely with complete anonymity, no restrictions, encryption, and password protection.">
-
-    <meta property="og:url"
-          content="https://secure.fileshare.ovh/">
-
-    <meta property="og:site_name"
-          content="Secure FileShare">
-
-    <meta property="og:image"
-          content="https://secure.fileshare.ovh/images/file-sharing-og.png">
-
-    <meta property="og:image:alt"
-          content="Secure FileShare - Secure File Sharing">
-
-    <meta property="og:image:width"
-          content="1200">
-
-    <meta property="og:image:height"
-          content="630">
-
-    <!-- Twitter / X -->
-    <meta name="twitter:card"
-          content="summary_large_image">
-
-    <meta name="twitter:title"
-          content="Secure File Sharing & File Transfer | Secure FileShare">
-
-    <meta name="twitter:description"
-          content="Share and transfer files securely with complete anonymity, no restrictions, encryption, and password protection.">
-
-    <meta name="twitter:image"
-          content="https://secure.fileshare.ovh/images/file-sharing-og.png">
-
-    <meta name="twitter:image:alt"
-          content="Secure FileShare - Secure File Sharing">
-
-    <!-- Structured Data -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Secure File Sharing, Transfers &amp; Private Calls | Secure FileShare</title>
+    <meta name="description" content="Share files with access controls, transfer securely between devices, and start private video calls. Free tools from Secure FileShare, with no account needed.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#0d1420">
+    <link rel="canonical" href="https://secure.fileshare.ovh/">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/file-sharing32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/file-sharing16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/file-sharing180.png">
+    <link rel="manifest" href="/file-sharing-manifest.json">
+    <link rel="stylesheet" href="/css/landing.css?v=20261008-privacy-intro">
+    <script src="/js/landing.js?v=20261008" defer></script>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Share freely. Stay in control. | Secure FileShare">
+    <meta property="og:description" content="Secure file sharing, device-to-device transfers, private video calls, and a Chrome extension. Your connection. Your control.">
+    <meta property="og:url" content="https://secure.fileshare.ovh/">
+    <meta property="og:site_name" content="Secure FileShare">
+    <meta property="og:image" content="https://secure.fileshare.ovh/images/file-sharing-og.png">
+    <meta property="og:image:alt" content="Secure FileShare — secure file sharing">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Share freely. Stay in control. | Secure FileShare">
+    <meta name="twitter:description" content="Share files, transfer between devices, and start private calls. Free to use, with no account needed.">
+    <meta name="twitter:image" content="https://secure.fileshare.ovh/images/file-sharing-og.png">
+    <meta name="twitter:image:alt" content="Secure FileShare — secure file sharing">
     <script type="application/ld+json">
         {
             "@context": "https://schema.org",
             "@type": "WebApplication",
             "name": "Secure FileShare",
             "url": "https://secure.fileshare.ovh/",
-            "description": "Securely share and transfer files from your device or through the cloud with encryption, password protection, complete anonymity, and no restrictions.",
+            "description": "Share files with access controls, transfer securely between devices, and start private video calls.",
             "applicationCategory": "UtilitiesApplication",
             "operatingSystem": "All",
             "browserRequirements": "Requires a modern web browser",
-            "featureList": [
-                "Secure file sharing",
-                "File transfer",
-                "Anonymous file sharing",
-                "Password protected file sharing",
-                "Encrypted file transfer",
-                "Direct file sharing",
-                "Cloud file sharing"
-            ],
-            "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "EUR"
-            }
+            "featureList": ["Password-protected file sharing", "Expiring share links", "Secure file transfer", "Private video calls", "Chrome extension"],
+            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}
         }
     </script>
 </head>
-<body class="demo-widget-page">
-<iframe src="html/header-modern.html" width="100%" height="95px"
-        style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
-<div id="demoWidgetContainer" class="demo-widget-parent-container"></div>
+<body>
+<a class="skip-link" href="#tools">Skip to tools</a>
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+        <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3-8 3v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"/><path d="M12 16V8m-3 3 3-3 3 3"/></symbol>
+        <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+        <symbol id="icon-external" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"/></symbol>
+        <symbol id="icon-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7V5Z"/></symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+        <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></symbol>
+        <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+        <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+        <symbol id="icon-youtube" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3V9Z"/></symbol>
+        <symbol id="icon-facebook" viewBox="0 0 24 24"><path d="M14 21v-8h3l.6-4H14V7c0-1 .3-2 2-2h2V1.5A25 25 0 0 0 15 1c-3 0-5 2-5 5v3H7v4h3v8"/></symbol>
+    </defs>
+</svg>
+
+<header class="site-header page-width">
+    <a class="brand" href="/" aria-label="Secure FileShare home">
+        <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#icon-shield"/></svg></span>
+        <span class="brand-name"><span>SECURE</span>FileShare</span>
+    </a>
+    <nav class="header-nav" aria-label="Main navigation">
+        <a class="nav-link" href="#tools">Explore tools</a>
+        <a class="nav-link" href="#support">Support us <svg class="icon" aria-hidden="true"><use href="#icon-heart"/></svg></a>
+    </nav>
+    <a class="header-social" href="https://www.youtube.com/playlist?list=PLYnMJJjt4qq13kjqTNgBOQ0GHKcxoWjlF" target="_blank" rel="noopener noreferrer" aria-label="Watch our tutorials on YouTube (opens in a new tab)">
+        <svg class="icon" aria-hidden="true"><use href="#icon-youtube"/></svg>
+        <span>Tutorials</span>
+        <svg class="icon small-icon" aria-hidden="true"><use href="#icon-external"/></svg>
+    </a>
+</header>
+
+<main class="page-width">
+    <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-detail">
+            <h1 id="hero-title">Share freely, without compromising your privacy.</h1>
+            <ul class="hero-benefits" aria-label="Why Secure FileShare">
+                <li><svg class="icon" aria-hidden="true"><use href="#icon-check"/></svg>Free to use</li>
+                <li><svg class="icon" aria-hidden="true"><use href="#icon-check"/></svg>No account needed</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="tools-section" id="tools" aria-labelledby="tools-title" tabindex="-1">
+        <div class="section-heading">
+            <h2 id="tools-title">What would you like to do?</h2>
+            <span>Pick a tool. Make it happen.</span>
+        </div>
+        <div class="feature-grid">
+            <article class="feature-card sharing-card" aria-labelledby="sharing-title">
+                <div class="feature-art">
+                    <span class="feature-category">SHARE BY LINK</span>
+                    <svg class="feature-corner icon" aria-hidden="true"><use href="#icon-external"/></svg>
+                    <img src="/images/landing-sharing.svg" width="560" height="244" alt="" fetchpriority="high">
+                </div>
+                <div class="feature-body">
+                    <h3 id="sharing-title">Your files. Your rules.</h3>
+                    <p>Turn files into shareable links. Choose who gets access, add a password, and set an expiration.</p>
+                    <div class="feature-actions">
+                        <a class="feature-link" href="/file-sharing-embedded.html">Share files <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a>
+                        <a class="demo-link" href="/videos/file-sharing-promo.webm" data-demo-title="File sharing" aria-label="Learn more about file sharing"><svg class="icon" aria-hidden="true"><use href="#icon-play"/></svg>Learn more</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="feature-card transfer-card" aria-labelledby="transfer-title">
+                <div class="feature-art">
+                    <span class="feature-category">Move files between devices</span>
+                    <svg class="feature-corner icon" aria-hidden="true"><use href="#icon-external"/></svg>
+                    <img src="/images/landing-transfer.svg" width="560" height="244" alt="">
+                </div>
+                <div class="feature-body">
+                    <h3 id="transfer-title">A private channel between any devices</h3>
+                    <p>Connect your devices and send files securely. From your laptop to your phone, or across the world.</p>
+                    <div class="feature-actions">
+                        <a class="feature-link" href="/file-transfer-embedded.html">Transfer files <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a>
+                        <a class="demo-link" href="/videos/file-transfer-promo.webm" data-demo-title="File transfer" aria-label="Learn more about file transfer"><svg class="icon" aria-hidden="true"><use href="#icon-play"/></svg>Learn more</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="feature-card call-card" aria-labelledby="call-title">
+                <div class="feature-art">
+                    <span class="feature-category">PRIVATE VIDEO CALLS</span>
+                    <svg class="feature-corner icon" aria-hidden="true"><use href="#icon-external"/></svg>
+                    <img src="/images/landing-call.svg" width="560" height="244" alt="" loading="lazy">
+                </div>
+                <div class="feature-body">
+                    <h3 id="call-title">Closer, wherever you are.</h3>
+                    <p>Meet face to face in your browser. Add end-to-end encryption for an extra layer of privacy.</p>
+                    <div class="feature-actions">
+                        <a class="feature-link" href="/remote-call.html">Start a call <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a>
+                        <a class="demo-link" href="/videos/remote-call-promo.webm" data-demo-title="Private video calls" aria-label="Learn more about private video calls"><svg class="icon" aria-hidden="true"><use href="#icon-play"/></svg>Learn more</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="feature-card extension-card" aria-labelledby="extension-title">
+                <div class="feature-art">
+                    <span class="feature-category">CHROME EXTENSION</span>
+                    <svg class="feature-corner icon" aria-hidden="true"><use href="#icon-external"/></svg>
+                    <img src="/images/landing-extension.svg" width="560" height="244" alt="" loading="lazy">
+                </div>
+                <div class="feature-body">
+                    <h3 id="extension-title">Keep sharing within reach.</h3>
+                    <p>Give FileShare a home in your browser. Open your sharing tools right from the Chrome toolbar.</p>
+                    <div class="feature-actions">
+                        <a class="feature-link" href="https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj?hl=en-US&amp;utm_source=ext_sidebar" target="_blank" rel="noopener noreferrer">Get extension <svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg><span class="visually-hidden"> (opens in a new tab)</span></a>
+                        <a class="demo-link" href="https://secure.fileshare.ovh/videos/Fileshare-Chrome-extension-demo.mp4" data-demo-title="Chrome extension" aria-label="Learn more about the Chrome extension"><svg class="icon" aria-hidden="true"><use href="#icon-play"/></svg>Learn more</a>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <p class="toolkit-note"><svg class="icon" aria-hidden="true"><use href="#icon-lock"/></svg>A little more privacy. A lot more peace of mind.</p>
+    </section>
+
+    <section class="support-section" id="support" aria-labelledby="support-title">
+        <div class="support-intro">
+            <span class="support-icon" aria-hidden="true"><svg class="icon"><use href="#icon-heart"/></svg></span>
+            <div>
+                <p class="eyebrow">SMALL CONTRIBUTIONS. REAL IMPACT.</p>
+                <h2 id="support-title">Everyone deserves real privacy</h2>
+                <p>If these tools make your day a little easier, consider supporting Secure FileShare.</p>
+            </div>
+        </div>
+        <details class="donation-details">
+            <summary>Support us <svg class="icon" aria-hidden="true"><use href="#icon-chevron"/></svg></summary>
+            <div class="donation-panel">
+                <p class="donation-hint">Choose a currency and copy the wallet address. Thank you for supporting the project.</p>
+                <div class="wallet-list">
+                    <div class="wallet" data-currency="Bitcoin">
+                        <div class="wallet-heading"><span class="currency-icon bitcoin" aria-hidden="true">₿</span><span><strong>Bitcoin</strong><small>BTC · Bitcoin network</small></span><button class="copy-button" type="button" aria-label="Copy Bitcoin wallet address" hidden><svg class="icon" aria-hidden="true"><use href="#icon-copy"/></svg><span>Copy</span></button></div>
+                        <code class="wallet-address" tabindex="0" aria-label="Bitcoin wallet address">bc1qqa79qjjr8q0wc86spkyw354tpd27am3s57flxtj409xdn6yyrqfstpp9m2</code>
+                    </div>
+                    <div class="wallet" data-currency="Ethereum">
+                        <div class="wallet-heading"><span class="currency-icon ethereum" aria-hidden="true">Ξ</span><span><strong>Ethereum</strong><small>ETH · Ethereum network</small></span><button class="copy-button" type="button" aria-label="Copy Ethereum wallet address" hidden><svg class="icon" aria-hidden="true"><use href="#icon-copy"/></svg><span>Copy</span></button></div>
+                        <code class="wallet-address" tabindex="0" aria-label="Ethereum wallet address">0xe99B15Ff9B0b9eE5BCA3411d693DeE2e4b87bA5C</code>
+                    </div>
+                    <div class="wallet" data-currency="USDT">
+                        <div class="wallet-heading"><span class="currency-icon usdt" aria-hidden="true">₮</span><span><strong>USDT</strong><small>TRC-20 · Tron network</small></span><button class="copy-button" type="button" aria-label="Copy USDT wallet address" hidden><svg class="icon" aria-hidden="true"><use href="#icon-copy"/></svg><span>Copy</span></button></div>
+                        <code class="wallet-address" tabindex="0" aria-label="USDT TRC-20 wallet address">THGBNA1XpxCDWZJYcAVEGpBNQA9AuSANzp</code>
+                    </div>
+                </div>
+                <p class="copy-status" id="copy-status" role="status" aria-live="polite"></p>
+            </div>
+        </details>
+    </section>
+</main>
+
+<footer class="site-footer page-width">
+    <div class="footer-copy"><a href="/" class="footer-brand">Secure FileShare</a><p>Your connection. Your control.</p></div>
+    <nav class="footer-links" aria-label="Community and privacy">
+        <a href="https://www.facebook.com/profile.php?id=61569366542948" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-facebook"/></svg>Facebook<span class="visually-hidden"> (opens in a new tab)</span></a>
+        <a href="https://www.youtube.com/playlist?list=PLYnMJJjt4qq13kjqTNgBOQ0GHKcxoWjlF" target="_blank" rel="noopener noreferrer"><svg class="icon" aria-hidden="true"><use href="#icon-youtube"/></svg>YouTube<span class="visually-hidden"> (opens in a new tab)</span></a>
+        <a href="/privacy/file-sharing-privacy.html">Privacy policy</a>
+    </nav>
+</footer>
+
+<dialog class="demo-dialog" id="demo-dialog" aria-labelledby="demo-title">
+    <div class="demo-heading">
+        <div><p class="eyebrow">SEE IT IN ACTION</p><h2 id="demo-title">Feature demo</h2></div>
+        <button type="button" class="dialog-close" aria-label="Close demo" autofocus><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button>
+    </div>
+    <div class="demo-player">
+        <video id="demo-video" controls playsinline preload="none" aria-label="Feature demo video"></video>
+        <div class="video-error" id="video-error" role="status" hidden><p>This demo couldn’t load. Try again or open the video directly.</p><button type="button" class="retry-button" id="retry-video">Try again</button></div>
+    </div>
+    <div class="demo-footer"><a id="video-direct-link" href="/videos/file-sharing-promo.webm" target="_blank" rel="noopener noreferrer">Open video <svg class="icon" aria-hidden="true"><use href="#icon-external"/></svg><span class="visually-hidden"> (opens in a new tab)</span></a><a class="demo-feature-link" id="demo-feature-link" href="/file-sharing-embedded.html">Share files <svg class="icon" aria-hidden="true"><use href="#icon-arrow"/></svg></a></div>
+</dialog>
 </body>
-<script src="js/pushca.min.js?v=<?= time(); ?>"></script>
-<script src="js/main.js?v=<?= time(); ?>"></script>
-<script src="js/demo-widget.js?v=20261006-always-visible-controls"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const demoWidgetContainer = document.getElementById("demoWidgetContainer");
-        if (demoWidgetContainer) {
-            const adItems = [
-                {
-                    title: "Share with a full control over access to your content",
-                    srcUrl: "https://secure.fileshare.ovh/videos/file-sharing-promo.webm",
-                    link: "https://secure.fileshare.ovh/file-sharing-embedded.html"
-                },
-                {
-                    title: "Create extra security layer on top of any social media",
-                    srcUrl: "https://secure.fileshare.ovh/videos/Fileshare-Chrome-extension-demo.mp4",
-                    link: "https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj?hl=en-US&utm_source=ext_sidebar"
-                },
-                {
-                    title: "Transfer files between any devices with ultimate security",
-                    srcUrl: "https://secure.fileshare.ovh/videos/file-transfer-promo.webm",
-                    link: "https://secure.fileshare.ovh/file-transfer-embedded.html"
-                },
-                {
-                    title: "Secure video calls for truly private conversations",
-                    srcUrl: "https://secure.fileshare.ovh/videos/remote-call-promo.webm",
-                    link: "https://secure.fileshare.ovh/remote-call.html"
-                }
-            ];
-
-            // Cryptocurrency wallets for donations
-            const wallets = [
-                {
-                    cryptoCurrency: "Bitcoin (BTC)",
-                    walletAddress: "bc1qqa79qjjr8q0wc86spkyw354tpd27am3s57flxtj409xdn6yyrqfstpp9m2"
-                },
-                {
-                    cryptoCurrency: "Ethereum (ETH)",
-                    walletAddress: "0xe99B15Ff9B0b9eE5BCA3411d693DeE2e4b87bA5C"
-                },
-                {
-                    cryptoCurrency: "USDT TRC-20 (TRX)",
-                    walletAddress: "THGBNA1XpxCDWZJYcAVEGpBNQA9AuSANzp"
-                }
-            ];
-
-            // Create and inject the widget
-            addDemoWidget(adItems, wallets, demoWidgetContainer);
-        }
-    });
-</script>
 </html>

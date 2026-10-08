@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="244" viewBox="0 0 560 244" fill="none">
+<defs>
+  <radialGradient id="bg"><stop offset="0" stop-color="#1b3c49"/><stop offset="1" stop-color="#112231"/></radialGradient>
+  <linearGradient id="screen" x1="143" y1="81" x2="253" y2="163" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#254d62"/><stop offset="1" stop-color="#162c41"/></linearGradient>
+  <linearGradient id="body" x1="139" y1="72" x2="264" y2="185" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#466981"/><stop offset="1" stop-color="#263e58"/></linearGradient>
+  <linearGradient id="lock" x1="292" y1="99" x2="330" y2="164" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#518d8a"/><stop offset="1" stop-color="#28585d"/></linearGradient>
+  <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M34 0H0v34" stroke="#90e6d3" stroke-opacity=".04"/></pattern>
+  <filter id="shadow" x="-50%" y="-50%" width="200%" height="220%"><feDropShadow dy="9" stdDeviation="9" flood-color="#050f1a" flood-opacity=".5"/></filter>
+</defs>
+<path fill="url(#bg)" d="M0 0h560v244H0z"/><path fill="url(#grid)" d="M0 0h560v244H0z"/>
+<ellipse cx="283" cy="147" rx="199" ry="67" stroke="#88d3c4" stroke-opacity=".09" transform="rotate(-9 283 147)"/>
+<path d="M188 144c28 65 105 70 145 7s84-62 109-17" stroke="#52988c" stroke-opacity=".18" stroke-width="20"/>
+<path d="M188 144c28 65 105 70 145 7s84-62 109-17" stroke="#81cfc0" stroke-width="1.5" stroke-dasharray="4 6"/>
+<g filter="url(#shadow)" transform="rotate(-7 188 133)">
+  <rect x="106" y="77" width="163" height="109" rx="9" fill="url(#body)" stroke="#7c9bb5"/>
+  <rect x="113" y="85" width="149" height="92" rx="4" fill="url(#screen)" stroke="#3e627a"/>
+  <circle cx="188" cy="81" r="1.2" fill="#b5d8e7"/>
+  <rect x="126" y="99" width="120" height="12" rx="3" fill="#7998b4" fill-opacity=".09"/>
+  <circle cx="132" cy="105" r="2" fill="#87c7c2"/><path d="M140 105h33" stroke="#799eac" stroke-width="2" stroke-linecap="round"/>
+  <rect x="147" y="122" width="33" height="36" rx="4" fill="#2f5d76" stroke="#81aebf"/>
+  <path d="M155 133h17m-17 7h17m-17 7h10" stroke="#afcede" stroke-width="2" stroke-linecap="round"/>
+  <path d="M191 136h37m-37 10h28" stroke="#7ba6b8" stroke-width="3" stroke-linecap="round"/>
+  <path d="m106 185-17 12a4 4 0 0 0 2 6h192a4 4 0 0 0 3-6l-17-12H106Z" fill="#3d5a71" stroke="#7793a8"/><path d="M162 186h51l-5 6h-41l-5-6Z" fill="#22394b"/>
+</g>
+<g filter="url(#shadow)" transform="rotate(10 402 135)">
+  <rect x="366" y="63" width="72" height="140" rx="15" fill="#253e52" stroke="#91b6bd" stroke-width="1.2"/>
+  <rect x="372" y="70" width="60" height="125" rx="10" fill="#142c3d"/>
+  <rect x="390" y="72" width="24" height="5" rx="2.5" fill="#091a28"/>
+  <circle cx="402" cy="122" r="18" fill="#2d605f" stroke="#6cab9d"/><path d="m394 122 6 6 11-12" stroke="#a9f1d8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M386 156h33m-26 8h18" stroke="#7498a3" stroke-width="3" stroke-linecap="round"/><path d="M394 187h16" stroke="#9ab8bd" stroke-width="2" stroke-linecap="round"/>
+</g>
+<g filter="url(#shadow)"><rect x="279" y="102" width="57" height="57" rx="17" fill="url(#lock)" stroke="#81bfb3"/><rect x="297" y="127" width="21" height="17" rx="4" stroke="#d1fff0" stroke-width="1.8"/><path d="M301 127v-5a6.5 6.5 0 0 1 13 0v5m-6.5 7v4" stroke="#d1fff0" stroke-width="1.8" stroke-linecap="round"/></g>
+<path d="m342 179 4 4-4 4m6-109 4-4m-4 0 4 4" stroke="#98dacc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="242" y="192" width="119" height="25" rx="12.5" fill="#1b333f" stroke="#365e67"/><circle cx="255" cy="204.5" r="2.5" fill="#81efce"/><text x="264" y="208" fill="#b1dcd2" font-family="system-ui,sans-serif" font-size="9">Encrypted transfer</text>
+</svg>

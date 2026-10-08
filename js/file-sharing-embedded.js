@@ -433,8 +433,15 @@ function canPasteSharedContent() {
         && !document.querySelector('.consent-dialog.visible');
 }
 
+// The clipboard sink is invisible. Focusing it on touch devices opens the
+// software keyboard, so only desktop mouse/keyboard devices receive this focus.
+function canFocusSharedPasteArea() {
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches
+        && canPasteSharedContent();
+}
+
 function focusPasteAreaForDropZone(event) {
-    if (!canPasteSharedContent() || event.buttons || document.activeElement === toolBarPasteArea) {
+    if (!canFocusSharedPasteArea() || event.buttons || document.activeElement === toolBarPasteArea) {
         return;
     }
     // Keep selected text available for Ctrl+C, including selections inside inputs.
@@ -513,13 +520,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const dropZoneHeading = document.querySelector('.drop-zone-heading');
     // Keep paste focus from dropping between mouse down and click.
     dropZoneHeading.addEventListener('mousedown', function (event) {
-        if (canPasteSharedContent()) {
+        if (canFocusSharedPasteArea()) {
             event.preventDefault();
             toolBarPasteArea.focus({preventScroll: true});
         }
     });
     dropZoneHeading.addEventListener('click', function () {
-        if (canPasteSharedContent()) {
+        if (canFocusSharedPasteArea()) {
             toolBarPasteArea.focus({preventScroll: true});
         }
     });
@@ -541,7 +548,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     initEventsForCopyPasteArea();
-    if (toolBarPasteArea) {
+    if (toolBarPasteArea && canFocusSharedPasteArea()) {
         toolBarPasteArea.focus({preventScroll: true});
     }
 

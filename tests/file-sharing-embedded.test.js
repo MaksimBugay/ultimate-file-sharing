@@ -63,21 +63,21 @@ for (const failure of ['http', 'network']) {
     });
 }
 
-function sharingHarness() {
+function sharingHarness({finePointer = true, hover = true} = {}) {
     const elements = new Map();
     const element = id => {
         if (!elements.has(id)) {
             const listeners = new Map();
             const attributes = new Map();
             elements.set(id, {
-                id, style: {}, disabled: false, checked: false, value: '', hidden: false,
+                id, style: {}, disabled: false, checked: false, value: '', hidden: false, readOnly: false, focusCalls: [],
                 classList: {add() {}, remove() {}, contains: () => false},
                 addEventListener: (event, callback) => listeners.set(event, callback),
                 dispatch: (event, detail = {}) => listeners.get(event)?.(detail),
                 removeAttribute: name => attributes.delete(name),
                 setAttribute: (name, value) => attributes.set(name, value),
                 getAttribute: name => attributes.get(name),
-                focus() { context.document.activeElement = this; }
+                focus(options) { this.focusCalls.push(options); context.document.activeElement = this; }
             });
         }
         return elements.get(id);
@@ -86,9 +86,14 @@ function sharingHarness() {
     const download = new Promise(resolve => { finishDownload = resolve; });
     const context = vm.createContext({
         console, URLSearchParams, URL, Blob,
-        window: {location: {search: ''}, addEventListener() {}},
+        window: {
+            location: {search: ''}, addEventListener() {},
+            matchMedia: () => ({matches: finePointer && hover}),
+            getSelection: () => ({toString: () => ''})
+        },
         document: {
-            getElementById: element, querySelectorAll: () => [], querySelector: () => element('heading'),
+            getElementById: element, querySelectorAll: () => [],
+            querySelector: selector => selector === '.drop-zone-heading' ? element('heading') : null,
             addEventListener: (event, callback) => { if (event === 'DOMContentLoaded') init = callback; }
         },
         ProgressBarWidget: class {setProgress() {}},
@@ -100,6 +105,7 @@ function sharingHarness() {
         uuid: {v4: () => 'binary-id'}, calculateDisplaySizeMb: () => 1,
         MemoryBlock: {MB: 1048576}
     });
+    context.document.activeElement = element('body');
     vm.runInContext(sharingSource, context);
     init();
     return {context, element, remote: () => remoteCallback('https://example.com/stream'), finishDownload};
@@ -239,4 +245,89 @@ test('file sharing locks tab switching until cleanup', async () => {
     assert.equal(h.element('selectFilesTab').disabled, false);
     assert.equal(h.element('remoteStreamTab').disabled, false);
     assert.equal(h.element('toolBarPasteArea').disabled, false);
+});
+
+test('desktop clipboard focus remains available on load, hover, and heading clicks', () => {
+    const h = sharingHarness();
+    const paste = h.element('toolBarPasteArea');
+    assert.equal(h.context.document.activeElement, paste);
+    assert.equal(paste.focusCalls.at(-1).preventScroll, true);
+
+    for (const [target, event] of [['dropZone', 'mousemove'], ['heading', 'mousedown'], ['heading', 'click']]) {
+        h.element('passwordInput').focus();
+        let prevented = false;
+        h.element(target).dispatch(event, {buttons: 0, preventDefault: () => { prevented = true; }});
+        assert.equal(h.context.document.activeElement, paste, event);
+        assert.equal(paste.focusCalls.at(-1).preventScroll, true);
+        if (event === 'mousedown') assert.equal(prevented, true);
+    }
+});
+
+test('touch devices never focus the invisible clipboard sink on load or drop-area interactions', () => {
+    for (const options of [
+        {finePointer: false, hover: false},
+        {finePointer: false, hover: true},
+        {finePointer: true, hover: false}
+    ]) {
+        const h = sharingHarness(options);
+        assert.equal(h.context.document.activeElement, h.element('body'));
+        for (const [target, event] of [['dropZone', 'mousemove'], ['heading', 'mousedown'], ['heading', 'click']]) {
+            let prevented = false;
+            h.element(target).dispatch(event, {buttons: 0, preventDefault: () => { prevented = true; }});
+            assert.equal(h.context.document.activeElement, h.element('body'), event);
+            assert.equal(prevented, false, event);
+        }
+        assert.equal(h.element('toolBarPasteArea').focusCalls.length, 0);
+        vm.runInContext('makeShareWithPasswordUiAdjustments()', h.context);
+        assert.equal(h.context.document.activeElement, h.element('passwordInput'));
+        h.element('dropZone').dispatch('mousemove', {buttons: 0});
+        assert.equal(h.context.document.activeElement, h.element('passwordInput'));
+    }
+});
+
+test('desktop Paste still shares the original clipboard file and restores upload controls', async () => {
+    const h = sharingHarness();
+    const calls = [];
+    h.context.capturePaste = (...args) => { calls.push(args); };
+    h.context.getReadMeText = async () => 'Clipboard description';
+    vm.runInContext('FileSharing.saveBlobInCloud = async (...args) => capturePaste(...args)', h.context);
+    const blob = new Blob(['original clipboard bytes'], {type: 'image/png'});
+    blob.name = 'clipboard.png';
+    let prevented = false, stopped = false;
+    await h.element('toolBarPasteArea').dispatch('paste', {
+        clipboardData: {items: [{kind: 'file', getAsFile: () => blob}]},
+        preventDefault: () => { prevented = true; },
+        stopPropagation: () => { stopped = true; }
+    });
+    assert.equal(prevented, true);
+    assert.equal(stopped, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0][0], 'clipboard.png');
+    assert.equal(calls[0][1], 'image/png');
+    assert.equal(calls[0][2], 'Clipboard description');
+    assert.equal(calls[0][3], blob);
+    assert.equal(await calls[0][3].text(), 'original clipboard bytes');
+    assert.equal(h.element('selectFilesBtn').disabled, false);
+    assert.equal(h.element('toolBarPasteArea').disabled, false);
+    assert.equal(h.context.document.activeElement, h.element('toolBarPasteArea'));
+});
+
+test('desktop clipboard focus preserves selected text and skips inactive or blocked upload areas', () => {
+    const h = sharingHarness();
+    const password = h.element('passwordInput');
+    password.focus();
+    password.selectionStart = 0;
+    password.selectionEnd = 6;
+    h.element('dropZone').dispatch('mousemove', {buttons: 0});
+    assert.equal(h.context.document.activeElement, password);
+
+    password.selectionEnd = 0;
+    h.element('remoteStreamTab').dispatch('click');
+    h.element('heading').dispatch('click');
+    assert.equal(h.context.document.activeElement, password);
+
+    h.element('selectFilesTab').dispatch('click');
+    h.element('toolBarPasteArea').disabled = true;
+    h.element('heading').dispatch('click');
+    assert.equal(h.context.document.activeElement, password);
 });

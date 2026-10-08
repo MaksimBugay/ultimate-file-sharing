@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="244" viewBox="0 0 560 244" fill="none">
+<defs>
+  <radialGradient id="bg"><stop offset="0" stop-color="#343454"/><stop offset="1" stop-color="#182136"/></radialGradient>
+  <linearGradient id="left" x1="130" y1="89" x2="274" y2="205" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#365a85"/><stop offset="1" stop-color="#1c304e"/></linearGradient>
+  <linearGradient id="right" x1="290" y1="105" x2="431" y2="200" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#575577"/><stop offset="1" stop-color="#333451"/></linearGradient>
+  <linearGradient id="person" x1="181" y1="115" x2="219" y2="181" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#90aed8"/><stop offset="1" stop-color="#557ead"/></linearGradient>
+  <linearGradient id="person2" x1="338" y1="127" x2="377" y2="198" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c0b5de"/><stop offset="1" stop-color="#877baf"/></linearGradient>
+  <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M34 0H0v34" stroke="#bfb5ee" stroke-opacity=".035"/></pattern>
+  <filter id="shadow" x="-50%" y="-50%" width="200%" height="220%"><feDropShadow dy="9" stdDeviation="9" flood-color="#0b0d1f" flood-opacity=".5"/></filter>
+</defs>
+<path fill="url(#bg)" d="M0 0h560v244H0z"/><path fill="url(#grid)" d="M0 0h560v244H0z"/>
+<ellipse cx="280" cy="153" rx="205" ry="72" stroke="#b3a4e2" stroke-opacity=".08"/>
+<ellipse cx="280" cy="153" rx="168" ry="91" stroke="#b3a4e2" stroke-opacity=".06"/>
+<g filter="url(#shadow)" transform="rotate(-7 201 141)">
+  <rect x="111" y="69" width="185" height="133" rx="13" fill="#21344e" stroke="#6d88b0"/>
+  <rect x="117" y="75" width="173" height="121" rx="9" fill="url(#left)"/>
+  <path d="M154 180c0-28 99-28 99 0v16h-99v-16Z" fill="url(#person)"/><ellipse cx="203" cy="129" rx="24" ry="27" fill="url(#person)"/><path d="M180 122c-1-31 49-35 48 3-14-1-22-8-28-15-4 8-11 13-20 12Z" fill="#28446c"/>
+  <rect x="128" y="86" width="29" height="15" rx="4" fill="#0b1a2c" fill-opacity=".55"/><text x="135" y="96.5" fill="#c8d9ef" font-family="system-ui,sans-serif" font-size="7">YOU</text>
+  <path d="M266 181v5m4-10v10m4-7v7" stroke="#a3c8fa" stroke-width="2" stroke-linecap="round"/>
+</g>
+<g filter="url(#shadow)" transform="rotate(7 364 150)">
+  <rect x="276" y="87" width="177" height="127" rx="13" fill="#3a3855" stroke="#8c81aa"/>
+  <rect x="282" y="93" width="165" height="115" rx="9" fill="url(#right)"/>
+  <path d="M315 191c0-29 94-29 94 0v17h-94v-17Z" fill="url(#person2)"/><path d="M335 142c0-43 57-42 57 0v31h-57v-31Z" fill="#484361"/><ellipse cx="362" cy="146" rx="23" ry="27" fill="url(#person2)"/><path d="M339 137c2-31 49-31 46 8-12-3-22-11-27-20-5 8-12 11-19 12Z" fill="#4c4569"/>
+  <circle cx="297" cy="107" r="2.5" fill="#9ee8ce"/><text x="305" y="110" fill="#d4cde7" font-family="system-ui,sans-serif" font-size="7">CONNECTED</text>
+</g>
+<g filter="url(#shadow)"><rect x="207" y="192" width="148" height="35" rx="12" fill="#202c44" stroke="#65708b"/><circle cx="233" cy="209.5" r="11" fill="#34435f"/><rect x="230.5" y="203" width="5" height="8" rx="2.5" stroke="#c4d6f2"/><path d="M228 209a5 5 0 0 0 10 0m-5 5v3m-3 0h6" stroke="#c4d6f2" stroke-linecap="round"/>
+  <circle cx="267" cy="209.5" r="11" fill="#34435f"/><rect x="261" y="206" width="8" height="7" rx="1.5" stroke="#c4d6f2"/><path d="m269 208 4-2v7l-4-2" stroke="#c4d6f2" stroke-linejoin="round"/>
+  <rect x="290" y="199" width="52" height="21" rx="10.5" fill="#b45666"/><path d="M307 211c3-5 13-5 16 0l-3 2-2-3h-4l-3 3-4-2Z" fill="#ffe0e5"/>
+</g>
+<rect x="320" y="56" width="109" height="25" rx="12.5" fill="#2d2f4b" stroke="#6d658a"/><path d="m334 63-5 2v4c0 3 5 5 5 5s5-2 5-5v-4l-5-2Z" stroke="#c7b6ef"/><text x="347" y="72" fill="#d4c5f3" font-family="system-ui,sans-serif" font-size="9">Your private space</text>
+<path d="m99 181 4-4m-4 0 4 4m365-66 4-4m-4 0 4 4" stroke="#c1adee" stroke-opacity=".55" stroke-linecap="round"/>
+</svg>
