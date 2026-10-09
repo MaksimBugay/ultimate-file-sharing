@@ -2,8 +2,8 @@
   'use strict';
 
   const WS_URL = 'wss://secure.fileshare.ovh:31085';
-  const PROTOCOL = 'REMOTE_CALL_V9';
-  const SIGNAL_PREFIX = 'remote-call-v9:';
+  const PROTOCOL = 'REMOTE_CALL_V10';
+  const SIGNAL_PREFIX = 'remote-call-v10:';
   const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER', video: 'REMOTE-CALL-VIDEO', audio: 'REMOTE-CALL-AUDIO' };
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
@@ -25,50 +25,96 @@
   const verifyCallButton = document.getElementById('verifyCallButton');
   const callCrypto = (() => {
     const encoder = new TextEncoder();
-    const saltPrefix = encoder.encode('REMOTE_CALL_V9');
+    const saltPrefix = encoder.encode('REMOTE_CALL_V10');
     const toBase64 = value => btoa(String.fromCharCode(...value));
     const fromBase64 = value => Uint8Array.from(atob(value), character => character.charCodeAt(0));
+    const toBase64Url = value => toBase64(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const fromBase64Url = value => fromBase64(value.replace(/-/g, '+').replace(/_/g, '/') + '=');
+    const isKey = value => typeof value === 'string' && /^[A-Za-z0-9_-]{43}$/.test(value);
+
+    // Link keys, nonces, commitments and tags are 32 bytes in unpadded base64url.
+    function randomKey() {
+      return toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+    }
 
     async function generateKeyPair() {
-      const pair = await generateRSAKeyPair();
+      // Non-extractable: the private key cannot leave this page. The public key stays exportable.
+      const pair = await crypto.subtle.generateKey({
+        name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'
+      }, false, ['encrypt', 'decrypt']);
       return { privateKey: pair.privateKey, publicKeyString: await exportPublicKey(pair.publicKey) };
     }
 
-    async function deriveSession(secret, publicKeyString, compareCodes) {
+    function linkHmacKey(linkKey, usage) {
+      return crypto.subtle.importKey('raw', fromBase64Url(linkKey), { name: 'HMAC', hash: 'SHA-256' }, false, [usage]);
+    }
+
+    function joinTranscript(join) {
+      return encoder.encode(JSON.stringify(['remote-call-v10/join', join.managerAlias, join.publicKey,
+        join.commitment ?? null]));
+    }
+
+    // Only someone holding the joint link can vouch for the receiver public key.
+    async function proveJoin(linkKey, join) {
+      return toBase64Url(new Uint8Array(await crypto.subtle.sign('HMAC', await linkHmacKey(linkKey, 'sign'),
+        joinTranscript(join))));
+    }
+
+    async function verifyJoin(linkKey, join) {
+      if (!isKey(join?.keyProof) || typeof join.publicKey !== 'string') return false;
+      return crypto.subtle.verify('HMAC', await linkHmacKey(linkKey, 'verify'), fromBase64Url(join.keyProof),
+        joinTranscript(join));
+    }
+
+    async function commit(nonce) {
+      return toBase64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', fromBase64Url(nonce))));
+    }
+
+    async function opensCommitment(nonce, commitment) {
+      return isKey(nonce) && isKey(commitment) && await commit(nonce) === commitment;
+    }
+
+    async function deriveSession(secret, linkKey, publicKeyString) {
       if (!(secret instanceof Uint8Array) || secret.length !== 32) throw new Error('Invalid call secret');
+      // Mixing in the link key means a relay that substitutes public keys ends up with different keys.
+      const input = new Uint8Array(64);
+      input.set(secret);
+      input.set(fromBase64Url(linkKey), 32);
       const publicBytes = encoder.encode(publicKeyString);
       const transcript = new Uint8Array(saltPrefix.length + publicBytes.length);
       transcript.set(saltPrefix);
       transcript.set(publicBytes, saltPrefix.length);
       const salt = await crypto.subtle.digest('SHA-256', transcript);
-      const material = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveBits', 'deriveKey']);
+      const material = await crypto.subtle.importKey('raw', input, 'HKDF', false, ['deriveBits', 'deriveKey']);
       const mediaSecret = new Uint8Array(await crypto.subtle.deriveBits({
-        name: 'HKDF', hash: 'SHA-256', salt, info: encoder.encode('remote-call-v9/media-secret')
+        name: 'HKDF', hash: 'SHA-256', salt, info: encoder.encode('remote-call-v10/media-secret')
       }, material, 256));
       const controlKey = await crypto.subtle.deriveKey({
-        name: 'HKDF', hash: 'SHA-256', salt, info: encoder.encode('remote-call-v9/control')
+        name: 'HKDF', hash: 'SHA-256', salt, info: encoder.encode('remote-call-v10/control')
       }, material, { name: 'HMAC', hash: 'SHA-256', length: 256 }, false, ['sign', 'verify']);
-      let verificationCode = null;
-      if (compareCodes) {
-        const digest = new Uint8Array(await crypto.subtle.sign('HMAC', controlKey,
-          encoder.encode(`remote-call-v9/verification/${publicKeyString}`)));
-        const number = ((digest[0] * 0x1000000 + digest[1] * 0x10000 + digest[2] * 0x100 + digest[3]) % 100000000)
-          .toString().padStart(8, '0');
-        verificationCode = `${number.slice(0, 4)} ${number.slice(4)}`;
-      }
-      return { mediaSecret, controlKey, verificationCode };
+      return { mediaSecret, controlKey, publicKeyString };
     }
 
-    async function createSession(publicKeyString, compareCodes) {
+    // Both nonces are fixed before either side can compute the code: the receiver commits to its nonce
+    // before seeing the caller nonce, so a relay gets one guess instead of an offline search.
+    async function verificationCode(session, callerNonce, receiverNonce) {
+      const digest = new Uint8Array(await crypto.subtle.sign('HMAC', session.controlKey, encoder.encode(JSON.stringify(
+        ['remote-call-v10/verification', session.publicKeyString, callerNonce, receiverNonce]))));
+      const number = ((digest[0] * 0x1000000 + digest[1] * 0x10000 + digest[2] * 0x100 + digest[3]) % 100000000)
+        .toString().padStart(8, '0');
+      return `${number.slice(0, 4)} ${number.slice(4)}`;
+    }
+
+    async function createSession(publicKeyString, linkKey) {
       const publicKey = await importPublicKeyFromString(publicKeyString);
       const secret = crypto.getRandomValues(new Uint8Array(32));
       const wrappedSecret = await encryptWithPublicKey(publicKey, toBase64(secret));
-      return { wrappedSecret, session: await deriveSession(secret, publicKeyString, compareCodes) };
+      return { wrappedSecret, session: await deriveSession(secret, linkKey, publicKeyString) };
     }
 
-    async function openSession(pair, wrappedSecret, compareCodes) {
+    async function openSession(pair, wrappedSecret, linkKey) {
       const secret = fromBase64(await decryptWithPrivateKey(pair.privateKey, wrappedSecret));
-      return deriveSession(secret, pair.publicKeyString, compareCodes);
+      return deriveSession(secret, linkKey, pair.publicKeyString);
     }
 
     function unsigned(message) {
@@ -77,18 +123,20 @@
     }
 
     async function signSignal(key, message) {
-      const tag = new Uint8Array(await crypto.subtle.sign('HMAC', key,
-        encoder.encode(JSON.stringify(unsigned(message)))));
-      return toBase64(tag).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      return toBase64Url(new Uint8Array(await crypto.subtle.sign('HMAC', key,
+        encoder.encode(JSON.stringify(unsigned(message))))));
     }
 
     async function verifySignal(key, message) {
-      if (!/^[A-Za-z0-9_-]{43}$/.test(message?.auth || '')) return false;
-      const tag = fromBase64(message.auth.replace(/-/g, '+').replace(/_/g, '/') + '=');
-      return crypto.subtle.verify('HMAC', key, tag, encoder.encode(JSON.stringify(unsigned(message))));
+      if (!isKey(message?.auth)) return false;
+      return crypto.subtle.verify('HMAC', key, fromBase64Url(message.auth),
+        encoder.encode(JSON.stringify(unsigned(message))));
     }
 
-    return { generateKeyPair, createSession, openSession, signSignal, verifySignal };
+    return {
+      isKey, randomKey, generateKeyPair, proveJoin, verifyJoin, commit, opensCommitment,
+      verificationCode, createSession, openSession, signSignal, verifySignal
+    };
   })();
   const searchParams = new URLSearchParams(window.location.search);
   const pageUrl = new URL(window.location.href);
@@ -114,6 +162,11 @@
   let encryptionEnabled = encryptionToggle.checked;
   let extraSecurityEnabled = extraSecurityToggle.checked;
   let localKeyPair = null;
+  // Travels only in the joint link fragment, which never reaches the relay server.
+  let linkKey = hasSourceHost ? null : callCrypto.randomKey();
+  let callerNonce = null;
+  let receiverNonce = null;
+  let receiverCommitment = null;
   let session = null;
   let verificationDestination = null;
   let verificationPromise = null;
@@ -132,8 +185,10 @@
     extraEchoToggle.disabled = true;
     const encrypted = linkSettings.get('e2e');
     const extraSecurity = linkSettings.get('extra-security');
+    linkKey = linkSettings.get('link-key');
     if (!['0', '1'].includes(encrypted) || !['0', '1'].includes(extraSecurity)
-      || (encrypted === '0' && extraSecurity === '1')) phase = 'invalid';
+      || (encrypted === '0' && extraSecurity === '1')
+      || (encrypted === '1' && !callCrypto.isKey(linkKey))) phase = 'invalid';
     else {
       encryptionEnabled = encrypted === '1';
       extraSecurityEnabled = extraSecurity === '1';
@@ -173,14 +228,14 @@
     session = derivedSession;
     verificationDestination = destination;
     if (!extraSecurityEnabled) return;
-    verificationCode.textContent = session.verificationCode;
     verificationPromise = new Promise(resolve => { resolveVerification = resolve; });
     for (const message of pendingVerifications.splice(0)) {
       if (await callCrypto.verifySignal(session.controlKey, message)) remoteVerified = true;
     }
   }
 
-  function showVerification() {
+  async function showVerification(receiverNonceValue) {
+    verificationCode.textContent = await callCrypto.verificationCode(session, callerNonce, receiverNonceValue);
     verificationPanel.hidden = false;
     setConnectionStatus('Compare the security code with the other person before confirming.');
   }
@@ -193,7 +248,8 @@
   }
 
   verifyCallButton.addEventListener('click', async () => {
-    if (!session || !verificationDestination || localVerified || verifyCallButton.disabled) return;
+    if (!session || !verificationDestination || verificationPanel.hidden || localVerified
+      || verifyCallButton.disabled) return;
     verifyCallButton.disabled = true;
     try {
       await sendSignal(verificationDestination, { type: 'VERIFY' });
@@ -288,6 +344,7 @@
       e2e: encryptionEnabled ? '1' : '0',
       'extra-security': extraSecurityEnabled ? '1' : '0'
     });
+    if (encryptionEnabled) linkSettings.set('link-key', linkKey);
     linkSettings.set('extra-echo', extraEchoToggle.checked ? '1' : '0');
     linkSettings.set('caller-name', userName());
     url.hash = linkSettings.toString();
@@ -477,7 +534,7 @@
   async function sendSignal(destination, message) {
     if (!PushcaClient.isOpen()) throw new Error('Call manager connection is unavailable');
     const signed = { protocol: PROTOCOL, ...message };
-    if (encryptionEnabled && ['VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
+    if (encryptionEnabled && ['OFFER', 'REVEAL', 'VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
       if (!session && message.type !== 'STOP') throw new Error('Call keys are not ready');
       if (session) signed.auth = await callCrypto.signSignal(session.controlKey, signed);
     }
@@ -544,6 +601,15 @@
       });
       return;
     }
+    if (encryptionEnabled && (!await callCrypto.verifyJoin(linkKey, message)
+      || (extraSecurityEnabled && !callCrypto.isKey(message.commitment)))) {
+      console.warn('Ignoring a join request that does not prove knowledge of the joint link');
+      await sendSignal(manager, {
+        type: 'REJECT', reason: 'The joint link could not be verified. Ask the caller for a new joint link.'
+      });
+      return;
+    }
+    if (phase !== 'waiting') return;
     phase = 'negotiating';
     encryptionToggle.disabled = true;
     extraSecurityToggle.disabled = true;
@@ -552,11 +618,13 @@
     setConnectionStatus('Receiver joined. Establishing call security…');
     acceptedManagerLookup = Promise.resolve(manager);
     verificationDestination = manager;
+    receiverCommitment = extraSecurityEnabled ? message.commitment : null;
+    callerNonce = extraSecurityEnabled ? callCrypto.randomKey() : null;
     let wrappedSecret = null;
     if (encryptionEnabled) {
       let agreement;
       try {
-        agreement = await callCrypto.createSession(message.publicKey, extraSecurityEnabled);
+        agreement = await callCrypto.createSession(message.publicKey, linkKey);
       } catch (error) {
         console.warn('Ignoring invalid receiver public key:', error);
         await sendSignal(manager, { type: 'REJECT', reason: 'Invalid call public key. Open a fresh joint link.' });
@@ -580,16 +648,28 @@
     phase = extraSecurityEnabled ? 'verifying' : 'waiting-ready';
     offerSignal = {
       type: 'OFFER', encrypted: encryptionEnabled, extraSecurity: extraSecurityEnabled,
-      ...(encryptionEnabled ? { wrappedSecret } : {})
+      ...(encryptionEnabled ? { wrappedSecret } : {}),
+      ...(extraSecurityEnabled ? { nonce: callerNonce } : {})
     };
     await sendSignal(manager, offerSignal);
     if (phase !== 'verifying') return;
-    showVerification();
+    // The code appears once the receiver reveals the nonce it committed to (handleReveal).
+    setConnectionStatus('Waiting for the receiver’s security code…');
     await verificationPromise;
     if (phase === 'verifying') {
       phase = 'waiting-ready';
       setConnectionStatus('Security confirmed. Waiting for the receiver’s camera and microphone…');
     }
+  }
+
+  async function handleReveal(message) {
+    if (hasSourceHost || !extraSecurityEnabled || phase !== 'verifying' || !session
+      || !verificationPanel.hidden) return;
+    if (!await callCrypto.opensCommitment(message.nonce, receiverCommitment)) {
+      throw new Error('The receiver’s security data does not match its commitment');
+    }
+    if (phase !== 'verifying') return;
+    await showVerification(message.nonce);
   }
 
   async function handleOffer(message) {
@@ -599,11 +679,21 @@
     }
     phase = extraSecurityEnabled ? 'verifying' : 'joining';
     if (encryptionEnabled) {
-      const derived = await callCrypto.openSession(localKeyPair, message.wrappedSecret, extraSecurityEnabled);
+      const derived = await callCrypto.openSession(localKeyPair, message.wrappedSecret, linkKey);
+      // Only the joint link creator derives the same control key, so this rejects offers forged by the relay.
+      if (!await callCrypto.verifySignal(derived.controlKey, message)) {
+        throw new Error('The caller could not be verified. Ask the caller for a new joint link.');
+      }
+      if (extraSecurityEnabled && !callCrypto.isKey(message.nonce)) {
+        throw new Error('The caller sent invalid security code data');
+      }
       await establishSession(derived, sourceHost);
       if (extraSecurityEnabled) {
         if (phase !== 'verifying') return;
-        showVerification();
+        callerNonce = message.nonce;
+        await sendSignal(sourceHost, { type: 'REVEAL', nonce: receiverNonce });
+        if (phase !== 'verifying') return;
+        await showVerification(receiverNonce);
         await verificationPromise;
         if (phase !== 'verifying') return;
         phase = 'joining';
@@ -701,11 +791,12 @@
         if (pendingVerifications.length < 8) pendingVerifications.push(message);
         return;
       }
-      if (encryptionEnabled && ['VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
+      if (encryptionEnabled && ['REVEAL', 'VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
         if (!session || !await callCrypto.verifySignal(session.controlKey, message)) return;
       }
       if (message.type === 'JOIN') await handleJoin(message);
       if (message.type === 'OFFER') await handleOffer(message);
+      if (message.type === 'REVEAL') await handleReveal(message);
       if (message.type === 'READY') await handleReady(message);
       if (message.type === 'VERIFY' && extraSecurityEnabled && session && ['ready', 'verifying'].includes(phase)) {
         remoteVerified = true;
@@ -868,11 +959,14 @@
     if (joinPromise) return joinPromise;
     phase = 'awaiting-offer';
     joinPromise = (async () => {
+      if (extraSecurityEnabled) receiverNonce = callCrypto.randomKey();
       joinSignal = {
         type: 'JOIN', managerAlias, userName: userName(), encrypted: encryptionEnabled,
         extraSecurity: extraSecurityEnabled,
-        ...(encryptionEnabled ? { publicKey: localKeyPair.publicKeyString } : {})
+        ...(encryptionEnabled ? { publicKey: localKeyPair.publicKeyString } : {}),
+        ...(extraSecurityEnabled ? { commitment: await callCrypto.commit(receiverNonce) } : {})
       };
+      if (encryptionEnabled) joinSignal.keyProof = await callCrypto.proveJoin(linkKey, joinSignal);
       setConnectionStatus(encryptionEnabled
         ? 'Requesting the call keys from the caller…' : 'Joining the call…');
       await sendSignal(sourceHost, joinSignal);

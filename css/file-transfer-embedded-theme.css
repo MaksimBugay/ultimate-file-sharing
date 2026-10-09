@@ -256,6 +256,18 @@ h2 { margin: 0; font-size: clamp(1.3rem, 3vw, 1.65rem); line-height: 1.25; lette
     line-height: 1.6;
 }
 .receiver-ready { display: none; color: #92e6d4; }
+.verification-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 0;
+    color: #afc0d2;
+    font-size: .7rem;
+    line-height: 1.6;
+    cursor: pointer;
+}
+.verification-option input { width: 16px; height: 16px; margin: 0; accent-color: #83aef2; }
+.security-code { margin: 16px 0; font-size: 1.6rem; font-weight: 700; letter-spacing: .12em; font-variant-numeric: tabular-nums; }
 .receiver-panel:has(#receiverVirtualHost.green-text) .receiver-ready { display: flex; }
 
 #selectFilesContainer { display: grid; gap: 18px; }

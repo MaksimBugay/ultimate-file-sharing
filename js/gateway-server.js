@@ -31,10 +31,13 @@ async function verifyJoinTransferGroupRequest(header, requestPayload) {
                 importedPublicKey,
                 responseStr
             );
+            // Pages without transfer verification answer without a nonce; the sender then refuses a 2FA transfer.
+            const verification = typeof TransferVerification === 'undefined' ? {}
+                : await TransferVerification.receiverFields(request, transferGroup, transferGroupPassword, response);
             return new WaiterResponse(
                 WaiterResponseType.SUCCESS,
                 stringToByteArray(
-                    JSON.stringify({result: response})
+                    JSON.stringify({result: response, ...verification})
                 )
             );
         }

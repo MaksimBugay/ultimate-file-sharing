@@ -55,6 +55,16 @@ function isBase64(str) {
     return base64Regex.test(normalized);
 }
 
+// Uniform index in [0, limit) from the cryptographic generator; rejection sampling avoids modulo bias.
+function secureRandomIndex(limit) {
+    const range = Math.floor(0x100000000 / limit) * limit;
+    const value = new Uint32Array(1);
+    do {
+        crypto.getRandomValues(value);
+    } while (value[0] >= range);
+    return value[0] % limit;
+}
+
 function generateStrongPassword(length = 12) {
     const upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const lowerCase = "abcdefghijklmnopqrstuvwxyz";
@@ -63,22 +73,22 @@ function generateStrongPassword(length = 12) {
 
     // Ensure password contains at least one character from each set
     const allChars = upperCase + lowerCase + numbers + specialChars;
+    const pick = chars => chars.charAt(secureRandomIndex(chars.length));
 
-    let password = "";
-    password += upperCase.charAt(Math.floor(Math.random() * upperCase.length));
-    password += lowerCase.charAt(Math.floor(Math.random() * lowerCase.length));
-    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
-    password += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+    const password = [pick(upperCase), pick(lowerCase), pick(numbers), pick(specialChars)];
 
     // Fill the rest of the password with random characters
     for (let i = 4; i < length; i++) {
-        password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+        password.push(pick(allChars));
     }
 
-    // Shuffle the password for randomness
-    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    // Fisher-Yates shuffle so the required characters are not at fixed positions
+    for (let i = password.length - 1; i > 0; i--) {
+        const j = secureRandomIndex(i + 1);
+        [password[i], password[j]] = [password[j], password[i]];
+    }
 
-    return password;
+    return password.join('');
 }
 
 function convertBlobToArrayBuffer(blob) {

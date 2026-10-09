@@ -92,12 +92,14 @@ async function cacheBinaryManifestInCloud(binaryManifest) {
 
 async function manifestToJsonObjectWithProtectedAttributes(manifest) {
     let encryptionContractStr = null;
+    const salt = stringToByteArray(FileSharing.deviceFpId);
     if (manifest.base64Key) {
         const ec = new EncryptionContract(manifest.base64Key, manifest.base64IV);
-        const salt = stringToByteArray(FileSharing.deviceFpId);
-        encryptionContractStr = await ec.toTransferableString(manifest.password, salt);
+        encryptionContractStr = await ec.toTransferableString(manifest.password, salt, PASSWORD_VERIFIER_VERSION);
     }
-    const passwordHash = manifest.password ? await calculateSha256(stringToArrayBuffer(manifest.password)) : null;
+    const passwordHash = manifest.password
+        ? await calculatePasswordHash(manifest.password, salt, encryptionContractStr)
+        : null;
     return {
         id: manifest.id,
         name: manifest.name,

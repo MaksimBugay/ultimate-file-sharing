@@ -172,7 +172,7 @@ async function createSignedDownloadRequest(pwd, workspaceId, suffix) {
         JSON.stringify(request.toSkipSignatureJSON())
     );
 
-    const passwordHash = await calculateSha256(stringToArrayBuffer(pwd));
+    const passwordHash = await calculatePasswordHash(pwd, stringToByteArray(workspaceId), encryptionContractStr);
 
     return new DownloadProtectedBinaryRequest(
         request.suffix,

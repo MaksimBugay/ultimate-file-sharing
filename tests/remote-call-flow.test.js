@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const { webcrypto } = require('node:crypto');
+const { webcrypto, createHash, createHmac } = require('node:crypto');
 
 const securitySource = fs.readFileSync(require.resolve('../js/security-utils.js'), 'utf8');
 const connectionSource = fs.readFileSync(require.resolve('../js/remote-call-connection.js'), 'utf8');
@@ -102,12 +102,12 @@ function makePage(urlString) {
       return { client };
     },
     async broadcastMessage(_from, to, _secure, message) {
-      const signal = JSON.parse(Buffer.from(message.slice('remote-call-v9:'.length), 'base64url').toString());
+      const signal = JSON.parse(Buffer.from(message.slice('remote-call-v10:'.length), 'base64url').toString());
       page.signals.push(signal);
       const target = clients.get(to.hashCode());
       if (!target) throw new Error('Unknown destination');
       const delivered = page.transformSignal ? await page.transformSignal(signal) : signal;
-      const payload = `remote-call-v9:${Buffer.from(JSON.stringify(delivered)).toString('base64url')}`;
+      const payload = `remote-call-v10:${Buffer.from(JSON.stringify(delivered)).toString('base64url')}`;
       queueMicrotask(() => target.PushcaClient.onMessageHandler(null, payload));
     }
   };
@@ -211,9 +211,9 @@ test('a forged start is ignored before both people confirm', async () => {
   await until(() => !receiver.byId('verificationPanel').hidden && !caller.byId('verificationPanel').hidden,
     'both verification codes');
 
-  const forged = { protocol: 'REMOTE_CALL_V9', type: 'START', encrypted: true,
+  const forged = { protocol: 'REMOTE_CALL_V10', type: 'START', encrypted: true,
     videoAlias: 'attacker', audioAlias: 'attacker', auth: 'A'.repeat(43) };
-  receiver.PushcaClient.onMessageHandler(null, `remote-call-v9:${Buffer.from(JSON.stringify(forged)).toString('base64url')}`);
+  receiver.PushcaClient.onMessageHandler(null, `remote-call-v10:${Buffer.from(JSON.stringify(forged)).toString('base64url')}`);
   assert.equal(caller.started, false);
   assert.equal(receiver.started, false);
   await receiver.byId('verifyCallButton').emit('click');
@@ -243,33 +243,96 @@ test('an unencrypted invitation still joins without exchanging call keys', async
   assert.deepEqual(receiver.errors, []);
 });
 
-test('substituting the receiver public key produces different security codes', async () => {
-  const attacker = await webcrypto.subtle.generateKey({
+async function attackerKeyPair() {
+  const pair = await webcrypto.subtle.generateKey({
     name: 'RSA-OAEP', modulusLength: 2048,
     publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256'
   }, true, ['encrypt', 'decrypt']);
-  const attackerPublic = Buffer.from(await webcrypto.subtle.exportKey('spki', attacker.publicKey)).toString('base64');
+  return { ...pair, publicString: Buffer.from(await webcrypto.subtle.exportKey('spki', pair.publicKey)).toString('base64') };
+}
+
+function joinProof(linkKey, join) {
+  return createHmac('sha256', Buffer.from(linkKey, 'base64url'))
+    .update(JSON.stringify(['remote-call-v10/join', join.managerAlias, join.publicKey, join.commitment ?? null]))
+    .digest('base64url');
+}
+
+test('the joint link carries a link key only in its fragment', async () => {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  const link = new URL(caller.byId('jointLink').value);
+  assert.match(new URLSearchParams(link.hash.slice(1)).get('link-key'), /^[A-Za-z0-9_-]{43}$/);
+  assert.equal(link.searchParams.has('link-key'), false);
+  caller.byId('encryptMedia').checked = false;
+  await caller.byId('encryptMedia').emit('change');
+  assert.equal(new URLSearchParams(new URL(caller.byId('jointLink').value).hash.slice(1)).has('link-key'), false);
+});
+
+test('an encrypted joint link without a valid link key is invalid', async () => {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  const link = new URL(caller.byId('jointLink').value);
+  const settings = new URLSearchParams(link.hash.slice(1));
+  settings.set('link-key', 'too-short');
+  link.hash = settings.toString();
+  const receiver = makePage(link.href);
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => receiver.byId('connectionStatus').textContent === 'Invalid joint link.', 'invalid link');
+  assert.equal(receiver.signals.length, 0);
+});
+
+test('a relay that substitutes the receiver public key is rejected by the caller', async () => {
+  const attacker = await attackerKeyPair();
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  const receiver = makePage(caller.byId('jointLink').value);
+  receiver.transformSignal = signal => signal.type === 'JOIN'
+    ? { ...signal, publicKey: attacker.publicString } : signal;
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => receiver.byId('connectionStatus').textContent.includes('could not be verified'), 'rejection');
+  assert.equal(caller.signals.some(signal => signal.type === 'OFFER'), false);
+  assert.equal(caller.mediaSecrets.length, 0);
+  assert.equal(caller.started, false);
+  assert.equal(receiver.started, false);
+});
+
+test('a relay that forges the offer for the real receiver key is rejected by the receiver', async () => {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  const receiver = makePage(caller.byId('jointLink').value);
+  caller.transformSignal = async signal => {
+    if (signal.type !== 'OFFER') return signal;
+    const realPublic = await webcrypto.subtle.importKey('spki',
+      Buffer.from(receiver.signals.find(item => item.type === 'JOIN').publicKey, 'base64'),
+      { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['encrypt']);
+    const relaySecret = Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
+    const wrapped = await webcrypto.subtle.encrypt({ name: 'RSA-OAEP' }, realPublic, Buffer.from(relaySecret));
+    return { ...signal, wrappedSecret: Buffer.from(wrapped).toString('base64') };
+  };
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => receiver.byId('connectionStatus').textContent.includes('caller could not be verified'), 'forged offer');
+  assert.equal(receiver.mediaSecrets.length, 0);
+  assert.equal(caller.started, false);
+  assert.equal(receiver.started, false);
+});
+
+test('a security code nonce that does not open the receiver commitment ends the call', async () => {
   const caller = makePage('https://example.test/remote-call.html');
   await until(() => !!caller.byId('jointLink').value, 'invitation');
   caller.byId('extraSecurity').checked = true;
   await caller.byId('extraSecurity').emit('change');
-  const receiver = makePage(caller.byId('jointLink').value);
-  receiver.transformSignal = signal => signal.type === 'JOIN'
-    ? { ...signal, publicKey: attackerPublic } : signal;
-  caller.transformSignal = async signal => {
-    if (signal.type !== 'OFFER') return signal;
-    const secret = await webcrypto.subtle.decrypt({ name: 'RSA-OAEP' }, attacker.privateKey,
-      Buffer.from(signal.wrappedSecret, 'base64'));
-    const realPublic = await webcrypto.subtle.importKey('spki',
-      Buffer.from(receiver.signals.find(item => item.type === 'JOIN').publicKey, 'base64'),
-      { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['encrypt']);
-    const rewrapped = await webcrypto.subtle.encrypt({ name: 'RSA-OAEP' }, realPublic, secret);
-    return { ...signal, wrappedSecret: Buffer.from(rewrapped).toString('base64') };
+  const link = caller.byId('jointLink').value;
+  const linkKey = new URLSearchParams(new URL(link).hash.slice(1)).get('link-key');
+  const receiver = makePage(link);
+  // Even a relay that knows the joint link cannot swap the committed nonce after seeing the caller nonce.
+  receiver.transformSignal = signal => {
+    if (signal.type !== 'JOIN') return signal;
+    const forged = { ...signal, commitment: createHash('sha256').update(Buffer.alloc(32, 7)).digest('base64url') };
+    return { ...forged, keyProof: joinProof(linkKey, forged) };
   };
   await receiver.byId('joinNameForm').emit('submit');
-  await until(() => !caller.byId('verificationPanel').hidden && !receiver.byId('verificationPanel').hidden,
-    'security codes');
-  assert.notEqual(caller.byId('verificationCode').textContent, receiver.byId('verificationCode').textContent);
+  await until(() => caller.byId('connectionStatus').textContent.includes('does not match its commitment'), 'mismatch');
+  assert.equal(caller.byId('verificationPanel').hidden, true);
   assert.equal(caller.started, false);
   assert.equal(receiver.started, false);
 });
@@ -293,7 +356,8 @@ test('an invitation with a changed extra-security setting is rejected', async ()
   caller.byId('extraSecurity').checked = true;
   await caller.byId('extraSecurity').emit('change');
   const link = new URL(caller.byId('jointLink').value);
-  link.hash = new URLSearchParams({ e2e: '1', 'extra-security': '0' }).toString();
+  const linkKey = new URLSearchParams(link.hash.slice(1)).get('link-key');
+  link.hash = new URLSearchParams({ e2e: '1', 'extra-security': '0', 'link-key': linkKey }).toString();
   const receiver = makePage(link.href);
   await receiver.byId('joinNameForm').emit('submit');
   await until(() => receiver.byId('connectionStatus').textContent.includes('settings changed'), 'rejection');

@@ -7,7 +7,7 @@
     <title>Ultimate file transfer</title>
     <link rel="stylesheet" href="css/consent-dialog.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
-    <link rel="stylesheet" href="css/file-transfer-embedded-theme.css?v=warning-cleanup-1">
+    <link rel="stylesheet" href="css/file-transfer-embedded-theme.css?v=receiver-2fa-1">
     <meta name="theme-color" content="#0d1420">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
@@ -138,6 +138,17 @@
     </div>
 </div>
 
+<div id="receiverCodeDialog" class="consent-dialog" style="z-index: 10006" role="dialog" aria-modal="true"
+     aria-labelledby="receiverCodeTitle">
+    <div class="dialog-box">
+        <div id="receiverCodeTitle" class="dialog-title">Confirm the receiver</div>
+        <p>Send only if the receiver's screen shows the same security code.</p>
+        <p id="receiverCodeText" class="security-code"></p>
+        <button id="receiverCodeConfirmBtn">Codes match</button>
+        <button id="receiverCodeCancelBtn">Cancel</button>
+    </div>
+</div>
+
 <div id="qrCodeScannerDialog" class="consent-dialog">
     <div class="info-content">
         <div class="info-caption">
@@ -243,6 +254,10 @@
                         </button>
                     </div>
                     <div id="destinationHint" class="fancy-text" data-localize="false">Ask the receiver to open our website and share their virtual host name with you.</div>
+                    <label class="verification-option" for="receiverVerificationToggle">
+                        <input type="checkbox" id="receiverVerificationToggle">
+                        Confirm the receiver with a security code (2FA)
+                    </label>
                     <p class="receiver-ready"><svg class="transfer-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>Receiver connected. You're ready to send.</p>
                 </fieldset>
             </div>
@@ -302,7 +317,7 @@
 </body>
 
 <!--<script src="https://secure.fileshare.ovh/js/pushca.file-transfer.min.js?v=<?= time(); ?>"></script>-->
-<script src="js/pushca.file-transfer.min.js?v=warning-cleanup-1"></script>
+<script src="js/pushca.file-transfer.min.js?v=receiver-2fa-1"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];

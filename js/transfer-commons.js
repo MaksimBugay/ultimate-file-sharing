@@ -377,14 +377,22 @@ async function acquireTmpGroupHandshake(alias, binaryId, errorHandler) {
         return null;
     }
 
+    // Set by the page while the sender's 2FA option is on: shows the code and resolves true once confirmed.
+    const confirmCode = TransferFileHelper.confirmReceiverCode;
+    const senderNonce = confirmCode ? TransferVerification.randomKey() : null;
     const joinGroupResponse = await sendJoinTransferGroupRequestToClient(
         clientWithAlias.client,
-        new JoinTransferGroupRequest(null, null, null, binaryId)
+        new JoinTransferGroupRequest(null, null, null, binaryId,
+            senderNonce ? await TransferVerification.commit(senderNonce) : null)
     );
 
     if (!joinGroupResponse) {
         showErrorMsg("Failed virtual host handshake", errorHandler);
         return null;
+    }
+
+    if (confirmCode) {
+        await verifyReceiver(clientWithAlias.client, binaryId, senderNonce, joinGroupResponse, confirmCode);
     }
 
     return {
@@ -575,9 +583,50 @@ async function encryptAndTransferBinaryChunk(binaryId, order, destHashCode, arra
     );
 }
 
+// Throws when the transfer must not proceed; the page reports the error and stops the remaining files.
+async function verifyReceiver(receiverClient, binaryId, senderNonce, joinGroupResponse, confirmCode) {
+    const check = await TransferVerification.checkReceiver(
+        receiverClient.hashCode(), binaryId, senderNonce, joinGroupResponse
+    );
+    if (!check) {
+        throw new Error("the receiver's page does not support security codes. Ask the receiver to reload it.");
+    }
+    if (check.paired) {
+        return;
+    }
+    await PushcaClient.broadcastMessage(
+        null, receiverClient, false, TransferVerification.revealMessage(binaryId, senderNonce)
+    );
+    if (!await confirmCode(check.code)) {
+        throw new Error('the security code was not confirmed.');
+    }
+    check.confirm();
+}
+
+// One key pair per page; the private key is non-extractable and never leaves the page.
+let transferKeyPairPromise = null;
+
+function getTransferKeyPair() {
+    if (!transferKeyPairPromise) {
+        transferKeyPairPromise = crypto.subtle.generateKey(
+            {
+                name: "RSA-OAEP",
+                modulusLength: 2048,
+                publicExponent: new Uint8Array([0x01, 0x00, 0x01]),
+                hash: "SHA-256",
+            },
+            false,
+            ["encrypt", "decrypt"]
+        ).then(async ({publicKey, privateKey}) => ({privateKey, publicKeyString: await exportPublicKey(publicKey)}));
+        transferKeyPairPromise.catch(() => {
+            transferKeyPairPromise = null;
+        });
+    }
+    return transferKeyPairPromise;
+}
+
 async function sendJoinTransferGroupRequestToClient(dest, joinTransferGroupRequest) {
-    const {publicKey, privateKey} = await generateRSAKeyPair();
-    const publicKeyString = await exportPublicKey(publicKey);
+    const {privateKey, publicKeyString} = await getTransferKeyPair();
 
     const request = joinTransferGroupRequest.cloneAndReplacePublicKey(publicKeyString);
 
@@ -604,7 +653,14 @@ async function sendJoinTransferGroupRequestToClient(dest, joinTransferGroupReque
             console.warn("Declined join transfer group attempt: " + jsonObject.result);
             return null;
         }
-        return JSON.parse(await decryptWithPrivateKey(privateKey, jsonObject.result));
+        const credentials = JSON.parse(await decryptWithPrivateKey(privateKey, jsonObject.result));
+        return {
+            ...credentials,
+            publicKeyStr: publicKeyString,
+            encryptedResult: jsonObject.result,
+            nonce: jsonObject.nonce,
+            proof: jsonObject.proof
+        };
     } catch (err) {
         console.warn("Failed join transfer group attempt: " + err);
         return null;

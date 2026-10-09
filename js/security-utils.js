@@ -11,11 +11,13 @@ class CreatePrivateUrlSuffixRequest {
 }
 
 class JoinTransferGroupRequest {
-    constructor(deviceId, sessionId, publicKeyStr, binaryId) {
+    // commitment: optional SHA-256 of the sender nonce when the sender requests receiver verification.
+    constructor(deviceId, sessionId, publicKeyStr, binaryId, commitment = null) {
         this.deviceId = deviceId;
         this.sessionId = sessionId;
         this.publicKeyStr = publicKeyStr;
         this.binaryId = binaryId;
+        this.commitment = commitment;
     }
 
     cloneAndReplacePublicKey(publicKeyStr) {
@@ -23,7 +25,8 @@ class JoinTransferGroupRequest {
             this.deviceId,
             this.sessionId,
             publicKeyStr,
-            this.binaryId
+            this.binaryId,
+            this.commitment
         );
     }
 
@@ -33,7 +36,8 @@ class JoinTransferGroupRequest {
             jsonObject.deviceId,
             jsonObject.sessionId,
             jsonObject.publicKeyStr,
-            jsonObject.binaryId
+            jsonObject.binaryId,
+            jsonObject.commitment ?? null
         );
     }
 }
@@ -71,16 +75,25 @@ class EncryptionContract {
         this.base64IV = base64IV;
     }
 
-    async toTransferableString(pwd, salt) {
+    async toTransferableString(pwd, salt, version = null) {
         const encryptedKey = await encryptPrivateKey(this.base64Key, this.base64IV, pwd, salt);
         return encodeToBase64UrlSafe(
             JSON.stringify(
                 {
                     base64Key: encryptedKey,
-                    base64IV: this.base64IV
+                    base64IV: this.base64IV,
+                    ...(version ? {v: version} : {})
                 }
             )
         );
+    }
+
+    static versionOf(transferableString) {
+        try {
+            return JSON.parse(decodeFromBase64UrlSafe(transferableString)).v ?? null;
+        } catch {
+            return null;
+        }
     }
 
     static async fromTransferableString(transferableString, password, salt) {
@@ -106,6 +119,34 @@ async function calculateSha256(content) {
     const hashBuffer = await crypto.subtle.digest('SHA-256', content);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return btoa(String.fromCharCode.apply(null, hashArray));
+}
+
+// Protected files marked with this contract version store a salted PBKDF2 password verifier. Older files store a
+// fast SHA-256, which lets whoever holds it test passwords far faster than the PBKDF2 key wrapping allows.
+const PASSWORD_VERIFIER_VERSION = 2;
+
+async function calculatePasswordVerifier(password, salt) {
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(password), {name: "PBKDF2"}, false, ["deriveBits"]);
+    // The label keeps the verifier independent of the key-wrapping key derived from the same password and salt.
+    const label = encoder.encode("password-verifier-v2:");
+    const verifierSalt = new Uint8Array(label.length + salt.length);
+    verifierSalt.set(label);
+    verifierSalt.set(salt, label.length);
+    const bits = await crypto.subtle.deriveBits(
+        {name: "PBKDF2", salt: verifierSalt, iterations: 100000, hash: "SHA-256"},
+        keyMaterial,
+        256
+    );
+    // Same 44-character base64 shape as calculateSha256, so the server stores and compares it unchanged.
+    return btoa(String.fromCharCode(...new Uint8Array(bits)));
+}
+
+// The password hash a protected file expects, chosen by the version of its transferable encryption contract.
+async function calculatePasswordHash(password, salt, transferableContract) {
+    return EncryptionContract.versionOf(transferableContract) === PASSWORD_VERIFIER_VERSION
+        ? calculatePasswordVerifier(password, salt)
+        : calculateSha256(stringToArrayBuffer(password));
 }
 
 async function generateKeyFromPassword(password, salt) {

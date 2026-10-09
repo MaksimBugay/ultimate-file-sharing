@@ -792,6 +792,8 @@ document.addEventListener("keydown", function (event) {
         } else if (isInfoDialogVisible()) {
             closeInfoDialog();
         }
+    } else if (event.key === "Escape") {
+        finishReceiverCode(false);
     }
 });
 
@@ -804,6 +806,41 @@ function setDeviceFromVirtualHost(alias) {
     ownerVirtualHost.value = alias;
     ownerVirtualHost.classList.add('embedded-link');
     updateFileSelectionState();
+}
+
+//===================================Receiver verification (2FA)===================================
+const receiverVerificationToggle = document.getElementById('receiverVerificationToggle');
+const receiverCodeDialog = document.getElementById('receiverCodeDialog');
+let resolveReceiverCode = null;
+
+// Pages without this option (the legacy transfer page) still show codes when receiving.
+if (receiverVerificationToggle && receiverCodeDialog) {
+    receiverVerificationToggle.checked = false;
+    receiverVerificationToggle.addEventListener('change', function () {
+        TransferFileHelper.confirmReceiverCode = receiverVerificationToggle.checked ? confirmReceiverCode : null;
+    });
+    document.getElementById('receiverCodeConfirmBtn').addEventListener('click', () => finishReceiverCode(true));
+    document.getElementById('receiverCodeCancelBtn').addEventListener('click', () => finishReceiverCode(false));
+}
+
+function confirmReceiverCode(code) {
+    finishReceiverCode(false);
+    document.getElementById('receiverCodeText').textContent = code;
+    receiverCodeDialog.classList.add('visible');
+    document.getElementById('receiverCodeConfirmBtn').focus();
+    return new Promise(resolve => {
+        resolveReceiverCode = resolve;
+    });
+}
+
+function finishReceiverCode(confirmed) {
+    if (!resolveReceiverCode) {
+        return;
+    }
+    const resolve = resolveReceiverCode;
+    resolveReceiverCode = null;
+    receiverCodeDialog.classList.remove('visible');
+    resolve(confirmed);
 }
 
 //===================================Receiver virtual host lookup =================================
@@ -913,6 +950,14 @@ PushcaClient.onFileTransferChunkHandler = async function (binaryWithHeader) {
 };
 
 PushcaClient.onMessageHandler = function (ws, data) {
+    if (data.startsWith(TransferVerification.revealPrefix)) {
+        TransferVerification.receiverCode(data).then(code => {
+            if (code) {
+                showInfoMsg(`Security code for the incoming transfer: ${code}. Confirm that the sender sees the same code.`);
+            }
+        }).catch(error => console.warn('Could not check the transfer security code:', error));
+        return;
+    }
     if (data.includes(FileTransfer.jointLinkPrefix)) {
         if (!FileTransfer.receiverVirtualHost) {
             const destAlias = data.replace(FileTransfer.jointLinkPrefix, "");

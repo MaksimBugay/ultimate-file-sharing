@@ -97,6 +97,7 @@ function harness({legacy = false, mobileViewport = false, mobileDevice = false, 
     };
     return {context, element, control, calls, ready, run,
         documentLoaded: () => dispatch(documentEvents, 'DOMContentLoaded', {}),
+        dispatchDocument: (type, event) => dispatch(documentEvents, type, event),
         documentMove: target => dispatch(documentEvents, 'mousemove', {target, buttons: 0})};
 }
 
@@ -363,4 +364,36 @@ test('browse and drop use the same transfer lifecycle and stay usable for the le
         assertEnabled(h, true);
         assert.equal(h.element('fileInput').value, '');
     }
+});
+
+test('receiver verification is off by default and the toggle installs the code confirmation', async () => {
+    const h = harness();
+    assert.equal(h.element('receiverVerificationToggle').checked, false);
+    assert.equal(h.context.TransferFileHelper.confirmReceiverCode, undefined);
+    h.element('receiverVerificationToggle').checked = true;
+    await h.element('receiverVerificationToggle').dispatch('change');
+    assert.equal(typeof h.context.TransferFileHelper.confirmReceiverCode, 'function');
+    h.element('receiverVerificationToggle').checked = false;
+    await h.element('receiverVerificationToggle').dispatch('change');
+    assert.equal(h.context.TransferFileHelper.confirmReceiverCode, null);
+});
+
+test('the receiver code dialog resolves on confirm, cancel, and Escape', async () => {
+    const h = harness();
+    const dialog = h.element('receiverCodeDialog');
+    const confirmed = h.run('confirmReceiverCode("1234 5678")');
+    assert.equal(h.element('receiverCodeText').textContent, '1234 5678');
+    assert.equal(dialog.classList.contains('visible'), true);
+    await h.element('receiverCodeConfirmBtn').click();
+    assert.equal(await confirmed, true);
+    assert.equal(dialog.classList.contains('visible'), false);
+
+    const cancelled = h.run('confirmReceiverCode("1111 2222")');
+    await h.element('receiverCodeCancelBtn').click();
+    assert.equal(await cancelled, false);
+
+    const escaped = h.run('confirmReceiverCode("3333 4444")');
+    await h.dispatchDocument('keydown', {key: 'Escape'});
+    assert.equal(await escaped, false);
+    assert.equal(dialog.classList.contains('visible'), false);
 });

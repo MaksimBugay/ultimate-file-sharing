@@ -8,7 +8,7 @@ CSS, served by nginx from `/data/nginx-pusher/data` on the server. The backend i
 
 ## Commands
 
-- Tests: `node --test tests/` (Node's built-in runner, no deps; ~90 tests, all fast).
+- Tests: `node --test tests/` (Node's built-in runner, no deps; ~105 tests, all fast).
   Single file: `node --test tests/remote-call-playback.test.js`.
 - Minified bundles: built by hand with `terser` (`npm install` gives a local copy, so use
   `npx terser`). The exact file lists and flags for every bundle are in `create-min-js-command`
@@ -46,9 +46,17 @@ Other: `html/` header/footer/popup fragments, `privacy/`, `manual/` (user docs +
   reconnect. Base URL `https://secure.fileshare.ovh`.
 - `pushca-binary-helper.js` — binary protocol: `BinaryType`, `BinaryManifest`, datagrams,
   `buildPushcaBinaryHeader`, chunk storage/upload.
-- `security-utils.js` (crypto/encryption), `common-utils.js`, `callable-future.js`
+- `security-utils.js` (crypto/encryption; protected files whose encryption contract carries
+  `v: PASSWORD_VERIFIER_VERSION` store a salted PBKDF2 password verifier, older ones a SHA-256 —
+  `calculatePasswordHash` picks the right one), `common-utils.js`, `callable-future.js`
   (async waiters with retries), `owner-signature.js`, `device-secret.js`, `gateway-server.js`
   (handles gateway requests such as join-transfer-group / signature verification).
+- `transfer-verification.js` — optional 2FA for direct transfers (off by default, toggle
+  `#receiverVerificationToggle`): the handshake request carries a `commitment`, the receiver answers
+  with a `nonce` (and a `proof` once paired), the sender reveals its nonce by message
+  (`transfer-verification::reveal::`) and both pages show an 8-digit code; after the sender confirms,
+  the pages stay paired for the session. Transfer RSA keys are one non-extractable pair per page
+  (`getTransferKeyPair` in `transfer-commons.js`).
 - `binary-chunks-db.js`, `credentials-db.js` — IndexedDB storage.
 - `thumbnail-*.js` — image/video/text thumbnails for shared files.
 - Vendored libraries (never edit): `fp.min.js`, `detect.min.js`, `client.min.js`,
@@ -60,9 +68,14 @@ Other: `html/` header/footer/popup fragments, `privacy/`, `manual/` (user docs +
 
 ## Remote call architecture
 
-- `remote-call-connection.js` — signalling over Pushca (`PROTOCOL = 'REMOTE_CALL_V9'`, apps
+- `remote-call-connection.js` — signalling over Pushca (`PROTOCOL = 'REMOTE_CALL_V10'`, apps
   `REMOTE-CALL-MANAGER/VIDEO/AUDIO`), invite link, optional media encryption; creates one hidden
   `remote-call-channel.html` iframe per media kind and talks to it with `postMessage`.
+  Key exchange: the receiver sends a fresh non-extractable RSA-OAEP public key in JOIN; the caller
+  wraps a random secret in OFFER. A `link-key` in the joint link `#fragment` (never sent to the
+  server) authenticates JOIN (`keyProof` HMAC) and is mixed into HKDF, so the relay cannot swap keys;
+  OFFER and later control signals are HMAC-signed. 2FA codes use commit-then-reveal (JOIN carries
+  `commitment`, OFFER the caller `nonce`, REVEAL the receiver nonce) so a relay cannot grind codes.
 - `remote-call-channel.js` — per-kind WebSocket connection, HKDF-derived encryption, 60-byte
   chunk header (`"RCM6"` magic, sender start/end times, playback marks).
 - `remote-call.js` — capture (MediaRecorder, default 500 ms chunks, `?chunkSeconds=` override),
