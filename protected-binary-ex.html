@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure FileShare: Protected content</title>
-    <link rel="stylesheet" href="css/protected-binary.css">
-    <link rel="stylesheet" href="css/modern-public-binary.css?v=20261006-no-centered-overlay">
+    <meta name="theme-color" content="#0d1420">
+    <link rel="stylesheet" href="css/protected-binary-ex.css?v=20261012">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -29,14 +29,14 @@
     <meta name="twitter:description" content="protected content">
     <meta name="twitter:image" content="https://secure.fileshare.ovh/binary/thumbnail/<!--# echo var='arg_tn' -->">
 </head>
-<body style="background-color: #006BFD;padding: 0;margin: 0;">
-<iframe src="html/header-modern.html" width="100%" height="93px"
-        style="border: none; margin: 0 0 0 0; padding: 0 0 0 0"></iframe>
-<div class="main-container-full-height">
-    <p id="errorMessage"
-       style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000; background-color: transparent"></p>
+<body>
+<a class="skip-link" href="#protectedContent">Skip to protected content</a>
+<iframe class="protected-header" src="html/header-modern.html#protected-download-header"
+        width="100%" height="102" title="Secure FileShare navigation"></iframe>
+<main id="protectedContent" class="main-container-full-height" tabindex="-1">
+    <p id="errorMessage" role="alert" style="display: none;"></p>
 
-    <div id="contentContainer" class="content-container" style="display: none;">
+    <div id="contentContainer" class="content-container" aria-label="Shared content" style="display: none;">
         <div id="ios-instruction" style="display:none">
             <h2>Open in Safari</h2>
 
@@ -69,12 +69,11 @@
         </div>
         <a id="downloadLink" class="download-link-button" style="display: none">Download</a>
         <img id="contentImage" src="images/how-to.png" alt="Open image in browser" style="display: none">
-        <embed id="pdfViewer" type="application/pdf" class="pdf-content-container" width="100%" height="100%"/>
+        <embed id="pdfViewer" type="application/pdf" class="pdf-content-container" title="Shared PDF" width="100%" height="100%"/>
         <video id="contentVideoPlayer" controls style="display: none">
             Your browser does not support the video tag.
         </video>
-        <div id="contentTextContainer" class="media-content-container"
-             style="padding: 20px; background-color: transparent; display: none">
+        <div id="contentTextContainer" class="media-content-container" style="display: none">
             <div id="contentText"
                  class="text-message-memo"
                  aria-label="text message data"
@@ -88,36 +87,47 @@
     </div>
     <div class="login-container">
         <div id="loginBox" class="content-details-container">
-            <h2>Credentials</h2>
+            <div class="access-intro">
+                <span class="access-icon" aria-hidden="true">
+                    <svg class="icon" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>
+                </span>
+                <p class="eyebrow">PROTECTED CONTENT</p>
+                <h1>Unlock your shared file</h1>
+                <p class="intro-copy">Enter the password from the owner to access this content.</p>
+            </div>
             <div class="input-group">
-                <label for="password" style="font-weight: bold;font-size: 14px">Password</label>
+                <label for="password">Password</label>
                 <div class="password-container">
-                    <input type="password" id="password" name="password" placeholder="Enter password" required>
-                    <button type="button" id="togglePassword" class="toggle-password"></button>
+                    <input type="password" id="password" name="password" placeholder="Enter password" autocomplete="current-password" required>
+                    <button type="button" id="togglePassword" class="toggle-password"
+                            title="Hold to show password" aria-label="Hold to show password">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
                 </div>
             </div>
-            <div class="input-group">
+            <div class="input-group reuse-credentials">
                 <input type="checkbox" id="reuseCredentialsCheckbox"/>
-                Use for all content from that owner
+                <label for="reuseCredentialsCheckbox">Use for all content from that owner</label>
             </div>
-            <div class="input-group" style="margin-bottom: 5px">
-                <button id="downloadBtn">
+            <div class="input-group download-action">
+                <button type="button" id="downloadBtn">
+                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg>
                     <span id="buttonText">Download</span>
                 </button>
             </div>
-            <div id="progressBarContainer" style="display: none;">
-                <progress id="downloadProgress" value="0" max="100" style="width: 100%"></progress>
-                <span id="progressPercentage">0%</span>
+            <div id="progressBarContainer" role="status" aria-live="polite" style="display: none;">
+                <div class="progress-caption"><span>Downloading your content</span><span id="progressPercentage">0%</span></div>
+                <progress id="downloadProgress" value="0" max="100" aria-label="Download progress"></progress>
             </div>
             <div id="miscContainer" class="misc-container">
-                <div class="misc-header">
+                <button type="button" class="misc-header" aria-label="Toggle content details" aria-controls="contentDetails">
                     <span id="hideShowContentDetailsCaption">Show content details</span>
-                    <span class="misc-arrow">▼</span>
-                </div>
+                    <svg class="icon misc-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
 
-                <div class="misc-body">
+                <div id="contentDetails" class="misc-body">
                     <div class="input-group">
-                        <label id="readMeLabel" style="font-weight: bold;font-size: 14px">Read me: </label>
+                        <label id="readMeLabel">Read me</label>
                         <div id="readMeTextMemo"
                              class="read-me-text-memo"
                              aria-label="provide information about content"
@@ -128,32 +138,36 @@
                         ></div>
                     </div>
                     <div class="input-group">
-                        <label id="ownerSignatureLabel" style="font-weight: bold;font-size: 14px; color: lightseagreen">Owner
-                            signature: </label>
+                        <label id="ownerSignatureLabel">Owner signature: </label>
                     </div>
                     <div class="input-group">
-                        <label for="workSpaceId" style="font-weight: bold;font-size: 14px">Workspace ID </label>
+                        <label for="workSpaceId">Workspace ID</label>
                         <input type="text" id="workSpaceId" name="workspace-id" required>
                     </div>
-                    <input type="checkbox" id="openInBrowserCheckbox" checked style="display: none"/>
-                    <div id="pastCredentialsContainer" class="memo-container" style="margin-bottom: 0">
-                    <textarea id="pastCredentials" rows="2" cols="30"
-                              placeholder="Past string with credentials received from owner here or enter workspace ID and password manually"></textarea>
+                    <input type="checkbox" id="openInBrowserCheckbox" aria-label="Open downloaded content in the browser" checked style="display: none"/>
+                    <div id="pastCredentialsContainer" class="memo-container">
+                        <textarea id="pastCredentials" rows="3" cols="30" aria-label="Credentials received from the owner"
+                                  placeholder="Paste the credentials from the owner, or enter the workspace ID and password manually."></textarea>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</main>
+<footer class="protected-footer">
+    <a href="index.html">Secure FileShare</a>
+    <span class="footer-divider" aria-hidden="true"></span>
+    <a href="privacy/file-sharing-privacy.html" target="_blank" rel="noopener noreferrer">Privacy policy</a>
+</footer>
 <!-- Product Selection Dialog -->
-<div id="productDialog" class="product-dialog">
+<div id="productDialog" class="product-dialog" role="dialog" aria-modal="true" aria-labelledby="productDialogTitle">
     <div class="product-dialog-overlay"></div>
     <div class="product-dialog-content">
-        <button class="product-dialog-close" id="closeDialog">&times;</button>
-        <h2 class="product-dialog-title">Choose Product</h2>
+        <button type="button" class="product-dialog-close" id="closeDialog" aria-label="Close product chooser">&times;</button>
+        <h2 id="productDialogTitle" class="product-dialog-title">Choose a product</h2>
 
         <div class="product-options">
-            <a href="https://secure.fileshare.ovh/main.html" target="_blank" class="product-option">
+            <a href="https://secure.fileshare.ovh/main.html" target="_blank" rel="noopener noreferrer" class="product-option">
                 <div class="product-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -167,7 +181,7 @@
             </a>
 
             <a href="https://chromewebstore.google.com/detail/fileshare/hapdidbjoflidaclfhkbbjmedjgpnmgj"
-               target="_blank" class="product-option">
+               target="_blank" rel="noopener noreferrer" class="product-option">
                 <div class="product-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>

@@ -347,6 +347,9 @@ kbd { padding: 3px 5px; border: 1px solid #405573; border-radius: 5px; backgroun
 .dropdown-button, .dropdown-list { border-color: #49617e; border-radius: 8px; background: #17263b; color: #edf3fa; }
 .dropdown-list li:hover { background: #243e60; }
 @media (min-width: 621px) {
+    .device-container { grid-auto-flow: dense; }
+    .expiration-panel { grid-column: 2; }
+    #transReceiverContainer { grid-column: 1; }
     body {
         display: flex;
         flex-direction: column;
