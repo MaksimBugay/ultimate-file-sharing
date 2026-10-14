@@ -504,6 +504,8 @@ PushcaClient.onChannelMessageHandler = null;
 PushcaClient.onHumanTokenHandler = null;
 PushcaClient.onDataHandler = null;
 PushcaClient.onFileTransferChunkHandler = null;
+PushcaClient.onRemoteCallVideoStreamHandler = null;
+PushcaClient.onRemoteCallAudioStreamHandler = null;
 PushcaClient.onCaptchaSetHandler = null;
 PushcaClient.onPuzzleCaptchaSetHandler = null;
 PushcaClient.onUploadBinaryAppealHandler = null;
@@ -607,6 +609,14 @@ PushcaClient.openWebSocket = function (onOpenHandler, onErrorHandler, onCloseHan
                 } else if (BinaryType.FILE_TRANSFER === binaryWithHeader.binaryType) {
                     if (typeof PushcaClient.onFileTransferChunkHandler === 'function') {
                         PushcaClient.onFileTransferChunkHandler(binaryWithHeader);
+                    }
+                } else if (BinaryType.REMOTE_CALL_VIDEO_STREAM === binaryWithHeader.binaryType) {
+                    if (typeof PushcaClient.onRemoteCallVideoStreamHandler === 'function') {
+                        PushcaClient.onRemoteCallVideoStreamHandler(binaryWithHeader);
+                    }
+                } else if (BinaryType.REMOTE_CALL_AUDIO_STREAM === binaryWithHeader.binaryType) {
+                    if (typeof PushcaClient.onRemoteCallAudioStreamHandler === 'function') {
+                        PushcaClient.onRemoteCallAudioStreamHandler(binaryWithHeader);
                     }
                 } else if (BinaryType.CAPTCHA_SET === binaryWithHeader.binaryType) {
                     if (typeof PushcaClient.onCaptchaSetHandler === 'function') {
@@ -1291,14 +1301,40 @@ PushcaClient.sendBinaryChunk = async function (binaryId, order, destHashCode, wi
     return result;
 }
 
-PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode, arrayBuffer) {
+PushcaClient.sendRemoteCallFrame = async function (binaryId, order, destHashCode, arrayBuffer, frameType) {
+    await PushcaClient.restoreBrokenWsConnection();
     if (isEmpty(PushcaClient.ws)) {
         return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
     }
-    if (PushcaClient.ws.readyState !== window.WebSocket.OPEN) {
-        const errorMsg = `WebSocket is not open. State: ${PushcaClient.ws.readyState}`;
-        console.error(errorMsg);
-        return new WaiterResponse(WaiterResponseType.ERROR, errorMsg);
+
+    const customHeader = buildPushcaBinaryHeader(
+        frameType, destHashCode, true, binaryId, order
+    );
+    const combinedBuffer = new ArrayBuffer(customHeader.length + arrayBuffer.byteLength);
+    const combinedView = new Uint8Array(combinedBuffer);
+    combinedView.set(customHeader, 0);
+    combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
+
+    const acknowledgeStartTime = performance.now();
+    const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
+        20_000, binaryId, 1, function () {
+            PushcaClient.ws.send(combinedBuffer);
+            //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
+        }
+    );
+    if (WaiterResponseType.SUCCESS === result.type) {
+        return new WaiterResponse(WaiterResponseType.SUCCESS, performance.now() - acknowledgeStartTime);
+    }
+    if (WaiterResponseType.ERROR === result.type) {
+        console.log(`Failed send chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);
+    }
+    return result;
+}
+
+PushcaClient.transferBinaryChunk = async function (binaryId, order, destHashCode, arrayBuffer) {
+    await PushcaClient.restoreBrokenWsConnection();
+    if (isEmpty(PushcaClient.ws)) {
+        return new WaiterResponse(WaiterResponseType.ERROR, 'Web socket connection does not exists');
     }
 
     const customHeader = buildPushcaBinaryHeader(

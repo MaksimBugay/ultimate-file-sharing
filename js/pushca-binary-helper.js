@@ -6,7 +6,9 @@ const BinaryType = Object.freeze({
     CACHE_BINARY: 4,
     PING: 5,
     CAPTCHA_SET: 6,
-    PUZZLE_CAPTCHA_SET: 7
+    PUZZLE_CAPTCHA_SET: 7,
+    REMOTE_CALL_VIDEO_STREAM: 8,
+    REMOTE_CALL_AUDIO_STREAM: 9
 });
 
 const DatagramState = Object.freeze({
