@@ -4,7 +4,12 @@
   const WS_URL = 'wss://secure.fileshare.ovh:31085';
   const PROTOCOL = 'REMOTE_CALL_V10';
   const SIGNAL_PREFIX = 'remote-call-v10:';
-  const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER', video: 'REMOTE-CALL-VIDEO', audio: 'REMOTE-CALL-AUDIO' };
+  const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER' };
+  const TRANSPORT_VERSION = 2;
+  const LATENCY_TEST_COUNT = 20;
+  const START_LEAD_MS = 5000;
+  const MAX_START_ATTEMPTS = 3;
+  const MAX_START_LATENESS_MS = 250;
   const jointLink = document.getElementById('jointLink');
   const jointLinkLabel = document.getElementById('jointLinkLabel');
   const copyButton = document.getElementById('copyJointLinkButton');
@@ -23,6 +28,10 @@
   const verificationPanel = document.getElementById('verificationPanel');
   const verificationCode = document.getElementById('verificationCode');
   const verifyCallButton = document.getElementById('verifyCallButton');
+  const chunkDeliveryStats = {
+    audio: document.getElementById('audioChunkDelivery'),
+    video: document.getElementById('videoChunkDelivery')
+  };
   const callCrypto = (() => {
     const encoder = new TextEncoder();
     const saltPrefix = encoder.encode('REMOTE_CALL_V10');
@@ -153,11 +162,19 @@
   let peer = null;
   let remoteStopReceived = false;
   let localStopPromise = null;
+  let localStopReason = null;
   let acceptedManagerLookup = null;
   let acceptedManagerAlias = null;
   let offerSignal = null;
   let joinSignal = null;
   const channels = new Map();
+  const participantClientIds = { audio: uuid.v4().toString(), video: uuid.v4().toString() };
+  let remoteCallId = hasSourceHost ? null : uuid.v4().toString();
+  let synchronization = null;
+  let latencyTask = null;
+  let pendingLatencyTest = null;
+  let cancelRecordingStart = null;
+  let confirmationTimer = null;
   const localBinaryIds = { audio: uuid.v4().toString(), video: uuid.v4().toString() };
   let encryptionEnabled = encryptionToggle.checked;
   let extraSecurityEnabled = extraSecurityToggle.checked;
@@ -215,13 +232,22 @@
   nameInput.value = hasSourceHost ? 'Receiver' : 'Caller';
   localHeading.textContent = userName();
 
-  function isPlaybackMark(mark) {
-    return mark === null || (Number.isSafeInteger(mark?.chunk) && mark.chunk >= 0
-      && Number.isFinite(mark.timeMs) && mark.timeMs >= 0);
-  }
-
   function setConnectionStatus(message) {
     connectionStatus.textContent = message;
+  }
+
+  function updateChunkDeliveryStats(kind, diagnostics) {
+    const element = chunkDeliveryStats[kind];
+    if (!element) return;
+    const { deliverySampleCount, averageChunkSizeBytes, averageDeliveryLatencyMs } = diagnostics;
+    let value = '—';
+    if (Number.isInteger(deliverySampleCount) && deliverySampleCount > 0 && deliverySampleCount <= 5
+      && Number.isFinite(averageChunkSizeBytes) && averageChunkSizeBytes > 0
+      && Number.isFinite(averageDeliveryLatencyMs) && averageDeliveryLatencyMs >= 0) {
+      const size = Number((averageChunkSizeBytes / 1048576).toPrecision(3));
+      value = `${size} MB / ${Math.round(averageDeliveryLatencyMs)} ms`;
+    }
+    element.textContent = `${kind === 'audio' ? 'Audio' : 'Video'}: ${value}`;
   }
 
   async function establishSession(derivedSession, destination) {
@@ -387,7 +413,8 @@
     if (!fields.every(field => typeof message[field] === 'string' && message[field].length > 0)
       || !['audio', 'video'].every(kind => typeof message.mimeTypes?.[kind] === 'string'
         && typeof message.binaryIds?.[kind] === 'string')
-      || typeof message.encrypted !== 'boolean') {
+      || typeof message.encrypted !== 'boolean' || message.transportVersion !== TRANSPORT_VERSION
+      || message.remoteCallId !== remoteCallId) {
       throw new Error('Incomplete call message');
     }
   }
@@ -396,6 +423,16 @@
     const result = await PushcaClient.connectionAliasLookup(alias);
     if (!result || result.client.applicationId !== applicationId) throw new Error(`Invalid ${applicationId} alias`);
     return result.client;
+  }
+
+  async function lookupMediaClient(alias, kind) {
+    const result = await PushcaClient.connectionAliasLookup(alias);
+    const client = result?.client;
+    if (!client || client.workSpaceId !== `REMOTE_CALL_${kind.toUpperCase()}_STREAM`
+      || client.applicationId !== remoteCallId || !client.accountId || client.accountId !== client.deviceId) {
+      throw new Error(`Invalid ${kind} call channel alias`);
+    }
+    return client;
   }
 
   function sameClient(first, second) {
@@ -436,10 +473,11 @@
     iframe.addEventListener('load', () => {
       iframe.contentWindow.postMessage({
         type: 'remote-call:init', kind, role: hasSourceHost ? 'receiver' : 'caller',
+        remoteCallId, clientId: participantClientIds[kind],
         encrypted: encryptionEnabled, mediaSecret: encryptionEnabled ? session.mediaSecret : null
       }, window.location.origin);
     }, { once: true });
-    iframe.src = new URL(`remote-call-channel.html?kind=${kind}&v=11`, pageUrl).toString();
+    iframe.src = new URL(`remote-call-channel.html?kind=${kind}&v=16`, pageUrl).toString();
     document.body.append(iframe);
     return entry;
   }
@@ -477,16 +515,24 @@
           .catch(error => console.error('Could not notify peer of stopped call:', error))
           .finally(() => setConnectionStatus(message.message));
       }
+    } else if (message.type === 'remote-call:queue') {
+      entry.diagnostics = message;
+      updateChunkDeliveryStats(message.kind, message);
+    } else if (message.type === 'remote-call:finished' && Number.isSafeInteger(message.count) && message.count >= 0) {
+      entry.resolveDrain?.(message.count);
+      entry.resolveDrain = null;
+    } else if (message.type === 'remote-call:congestion') {
+      void handleCongestion(message).catch(error => { void failCall(error, 'Could not adapt call transport'); });
     } else if (message.type === 'remote-call:chunk' && message.payload instanceof ArrayBuffer
       && Number.isSafeInteger(message.order) && message.order >= 0
-      && Number.isSafeInteger(message.senderStartTimeMs)
-      && Number.isSafeInteger(message.senderEndTimeMs)
-      && message.senderStartTimeMs >= 0 && message.senderEndTimeMs > message.senderStartTimeMs
-      && Number.isFinite(message.createdAtEpochMs) && message.createdAtEpochMs > 0
-      && Number.isFinite(message.arrivedAtEpochMs) && message.arrivedAtEpochMs > 0
-      && isPlaybackMark(message.playStart) && isPlaybackMark(message.playEnd)) {
+      && Number.isSafeInteger(message.index) && message.index >= 0
+      && Number.isSafeInteger(message.generation) && message.generation >= 0
+      && message.senderStartTimeMs === message.order
+      && Number.isSafeInteger(message.senderEndTimeMs) && message.senderEndTimeMs > message.order
+      && message.independent === true && typeof message.mimeType === 'string'
+      && Number.isFinite(message.arrivedAtEpochMs)) {
       if (!entry.expectedBinaryId) {
-        if (entry.earlyBytes + message.payload.byteLength <= 16 * 1048576) {
+        if (entry.earlyChunks.length < 12 && entry.earlyBytes + message.payload.byteLength <= 16 * 1048576) {
           entry.earlyChunks.push(message);
           entry.earlyBytes += message.payload.byteLength;
         }
@@ -496,6 +542,28 @@
     }
   });
 
+  async function handleCongestion(message) {
+    if (phase !== 'calling') return;
+    const kind = message.kind;
+    if (message.action === 'terminate' && kind === 'audio') {
+      setConnectionStatus('The network is too slow to maintain real-time audio transmission.');
+      await stopCall('The network is too slow to maintain real-time audio transmission.');
+    } else if (message.action === 'disable' && kind === 'video') {
+      await window.RemoteCallMedia.disableOutgoingVideo();
+      if (peer?.manager) await sendSignal(peer.manager, { type: 'CALL_VIDEO_DISABLED' });
+      setConnectionStatus('Video disabled because the network is too slow. The audio call continues.');
+    } else if (message.action === 'reduce' && [1, 2].includes(message.reductions)) {
+      const restart = await window.RemoteCallMedia.reduceTransportQuality(kind, message.reductions);
+      if (phase !== 'calling' || !restart) return;
+      await sendSignal(peer.manager, { type: 'CALL_RECORDER_RESTART', kind, ...restart });
+      const entry = channels.get(kind);
+      entry.iframe.contentWindow.postMessage({ type: 'remote-call:resume', kind, generation: restart.generation }, window.location.origin);
+      setConnectionStatus(kind === 'audio'
+        ? `Audio bitrate reduced to ${restart.bitrate} bps because of network congestion.`
+        : `Video quality reduced to ${restart.quality} because of network congestion.`);
+    }
+  }
+
   function setPeerMedia(message, clients) {
     peer = clients;
     setCounterpartName(clients.name);
@@ -503,6 +571,7 @@
       const entry = channel(kind);
       entry.peerClient = clients[kind];
       entry.expectedBinaryId = message.binaryIds[kind];
+      entry.iframe.contentWindow.postMessage({ type: 'remote-call:set-peer', kind, client: clients[kind] }, window.location.origin);
     }
     window.RemoteCallMedia.setPeerMimeTypes(message.mimeTypes);
     for (const kind of ['audio', 'video']) {
@@ -524,17 +593,20 @@
     const payload = chunk.binary.slice().buffer;
     entry.iframe.contentWindow.postMessage({
       type: 'remote-call:send', kind, binaryId: localBinaryIds[kind],
-      order: chunk.index, startTime: chunk.startTime, endTime: chunk.endTime,
+      order: chunk.order, index: chunk.index, generation: chunk.generation,
+      independent: true, mimeType: chunk.mimeType,
+      actualRecordingStartTimeMs: chunk.actualRecordingStartTimeMs,
+      startTime: chunk.startTime, endTime: chunk.endTime,
       createdAtEpochMs: chunk.createdAtEpochMs,
       playStart: chunk.playStart ?? null, playEnd: chunk.playEnd ?? null,
-      destHashCode: entry.peerClient.hashCode(), payload
+      payload
     }, window.location.origin, [payload]);
   }
 
   async function sendSignal(destination, message) {
     if (!PushcaClient.isOpen()) throw new Error('Call manager connection is unavailable');
-    const signed = { protocol: PROTOCOL, ...message };
-    if (encryptionEnabled && ['OFFER', 'REVEAL', 'VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
+    const signed = { protocol: PROTOCOL, remoteCallId, transportVersion: TRANSPORT_VERSION, ...message };
+    if (encryptionEnabled && !['JOIN', 'REJECT'].includes(message.type)) {
       if (!session && message.type !== 'STOP') throw new Error('Call keys are not ready');
       if (session) signed.auth = await callCrypto.signSignal(session.controlKey, signed);
     }
@@ -542,19 +614,227 @@
     await PushcaClient.broadcastMessage(null, destination, false, `${SIGNAL_PREFIX}${payload}`);
   }
 
-  function stopLocalAndNotify() {
+  async function drainChannels() {
+    const counts = await Promise.all(['audio', 'video'].map(kind => {
+      const entry = channels.get(kind);
+      if (!entry) return 0;
+      return new Promise(resolve => {
+        entry.resolveDrain = resolve;
+        entry.iframe.contentWindow.postMessage({ type: 'remote-call:finish', kind }, window.location.origin);
+      });
+    }));
+    return { audio: counts[0], video: counts[1] };
+  }
+
+  function stopLocalAndNotify(reason) {
     if (!localStopPromise) {
       localStopPromise = (async () => {
-        const counts = await window.RemoteCallMedia.stop();
-        if (peer?.manager) await sendSignal(peer.manager, { type: 'STOP', counts });
+        await window.RemoteCallMedia.stop();
+        const counts = await drainChannels();
+        if (peer?.manager) await sendSignal(peer.manager, { type: 'STOP', counts, ...(reason ? { reason } : {}) });
       })();
     }
     return localStopPromise;
   }
 
+  function cancelSynchronization() {
+    cancelRecordingStart?.();
+    clearTimeout(confirmationTimer);
+    cancelRecordingStart = null;
+    confirmationTimer = null;
+    if (pendingLatencyTest) {
+      clearTimeout(pendingLatencyTest.timer);
+      pendingLatencyTest.reject(new Error('Call synchronization canceled'));
+      pendingLatencyTest = null;
+    }
+  }
+
+  function synchronizationFailed(message) {
+    if (['ended', 'error'].includes(phase)) return;
+    void failCall(new Error(message), 'Call synchronization failed');
+  }
+
+  function scheduleRecording(localStartTime) {
+    clearTimeout(confirmationTimer);
+    confirmationTimer = null;
+    phase = 'scheduled';
+    window.RemoteCallMedia.setCallStartTime(localStartTime);
+    setConnectionStatus(`Call with ${peer.name} starts in five seconds…`);
+    const start = () => {
+      const remaining = localStartTime - performance.now();
+      if (remaining > 0) {
+        cancelRecordingStart = window.RemoteCallMedia.scheduleStart(localStartTime, start);
+        return;
+      }
+      cancelRecordingStart = null;
+      if (phase !== 'scheduled') return;
+      if (-remaining > MAX_START_LATENESS_MS) {
+        synchronizationFailed('This browser missed the agreed recording start time. Keep the call tab active and try again.');
+        return;
+      }
+      phase = 'calling';
+      void window.RemoteCallMedia.start(sendChunk, localStartTime).then(async () => {
+        if (phase !== 'calling') return;
+        releaseInviteWakeLock();
+        hideJointLink();
+        invitePanel.open = false;
+        setConnectionStatus(`Call started with ${peer.name}.`);
+        await sendSignal(peer.manager, { type: 'CALL_MEDIA_STARTED',
+          actualStarts: window.RemoteCallMedia.getRecordingStartTimes() });
+      }).catch(error => { void failCall(error, 'Could not start recording'); });
+    };
+    cancelRecordingStart = window.RemoteCallMedia.scheduleStart(localStartTime, start);
+  }
+
+  async function measureLatency() {
+    const samples = [];
+    const id = uuid.v4().toString();
+    synchronization = { id, samples, proposals: 0 };
+    setConnectionStatus('Measuring call delivery latency…');
+    for (let index = 0; index < LATENCY_TEST_COUNT; index++) {
+      if (phase !== 'synchronizing') return;
+      let resolve;
+      let reject;
+      const acknowledged = new Promise((yes, no) => { resolve = yes; reject = no; });
+      const sentAt = performance.now();
+      pendingLatencyTest = {
+        id, index, sentAt, resolve, reject,
+        timer: setTimeout(() => {
+          if (pendingLatencyTest?.id === id && pendingLatencyTest.index === index) {
+            pendingLatencyTest = null;
+            reject(new Error(`Call latency probe ${index + 1}/${LATENCY_TEST_COUNT} was not acknowledged within 10 seconds`));
+          }
+        }, 10000)
+      };
+      // Attach a rejection handler before sending: cancellation may race the relay.
+      const sample = acknowledged.then(value => value);
+      void sample.catch(() => {});
+      await sendSignal(peer.manager, { type: 'CALL_LATENCY_TEST', id, index });
+      samples.push(await sample);
+    }
+    if (phase !== 'synchronizing') return;
+    const sorted = [...samples].sort((a, b) => a - b);
+    synchronization.medianRTT = (sorted[9] + sorted[10]) / 2;
+    synchronization.estimatedOneWayLatency = synchronization.medianRTT / 2;
+    synchronization.callerSendTime = performance.now();
+    await sendSignal(peer.manager, { type: 'CALL_CLOCK_SYNC', id,
+      callerSendTime: synchronization.callerSendTime,
+      estimatedOneWayLatency: synchronization.estimatedOneWayLatency });
+    if (phase === 'synchronizing') confirmationTimer = setTimeout(() => {
+      synchronizationFailed('No recording start proposal arrived');
+    }, 15000);
+  }
+
+  async function proposeStart() {
+    clearTimeout(confirmationTimer);
+    const preparingPhase = phase;
+    await window.RemoteCallMedia.ensureReady();
+    if (phase !== preparingPhase) return;
+    if (++synchronization.proposals > MAX_START_ATTEMPTS) {
+      throw new Error('The network cannot agree on a recording start with enough scheduling time');
+    }
+    const proposalId = uuid.v4().toString();
+    const calleeStartTime = performance.now() + START_LEAD_MS;
+    const callerStartTime = calleeStartTime - synchronization.clockOffset;
+    Object.assign(synchronization, { proposalId, calleeStartTime, callerStartTime });
+    phase = 'awaiting-start-ack';
+    confirmationTimer = setTimeout(() => {
+      synchronizationFailed('The recording start proposal was not acknowledged in time');
+    }, START_LEAD_MS);
+    await sendSignal(sourceHost, { type: 'CALL_START_PROPOSAL', id: synchronization.id,
+      proposalId, callerStartTime, calleeStartTime, clockOffset: synchronization.clockOffset });
+  }
+
+  async function handleSynchronization(message, receivedAt) {
+    if (message.remoteCallId !== remoteCallId || message.transportVersion !== TRANSPORT_VERSION) return;
+    if (message.type === 'CALL_TRANSPORT_READY' && !hasSourceHost && phase === 'synchronizing' && !latencyTask) {
+      latencyTask = measureLatency();
+      await latencyTask;
+    } else if (message.type === 'CALL_LATENCY_TEST' && hasSourceHost && phase === 'synchronizing'
+      && typeof message.id === 'string' && Number.isInteger(message.index) && message.index >= 0 && message.index < LATENCY_TEST_COUNT) {
+      await sendSignal(sourceHost, { type: 'CALL_LATENCY_ACK', id: message.id, index: message.index });
+    } else if (message.type === 'CALL_LATENCY_ACK' && !hasSourceHost && pendingLatencyTest
+      && message.id === pendingLatencyTest.id && message.index === pendingLatencyTest.index) {
+      const pending = pendingLatencyTest;
+      pendingLatencyTest = null;
+      clearTimeout(pending.timer);
+      pending.resolve(Math.max(0, receivedAt - pending.sentAt));
+    } else if (message.type === 'CALL_CLOCK_SYNC' && hasSourceHost && phase === 'synchronizing'
+      && typeof message.id === 'string' && Number.isFinite(message.callerSendTime) && message.callerSendTime >= 0
+      && Number.isFinite(message.estimatedOneWayLatency) && message.estimatedOneWayLatency >= 0) {
+      synchronization = { id: message.id, proposals: 0,
+        estimatedOneWayLatency: message.estimatedOneWayLatency,
+        clockOffset: receivedAt - message.callerSendTime - message.estimatedOneWayLatency };
+      await proposeStart();
+    } else if (message.type === 'CALL_START_PROPOSAL' && !hasSourceHost && phase === 'synchronizing'
+      && message.id === synchronization?.id && typeof message.proposalId === 'string'
+      && Number.isFinite(message.callerStartTime) && Number.isFinite(message.calleeStartTime)
+      && Number.isFinite(message.clockOffset)
+      && Math.abs(message.calleeStartTime - message.clockOffset - message.callerStartTime) < 0.01) {
+      clearTimeout(confirmationTimer);
+      await window.RemoteCallMedia.ensureReady();
+      if (phase !== 'synchronizing') return;
+      if (++synchronization.proposals > MAX_START_ATTEMPTS) throw new Error('Too many recording start proposals');
+      const margin = Math.max(500, synchronization.medianRTT + 250);
+      if (message.callerStartTime - performance.now() < margin) {
+        await sendSignal(peer.manager, { type: 'CALL_START_REJECT', id: message.id, proposalId: message.proposalId,
+          reason: 'Insufficient recording scheduling margin; propose a new start time.' });
+        return;
+      }
+      Object.assign(synchronization, { proposalId: message.proposalId,
+        localStartTime: message.callerStartTime, peerStartTime: message.calleeStartTime,
+        clockOffset: message.clockOffset });
+      phase = 'awaiting-start-confirmation';
+      confirmationTimer = setTimeout(() => {
+        synchronizationFailed('Recording start confirmation did not arrive before the agreed start');
+      }, Math.max(0, synchronization.localStartTime - performance.now()));
+      await sendSignal(peer.manager, { type: 'CALL_START_ACK', id: message.id, proposalId: message.proposalId });
+    } else if (message.type === 'CALL_START_REJECT' && hasSourceHost && phase === 'awaiting-start-ack'
+      && message.id === synchronization?.id && message.proposalId === synchronization.proposalId) {
+      await proposeStart();
+    } else if (message.type === 'CALL_START_ACK' && hasSourceHost && phase === 'awaiting-start-ack'
+      && message.id === synchronization?.id && message.proposalId === synchronization.proposalId) {
+      await window.RemoteCallMedia.ensureReady();
+      if (phase !== 'awaiting-start-ack') return;
+      if (synchronization.calleeStartTime - performance.now() < synchronization.estimatedOneWayLatency + 100) {
+        // The ACK itself was delayed; a fresh proposal must be acknowledged again.
+        phase = 'synchronizing';
+        await sendSignal(sourceHost, { type: 'CALL_START_RETRY', id: synchronization.id, proposalId: synchronization.proposalId });
+        await proposeStart();
+        return;
+      }
+      const confirmed = sendSignal(sourceHost, { type: 'CALL_START_CONFIRMED', id: synchronization.id,
+        proposalId: synchronization.proposalId, callerStartTime: synchronization.callerStartTime });
+      synchronization.localStartTime = synchronization.calleeStartTime;
+      synchronization.peerStartTime = synchronization.callerStartTime;
+      scheduleRecording(synchronization.localStartTime);
+      await confirmed;
+    } else if (message.type === 'CALL_START_RETRY' && !hasSourceHost && phase === 'awaiting-start-confirmation'
+      && message.id === synchronization?.id && message.proposalId === synchronization.proposalId) {
+      cancelSynchronization();
+      phase = 'synchronizing';
+    } else if (message.type === 'CALL_START_CONFIRMED' && !hasSourceHost && phase === 'awaiting-start-confirmation'
+      && message.id === synchronization?.id && message.proposalId === synchronization.proposalId
+      && message.callerStartTime === synchronization.localStartTime) {
+      await window.RemoteCallMedia.ensureReady();
+      if (phase !== 'awaiting-start-confirmation') return;
+      if (performance.now() >= synchronization.localStartTime) throw new Error('The recording start confirmation arrived too late');
+      scheduleRecording(synchronization.localStartTime);
+    } else if (message.type === 'CALL_MEDIA_STARTED' && ['scheduled', 'calling', 'ended'].includes(phase)) {
+      window.RemoteCallMedia.setPeerRecordingStartTimes(message.actualStarts);
+    } else if (message.type === 'CALL_RECORDER_RESTART' && ['calling', 'ended'].includes(phase)
+      && ['audio', 'video'].includes(message.kind) && Number.isSafeInteger(message.generation) && message.generation > 0
+      && Number.isSafeInteger(message.firstIndex) && message.firstIndex >= 0 && typeof message.mimeType === 'string') {
+      window.RemoteCallMedia.restartRemotePlayer(message.kind, message);
+    } else if (message.type === 'CALL_VIDEO_DISABLED' && ['calling', 'ended'].includes(phase)) {
+      window.RemoteCallMedia.disableRemoteVideo();
+    }
+  }
+
   async function failCall(error, label) {
     const failedPhase = phase;
     phase = 'error';
+    cancelSynchronization();
     releaseInviteWakeLock();
     verificationPanel.hidden = true;
     encryptionToggle.disabled = true;
@@ -562,11 +842,11 @@
     setConnectionStatus(`${label}: ${error.message}`);
     console.error(label, error);
     try {
-      const counts = await window.RemoteCallMedia.abort();
+      await window.RemoteCallMedia.abort();
       const destination = peer?.manager || verificationDestination || sourceHost;
       if (destination && PushcaClient.isOpen()) await sendSignal(destination,
-        session && !['negotiating', 'awaiting-offer'].includes(failedPhase)
-          ? { type: 'STOP', counts } : { type: 'REJECT', reason: `${label}: ${error.message}` });
+        (session || peer) && !['negotiating', 'awaiting-offer'].includes(failedPhase)
+          ? { type: 'STOP', counts: { audio: 0, video: 0 }, reason: `${label}: ${error.message}` } : { type: 'REJECT', reason: `${label}: ${error.message}` });
     } catch (cleanupError) {
       console.error('Could not clean up failed call:', cleanupError);
     }
@@ -580,7 +860,7 @@
         await sendSignal(await acceptedManagerLookup, offerSignal);
         return;
       }
-      if (['negotiating', 'verifying', 'waiting-ready', 'preparing', 'calling', 'ended', 'error'].includes(phase)) {
+      if (['negotiating', 'verifying', 'waiting-ready', 'preparing', 'synchronizing', 'awaiting-start-ack', 'awaiting-start-confirmation', 'scheduled', 'calling', 'ended', 'error'].includes(phase)) {
         await rejectAdditionalReceiver(message);
       }
       return;
@@ -647,7 +927,7 @@
     if (phase !== 'negotiating') return;
     phase = extraSecurityEnabled ? 'verifying' : 'waiting-ready';
     offerSignal = {
-      type: 'OFFER', encrypted: encryptionEnabled, extraSecurity: extraSecurityEnabled,
+      type: 'OFFER', remoteCallId, transportVersion: TRANSPORT_VERSION, encrypted: encryptionEnabled, extraSecurity: extraSecurityEnabled,
       ...(encryptionEnabled ? { wrappedSecret } : {}),
       ...(extraSecurityEnabled ? { nonce: callerNonce } : {})
     };
@@ -677,6 +957,10 @@
     if (message.encrypted !== encryptionEnabled || message.extraSecurity !== extraSecurityEnabled) {
       throw new Error('Call security settings differ from the joint link');
     }
+    if (message.transportVersion !== TRANSPORT_VERSION || typeof message.remoteCallId !== 'string' || !message.remoteCallId) {
+      throw new Error('This call uses an older transport. Reload both call pages and open a fresh joint link.');
+    }
+    remoteCallId = message.remoteCallId;
     phase = extraSecurityEnabled ? 'verifying' : 'joining';
     if (encryptionEnabled) {
       const derived = await callCrypto.openSession(localKeyPair, message.wrappedSecret, linkKey);
@@ -710,7 +994,7 @@
     }
     phase = 'ready';
     readySignal = {
-      type: 'READY', managerAlias, videoAlias: aliases.videoAlias,
+      type: 'READY', remoteCallId, transportVersion: TRANSPORT_VERSION, managerAlias, videoAlias: aliases.videoAlias,
       audioAlias: aliases.audioAlias, userName: userName(), mimeTypes,
       binaryIds: localBinaryIds, encrypted: encryptionEnabled
     };
@@ -730,8 +1014,8 @@
     setConnectionStatus('Receiver is ready. Preparing your camera and microphone…');
     const [manager, video, audio] = await Promise.all([
       acceptedManagerLookup,
-      lookupClient(message.videoAlias, APPLICATIONS.video),
-      lookupClient(message.audioAlias, APPLICATIONS.audio)
+      lookupMediaClient(message.videoAlias, 'video'),
+      lookupMediaClient(message.audioAlias, 'audio')
     ]);
     if (phase !== 'preparing') return;
     setConnectionStatus(extraSecurityEnabled
@@ -745,18 +1029,12 @@
       return;
     }
     setPeerMedia(message, { manager, video, audio, name: message.userName || 'Receiver' });
+    phase = 'synchronizing';
     await sendSignal(manager, {
       type: 'START', videoAlias: aliases.videoAlias, audioAlias: aliases.audioAlias,
       userName: userName(), mimeTypes, binaryIds: localBinaryIds, encrypted: encryptionEnabled
     });
-    if (phase !== 'preparing') return;
-    phase = 'calling';
-    await window.RemoteCallMedia.start(sendChunk);
-    if (phase !== 'calling') return;
-    releaseInviteWakeLock();
-    hideJointLink();
-    invitePanel.open = false;
-    setConnectionStatus(`Call started with ${peer.name}.`);
+    if (phase === 'synchronizing') setConnectionStatus('Waiting for both media transports before clock synchronization…');
   }
 
   async function handleStart(message) {
@@ -769,29 +1047,28 @@
     }
     phase = 'starting';
     const [video, audio] = await Promise.all([
-      lookupClient(message.videoAlias, APPLICATIONS.video),
-      lookupClient(message.audioAlias, APPLICATIONS.audio)
+      lookupMediaClient(message.videoAlias, 'video'),
+      lookupMediaClient(message.audioAlias, 'audio')
     ]);
     if (phase !== 'starting') return;
     setPeerMedia(message, { manager: sourceHost, video, audio, name: message.userName || 'Caller' });
-    await window.RemoteCallMedia.start(sendChunk);
-    if (phase !== 'starting') return;
-    phase = 'calling';
-    setConnectionStatus(`Call started with ${peer.name}.`);
+    phase = 'synchronizing';
+    await sendSignal(sourceHost, { type: 'CALL_TRANSPORT_READY' });
   }
 
   PushcaClient.onMessageHandler = (_ws, data) => {
     if (typeof data !== 'string' || !data.startsWith(SIGNAL_PREFIX)) return;
+    const receivedAt = performance.now();
     let message;
     try { message = JSON.parse(decodeFromBase64UrlSafe(data.slice(SIGNAL_PREFIX.length))); } catch { return; }
-    if (message?.protocol !== PROTOCOL) return;
+    if (message?.protocol !== PROTOCOL || typeof message.type !== 'string') return;
     void (async () => {
       if (extraSecurityEnabled && message.type === 'VERIFY' && !session
         && ['negotiating', 'verifying'].includes(phase)) {
         if (pendingVerifications.length < 8) pendingVerifications.push(message);
         return;
       }
-      if (encryptionEnabled && ['REVEAL', 'VERIFY', 'READY', 'START', 'STOP'].includes(message.type)) {
+      if (encryptionEnabled && !['JOIN', 'OFFER', 'REJECT'].includes(message.type)) {
         if (!session || !await callCrypto.verifySignal(session.controlKey, message)) return;
       }
       if (message.type === 'JOIN') await handleJoin(message);
@@ -803,16 +1080,18 @@
         finishVerificationIfReady();
       }
       if (message.type === 'START') await handleStart(message);
+      if (message.type.startsWith('CALL_')) await handleSynchronization(message, receivedAt);
       if (message.type === 'REJECT' && ['negotiating', 'awaiting-offer', 'verifying', 'waiting-ready', 'joining', 'ready'].includes(phase)) {
         phase = 'error';
         verificationPanel.hidden = true;
         setConnectionStatus(message.reason || 'The invitation was rejected.');
         await window.RemoteCallMedia.abort();
       }
-      if (message.type === 'STOP' && ['ready', 'verifying', 'waiting-ready', 'preparing', 'starting', 'calling', 'ended'].includes(phase)
+      if (message.type === 'STOP' && ['ready', 'verifying', 'waiting-ready', 'preparing', 'starting', 'synchronizing', 'awaiting-start-ack', 'awaiting-start-confirmation', 'scheduled', 'calling', 'ended'].includes(phase)
         && !remoteStopReceived) {
         remoteStopReceived = true;
         phase = 'ended';
+        cancelSynchronization();
         releaseInviteWakeLock();
         verificationPanel.hidden = true;
         encryptionToggle.disabled = true;
@@ -827,7 +1106,7 @@
         } else {
           await window.RemoteCallMedia.abort();
         }
-        setConnectionStatus(message.reason || 'Call ended.');
+        setConnectionStatus(message.reason || localStopReason || 'Call ended.');
       }
     })().catch(error => {
       if (phase !== 'ended') void failCall(error, 'Call setup failed');
@@ -914,15 +1193,17 @@
   });
 
   /** @returns {Promise<void>} */
-  async function stopCall() {
-    if (phase !== 'calling') return;
+  async function stopCall(reason) {
+    if (!['calling', 'scheduled', 'synchronizing', 'awaiting-start-ack', 'awaiting-start-confirmation'].includes(phase)) return;
     phase = 'ended';
+    localStopReason = typeof reason === 'string' ? reason : null;
+    cancelSynchronization();
     releaseInviteWakeLock();
     encryptionToggle.disabled = true;
     extraSecurityToggle.disabled = true;
     try {
-      await stopLocalAndNotify();
-      setConnectionStatus(remoteStopReceived ? 'Call ended.' : 'Your recording stopped. Waiting for the peer stream to finish…');
+      await stopLocalAndNotify(typeof reason === 'string' ? reason : undefined);
+      setConnectionStatus(reason || (remoteStopReceived ? 'Call ended.' : 'Your recording stopped. Waiting for the peer stream to finish…'));
     } catch (error) {
       setConnectionStatus(`Could not notify the peer that the call ended: ${error.message}`);
       console.error('Could not finish call:', error);
@@ -936,8 +1217,12 @@
       const entry = channels.get('video');
       entry?.iframe.contentWindow.postMessage({ type: 'remote-call:disable-receive', kind: 'video' }, window.location.origin);
     },
-    stopCall
+    stopCall,
+    getTransportDiagnostics: () => Object.fromEntries([...channels].map(([kind, entry]) => [kind, entry.diagnostics || null])),
+    getSynchronization: () => synchronization ? { ...synchronization, samples: [...(synchronization.samples || [])] } : null
   };
+
+  window.addEventListener('pagehide', cancelSynchronization);
 
   async function waitForManagerAlias(client) {
     const result = await CallableFuture.callAsynchronously(10000, String(client.hashCode()), () => {});

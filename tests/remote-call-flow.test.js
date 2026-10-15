@@ -14,7 +14,7 @@ class ClientFilter {
   constructor(workSpaceId, accountId, deviceId, applicationId) {
     Object.assign(this, { workSpaceId, accountId, deviceId, applicationId });
   }
-  hashCode() { return `${this.applicationId}:${this.deviceId}`; }
+  hashCode() { return `${this.workSpaceId}:${this.applicationId}:${this.deviceId}`; }
 }
 
 function element(initial = {}) {
@@ -29,8 +29,9 @@ function element(initial = {}) {
   };
 }
 
-function makePage(urlString) {
+function makePage(urlString, options = {}) {
   const url = new URL(urlString);
+  const clock = { now: () => performance.now() * 10 + (options.clockOffset ?? (url.searchParams.has('source-host') ? 125000 : 50000)) };
   const dom = new Map();
   const byId = id => {
     if (!dom.has(id)) dom.set(id, element());
@@ -61,6 +62,8 @@ function makePage(urlString) {
       const iframe = element();
       iframe.contentWindow = {
         postMessage(message) {
+          if (message.type === 'remote-call:init') iframe.init = message;
+          if (message.type === 'remote-call:finish') queueMicrotask(() => page.emitChannel(message.kind, { type: 'remote-call:finished', count: 0 }));
           if (message.type === 'remote-call:init' && message.encrypted) {
             page.mediaSecrets.push(Buffer.from(message.mediaSecret));
           }
@@ -74,7 +77,7 @@ function makePage(urlString) {
           iframe.emit('load');
           const kind = new URL(iframe.src).searchParams.get('kind');
           page.mediaFrames.set(kind, iframe);
-          const client = new ClientFilter('remote-call', 'anonymous-sharing', `media-${++nextId}`, `REMOTE-CALL-${kind.toUpperCase()}`);
+          const client = new ClientFilter(`REMOTE_CALL_${kind.toUpperCase()}_STREAM`, iframe.init.clientId, iframe.init.clientId, iframe.init.remoteCallId);
           const alias = `alias:${client.hashCode()}`;
           aliases.set(alias, client);
           windowHandlers.get('message')({
@@ -107,6 +110,7 @@ function makePage(urlString) {
       const target = clients.get(to.hashCode());
       if (!target) throw new Error('Unknown destination');
       const delivered = page.transformSignal ? await page.transformSignal(signal) : signal;
+      if (delivered === null) return;
       const payload = `remote-call-v10:${Buffer.from(JSON.stringify(delivered)).toString('base64url')}`;
       queueMicrotask(() => target.PushcaClient.onMessageHandler(null, payload));
     }
@@ -114,16 +118,29 @@ function makePage(urlString) {
   page.PushcaClient = PushcaClient;
   window.RemoteCallMedia = {
     async prepare() { return { audio: 'audio/webm', video: 'video/webm' }; },
-    async start() { page.started = true; },
-    async stop() { return { audio: 0, video: 0 }; },
-    async abort() { return { audio: 0, video: 0 }; },
+    async ensureReady() { page.readinessChecks = (page.readinessChecks || 0) + 1; },
+    async start(_send, agreedStart) { page.started = true; page.actualStart = clock.now(); page.agreedStart = agreedStart; },
+    async stop() { page.stopped = true; return { audio: 0, video: 0 }; },
+    async abort() { page.aborted = true; return { audio: 0, video: 0 }; },
+    scheduleStart(time, callback) {
+      const timer = setTimeout(callback, Math.max(0, time - clock.now()) / 10);
+      return () => clearTimeout(timer);
+    },
+    setCallStartTime(time) { page.scheduledStart = time; },
+    getRecordingStartTimes() { return { audio: page.actualStart, video: page.actualStart }; },
+    setPeerRecordingStartTimes(times) { page.peerActualStarts = times; },
+    restartRemotePlayer(kind, restart) { (page.restarts ||= []).push({ kind, ...restart }); },
+    disableRemoteVideo() { page.videoDisabled = true; },
+    async disableOutgoingVideo() { page.outgoingVideoDisabled = true; },
+    async reduceTransportQuality(kind, reduction) { return { generation: reduction, firstIndex: 10,
+      mimeType: `${kind}/webm`, bitrate: kind === 'audio' ? 42880 : 700000, quality: 'medium' }; },
     setPeerMimeTypes() {}, receiveChunk() {}, finishRemote() {}, markCallEnded() {},
     failRemoteStream(kind, message) { page.streamFailures.push({ kind, message }); }
   };
   const context = vm.createContext({
     window, document, navigator: { userAgent: 'Test', maxTouchPoints: 0 },
     crypto: webcrypto, URL, URLSearchParams, TextEncoder, TextDecoder, Uint8Array,
-    atob, btoa, setTimeout, queueMicrotask,
+    atob, btoa, setTimeout: (fn, delay) => setTimeout(fn, delay / 10), clearTimeout, queueMicrotask, performance: clock,
     ClientFilter, PushcaClient, WaiterResponseType: { SUCCESS: 'success' },
     CallableFuture: { async callAsynchronously(_ms, hash) { return { type: 'success', body: `alias:${hash}` }; } },
     uuid: { v4: () => ({ toString: () => `id-${++nextId}` }) },
@@ -391,4 +408,132 @@ test('a corrupt received video chunk stops only remote video and preserves the c
   assert.deepEqual(receiver.streamFailures, [{ kind: 'video', message: 'Video authentication failed' }]);
   assert.equal(receiver.signals.some(signal => signal.type === 'STOP'), false);
   assert.equal(caller.signals.some(signal => signal.type === 'STOP'), false);
+});
+
+
+test('twenty acknowledged probes agree on a future start across different monotonic clock origins', async () => {
+  const caller = makePage('https://example.test/remote-call.html', { clockOffset: 400000 });
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  const receiver = makePage(caller.byId('jointLink').value, { clockOffset: 7200000 });
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => caller.started && receiver.started, 'synchronized call');
+  assert.equal(caller.signals.filter(signal => signal.type === 'CALL_LATENCY_TEST').length, 20);
+  assert.equal(receiver.signals.filter(signal => signal.type === 'CALL_LATENCY_ACK').length, 20);
+  const sync = caller.window.RemoteCallConnection.getSynchronization();
+  assert.equal(sync.samples.length, 20);
+  assert.notEqual(caller.mediaFrames.get('audio').init.clientId, caller.mediaFrames.get('video').init.clientId);
+  assert.notEqual(receiver.mediaFrames.get('audio').init.clientId, receiver.mediaFrames.get('video').init.clientId);
+  const sorted = [...sync.samples].sort((a, b) => a - b);
+  assert.equal(sync.medianRTT, (sorted[9] + sorted[10]) / 2);
+  assert.equal(sync.estimatedOneWayLatency, sync.medianRTT / 2);
+  assert.ok(Math.abs((receiver.agreedStart - caller.agreedStart) - sync.clockOffset) < 0.01);
+  assert.ok(Math.abs(sync.clockOffset - 6800000) < 100);
+  assert.ok(caller.actualStart >= caller.agreedStart);
+  assert.ok(receiver.actualStart >= receiver.agreedStart);
+  for (const signal of [...caller.signals, ...receiver.signals].filter(signal => signal.type.startsWith('CALL_'))) {
+    assert.match(signal.auth, /^[A-Za-z0-9_-]{43}$/);
+  }
+  assert.deepEqual(caller.errors, []);
+  assert.deepEqual(receiver.errors, []);
+});
+
+async function unencryptedPair() {
+  const caller = makePage('https://example.test/remote-call.html');
+  await until(() => !!caller.byId('jointLink').value, 'invitation');
+  caller.byId('encryptMedia').checked = false;
+  await caller.byId('encryptMedia').emit('change');
+  return { caller, receiver: makePage(caller.byId('jointLink').value) };
+}
+
+test('a stale start proposal is rejected and a new proposal must be acknowledged', async () => {
+  const { caller, receiver } = await unencryptedPair();
+  let stale = false;
+  receiver.transformSignal = signal => {
+    if (signal.type !== 'CALL_START_PROPOSAL' || stale) return signal;
+    stale = true;
+    return { ...signal, callerStartTime: signal.callerStartTime - 4999, calleeStartTime: signal.calleeStartTime - 4999 };
+  };
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => caller.started && receiver.started, 'renegotiated call');
+  const proposals = receiver.signals.filter(signal => signal.type === 'CALL_START_PROPOSAL');
+  assert.equal(proposals.length, 2);
+  assert.equal(caller.signals.filter(signal => signal.type === 'CALL_START_REJECT').length, 1);
+  assert.equal(caller.signals.find(signal => signal.type === 'CALL_START_ACK').proposalId, proposals[1].proposalId);
+});
+
+for (const mismatch of ['id', 'index']) {
+  test(`a latency ACK with the wrong ${mismatch} cannot unblock synchronization`, async () => {
+    const { caller, receiver } = await unencryptedPair();
+    receiver.transformSignal = signal => signal.type === 'CALL_LATENCY_ACK'
+      ? { ...signal, [mismatch]: mismatch === 'id' ? 'another-measurement' : signal.index + 1 }
+      : signal;
+    await receiver.byId('joinNameForm').emit('submit');
+    await until(() => caller.byId('connectionStatus').textContent.includes('probe 1/20'), 'probe ACK timeout');
+    assert.equal(caller.window.RemoteCallConnection.getSynchronization().samples.length, 0);
+    assert.equal(caller.started, false);
+    assert.equal(receiver.started, false);
+    assert.equal(caller.signals.some(signal => signal.type === 'CALL_CLOCK_SYNC'), false);
+    assert.equal(caller.aborted, true);
+    await until(() => receiver.stopped, 'remote cancellation');
+  });
+}
+
+test('missing start confirmation aborts the caller instead of recording at an unconfirmed time', async () => {
+  const { caller, receiver } = await unencryptedPair();
+  receiver.transformSignal = signal => signal.type === 'CALL_START_CONFIRMED' ? null : signal;
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => caller.byId('connectionStatus').textContent.includes('confirmation did not arrive'), 'confirmation timeout');
+  assert.equal(caller.started, false);
+  assert.equal(caller.aborted, true);
+  await until(() => receiver.stopped, 'remote abort');
+});
+
+test('video congestion disables only video and audio congestion ends both participants with a reason', async () => {
+  const { caller, receiver } = await unencryptedPair();
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => caller.started && receiver.started, 'call');
+  caller.emitChannel('video', { type: 'remote-call:congestion', action: 'disable', reductions: 2 });
+  await until(() => receiver.videoDisabled, 'remote video disable');
+  assert.equal(caller.outgoingVideoDisabled, true);
+  assert.equal(caller.stopped, undefined);
+  caller.emitChannel('audio', { type: 'remote-call:congestion', action: 'terminate', reductions: 2 });
+  await until(() => receiver.stopped, 'audio congestion stop');
+  assert.match(caller.signals.find(signal => signal.type === 'STOP').reason, /too slow/);
+});
+
+test('encoder adaptation notifies and restarts only the affected remote player', async () => {
+  const { caller, receiver } = await unencryptedPair();
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => caller.started && receiver.started, 'call');
+  caller.emitChannel('audio', { type: 'remote-call:congestion', action: 'reduce', reductions: 1, generation: 1 });
+  await until(() => receiver.restarts?.length === 1, 'audio restart');
+  assert.equal(receiver.restarts[0].kind, 'audio');
+  assert.equal(receiver.restarts[0].generation, 1);
+  assert.equal(receiver.restarts[0].bitrate, 42880);
+});
+
+
+test('delivery averages render per stream from channel reports, including small chunks and an empty window', async () => {
+  const { caller, receiver } = await unencryptedPair();
+  await receiver.byId('joinNameForm').emit('submit');
+  await until(() => caller.started && receiver.started, 'call');
+  caller.emitChannel('audio', { type: 'remote-call:queue', deliverySampleCount: 3,
+    averageChunkSizeBytes: 1.25 * 1048576, averageDeliveryLatencyMs: 200.4 });
+  assert.equal(caller.byId('audioChunkDelivery').textContent, 'Audio: 1.25 MB / 200 ms');
+  caller.emitChannel('video', { type: 'remote-call:queue', deliverySampleCount: 5,
+    averageChunkSizeBytes: 10 * 1048576, averageDeliveryLatencyMs: 300.6 });
+  assert.equal(caller.byId('videoChunkDelivery').textContent, 'Video: 10 MB / 301 ms');
+  assert.equal(caller.byId('audioChunkDelivery').textContent, 'Audio: 1.25 MB / 200 ms');
+  assert.equal(caller.window.RemoteCallConnection.getTransportDiagnostics().video.averageDeliveryLatencyMs, 300.6);
+  caller.emitChannel('audio', { type: 'remote-call:queue', deliverySampleCount: 5,
+    averageChunkSizeBytes: 4096, averageDeliveryLatencyMs: 0 });
+  assert.equal(caller.byId('audioChunkDelivery').textContent, 'Audio: 0.00391 MB / 0 ms');
+  caller.emitChannel('audio', { type: 'remote-call:queue', deliverySampleCount: 0,
+    averageChunkSizeBytes: null, averageDeliveryLatencyMs: null });
+  assert.equal(caller.byId('audioChunkDelivery').textContent, 'Audio: —');
+  caller.emitChannel('audio', { type: 'remote-call:queue', deliverySampleCount: 5,
+    averageChunkSizeBytes: NaN, averageDeliveryLatencyMs: 200 });
+  assert.equal(caller.byId('audioChunkDelivery').textContent, 'Audio: —');
+  assert.equal(caller.byId('videoChunkDelivery').textContent, 'Video: 10 MB / 301 ms');
+  await caller.window.RemoteCallConnection.stopCall();
 });

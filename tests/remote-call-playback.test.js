@@ -47,7 +47,7 @@ function harness(options = {}) {
     }
     get src() { return this.url || ''; }
     get buffered() { return this.source?.buffer?.buffered || ranges(0, 0); }
-    get readyState() { return this.buffered.length ? 3 : 0; }
+    get readyState() { return this.buffered.length && now - EPOCH >= (options.metadataDelayMs || 0) ? 3 : 0; }
     getAttribute() { return 'false'; }
     setAttribute() {}
     querySelector() { return { style: {} }; }
@@ -56,7 +56,8 @@ function harness(options = {}) {
     pause() { this.paused = true; this.pauseCalls++; this.emit('pause'); }
     play() {
       this.playCalls++;
-      if (options.autoplayBlocked && !this.gestureAllowed) return Promise.reject(new Error('Gesture required'));
+      if (options.interruptPlayOnce === this.id && this.playCalls === 1) return Promise.reject(Object.assign(new Error('Source changed'), { name: 'AbortError' }));
+      if (options.autoplayBlocked && !this.gestureAllowed) return Promise.reject(Object.assign(new Error('Gesture required'), { name: 'NotAllowedError' }));
       this.paused = false; this.emit('play'); return Promise.resolve();
     }
     advance(ms) {
@@ -74,6 +75,11 @@ function harness(options = {}) {
       super(); Object.assign(this, { kind, updating: false, start: 0, end: 0, appends: [], removes: [] });
     }
     get buffered() { return ranges(this.start, this.end); }
+    set mode(value) {
+      if (this.parsingSegment) throw new Error("SourceBuffer is PARSING_MEDIA_SEGMENT");
+      this.currentMode = value;
+    }
+    get mode() { return this.currentMode; }
     appendBuffer(bytes) {
       assert.equal(this.updating, false, 'a SourceBuffer must serialize its own mutations');
       if (options.appendThrows === this.kind) throw new Error('Corrupt media');
@@ -84,7 +90,9 @@ function harness(options = {}) {
       this.appends.push({ index, at: now });
       if (options.blockAppend === this.kind) return;
       this.timer = schedule(() => {
-        this.end += duration; this.updating = false; this.emit('updateend');
+        if (this.timestampOffset !== undefined && this.end === 0) this.start = this.timestampOffset;
+        this.end = (this.timestampOffset ?? this.end) + duration; this.updating = false;
+        this.parsingSegment = options.openEndedWebm === this.kind; this.emit('updateend');
       }, options.appendMs?.[this.kind] ?? 5);
     }
     remove(start, end) {
@@ -93,7 +101,7 @@ function harness(options = {}) {
       this.removes.push([start, end]);
       this.timer = schedule(() => { this.start = end; this.updating = false; this.emit('updateend'); }, 2);
     }
-    abort() { timers.delete(this.timer); this.updating = false; }
+    abort() { timers.delete(this.timer); this.updating = false; this.parsingSegment = false; }
   }
   class MediaSource extends Events {
     static isTypeSupported() { return true; }
@@ -151,11 +159,12 @@ function harness(options = {}) {
   }
   function chunk(kind, index, { duration = 500, captureEnd = (index + 1) * duration, createdAt,
     receivedAt = now + (options.localClockOffsetMs || 0),
-    decryptedAt = now + (options.localClockOffsetMs || 0) } = {}) {
+    decryptedAt = now + (options.localClockOffsetMs || 0), independent = false, generation = 0 } = {}) {
     const payload = new ArrayBuffer(8);
     const view = new DataView(payload);
     view.setUint32(0, index); view.setUint32(4, duration);
-    media.receiveChunk(kind, index, payload, {
+    media.receiveChunk(kind, independent ? captureEnd - duration : index, payload, {
+      index, independent, generation,
       senderStartTimeMs: captureEnd - duration, senderEndTimeMs: captureEnd,
       createdAtEpochMs: createdAt ?? EPOCH + (options.remoteClockOffsetMs || 0) + captureEnd,
       arrivedAtEpochMs: receivedAt, decryptedAtEpochMs: decryptedAt, playStart: null, playEnd: null
@@ -177,13 +186,14 @@ function scheduleStream(h, kind, count, deliveryDelay = 30) {
   }
 }
 
-test('normal streams start with their first data and have independent MSE owners', async () => {
+test('audio starts with two chunks and video with its first, using independent MSE owners', async () => {
   const h = harness();
   scheduleStream(h, 'audio', 20, 30); scheduleStream(h, 'video', 20, 80);
   await h.advanceTo(10000);
   const d = h.diagnostics();
   assert.equal(d.state, 'NORMAL');
-  assert.ok(d.audioPlaybackDelayMs < 600); assert.ok(d.videoPlaybackDelayMs < 650);
+  assert.ok(d.audioPlaybackDelayMs >= 1000 && d.audioPlaybackDelayMs < 1100);
+  assert.ok(d.videoPlaybackDelayMs < 650);
   assert.equal(h.byId('remotePanel').dataset.playbackState, 'NORMAL');
   assert.equal(h.byId('playbackDelayWarning').hidden, true);
   assert.equal(h.byId('remoteAudio').pauseCalls, 0);
@@ -193,12 +203,74 @@ test('normal streams start with their first data and have independent MSE owners
   assert.ok(h.sources[0].buffer.appends[0].at < h.sources[1].buffer.appends[0].at);
 });
 
+test('audio waits for the second completed append while video and user gestures remain independent', async () => {
+  const h = harness();
+  h.scheduleAt(530, () => { h.chunk('audio', 0); h.chunk('video', 0); });
+  await h.advanceTo(1000);
+  assert.equal(h.byId('remoteAudio').playCalls, 0);
+  assert.equal(h.byId('remoteAudio').currentTime, 0);
+  assert.equal(h.byId('replayVideo').paused, false);
+  h.window.emit('pointerdown');
+  h.chunk('audio', 0); // A duplicate cannot satisfy the two-chunk requirement.
+  h.chunk('audio', 1);
+  await h.advanceTo(1004);
+  assert.equal(h.byId('remoteAudio').playCalls, 0, 'receiving alone is insufficient while the append is in flight');
+  await h.advanceTo(1005);
+  assert.equal(h.byId('remoteAudio').playCalls, 1);
+  assert.equal(h.byId('remoteAudio').currentTime, 0, 'the first chunk must be retained and played');
+  assert.equal(h.sources[0].buffer.buffered.end(0), 1);
+  await h.advanceTo(1250);
+  assert.equal(h.diagnostics().audio.currentlyPlaying.index, 0);
+});
+
+test('out-of-order audio must be appended in order before startup can consume its reserve', async () => {
+  const h = harness();
+  h.chunk('audio', 0);
+  h.chunk('audio', 2);
+  await h.advanceTo(800);
+  assert.equal(h.byId('remoteAudio').playCalls, 0);
+  assert.equal(h.diagnostics().audio.waitingForIndex, 1);
+  h.chunk('audio', 1);
+  await h.advanceTo(805);
+  assert.equal(h.byId('remoteAudio').playCalls, 1);
+  assert.deepEqual(h.sources[0].buffer.appends.slice(0, 2).map(entry => entry.index), [0, 1]);
+});
+
+test('a burst starts after its second appended audio chunk without waiting for another timer or the entire burst', async () => {
+  const h = harness();
+  for (let index = 0; index < 5; index++) h.chunk('audio', index);
+  await h.advanceTo(5);
+  assert.equal(h.byId('remoteAudio').playCalls, 0);
+  await h.advanceTo(10);
+  assert.equal(h.byId('remoteAudio').playCalls, 1);
+  assert.equal(h.sources[0].buffer.appends.length, 3, 'the third append has just started');
+  assert.equal(h.byId('remoteAudio').currentTime, 0);
+  await h.advanceTo(30);
+  assert.deepEqual(h.sources[0].buffer.appends.map(entry => entry.index), [0, 1, 2, 3, 4]);
+});
+
+test('a finished one-chunk audio call drains even when metadata arrives after end-of-stream', async () => {
+  const h = harness({ metadataDelayMs: 150 });
+  h.chunk('audio', 0);
+  h.media.finishRemote({ audio: 1, video: 0 });
+  await h.advanceTo(100);
+  assert.equal(h.sources[0].readyState, 'ended');
+  assert.equal(h.byId('remoteAudio').playCalls, 0);
+  await h.advanceTo(250);
+  assert.equal(h.byId('remoteAudio').playCalls, 1);
+  assert.ok(h.byId('remoteAudio').currentTime > 0);
+  await h.advanceTo(1000);
+  assert.equal(h.byId('remoteAudio').currentTime, 0.5);
+  assert.equal(h.byId('remoteAudio').paused, true);
+  assert.equal(h.diagnostics().audio.failure, null);
+});
+
 for (const options of [{ videoNeverOpens: true }, { blockAppend: 'video' }, { appendMs: { video: 1100 } }]) {
   test(`audio remains continuous when video is unavailable/slow: ${JSON.stringify(options)}`, async () => {
     const h = harness(options);
     scheduleStream(h, 'audio', 30); scheduleStream(h, 'video', 30);
     await h.advanceTo(14000);
-    assert.ok(h.diagnostics().audioPlaybackDelayMs < 600);
+    assert.ok(h.diagnostics().audioPlaybackDelayMs < 1100);
     assert.equal(h.byId('remoteAudio').pauseCalls, 0);
     assert.equal(h.sources[0].buffer.appends.length, 27);
     assert.equal(h.diagnostics().audio.queuedDurationMs, 0);
@@ -214,7 +286,7 @@ test('a missing/reordered video index only holds video and is restored in stream
   await h.advanceTo(4250);
   assert.equal(h.diagnostics().state, 'VIDEO_DELAYED');
   assert.equal(h.diagnostics().video.waitingForIndex, 1);
-  assert.ok(h.diagnostics().audioPlaybackDelayMs < 600);
+  assert.ok(h.diagnostics().audioPlaybackDelayMs < 1100);
   assert.equal(h.byId('disableRemoteVideo').hidden, false);
   await h.advanceTo(4750);
   assert.deepEqual(h.sources[1].buffer.appends.map(x => x.index), [0, 1, 2]);
@@ -225,7 +297,7 @@ test('video delivery delayed by one second never pauses or seeks audio', async (
   scheduleStream(h, 'audio', 30); scheduleStream(h, 'video', 30, 1030);
   await h.advanceTo(14500);
   assert.equal(h.diagnostics().state, 'NORMAL');
-  assert.ok(h.diagnostics().audioPlaybackDelayMs < 600);
+  assert.ok(h.diagnostics().audioPlaybackDelayMs < 1100);
   assert.ok(h.diagnostics().videoPlaybackDelayMs > 1400);
   assert.equal(h.byId('remoteAudio').pauseCalls, 0);
 });
@@ -282,7 +354,7 @@ test('warning hysteresis recovers below 2500 ms and red overrides blue', async (
   assert.equal(h.diagnostics().state, 'NORMAL');
   h.chunk('audio', 3, { captureEnd: 3000 });
   h.chunk('video', 3, { captureEnd: 3000 });
-  await h.advanceTo(6750);
+  await h.advanceTo(7250);
   assert.equal(h.diagnostics().state, 'AUDIO_DELAYED');
 });
 
@@ -320,7 +392,7 @@ for (const options of [{ appendThrows: 'video' }, { videoType: 'video/unsupporte
     await h.advanceTo(9000);
     assert.equal(h.diagnostics().video.closed, true);
     assert.ok(h.diagnostics().video.failure);
-    assert.ok(h.diagnostics().audioPlaybackDelayMs < 600);
+    assert.ok(h.diagnostics().audioPlaybackDelayMs < 1100);
     assert.equal(h.byId('remoteAudio').pauseCalls, 0);
     assert.equal(h.stoppedCalls(), 0);
   });
@@ -333,7 +405,7 @@ test('queue overflow stops the affected stream visibly rather than silently drop
   assert.match(h.diagnostics().video.failure, /queue limit exceeded/);
   assert.equal(h.diagnostics().video.queueLength, 0);
   assert.match(h.byId('playerCaption').textContent, /video playback stopped/);
-  assert.ok(h.diagnostics().audioPlaybackDelayMs < 600);
+  assert.ok(h.diagnostics().audioPlaybackDelayMs < 1100);
   assert.equal(h.byId('remoteAudio').pauseCalls, 0);
 });
 
@@ -357,7 +429,8 @@ test('audio end-of-stream is independent of missing final video, including the 3
   assert.equal(h.sources[1].readyState, 'open');
   await h.advanceTo(31000);
   assert.equal(h.diagnostics().audio.failure, null);
-  assert.match(h.diagnostics().video.failure, /not received/);
+  assert.equal(h.diagnostics().video.failure, null);
+  assert.equal(h.sources[1].readyState, 'ended');
 });
 
 test('autoplay rejection waits for a gesture without coupling the streams', async () => {
@@ -388,7 +461,7 @@ test('five minutes of progressively jittery video delivery never adds delay to a
       videoDelayMs: Math.round(d.videoPlaybackDelayMs), audioQueueMs: d.audio.queuedDurationMs,
       videoQueueMs: d.video.queuedDurationMs, audioAheadMs: Math.round(d.audio.bufferedAheadMs),
       videoAheadMs: Math.round(d.video.bufferedAheadMs), state: d.state });
-    assert.ok(d.audioPlaybackDelayMs < 600, JSON.stringify(d));
+    assert.ok(d.audioPlaybackDelayMs < 1100, JSON.stringify(d));
     assert.equal(h.byId('remoteAudio').pauseCalls, 0);
     assert.equal(d.audio.failure, null); assert.equal(d.video.failure, null);
   }
@@ -399,6 +472,23 @@ test('five minutes of progressively jittery video delivery never adds delay to a
   t.diagnostic(JSON.stringify(samples));
 });
 
+
+test('the startup reserve absorbs repeated audio arrival jitter without accumulating playback delay', async () => {
+  const h = harness();
+  scheduleStream(h, 'audio', 620, index => 25 + (index % 5) * 40);
+  const delays = [];
+  for (const time of [10000, 60000, 180000, 300000]) {
+    await h.advanceTo(time);
+    const audio = h.diagnostics().audio;
+    delays.push(audio.playbackDelayMs);
+    assert.ok(audio.bufferedAheadMs >= 100, 'audio retains playable headroom between arrivals');
+    assert.ok(audio.playbackDelayMs >= 1000 && audio.playbackDelayMs < 1150);
+    assert.equal(audio.failure, null);
+  }
+  assert.ok(Math.max(...delays) - Math.min(...delays) < 2);
+  assert.equal(h.byId('remoteAudio').playCalls, 1);
+  assert.equal(h.byId('remoteAudio').pauseCalls, 0);
+});
 
 test('delay monitor is a read-only observer with strict warning and recovery thresholds', () => {
   const start = source.indexOf('  class CallDelayMonitor');
@@ -428,11 +518,12 @@ test('missing audio does not stall video ordering, appends or playback', async (
   const h = harness();
   scheduleStream(h, 'video', 40);
   h.scheduleAt(530, () => h.chunk('audio', 0));
-  h.scheduleAt(1530, () => h.chunk('audio', 2));
+  h.scheduleAt(1030, () => h.chunk('audio', 1));
+  h.scheduleAt(2030, () => h.chunk('audio', 3));
   await h.advanceTo(18000);
   const d = h.diagnostics();
   assert.equal(d.state, 'AUDIO_DELAYED');
-  assert.equal(d.audio.waitingForIndex, 1);
+  assert.equal(d.audio.waitingForIndex, 2);
   assert.ok(d.videoPlaybackDelayMs < 600);
   assert.equal(h.byId('replayVideo').pauseCalls, 0);
 });
@@ -447,7 +538,7 @@ test('caller and callee measure the same delay despite different device clocks a
     await h.advanceTo(10000);
     const d = h.diagnostics();
     assert.equal(d.state, 'NORMAL');
-    assert.ok(d.audioPlaybackDelayMs > 1000 && d.audioPlaybackDelayMs < 2000);
+    assert.ok(d.audioPlaybackDelayMs > 2000 && d.audioPlaybackDelayMs < 2100);
     assert.equal(h.byId('playbackDelayWarning').hidden, true);
     const timing = h.media.getReceivedChunkTiming('audio', 0);
     assert.equal(timing.createdAtCallTimeMs, 500);
@@ -486,6 +577,155 @@ for (const remoteClockOffsetMs of [-86400000, 86400000]) {
     assert.equal(h.byId('remoteAudio').pauseCalls, 0);
     assert.equal(h.byId('replayVideo').pauseCalls, 0);
     assert.equal(h.byId('playbackDelayMessage').textContent,
-      `Audio is delayed by network conditions. Audio delay: ${Math.round(d.audioPlaybackDelayMs)} ms.`);
+      `Audio playback is delayed. Audio delay: ${Math.round(d.audioPlaybackDelayMs)} ms.`);
   });
 }
+
+
+test('a transient interrupted play request retries without demanding another user gesture', async () => {
+  const h = harness({ interruptPlayOnce: 'replayVideo' });
+  h.chunk('video', 0);
+  h.chunk('audio', 0);
+  await h.advanceTo(300);
+  assert.ok(h.byId('replayVideo').playCalls >= 2);
+  assert.equal(h.diagnostics().video.needsGesture, false);
+  assert.equal(h.byId('replayVideo').paused, false);
+  assert.equal(h.stoppedCalls(), 0);
+});
+
+
+test('a restarted player waits for metadata before seeking to a positive capture timestamp', async () => {
+  const h = harness({ metadataDelayMs: 150 });
+  h.media.restartRemotePlayer('video', { generation: 1, firstIndex: 4, mimeType: 'video/webm;codecs=vp8' });
+  h.sources[2].open();
+  h.chunk('video', 4, { independent: true, generation: 1 });
+  await h.advanceTo(100);
+  assert.equal(h.byId('replayVideo').playCalls, 0);
+  assert.equal(h.byId('replayVideo').currentTime, 0);
+  await h.advanceTo(350);
+  assert.ok(h.byId('replayVideo').currentTime >= 2);
+  assert.equal(h.byId('replayVideo').paused, false);
+});
+
+test('independent frames resume across a missing sequence without shifting timestamps or discarding HQ', async () => {
+  const h = harness();
+  h.chunk('audio', 0, { independent: true });
+  await h.advanceTo(1500);
+  h.chunk('audio', 2, { independent: true });
+  await h.advanceTo(2250);
+  assert.deepEqual(h.sources[0].buffer.appends.map(entry => entry.index), [0, 2]);
+  assert.equal(h.sources[0].buffer.timestampOffset, 1);
+  assert.equal(h.diagnostics().audio.lastAppended.captureStartTimeMs, 1000);
+  h.chunk('audio', 1, { independent: true }); // Too late for playback; still retained in HQ.
+  await h.advanceTo(2300);
+  assert.deepEqual(h.sources[0].buffer.appends.map(entry => entry.index), [0, 2]);
+  assert.deepEqual(Array.from(h.media.getHistories().remote.audio, frame => frame.order), [0, 1000, 500]);
+});
+
+test('a recorder restart replaces only its player and preserves history from older generations', async () => {
+  const h = harness();
+  h.chunk('audio', 0, { independent: true });
+  h.chunk('audio', 1, { independent: true });
+  h.chunk('video', 0, { independent: true });
+  await h.advanceTo(50);
+  h.media.restartRemotePlayer('video', { generation: 1, firstIndex: 2, mimeType: 'video/webm;codecs=vp8' });
+  h.sources[2].open();
+  h.chunk('video', 1, { independent: true, generation: 0 });
+  h.chunk('video', 2, { independent: true, generation: 1 });
+  await h.advanceTo(400);
+  assert.equal(h.sources[1].removed, true);
+  assert.deepEqual(h.sources[2].buffer.appends.map(entry => entry.index), [2]);
+  assert.deepEqual(Array.from(h.media.getHistories().remote.video, frame => frame.order), [0, 500, 1000]);
+  assert.equal(h.sources[0].removed, undefined);
+  assert.equal(h.byId('remoteAudio').paused, false);
+});
+
+for (const kind of ['audio', 'video']) {
+  test(`independent ${kind} WebM frames reset an open segment parser before setting the next capture offset`, async () => {
+    const h = harness({ openEndedWebm: kind });
+    h.chunk(kind, 0, { independent: true });
+    await h.advanceTo(50);
+    h.chunk(kind, 1, { independent: true });
+    await h.advanceTo(150);
+    h.chunk(kind, 2, { independent: true });
+    await h.advanceTo(350);
+    const buffer = h.sources[kind === 'audio' ? 0 : 1].buffer;
+    assert.deepEqual(buffer.appends.map(entry => entry.index), [0, 1, 2]);
+    assert.equal(buffer.timestampOffset, 1);
+    assert.equal(h.diagnostics()[kind].failure, null);
+    assert.equal(h.byId(kind === 'audio' ? 'remoteAudio' : 'replayVideo').paused, false);
+  });
+}
+
+
+for (const kind of ['audio', 'video']) {
+  test(`${kind} waiting events cross buffered capture gaps immediately and leave the other stream alone`, async () => {
+    const h = harness();
+    h.chunk('audio', 0, { independent: true });
+    h.chunk('audio', 1, { independent: true });
+    h.chunk('video', 0, { independent: true });
+    await h.advanceTo(50);
+    const index = kind === 'audio' ? 0 : 1;
+    const element = h.byId(kind === 'audio' ? 'remoteAudio' : 'replayVideo');
+    const other = h.byId(kind === 'audio' ? 'replayVideo' : 'remoteAudio');
+    const otherPosition = other.currentTime;
+    Object.defineProperty(h.sources[index].buffer, 'buffered', { get: () => ({
+      length: 2, start: i => i ? 0.51 : 0, end: i => i ? 1 : 0.48
+    }) });
+    element.currentTime = 0.48;
+    const now = h.time();
+    element.emit('waiting');
+    assert.equal(element.currentTime, 0.51, 'waiting must not accumulate a timer tick of delay at every frame');
+    assert.equal(h.time(), now);
+    assert.equal(other.currentTime, otherPosition);
+    await h.media.abort();
+    assert.equal(element.handlers.get('waiting').size, 0);
+  });
+}
+
+
+test('audio capture windows cover small boundary gaps without shifting frame timestamps or touching video', async () => {
+  const h = harness();
+  h.chunk('audio', 0, { independent: true });
+  h.chunk('video', 0, { independent: true });
+  await h.advanceTo(20);
+  h.chunk('audio', 1, { independent: true, captureEnd: 1001 });
+  await h.advanceTo(40);
+  const audio = h.sources[0].buffer;
+  assert.equal(audio.timestampOffset, 0.501);
+  assert.equal(audio.appendWindowStart, 0.5);
+  assert.equal(audio.appendWindowEnd, 1.001);
+  assert.equal(h.sources[1].buffer.appendWindowStart, undefined);
+  assert.equal(h.sources[1].buffer.appendWindowEnd, undefined);
+  assert.equal(h.media.getHistories().remote.audio[1].order, 501);
+  h.chunk('audio', 3, { independent: true, captureEnd: 2001 });
+  await h.advanceTo(700);
+  assert.equal(audio.timestampOffset, 1.501);
+  assert.equal(audio.appendWindowStart, 1.501, 'a missing chunk must not be turned into a synthetic boundary gap');
+  assert.equal(audio.appendWindowEnd, 2.001);
+});
+
+test('a restarted audio player buffers two new chunks at a late call position and retains earlier HQ frames', async () => {
+  const h = harness();
+  h.chunk('audio', 0, { independent: true });
+  h.chunk('audio', 1, { independent: true });
+  await h.advanceTo(20);
+  h.media.restartRemotePlayer('audio', { generation: 1, firstIndex: 4, mimeType: 'audio/webm;codecs=opus' });
+  h.sources[2].open();
+  h.chunk('audio', 4, { independent: true, generation: 1, captureEnd: 65000 });
+  await h.advanceTo(40);
+  assert.equal(h.sources[2].buffer.timestampOffset, 64.5);
+  assert.equal(h.sources[2].buffer.appendWindowStart, 64.5);
+  assert.equal(h.sources[2].buffer.appendWindowEnd, 65);
+  assert.equal(h.media.getHistories().remote.audio.length, 3);
+  assert.equal(h.byId('remoteAudio').playCalls, 1, 'old-generation chunks cannot unlock the new player');
+  assert.equal(h.byId('remoteAudio').paused, true);
+  h.window.emit('pointerdown');
+  assert.equal(h.byId('remoteAudio').playCalls, 1);
+  h.chunk('audio', 5, { independent: true, generation: 1, captureEnd: 65500 });
+  await h.advanceTo(60);
+  assert.equal(h.byId('remoteAudio').playCalls, 2);
+  assert.ok(h.byId('remoteAudio').currentTime >= 64.5);
+  assert.equal(h.media.getHistories().remote.audio.length, 4);
+  assert.equal(h.sources[1].removed, undefined);
+});

@@ -132,3 +132,43 @@ test('failed audio setup does not disconnect live remote playback', () => {
   assert.ok(!h.connections.some(([source, destination]) => source === 'remote audio' && destination.startsWith('disconnect:')));
   assert.deepEqual(h.stoppedTracks, ['canvas remote video']);
 });
+
+
+test('history download pairs both audio histories and received video by closest capture order', () => {
+  const { Recorder } = harness();
+  const frame = (order, id) => ({ order, startTime: order, endTime: order + 500, id });
+  const own = [frame(10, 'own 0'), frame(510, 'own 1'), frame(1010, 'own 2')];
+  const remote = [frame(5, 'peer 0'), frame(505, 'peer 1'), frame(1005, 'peer 2')];
+  const video = [frame(0, 'video 0'), frame(500, 'video 1'), frame(1000, 'video 2')];
+  const plan = Recorder.planHistory({ ownAudio: own, remoteAudio: remote, remoteVideo: video, chunkMs: 500 });
+  assert.deepEqual(Array.from(plan, window => window.order), [10, 510, 1010]);
+  assert.deepEqual(Array.from(plan, window => window.ownAudio.id), ['own 0', 'own 1', 'own 2']);
+  assert.deepEqual(Array.from(plan, window => window.remoteAudio.id), ['peer 0', 'peer 1', 'peer 2']);
+  assert.deepEqual(Array.from(plan, window => window.remoteVideo.id), ['video 0', 'video 1', 'video 2']);
+});
+
+test('download retains own unsent frames and preserves missing remote audio/video as gaps', () => {
+  const { Recorder } = harness();
+  const frame = order => ({ order, startTime: order, endTime: order + 500 });
+  const own = [frame(0), frame(500), frame(1000), frame(1500)];
+  const plan = Recorder.planHistory({ ownAudio: own, remoteAudio: [frame(0), frame(1500)],
+    remoteVideo: [frame(0)], chunkMs: 500 });
+  assert.equal(plan.length, 4);
+  assert.equal(plan[1].ownAudio, own[1]);
+  assert.equal(plan[1].remoteAudio, null);
+  assert.equal(plan[2].remoteAudio, null);
+  assert.equal(plan[3].remoteVideo, null);
+  assert.equal(plan[3].startTime, 1500);
+});
+
+test('history assembly sorts out-of-order HQ and retains a peer capture tail after local stop', () => {
+  const { Recorder } = harness();
+  const frame = order => ({ order, startTime: order, endTime: order + 500 });
+  const own = [frame(0)];
+  const plan = Recorder.planHistory({ ownAudio: own, remoteAudio: [frame(1000), frame(0), frame(500)],
+    remoteVideo: [frame(1500)], chunkMs: 500 });
+  assert.deepEqual(Array.from(plan, window => window.startTime), [0, 500, 1000, 1500]);
+  assert.equal(plan[0].ownAudio, own[0]);
+  assert.equal(plan[1].ownAudio, null);
+  assert.equal(plan[3].remoteVideo.order, 1500);
+});

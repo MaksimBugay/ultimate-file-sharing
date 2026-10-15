@@ -1316,8 +1316,10 @@ PushcaClient.sendRemoteCallFrame = async function (binaryId, order, destHashCode
     combinedView.set(new Uint8Array(arrayBuffer), customHeader.length);
 
     const acknowledgeStartTime = performance.now();
+    const frameTypeName = Object.keys(BinaryType).find(type => BinaryType[type] === frameType);
+    const ackId = `${frameTypeName}_${destHashCode}_${binaryId}`;
     const result = await CallableFuture.callAsynchronouslyWithRepeatOfFailure(
-        20_000, binaryId, 1, function () {
+        3_000, ackId, 1, function () {
             PushcaClient.ws.send(combinedBuffer);
             //console.log(`Send binary chunk attempt: ${binaryId}, ${order}, ${id}`);
         }

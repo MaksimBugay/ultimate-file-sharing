@@ -366,6 +366,9 @@
     .remote-panel video { height: 100%; min-height: 0; aspect-ratio: auto; }
     .caption { margin: 12px 16px 0; color: #b8c9de; font-size: .82rem; }
     .panel > .caption:last-child { margin-bottom: 14px; }
+    .player-status { display: flex; align-items: flex-end; gap: 12px; padding: 12px 16px 0; }
+    .player-status .caption { flex: 1 1 auto; min-width: 0; margin: 0; }
+    .call-duration { position: relative; z-index: 4; flex: 0 0 auto; margin: 0; background: #172334; color: #d8e5f5; font-size: .82rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .replay-controls {
       display: flex;
       flex-wrap: wrap;
@@ -506,6 +509,7 @@
     .stat { flex: 1 1 150px; padding: 8px 12px; border: 1px solid #304156; border-radius: 10px; background: #172334; }
     .stat dt { color: #afc0d2; font-size: .78rem; }
     .stat dd { margin: 2px 0 0; font-size: 1.1rem; font-weight: 700; }
+    .delivery-stat dd { font-size: .85rem; }
     .diagnostics { flex: 0 0 auto; margin: 0; padding: 7px 10px; border: 1px solid #304156; border-radius: 10px; color: #afc0d2; font-size: .78rem; overflow-wrap: anywhere; }
     .details { flex: 0 0 auto; max-width: 100%; margin: 0; color: #afc0d2; font-size: .78rem; line-height: 1.3; }
     code { color: #b6dcff; }
@@ -612,7 +616,10 @@
         <span id="playbackDelayMessage"></span>
         <button id="disableRemoteVideo" type="button" class="secondary" hidden>Disable video</button>
       </div>
-      <p id="playerCaption" class="caption">Incoming audio and video start independently as their chunks arrive.</p>
+      <div class="player-status">
+        <p id="playerCaption" class="caption">Incoming audio and video start independently as their chunks arrive.</p>
+        <p id="callDuration" class="call-duration" role="timer" aria-label="Call duration" aria-live="off">00:00</p>
+      </div>
       <div id="replayControls" class="replay-controls" aria-label="Replay controls" hidden>
         <button id="pauseReplayButton" type="button" class="secondary">Pause</button>
         <button id="muteReplayButton" type="button" class="secondary" aria-pressed="false">Mute audio</button>
@@ -656,16 +663,21 @@
         <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
         <div class="stat"><dt>Sent audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
         <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
+        <div class="stat delivery-stat">
+          <dt>Chunk delivery (avg last 5)</dt>
+          <dd id="audioChunkDelivery">Audio: —</dd>
+          <dd id="videoChunkDelivery">Video: —</dd>
+        </div>
       </dl>
       <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
       <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming audio and video play independently through separate MediaSources. A blue border indicates delayed video and offers Disable video; red indicates delayed audio. Delay estimates may include differences in when each person starts the call. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 0.5 seconds. Recording needs HTTPS or localhost.</p>
     </div>
   </details>
 </main>
-<script src="js/pushca.min.js?v=remote-call-10" defer></script>
-<script src="js/remote-call-connection.js?v=12" defer></script>
-<script src="js/remote-call-conversation.js?v=1" defer></script>
-<script src="js/remote-call.js?v=11" defer></script>
+<script src="js/pushca.min.js?v=remote-call-12" defer></script>
+<script src="js/remote-call-connection.js?v=19" defer></script>
+<script src="js/remote-call-conversation.js?v=2" defer></script>
+<script src="js/remote-call.js?v=24" defer></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
   window.dataLayer = window.dataLayer || [];

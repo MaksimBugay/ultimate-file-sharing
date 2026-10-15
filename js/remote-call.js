@@ -7,12 +7,23 @@
     && requestedChunkSeconds >= 0.1 && requestedChunkSeconds <= 60
     ? Math.round(requestedChunkSeconds * 1000) : 500;
   const WINDOW_MS = CHUNK_MS;
+  const VIDEO_QUALITY_LEVELS = [
+    { name: 'high', width: 1280, height: 720, fps: 30, bitrate: 1500000 },
+    { name: 'medium', width: 854, height: 480, fps: 20, bitrate: 700000 },
+    { name: 'low', width: 640, height: 360, fps: 15, bitrate: 350000 }
+  ];
+  const AUDIO_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm'];
+  const AUDIO_CAPTURE_CONSTRAINTS = {
+    echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+    channelCount: { ideal: 1 }, sampleRate: { ideal: 48000 }
+  };
+  const FRAME_REORDER_WAIT_MS = 500;
   const PLAYBACK_DELAY_WARNING_MS = 3000;
   const PLAYBACK_DELAY_RECOVERY_MS = 2500;
   const PLAYBACK_MONITOR_INTERVAL_MS = 250;
   const MAX_PLAYBACK_QUEUED_DURATION_MS = 30000;
   const MAX_PLAYBACK_QUEUED_CHUNKS = 256;
-  // Existing append ceiling, not a startup target: play as soon as data is available.
+  const AUDIO_STARTUP_CHUNKS = 2;
   const MAX_BUFFERED_AHEAD_SECONDS = 12;
   const MAX_RECORDING_BYTES = 512 * 1048576;
   // Opus needs decoded packets ahead of a snippet before its output settles.
@@ -46,6 +57,7 @@
     statusCard: document.getElementById('callStatus'),
     status: document.getElementById('status'),
     elapsed: document.getElementById('elapsed'),
+    callDuration: document.getElementById('callDuration'),
     chunkInterval: document.getElementById('chunkInterval'),
     count: document.getElementById('chunkCount'),
     size: document.getElementById('storedSize'),
@@ -82,12 +94,21 @@
   let conversationStoppingPromise = null;
   let localReplayUrl = null;
   let localReplayActive = false;
+  let remoteHistory = { audio: [], video: [] };
+  let remoteHistoryBytes = 0;
+  let historyTail = Promise.resolve();
+  let peerRecordingStartTimes = null;
+  let assembledRecording = null;
+  let outgoingVideoDisabled = false;
+  let videoCaptureStreams = [];
   let remoteReceived = { audio: new Set(), video: new Set() };
   let remoteChunkTimings = { audio: new Map(), video: new Map() };
   let remoteFinalCounts = null;
   let remoteFinishTimer = null;
   let remotePlaybackFinished = false;
   let preparedMimeTypes = null;
+  let preparedAudioRecorderMime = null;
+  let preparedAudioWatch = null;
   let cameraTrack = null;
   let cameraActive = false;
   let cameraBusy = false;
@@ -108,13 +129,15 @@
   function updateElapsed() {
     if (!startedAt) return;
     const seconds = Math.floor(relativeMs() / 1000);
-    ui.elapsed.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    const duration = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    ui.elapsed.textContent = duration;
+    if (ui.callDuration) ui.callDuration.textContent = duration;
   }
 
   function updateStats() {
     const chunks = recorderSession?.chunks;
     ui.count.textContent = `${chunks?.audio.length || 0} / ${chunks?.video.length || 0}`;
-    const storedBytes = (recorderSession?.storedBytes || 0) + (conversationRecorder?.storedBytes || 0);
+    const storedBytes = (recorderSession?.storedBytes || 0) + (conversationRecorder?.storedBytes || 0) + remoteHistoryBytes;
     ui.size.textContent = `${(storedBytes / 1048576).toFixed(1)} MB`;
     ui.cameraEnabled.disabled = busy || cameraBusy || !!stoppingPromise || (!!preparedMimeTypes && !recording);
     ui.extraEchoCancellation.disabled = new URLSearchParams(window.location.search).has('source-host')
@@ -123,33 +146,34 @@
     ui.replay.disabled = busy || recording || !finished || !callEnded || !remotePlaybackFinished
       || !conversationRecorder?.finished || !conversationRecorder.chunks.length;
     ui.save.disabled = busy || !finished || !callEnded || recordingSaved
-      || !conversationRecorder?.finished || !conversationRecorder.chunks.length;
+      || !remotePlaybackFinished || !recorderSession?.chunks.audio.length;
   }
 
   function checkRecordingMemoryLimit() {
-    if ((recorderSession?.storedBytes || 0) < MAX_RECORDING_BYTES) return false;
+    if ((recorderSession?.storedBytes || 0) + remoteHistoryBytes + (conversationRecorder?.storedBytes || 0) < MAX_RECORDING_BYTES) return false;
     if (memoryLimitReached) return true;
     memoryLimitReached = true;
     if (recording) {
       setStatus('Local recording reached the 512 MB in-memory limit. Finishing…');
-      void window.RemoteCallConnection.stopCall();
+      void window.RemoteCallConnection.stopCall('The call reached the 512 MB recording history limit.');
     }
     return true;
   }
 
   function checkConversationMemoryLimit() {
-    const storedBytes = (recorderSession?.storedBytes || 0) + (conversationRecorder?.storedBytes || 0);
+    const storedBytes = (recorderSession?.storedBytes || 0) + (conversationRecorder?.storedBytes || 0) + remoteHistoryBytes;
     if (storedBytes < MAX_RECORDING_BYTES) return false;
     if (conversationMemoryLimitReached) return true;
     conversationMemoryLimitReached = true;
     setStatus('Conversation recording reached the 512 MB in-memory limit.', true);
     void conversationRecorder?.stop();
+    if (recording) void window.RemoteCallConnection.stopCall('The call reached the 512 MB recording history limit.');
     return true;
   }
 
   function pickMime(kind) {
     const candidates = kind === 'audio'
-      ? ['audio/webm;codecs=opus']
+      ? AUDIO_MIME_TYPES
       : ['video/webm;codecs=vp9', 'video/webm;codecs=vp8'];
     return candidates.find(type => MediaRecorder.isTypeSupported(type) && MediaSource.isTypeSupported(type));
   }
@@ -166,6 +190,260 @@
     return track;
   }
 
+  // Opening the joint link backgrounds the caller. Window timers are then
+  // batched by Chrome, which can miss both the agreed start and 500 ms frames.
+  const captureClock = (() => {
+    let worker = null;
+    let workerUrl = null;
+    let workerUnavailable = false;
+    let nextId = 0;
+    const tasks = new Map();
+
+    function arm(id, task) {
+      if (worker) worker.postMessage({ id, deadline: performance.timeOrigin + task.at });
+      else task.timer = setTimeout(() => fire(id), Math.max(0, task.at - performance.now()));
+    }
+
+    function fire(id) {
+      const task = tasks.get(id);
+      if (!task) return;
+      if (task.at > performance.now()) { arm(id, task); return; }
+      tasks.delete(id);
+      task.callback();
+    }
+
+    function releaseWorker() {
+      worker?.terminate();
+      worker = null;
+      if (workerUrl) URL.revokeObjectURL(workerUrl);
+      workerUrl = null;
+    }
+
+    function fallBack() {
+      workerUnavailable = true;
+      releaseWorker();
+      for (const [id, task] of tasks) arm(id, task);
+    }
+
+    function openWorker() {
+      if (worker || workerUnavailable) return;
+      if (!window.Worker) { workerUnavailable = true; return; }
+      try {
+        workerUrl = URL.createObjectURL(new Blob([`
+          const timers = new Map();
+          onmessage = ({ data }) => {
+            clearTimeout(timers.get(data.id));
+            timers.delete(data.id);
+            if (data.cancel) return;
+            const fire = () => {
+              const remaining = data.deadline - performance.timeOrigin - performance.now();
+              if (remaining > 0) { timers.set(data.id, setTimeout(fire, remaining)); return; }
+              timers.delete(data.id);
+              postMessage(data.id);
+            };
+            timers.set(data.id, setTimeout(fire,
+              Math.max(0, data.deadline - performance.timeOrigin - performance.now())));
+          };
+        `], { type: 'application/javascript' }));
+        worker = new window.Worker(workerUrl);
+        worker.onmessage = event => fire(event.data);
+        worker.onerror = fallBack;
+      } catch { fallBack(); }
+    }
+
+    return {
+      schedule(callback, at) {
+        openWorker();
+        const id = ++nextId;
+        const task = { callback, at, timer: null };
+        tasks.set(id, task);
+        arm(id, task);
+        return id;
+      },
+      cancel(id) {
+        const task = tasks.get(id);
+        if (!task) return;
+        tasks.delete(id);
+        clearTimeout(task.timer);
+        worker?.postMessage({ id, cancel: true });
+      },
+      close() {
+        for (const task of tasks.values()) clearTimeout(task.timer);
+        tasks.clear();
+        releaseWorker();
+      }
+    };
+  })();
+
+  async function checkAudioRecorder(track, mimeType) {
+    if (track.readyState === 'ended') throw new Error('The microphone stopped before audio recording could start.');
+    const recorder = new MediaRecorder(new MediaStream([track]), {
+      mimeType, audioBitsPerSecond: 64000
+    });
+    let actualMimeType = mimeType;
+    await new Promise((resolve, reject) => {
+      let settled = false;
+      let stopTimer;
+      const finish = error => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        captureClock.cancel(stopTimer);
+        recorder.removeEventListener('start', onStart);
+        recorder.removeEventListener('dataavailable', onData);
+        recorder.removeEventListener('stop', onStop);
+        recorder.removeEventListener('error', onError);
+        if (recorder.state !== 'inactive') {
+          try { recorder.stop(); } catch { /* A rejected start may leave no encoder to stop. */ }
+        }
+        error ? reject(error) : resolve();
+      };
+      const onStart = () => { actualMimeType = recorder.mimeType || actualMimeType; };
+      const onData = event => { if (event.data?.type) actualMimeType = event.data.type; };
+      const onStop = () => finish();
+      const onError = event => finish(event.error || new Error('The audio encoder could not start.'));
+      const timer = setTimeout(() => finish(Object.assign(
+        new Error('The microphone recorder did not complete its startup check.'), { name: 'TimeoutError' }
+      )), 3000);
+      recorder.addEventListener('start', onStart, { once: true });
+      recorder.addEventListener('dataavailable', onData);
+      recorder.addEventListener('stop', onStop, { once: true });
+      recorder.addEventListener('error', onError, { once: true });
+      try {
+        // Exercise the real microphone/encoder configuration before agreeing on
+        // a start time. isTypeSupported() alone does not validate this track.
+        recorder.start(CHUNK_MS);
+        // Stop independently of 'start': some recorder implementations defer
+        // that event until data is flushed. Probe bytes stay out of history/SQ.
+        if (!settled) stopTimer = captureClock.schedule(() => {
+          actualMimeType = recorder.mimeType || actualMimeType;
+          try { recorder.stop(); } catch (error) { finish(error); }
+        }, performance.now() + Math.min(CHUNK_MS, 500));
+      } catch (error) { finish(error); }
+    });
+    if (track.readyState === 'ended') throw new Error('The microphone ended during its encoder startup check.');
+    if (!actualMimeType.startsWith('audio/webm') || !MediaSource.isTypeSupported(actualMimeType)) {
+      throw Object.assign(new Error(`Recorded microphone format cannot be played: ${actualMimeType}`), { name: 'NotSupportedError' });
+    }
+    return { recordingMimeType: mimeType, mimeType: actualMimeType };
+  }
+
+  async function prepareAudioRecorder(preferSystemAudio = true) {
+    const stream = mediaStream;
+    let lastError;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (mediaStream !== stream) throw new Error('Microphone preparation was canceled.');
+      const track = requireTrack(stream.getAudioTracks()[0], 'Microphone track is unavailable.');
+      if (track.readyState !== 'ended') await configureEchoCancellation(track, preferSystemAudio && attempt === 0);
+      if (track.readyState !== 'ended') {
+        for (const mimeType of AUDIO_MIME_TYPES) {
+          if (!MediaRecorder.isTypeSupported(mimeType)) continue;
+          try { return await checkAudioRecorder(track, mimeType); }
+          catch (error) {
+            lastError = error;
+            const settings = track.getSettings?.() || {};
+            console.warn('Microphone encoder startup failed', {
+              mimeType, errorName: error.name, message: error.message,
+              readyState: track.readyState, muted: track.muted, enabled: track.enabled,
+              sampleRate: settings.sampleRate, channelCount: settings.channelCount,
+              echoCancellation: settings.echoCancellation
+            });
+            if (track.readyState === 'ended') break;
+            if (!['NotSupportedError', 'UnknownError', 'TimeoutError'].includes(error.name)) throw error;
+          }
+        }
+      } else lastError = new Error('The microphone stopped while the call was being prepared.');
+      if (attempt === 0) {
+        // Reopen the input once if the driver ended its track or rejected every
+        // supported WebM configuration. Retry with standard browser echo
+        // cancellation and keep the existing camera track intact.
+        if (mediaStream !== stream) throw new Error('Microphone preparation was canceled.');
+        const replacement = await navigator.mediaDevices.getUserMedia({ audio: AUDIO_CAPTURE_CONSTRAINTS, video: false });
+        if (mediaStream !== stream) {
+          replacement.getTracks().forEach(item => item.stop());
+          throw new Error('Microphone preparation was canceled.');
+        }
+        const nextTrack = replacement.getAudioTracks()[0];
+        if (!nextTrack) {
+          replacement.getTracks().forEach(item => item.stop());
+          throw new Error('The reopened microphone has no audio track.');
+        }
+        stream.removeTrack(track);
+        track.stop();
+        stream.addTrack(nextTrack);
+        nextTrack.enabled = !micMuted;
+        replacement.getTracks().filter(item => item !== nextTrack).forEach(item => item.stop());
+      }
+    }
+    throw new Error(`Microphone audio recording could not start: ${lastError?.message || 'No working WebM audio encoder'}`);
+  }
+
+  function stopPreparedAudioWatch() {
+    const watch = preparedAudioWatch;
+    preparedAudioWatch = null;
+    if (!watch) return;
+    captureClock.cancel(watch.timer);
+    watch.track?.removeEventListener?.('ended', watch.onEnded);
+  }
+
+  async function ensurePreparedAudioReady() {
+    const watch = preparedAudioWatch;
+    if (!watch || !preparedMimeTypes || !mediaStream) throw new Error('Microphone is not prepared.');
+    if (watch.error) throw watch.error;
+    if (watch.pending) return watch.pending;
+    const track = requireTrack(mediaStream.getAudioTracks()[0], 'Microphone track is unavailable.');
+    if (track.readyState !== 'ended') return;
+    if (++watch.recoveries > 2) {
+      watch.error = new Error('The microphone repeatedly stopped while the call was waiting to start.');
+      throw watch.error;
+    }
+    console.warn('Microphone ended before the call started; reopening capture.', { recovery: watch.recoveries });
+    setStatus('Restoring the microphone before the agreed call start…');
+    const pending = (async () => {
+      // A source that has ended cannot be restarted. Keep the camera and the
+      // agreed clock intact; open a fresh audio input with standard browser AEC.
+      const format = await prepareAudioRecorder(false);
+      if (preparedAudioWatch !== watch) throw new Error('Microphone preparation was canceled.');
+      if (format.mimeType !== preparedMimeTypes.audio) {
+        throw new Error('The reopened microphone changed recording format. Start a new call.');
+      }
+      preparedAudioRecorderMime = format.recordingMimeType;
+      setStatus('Microphone restored. Waiting for the agreed call start.');
+    })().catch(error => {
+      if (preparedAudioWatch === watch) watch.error = error;
+      throw error;
+    }).finally(() => {
+      if (watch.pending === pending) watch.pending = null;
+    });
+    watch.pending = pending;
+    return pending;
+  }
+
+  function watchPreparedAudio() {
+    stopPreparedAudioWatch();
+    const watch = { track: null, onEnded: null, timer: null, pending: null, error: null, recoveries: 0 };
+    preparedAudioWatch = watch;
+    const inspect = () => {
+      if (preparedAudioWatch !== watch || recording || !mediaStream) return;
+      const track = mediaStream.getAudioTracks()[0];
+      if (watch.track !== track) {
+        watch.track?.removeEventListener?.('ended', watch.onEnded);
+        watch.track = track;
+        watch.onEnded = () => {
+          void ensurePreparedAudioReady().catch(error => {
+            if (preparedAudioWatch === watch) setStatus(`Microphone could not recover: ${error.message}`, true);
+          });
+        };
+        track?.addEventListener?.('ended', watch.onEnded);
+      }
+      // stop() does not emit 'ended'. Check the state too, using the capture
+      // worker so a background caller is monitored during the five-second wait.
+      if (!watch.error && track?.readyState === 'ended') watch.onEnded();
+      watch.timer = captureClock.schedule(inspect, performance.now() + 100);
+    };
+    inspect();
+  }
+
   class CallRecorder {
     constructor({ clock, playbackMark, onUpdate, onLimit, onError }) {
       this.clock = clock;
@@ -180,7 +458,15 @@
       this.recordingChunks = [];
       this.recordingMimeType = '';
       this.mimeTypes = { audio: '', video: '' };
-      this.lastEndMs = { audio: 0, video: 0 };
+      this.encoderMimeTypes = { audio: '', video: '' };
+      this.actualStartTimes = { audio: null, video: null };
+      this.settings = {
+        audio: { bitrate: 64000, generation: 0 },
+        video: { bitrate: VIDEO_QUALITY_LEVELS[0].bitrate, generation: 0 }
+      };
+      this.stopping = false;
+      this.pausedTracks = new Set();
+      this.activeRecorders = new Set();
       this.nextSequence = { audio: 0, video: 0 };
       this.conversionTail = { audio: Promise.resolve(), video: Promise.resolve() };
       this.mediaWindows = new Map();
@@ -218,58 +504,109 @@
       }
     }
 
-    onData(kind, event) {
-      if (!event.data?.size) return;
+    onFrame(kind, current) {
+      if (!current.data.length) return;
+      // Capture boundaries are saved at start()/stop(), before encoding finishes.
+      const startTime = current.captureStart;
+      const endTime = Math.max(startTime + 1, current.captureEnd);
       const createdAtEpochMs = performance.timeOrigin + performance.now();
-      const index = this.nextSequence[kind]++;
-      const endTime = Math.max(this.lastEndMs[kind] + 1, this.clock());
-      const startTime = this.lastEndMs[kind];
-      this.lastEndMs[kind] = endTime;
-      // What the peer's stream was playing when this chunk started and ended recording;
-      // the peer rebuilds its own voice that our microphone may have picked up.
-      const playStart = kind === 'audio' ? this.playMark : null;
-      const playEnd = kind === 'audio' ? this.playbackMark() : null;
-      if (kind === 'audio') this.playMark = playEnd;
-      const blob = event.data;
+      const blob = new Blob(current.data, { type: current.mimeType });
       this.conversionTail[kind] = this.conversionTail[kind].then(async () => {
         const binary = new Uint8Array(await blob.arrayBuffer());
         const chunk = {
-          index,
-          mediaType: kind.toUpperCase(),
-          mimeType: this.mimeTypes[kind],
-          startTime,
-          endTime,
-          createdAtEpochMs,
-          playStart,
-          playEnd,
-          duration: endTime - startTime,
-          binary
+          index: current.index, order: startTime, mediaType: kind.toUpperCase(),
+          mimeType: current.mimeType,
+          generation: current.generation, independent: true, empty: new WebmOpusParser().push(binary).length === 0,
+          actualRecordingStartTimeMs: current.actualStart,
+          startTime, endTime, createdAtEpochMs, duration: endTime - startTime, binary
         };
+        // OHQ owns its bytes. The channel gets a copy and may discard only SQ.
         this.chunks[kind].push(chunk);
         this.addToWindow(chunk);
         this.storedBytes += binary.byteLength;
-        this.publishChunk(chunk);
+        if (!chunk.empty) this.publishChunk(chunk);
         this.onUpdate();
         if (this.storedBytes >= MAX_RECORDING_BYTES) this.onLimit();
       }).catch(error => this.onError(kind, error));
     }
 
-    start(kind, track, mimeType) {
+    start(kind, track, mimeType, recordingMimeType = mimeType) {
+      if (this.stopping || this.pausedTracks.has(kind)) return;
+      if (track.readyState === 'ended') throw new Error(`${kind} capture stopped before recording could start. Reconnect the device and start a new call.`);
+      const settings = this.settings[kind];
       const recorder = new MediaRecorder(new MediaStream([track]), {
-        mimeType,
-        ...(kind === 'audio' ? { audioBitsPerSecond: 64000 } : { videoBitsPerSecond: 1500000 })
+        mimeType: recordingMimeType,
+        ...(kind === 'audio' ? { audioBitsPerSecond: settings.bitrate } : { videoBitsPerSecond: settings.bitrate })
       });
-      let resolveStopped;
-      const stopped = new Promise(resolve => { resolveStopped = resolve; });
-      recorder.addEventListener('dataavailable', event => this.onData(kind, event));
-      recorder.addEventListener('error', event => {
-        this.onError(kind, event.error || new Error('unknown recorder error'));
+      const current = {
+        recorder, track, mimeType, data: [], index: this.nextSequence[kind], started: false,
+        generation: settings.generation, captureStart: this.clock(), captureEnd: null,
+        actualStart: performance.now(), timer: null
+      };
+      current.stopped = new Promise(resolve => {
+        recorder.addEventListener('stop', () => {
+          if (current.started) this.onFrame(kind, current);
+          this.activeRecorders.delete(current);
+          resolve();
+        }, { once: true });
       });
-      recorder.addEventListener('stop', resolveStopped, { once: true });
-      if (kind === 'audio') this.playMark = this.playbackMark();
-      recorder.start(CHUNK_MS);
-      this.recorders[kind] = { recorder, stopped };
-      this.mimeTypes[kind] = recorder.mimeType || mimeType;
+      recorder.addEventListener('dataavailable', event => {
+        if (event.data?.size) current.data.push(event.data);
+      });
+      recorder.addEventListener('error', event => this.onError(kind, event.error || new Error('unknown recorder error')));
+      // One complete WebM per frame, including initialization and a video keyframe.
+      // A missing frame cannot make all subsequent continuation bytes undecodable.
+      try {
+        // The timer below still stops/replaces the encoder at each capture
+        // boundary. A finite timeslice also works with live-only WebM muxers.
+        recorder.start(CHUNK_MS);
+        if (kind === 'video') track.requestFrame?.();
+      } catch (error) {
+        if (recorder.state !== 'inactive') {
+          try { recorder.stop(); } catch { /* Encoder startup did not complete. */ }
+        }
+        throw new Error(`${kind} recorder could not start (${mimeType}): ${error.message}`);
+      }
+      current.started = true;
+      this.nextSequence[kind]++;
+      if (this.actualStartTimes[kind] === null) this.actualStartTimes[kind] = current.actualStart;
+      this.activeRecorders.add(current);
+      this.recorders[kind] = current;
+      this.mimeTypes[kind] = mimeType;
+      this.encoderMimeTypes[kind] = recordingMimeType;
+      current.timer = captureClock.schedule(() => {
+        if (this.recorders[kind] !== current || this.stopping || this.pausedTracks.has(kind)) return;
+        try {
+          this.stopCurrentFrame(current);
+          this.start(kind, track, mimeType, recordingMimeType);
+        } catch (error) { this.onError(kind, error); }
+      }, performance.now() + CHUNK_MS);
+    }
+
+    stopCurrentFrame(current) {
+      captureClock.cancel(current.timer);
+      current.timer = null;
+      if (current.captureEnd === null) current.captureEnd = this.clock();
+      if (current.recorder.state !== 'inactive') current.recorder.stop();
+    }
+
+    async stopTrack(kind) {
+      this.pausedTracks.add(kind);
+      const current = this.recorders[kind];
+      if (current) {
+        this.stopCurrentFrame(current);
+        await current.stopped;
+      }
+      await this.conversionTail[kind];
+    }
+
+    restartTrack(kind, track, mimeType, settings) {
+      if (this.stopping) return null;
+      Object.assign(this.settings[kind], settings);
+      this.pausedTracks.delete(kind);
+      this.start(kind, track, mimeType, this.encoderMimeTypes[kind] || mimeType);
+      return { generation: settings.generation, firstIndex: this.recorders[kind].index,
+        mimeType: this.mimeTypes[kind], bitrate: settings.bitrate };
     }
 
     startCombined(audioTrack, videoTrack, mimeType) {
@@ -295,13 +632,15 @@
     }
 
     stopImmediately() {
-      for (const current of Object.values(this.recorders)) {
-        if (current && current.recorder.state !== 'inactive') current.recorder.stop();
-      }
+      this.stopping = true;
+      for (const current of this.activeRecorders) this.stopCurrentFrame(current);
+      const combined = this.recorders.recording;
+      if (combined && combined.recorder.state !== 'inactive') combined.recorder.stop();
     }
 
     async stop() {
-      const done = Object.values(this.recorders).filter(Boolean).map(current => current.stopped);
+      const done = [...this.activeRecorders].map(current => current.stopped);
+      if (this.recorders.recording) done.push(this.recorders.recording.stopped);
       this.stopImmediately();
       await Promise.all(done);
       await Promise.all([this.conversionTail.audio, this.conversionTail.video]);
@@ -325,6 +664,17 @@
     }
   }
 
+  function scheduleVideoDrawing(fps) {
+    captureClock.cancel(drawTimer);
+    const draw = () => {
+      if (!canvasStream || !canvas) return;
+      drawVideoFrame();
+      canvasStream.getVideoTracks()[0]?.requestFrame?.();
+      drawTimer = captureClock.schedule(draw, performance.now() + 1000 / fps);
+    };
+    draw();
+  }
+
   function startVideoCapture() {
     canvas = document.createElement('canvas');
     canvas.width = 1280;
@@ -332,9 +682,10 @@
     canvasContext = canvas.getContext('2d', { alpha: false });
     if (!canvasContext || !canvas.captureStream) throw new Error('Canvas video capture is unavailable.');
     drawVideoFrame();
-    canvasStream = canvas.captureStream(30);
+    canvasStream = canvas.captureStream(VIDEO_QUALITY_LEVELS[0].fps);
+    videoCaptureStreams.push(canvasStream);
     if (!canvasStream.getVideoTracks()[0]) throw new Error('Canvas video track is unavailable.');
-    drawTimer = setInterval(drawVideoFrame, 1000 / 30);
+    scheduleVideoDrawing(VIDEO_QUALITY_LEVELS[0].fps);
     ui.camera.muted = true;
     ui.camera.srcObject = canvasStream;
     ui.camera.play().catch(() => {});
@@ -368,10 +719,11 @@
   }
 
   function stopVideoCapture() {
-    clearInterval(drawTimer);
+    captureClock.cancel(drawTimer);
     drawTimer = null;
     disableCameraTrack();
-    canvasStream?.getTracks().forEach(track => track.stop());
+    for (const stream of videoCaptureStreams) stream.getTracks().forEach(track => track.stop());
+    videoCaptureStreams = [];
     canvasStream = null;
     canvasContext = null;
     canvas = null;
@@ -432,6 +784,7 @@
       this.clock = clock;
       this.pending = new Map();
       this.next = 0;
+      this.generation = 0;
       this.queuedBytes = 0;
       this.queuedDurationMs = 0;
       this.maxQueuedBytes = (kind === 'audio' ? 8 : 32) * 1048576;
@@ -453,6 +806,7 @@
       this.mediaSource = new MediaSource();
       this.mediaSource.addEventListener('sourceopen', this.onOpen, { once: true });
       element.addEventListener('timeupdate', this.onTimeUpdate);
+      element.addEventListener('waiting', this.onTimeUpdate);
       element.addEventListener('ended', this.onEnded);
       element.addEventListener('error', this.onElementError);
       this.url = URL.createObjectURL(this.mediaSource);
@@ -479,11 +833,20 @@
       }
       if (chunk.index < this.next || this.pending.has(chunk.index)) return true;
       const duration = Math.max(0, chunk.senderEndTimeMs - chunk.senderStartTimeMs);
-      if (this.pending.size >= MAX_PLAYBACK_QUEUED_CHUNKS
+      const overflowing = () => this.pending.size >= MAX_PLAYBACK_QUEUED_CHUNKS
         || this.queuedBytes + chunk.binary.byteLength > this.maxQueuedBytes
-        || this.queuedDurationMs + duration > Math.max(MAX_PLAYBACK_QUEUED_DURATION_MS, duration)) {
-        // Continuation WebM chunks cannot safely be dropped. Fail this stream explicitly
-        // and release its resources instead of moving an unbounded backlog upstream.
+        || this.queuedDurationMs + duration > Math.max(MAX_PLAYBACK_QUEUED_DURATION_MS, duration);
+      if (overflowing() && chunk.independent) {
+        // History has already retained these independently playable frames.
+        for (const [index, queued] of this.pending) {
+          if (this.operation?.chunk?.index === index) continue;
+          this.pending.delete(index);
+          this.queuedBytes -= queued.binary.byteLength;
+          this.queuedDurationMs -= queued.duration;
+          if (!overflowing()) break;
+        }
+      }
+      if (overflowing()) {
         this.fail(new Error(`Playback queue limit exceeded at chunk ${chunk.index}`));
         return false;
       }
@@ -507,12 +870,13 @@
       if (operation?.type === 'append') {
         const { chunk, start, appendedAtCallTimeMs } = operation;
         this.pending.delete(chunk.index);
-        this.next++;
+        this.next = chunk.index + 1;
         this.queuedBytes -= chunk.binary.byteLength;
         this.queuedDurationMs -= chunk.duration;
         const end = this.bufferedEnd();
         const ranges = this.buffer.buffered;
-        const mediaStartTime = ranges.length ? Math.max(start, ranges.start(0)) : start;
+        const mediaStartTime = chunk.independent ? chunk.senderStartTimeMs / 1000
+          : ranges.length ? Math.max(start, ranges.start(0)) : start;
         if (end > mediaStartTime) {
           // Capture times are relative to the sender's recording start, so device
           // wall-clock offsets never enter the playing-media age calculation.
@@ -534,18 +898,33 @@
       if (this.closed || this.playbackFinished || !this.buffer) return;
       try {
         const ranges = this.buffer.buffered;
-        if (!this.started && ranges.length) {
+        // Keep one complete chunk in reserve before starting incoming audio.
+        // Finished short calls must still play their last (possibly only) chunk.
+        const startupReady = this.kind !== 'audio' || this.timeline.length >= AUDIO_STARTUP_CHUNKS
+          || (this.finished && !this.pending.size);
+        if (!this.started && startupReady && ranges.length
+          && this.element.readyState >= (HTMLMediaElement.HAVE_METADATA ?? 1)) {
           this.started = true;
           this.element.currentTime = ranges.start(0);
         }
-        if (this.started) this.tryPlay();
+        if (this.started) {
+          // Jump this stream's playhead across an actual capture gap. Offsets and
+          // frame timestamps remain unchanged; the other stream is never touched.
+          for (let i = 1; i < ranges.length; i++) {
+            if (this.element.currentTime >= ranges.end(i - 1) - 0.05 && this.element.currentTime < ranges.start(i)) {
+              this.element.currentTime = ranges.start(i);
+              break;
+            }
+          }
+          this.tryPlay();
+        }
         // Keep metadata for the playing (including stalled) chunk and recent history.
         const cutoff = this.element.currentTime - 20;
         while (this.timeline.length > 1 && this.timeline[0].mediaEndTime < cutoff) this.timeline.shift();
         if (this.finished && !this.pending.size && !this.buffer.updating && !this.operation
           && this.mediaSource.readyState === 'open') {
           this.mediaSource.endOfStream();
-          if (!this.started) this.finishPlayback();
+          if (!this.started && !ranges.length) this.finishPlayback();
           return;
         }
         if (this.buffer.updating || this.operation || this.mediaSource.readyState !== 'open') return;
@@ -554,10 +933,40 @@
           this.buffer.remove(ranges.start(0), cutoff);
           return;
         }
-        const chunk = this.pending.get(this.next);
-        if (!chunk || this.bufferedEnd() - this.element.currentTime >= MAX_BUFFERED_AHEAD_SECONDS) return;
-        this.operation = { type: 'append', chunk, start: this.bufferedEnd(), appendedAtCallTimeMs: this.clock() };
-        this.buffer.appendBuffer(chunk.binary);
+        let chunk = this.pending.get(this.next);
+        if (!chunk && this.pending.size) {
+          const firstIndex = Math.min(...this.pending.keys());
+          const first = this.pending.get(firstIndex);
+          if (first.independent && (this.finished || this.clock() - first.queuedAtCallTimeMs >= FRAME_REORDER_WAIT_MS)) {
+            this.next = firstIndex;
+            chunk = first;
+          }
+        }
+        const playbackPosition = this.started ? this.element.currentTime
+          : ranges.length ? ranges.start(0) : 0;
+        if (!chunk || this.bufferedEnd() - playbackPosition >= MAX_BUFFERED_AHEAD_SECONDS) return;
+        let audioGapMs = 0;
+        if (chunk.independent) {
+          // Live WebM can leave an unknown-length segment open after updateend.
+          // Reset its parser before appending the next complete frame.
+          this.buffer.abort();
+          this.buffer.mode = 'segments';
+          this.buffer.timestampOffset = chunk.senderStartTimeMs / 1000;
+          if (this.kind === 'audio') {
+            const gap = chunk.senderStartTimeMs - (this.lastAppended?.mediaEndTime || 0) * 1000;
+            if (this.lastAppended?.index + 1 === chunk.index && gap > 0 && gap <= FRAME_REORDER_WAIT_MS) audioGapMs = gap;
+            // Let MSE trim partial silence packets at sample precision. Using
+            // container DiscardPadding alone can leave overlapping coded ranges.
+            this.buffer.appendWindowEnd = chunk.senderEndTimeMs / 1000;
+            this.buffer.appendWindowStart = (chunk.senderStartTimeMs - audioGapMs) / 1000;
+          }
+        }
+        this.operation = { type: 'append', chunk,
+          start: chunk.independent ? chunk.senderStartTimeMs / 1000 : this.bufferedEnd(),
+          appendedAtCallTimeMs: this.clock() };
+        this.buffer.appendBuffer(this.kind === 'audio' && chunk.independent
+          ? prepareAudioPlaybackFrame(chunk.binary, chunk.senderEndTimeMs - chunk.senderStartTimeMs, audioGapMs)
+          : chunk.binary);
       } catch (error) { this.fail(error); }
     }
 
@@ -565,8 +974,10 @@
       if (this.closed || this.playbackFinished || !this.started || !this.element.paused
         || this.playPending || (this.needsGesture && !fromGesture)) return;
       this.playPending = true;
-      Promise.resolve(this.element.play()).then(() => { this.needsGesture = false; }).catch(() => {
-        this.needsGesture = true;
+      Promise.resolve(this.element.play()).then(() => { this.needsGesture = false; }).catch(error => {
+        // A source reset may interrupt play(). Retry that transient failure;
+        // only autoplay policy rejection requires another user gesture.
+        this.needsGesture = error.name === 'NotAllowedError';
       }).finally(() => { this.playPending = false; });
     }
 
@@ -643,6 +1054,7 @@
       this.operation = null;
       this.element.pause();
       this.element.removeEventListener('timeupdate', this.onTimeUpdate);
+      this.element.removeEventListener('waiting', this.onTimeUpdate);
       this.element.removeEventListener('ended', this.onEnded);
       this.element.removeEventListener('error', this.onElementError);
       this.mediaSource.removeEventListener('sourceopen', this.onOpen);
@@ -731,6 +1143,18 @@
     }
 
     receiveChunk(chunk) { return this[chunk.mediaType.toLowerCase()]?.enqueue(chunk) || false; }
+
+    restartTrack(kind, { generation, mimeType, firstIndex }) {
+      const previous = this[kind];
+      if (this.closed || (kind === 'video' && this.videoDisabled) || generation <= previous.generation) return;
+      previous.close();
+      const track = new MediaPlaybackPipeline(kind, previous.element, mimeType, () => this.trackStateChanged(), this.clock);
+      track.generation = generation;
+      track.next = firstIndex;
+      this[kind] = track;
+      if (kind === 'audio') resetEchoProcessing();
+      this.observe();
+    }
     finishTrack(kind) { this[kind]?.finishTrack(); }
     failTrack(kind, error) { this[kind]?.fail(error); }
 
@@ -756,8 +1180,8 @@
       ui.delayWarning.hidden = state === 'NORMAL';
       const metric = value => value === null ? 'unknown' : `${Math.round(value)} ms`;
       ui.delayMessage.textContent = state === 'AUDIO_DELAYED'
-        ? `Audio is delayed by network conditions. Audio delay: ${metric(audioPlaybackDelayMs)}.`
-        : 'Video is delayed by network conditions.';
+        ? `Audio playback is delayed. Audio delay: ${metric(audioPlaybackDelayMs)}.`
+        : 'Video playback is delayed.';
       ui.disableVideo.hidden = state !== 'VIDEO_DELAYED' || this.videoDisabled;
       const describe = (name, data) => `${name}: delay ${metric(data.playbackDelayMs)} · queue ${data.queueLength} / ${Math.round(data.queuedDurationMs)} ms · ahead ${Math.round(data.bufferedAheadMs)} ms · position ${data.currentPlaybackPosition.toFixed(2)}s${data.waitingForIndex === null ? '' : ` · waiting for chunk ${data.waitingForIndex}`}${data.failure ? ` · failed: ${data.failure}` : ''}`;
       ui.diagnostics.textContent = `${describe('AUDIO', audio)} | ${describe('VIDEO', video)} | A/V delay difference ${metric(avDelayDifferenceMs)} · call-relative timing`;
@@ -823,6 +1247,10 @@
   }
 
   function resetRecording() {
+    clearInterval(elapsedTimer);
+    ui.elapsed.textContent = '00:00';
+    if (ui.callDuration) ui.callDuration.textContent = '00:00';
+    stopPreparedAudioWatch();
     void conversationRecorder?.stop();
     conversationRecorder = null;
     conversationStoppingPromise = null;
@@ -836,6 +1264,12 @@
     callEnded = false;
     remoteReceived = { audio: new Set(), video: new Set() };
     remoteChunkTimings = { audio: new Map(), video: new Map() };
+    remoteHistory = { audio: [], video: [] };
+    remoteHistoryBytes = 0;
+    historyTail = Promise.resolve();
+    peerRecordingStartTimes = null;
+    assembledRecording = null;
+    outgoingVideoDisabled = false;
     player?.close();
     player = null;
     resetEchoProcessing();
@@ -843,6 +1277,7 @@
     stopVideoCapture();
     cameraBusy = false;
     preparedMimeTypes = null;
+    preparedAudioRecorderMime = null;
     recorderSession = new CallRecorder({
       clock: relativeMs,
       playbackMark: () => (player && !player.closed ? player.updatePlayingAudioChunk() : null),
@@ -876,7 +1311,7 @@
   }
 
   async function acquireMediaStream() {
-    const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    const audio = AUDIO_CAPTURE_CONSTRAINTS;
     if (!cameraEnabled()) return navigator.mediaDevices.getUserMedia({ audio, video: false });
     return acquireCameraStream(audio).catch(async () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
@@ -885,11 +1320,11 @@
     });
   }
 
-  async function configureEchoCancellation(track) {
+  async function configureEchoCancellation(track, preferSystemAudio = true) {
     const modes = track.getCapabilities?.()?.echoCancellation;
     // This call plays remote audio through MediaSource, so "remote-only" (WebRTC
     // tracks) is insufficient. Request cancellation of all system output when offered.
-    if (Array.isArray(modes) && modes.includes('all')
+    if (preferSystemAudio && Array.isArray(modes) && modes.includes('all')
       && track.applyConstraints) {
       try {
         await track.applyConstraints({
@@ -902,7 +1337,7 @@
       }
     }
     let setting = track.getSettings?.()?.echoCancellation;
-    if (setting === false && track.applyConstraints) {
+    if ((setting === false || (!preferSystemAudio && setting !== true)) && track.applyConstraints) {
       try {
         await track.applyConstraints({
           echoCancellation: { exact: true },
@@ -988,6 +1423,10 @@
       this.clusterTimecode = 0;
       this.channels = 1;
       this.sampleRate = 48000;
+      this.codecId = null;
+      this.codecDelayUs = 0;
+      this.hasDiscardPadding = false;
+      this.hasUnsupportedLacing = false;
     }
 
     push(binary) {
@@ -1019,6 +1458,9 @@
       if (id === 0x2ad7b1) this.timecodeScale = readUint(bytes, start, end);
       else if (id === 0xe7) this.clusterTimecode = readUint(bytes, start, end);
       else if (id === 0x9f) this.channels = readUint(bytes, start, end);
+      else if (id === 0x86 && end - start <= 32) this.codecId = String.fromCharCode(...bytes.subarray(start, end));
+      else if (id === 0x56aa) this.codecDelayUs = readUint(bytes, start, end) / 1000;
+      else if (id === 0x75a2) this.hasDiscardPadding = true;
       else if (id === 0xb5) {
         const view = new DataView(bytes.buffer, bytes.byteOffset + start, end - start);
         this.sampleRate = end - start === 4 ? view.getFloat32(0) : view.getFloat64(0);
@@ -1026,15 +1468,121 @@
         const track = readVint(bytes, start, false);
         const header = start + (track?.length || 0);
         if (!track || header + 3 > end) throw new Error('Invalid WebM block');
-        if (Math.floor(bytes[header + 2] / 2) % 4 !== 0) return; // MediaRecorder does not lace audio frames.
+        if (Math.floor(bytes[header + 2] / 2) % 4 !== 0) {
+          this.hasUnsupportedLacing = true;
+          return;
+        }
         const unsignedTimecode = bytes[header] * 256 + bytes[header + 1];
         const relative = unsignedTimecode >= 0x8000 ? unsignedTimecode - 0x10000 : unsignedTimecode;
         packets.push({
+          trackNumber: track.value,
           timestampUs: Math.round((this.clusterTimecode + relative) * this.timecodeScale / 1000),
           data: bytes.subarray(header + 3, end)
         });
       }
     }
+  }
+
+  function opusPacketDurationUs(data) {
+    if (!data.length) throw new Error('Invalid Opus packet');
+    const frameCountCode = data[0] % 4;
+    if (frameCountCode === 3 && data.length < 2) throw new Error('Invalid Opus packet');
+    const configuration = Math.floor(data[0] / 8);
+    const durationCode = configuration % 4;
+    const frameUs = configuration >= 16 ? 2500 * 2 ** durationCode
+      : configuration >= 12 ? 10000 * 2 ** (configuration % 2)
+      : durationCode === 3 ? 60000 : 10000 * 2 ** durationCode;
+    const count = frameCountCode === 0 ? 1 : frameCountCode === 3 ? data[1] % 64 : 2;
+    const duration = frameUs * count;
+    if (!count || duration > 120000) throw new Error('Invalid Opus packet duration');
+    return duration;
+  }
+
+  // Fresh encoders can produce 480 ms of Opus for a 500 ms capture slot. MSE
+  // reports the timestamp gaps but its audio renderer counts decoded samples.
+  // Retain every received packet and fill only the uncovered time with silence.
+  // This copy belongs to playback; OHQ/HQ and the transmitted bytes stay intact.
+  function prepareAudioPlaybackFrame(binary, durationMs, gapMs = 0) {
+    if (binary.length < 4 || new DataView(binary.buffer, binary.byteOffset, 4).getUint32(0) !== 0x1a45dfa3) return binary;
+    const parser = new WebmOpusParser();
+    const packets = parser.push(binary);
+    if (parser.codecId !== 'A_OPUS' || parser.hasUnsupportedLacing || !packets.length) return binary;
+    const targetUs = Math.round(durationMs * 1000 + parser.codecDelayUs);
+    let endUs = 0;
+    for (const packet of packets) endUs = Math.max(endUs, packet.timestampUs + opusPacketDurationUs(packet.data));
+    if (targetUs - endUs > MAX_PLAYBACK_QUEUED_DURATION_MS * 1000) throw new Error('Audio capture gap exceeds the playback buffer limit');
+    if (endUs >= targetUs && gapMs <= 0 && !parser.hasDiscardPadding) return binary;
+    const track = packets[0].trackNumber;
+    if (!Number.isInteger(track) || track < 1 || track > 127 || packets.some(packet => packet.trackNumber !== track)) {
+      throw new Error('Unsupported audio track numbering');
+    }
+    const join = parts => {
+      const result = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+      let offset = 0;
+      for (const part of parts) { result.set(part, offset); offset += part.length; }
+      return result;
+    };
+    const uint = value => {
+      let length = 1;
+      while (value >= 2 ** (length * 8)) length++;
+      const result = new Uint8Array(length);
+      for (let i = length - 1; i >= 0; i--) { result[i] = value % 256; value = Math.floor(value / 256); }
+      return result;
+    };
+    const element = (id, body) => {
+      let length = 1;
+      while (body.length >= 2 ** (7 * length) - 1) length++;
+      const size = new Uint8Array(length);
+      let value = body.length;
+      for (let i = length - 1; i >= 0; i--) { size[i] = value % 256; value = Math.floor(value / 256); }
+      size[0] |= 2 ** (8 - length);
+      return join([new Uint8Array(id), size, body]);
+    };
+    let clusterOffset = -1;
+    let segmentSizeOffset = -1;
+    let segmentSizeLength = 0;
+    for (let offset = 0; offset < binary.length;) {
+      const id = readVint(binary, offset, true);
+      const size = id && readVint(binary, offset + id.length, false);
+      if (!size) throw new Error('Incomplete audio WebM header');
+      const start = offset + id.length + size.length;
+      if (id.value === 0x18538067) {
+        segmentSizeOffset = offset + id.length;
+        segmentSizeLength = size.length;
+        offset = start;
+      } else if (id.value === 0x1f43b675) {
+        clusterOffset = offset;
+        break;
+      } else {
+        if (size.unknown) throw new Error('Unsupported audio WebM header');
+        offset = start + size.value;
+      }
+    }
+    if (clusterOffset < 0 || segmentSizeOffset < 0) throw new Error('Missing audio WebM initialization');
+    const header = binary.slice(0, clusterOffset);
+    // New clusters may extend a finite Segment; keep the initialization intact
+    // and mark only its size as unknown in the playback copy.
+    header.fill(255, segmentSizeOffset, segmentSizeOffset + segmentSizeLength);
+    header[segmentSizeOffset] = 2 ** (9 - segmentSizeLength) - 1;
+    const parts = [header];
+    const appendPacket = (timestampUs, data) => {
+      const ticks = Math.round(timestampUs * 1000 / parser.timecodeScale);
+      const relative = Math.min(0, ticks);
+      if (relative < -32768) throw new Error('Audio gap exceeds WebM timestamp precision');
+      const block = join([new Uint8Array([0x80 | track, (relative >> 8) & 255, relative & 255, 0x80]), data]);
+      parts.push(element([0x1f, 0x43, 0xb6, 0x75], join([
+        element([0xe7], uint(Math.max(0, ticks))), element([0xa3], block)
+      ])));
+    };
+    const silence = new Uint8Array([0xf8, 0xff, 0xfe]); // One 20 ms Opus silence packet.
+    const prefixCount = Math.ceil(Math.max(0, gapMs * 1000 + packets[0].timestampUs) / 20000);
+    if (prefixCount > FRAME_REORDER_WAIT_MS / 20 + 1) throw new Error('Audio boundary gap exceeds the playback buffer limit');
+    for (let i = prefixCount; i > 0; i--) appendPacket(packets[0].timestampUs - i * 20000, silence);
+    // Rewrap, without re-encoding or changing timestamps. Old DiscardPadding is
+    // replaced by the capture window below, so the final packet is trimmed once.
+    for (const packet of packets) appendPacket(packet.timestampUs, packet.data);
+    for (; endUs < targetUs; endUs += 20000) appendPacket(endUs, silence);
+    return join(parts);
   }
 
   function monoFrame(data) {
@@ -1059,7 +1607,11 @@
 
     parseThrough(index) {
       while (this.packets.length <= index && this.packets.length < this.chunks.length) {
-        this.packets.push(this.parser.push(this.chunks[this.packets.length].binary));
+        const chunk = this.chunks[this.packets.length];
+        if (chunk.independent) this.parser = new WebmOpusParser();
+        const packets = this.parser.push(chunk.binary);
+        if (chunk.independent) for (const packet of packets) packet.timestampUs += chunk.startTime * 1000;
+        this.packets.push(packets);
       }
     }
 
@@ -1106,34 +1658,32 @@
     }
   }
 
-  // Maps a moment of the peer's chunk recording to our media time it was playing.
-  function playedTimeAt(time, timing) {
-    const { senderStartTimeMs: start, senderEndTimeMs: end, playStart, playEnd } = timing;
-    return playStart.timeMs + (time - start) * (playEnd.timeMs - playStart.timeMs) / (end - start);
-  }
-
-  // Rebuilds the part of our stream the peer played while recording one audio chunk,
-  // laid out on that chunk's timeline at the processing sample rate.
+  // The first implementation matches only synchronized capture orders. It does
+  // not estimate network/acoustic delay or use the peer's playback marks.
   async function buildEchoReference(reference, timing, sampleRate) {
-    const { playStart, playEnd, senderStartTimeMs: start, senderEndTimeMs: end } = timing;
-    if (!playStart || !playEnd || playEnd.chunk < playStart.chunk) return null;
-    const playbackRate = (playEnd.timeMs - playStart.timeMs) / (end - start);
-    if (playbackRate < 0.5 || playbackRate > 1.5) return null;
-    const frames = await reference.decode(playStart.chunk, playEnd.chunk,
-      playedTimeAt(start, timing), playedTimeAt(end, timing));
+    const chunks = reference.chunks;
+    if (!chunks.length) return null;
+    let low = 0;
+    let high = chunks.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if (chunks[middle].order < timing.order) low = middle + 1;
+      else high = middle;
+    }
+    let index = Math.min(low, chunks.length - 1);
+    if (index > 0 && Math.abs(chunks[index - 1].order - timing.order) <= Math.abs(chunks[index].order - timing.order)) index--;
+    const local = chunks[index];
+    if (Math.abs(local.order - timing.order) > CHUNK_MS) return null;
+    const frames = await reference.decode(index, index, local.startTime, local.endTime);
     if (!frames.length) return null;
-    const samples = new Float32Array(Math.round((end - start) * sampleRate / 1000));
+    const samples = new Float32Array(Math.round((timing.senderEndTimeMs - timing.senderStartTimeMs) * sampleRate / 1000));
     let frameIndex = 0;
     for (let i = 0; i < samples.length; i++) {
-      const played = playedTimeAt(start + i * 1000 / sampleRate, timing);
-      while (frameIndex < frames.length - 1 && frames[frameIndex].endMs <= played) frameIndex++;
+      const captureTime = timing.senderStartTimeMs + i * 1000 / sampleRate;
+      while (frameIndex < frames.length - 1 && frames[frameIndex].endMs <= captureTime) frameIndex++;
       const frame = frames[frameIndex];
-      const position = (played - frame.startMs) * frame.sampleRate / 1000;
-      const lower = Math.floor(position);
-      if (lower < 0 || lower >= frame.samples.length) continue;
-      const next = lower + 1 < frame.samples.length ? frame.samples[lower + 1]
-        : frames[frameIndex + 1]?.samples[0] ?? frame.samples[lower];
-      samples[i] = frame.samples[lower] + (position - lower) * (next - frame.samples[lower]);
+      const position = Math.floor((captureTime - frame.startMs) * frame.sampleRate / 1000);
+      if (position >= 0 && position < frame.samples.length) samples[i] = frame.samples[position];
     }
     return samples;
   }
@@ -1141,7 +1691,7 @@
   function queueEchoReference(timing) {
     const reference = echoReference;
     const generation = echoGeneration;
-    if (!echoNode || !reference || !timing.playStart || !timing.playEnd) return;
+    if (!echoNode || !reference) return;
     void buildEchoReference(reference, timing, echoContext.sampleRate).then(samples => {
       if (!samples || generation !== echoGeneration || !echoNode) return;
       echoNode.port.postMessage({ type: 'reference', startMs: timing.senderStartTimeMs, samples }, [samples.buffer]);
@@ -1201,7 +1751,7 @@
         throw new Error('AudioWorklet is unavailable');
       }
       try {
-        await context.audioWorklet.addModule('js/remote-call-echo-worklet.js');
+        await context.audioWorklet.addModule('js/remote-call-echo-worklet.js?v=2');
         await resumeEchoContext(context);
         // Captured last: from here on the element is audible only through this context.
         echoPlayerSource = context.createMediaElementSource(ui.audio);
@@ -1243,7 +1793,7 @@
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder || !window.MediaSource) {
       throw new Error('MediaRecorder and MediaSource are required. Use HTTPS or localhost in a Chromium browser.');
     }
-    const audioMime = pickMime('audio');
+    let audioMime = pickMime('audio');
     const videoMime = pickMime('video');
     const recordingMime = videoMime && pickRecordingMime(videoMime);
     if (!audioMime || !videoMime || !recordingMime) {
@@ -1256,13 +1806,14 @@
     try {
       resetRecording();
       mediaStream = await acquireMediaStream();
-      const microphoneTrack = requireTrack(mediaStream.getAudioTracks()[0],
-        'The required microphone or camera track is unavailable.');
+      requireTrack(mediaStream.getAudioTracks()[0], 'The required microphone track is unavailable.');
       const initialCameraTrack = mediaStream.getVideoTracks()[0];
       if (cameraEnabled()) requireTrack(initialCameraTrack,
         'The required microphone or camera track is unavailable.');
       ui.statusCard.hidden = true;
-      await configureEchoCancellation(microphoneTrack);
+      const audioFormat = await prepareAudioRecorder();
+      audioMime = audioFormat.mimeType;
+      preparedAudioRecorderMime = audioFormat.recordingMimeType;
       if (ui.extraEchoCancellation.checked) {
         try {
           await prepareExtraEchoCancellation();
@@ -1276,10 +1827,14 @@
       updateCameraCaption();
       baseName = `recording-${new Date().toISOString().replace(/[:.]/g, '-')}`;
       preparedMimeTypes = { audio: audioMime, video: videoMime, recording: recordingMime };
+      watchPreparedAudio();
+      await ensurePreparedAudioReady();
       setStatus(cameraActive ? 'Camera and microphone are ready for the call.'
         : 'Microphone is ready. Black video will be sent.');
       return preparedMimeTypes;
     } catch (error) {
+      stopPreparedAudioWatch();
+      captureClock.close();
       bypassEchoProcessing();
       stopVideoCapture();
       mediaStream?.getTracks().forEach(track => track.stop());
@@ -1295,22 +1850,26 @@
     }
   }
 
-  async function startRecording(sendChunk) {
+  async function startRecording(sendChunk, agreedLocalStartTime = performance.now()) {
     if (!preparedMimeTypes || !mediaStream || recording || busy || stoppingPromise) {
       throw new Error('Camera and microphone are not ready');
     }
+    if (preparedAudioWatch?.error) throw preparedAudioWatch.error;
+    if (preparedAudioWatch?.pending) throw new Error('The microphone is still recovering at the agreed call start.');
     const audioTrack = requireTrack(mediaStream.getAudioTracks()[0], 'Microphone track is unavailable');
     const videoTrack = requireTrack(canvasStream?.getVideoTracks()[0], 'Video track is unavailable');
-    startedAt = performance.now();
+    startedAt = agreedLocalStartTime;
     player?.setCallStartTime(startedAt);
+    stopPreparedAudioWatch();
     recording = true;
     // Kept after recording stops: the peer's buffered chunks still refer to our audio.
     echoReference = echoNode ? new LocalEchoReference(recorderSession.chunks.audio) : null;
     try {
       recorderSession.setPublisher({ publishChunk: sendChunk });
-      recorderSession.startCombined(audioTrack, videoTrack, preparedMimeTypes.recording);
-      recorderSession.start('audio', audioTrack, preparedMimeTypes.audio);
+      recorderSession.start('audio', audioTrack, preparedMimeTypes.audio, preparedAudioRecorderMime);
       recorderSession.start('video', videoTrack, preparedMimeTypes.video);
+      recorderSession.startCombined(audioTrack, videoTrack, preparedMimeTypes.recording);
+      updateElapsed();
       elapsedTimer = setInterval(updateElapsed, 250);
       ui.stop.disabled = false;
       setStatus('Recording and sending live audio and video.');
@@ -1320,6 +1879,44 @@
       throw error;
     }
     void startConversationRecording(audioTrack, recorderSession, preparedMimeTypes.recording);
+  }
+
+  async function reduceTransportQuality(kind, reductions) {
+    if (!recording || !recorderSession || ![1, 2].includes(reductions) || !['audio', 'video'].includes(kind)) return null;
+    const current = recorderSession.settings[kind];
+    if (current.generation >= reductions) return null;
+    await recorderSession.stopTrack(kind);
+    if (!recording || recorderSession.stopping) return null;
+    let track;
+    let bitrate;
+    let quality;
+    if (kind === 'audio') {
+      bitrate = Math.round(current.bitrate * 0.67);
+      track = mediaStream.getAudioTracks()[0];
+    } else {
+      const level = VIDEO_QUALITY_LEVELS[reductions];
+      bitrate = level.bitrate;
+      quality = level.name;
+      canvas.width = level.width;
+      canvas.height = level.height;
+      // A fresh capture stream enforces the requested frame rate, even on canvas
+      // tracks whose applyConstraints() does not implement frame-rate changes.
+      canvasStream = canvas.captureStream(level.fps);
+      videoCaptureStreams.push(canvasStream);
+      scheduleVideoDrawing(level.fps);
+      ui.camera.srcObject = canvasStream;
+      void ui.camera.play().catch(() => {});
+      track = canvasStream.getVideoTracks()[0];
+    }
+    const restart = recorderSession.restartTrack(kind, requireTrack(track, `${kind} capture is unavailable`),
+      preparedMimeTypes[kind], { bitrate, generation: reductions });
+    return restart ? { ...restart, ...(quality ? { quality } : {}) } : null;
+  }
+
+  async function disableOutgoingVideo() {
+    outgoingVideoDisabled = true;
+    await recorderSession?.stopTrack('video');
+    setStatus('Video transport disabled because of network congestion. Audio continues.');
   }
 
   async function startConversationRecording(microphoneTrack, session, mimeType) {
@@ -1361,6 +1958,7 @@
   }
 
   function stopRecording() {
+    stopPreparedAudioWatch();
     if (stoppingPromise) return stoppingPromise;
     if (!recording) {
       if (mediaStream || preparedMimeTypes) return abortPreparedMedia();
@@ -1385,10 +1983,12 @@
       } catch (error) {
         setStatus(`Could not finish recording: ${error.message}`, true);
       } finally {
+        captureClock.close();
         stopVideoCapture();
         mediaStream?.getTracks().forEach(track => track.stop());
         mediaStream = null;
         preparedMimeTypes = null;
+        preparedAudioRecorderMime = null;
         ui.echoCancellationStatus.textContent = 'Microphone released.';
         ui.camera.srcObject = null;
         stoppingPromise = null;
@@ -1456,7 +2056,7 @@
   }
 
   function replayRecording() {
-    const savedChunks = conversationRecorder?.chunks;
+    const savedChunks = (assembledRecording || conversationRecorder)?.chunks;
     if (recording || busy || !finished || !callEnded || !remotePlaybackFinished
       || !conversationRecorder?.finished || !savedChunks?.length) return;
     bypassEchoProcessing();
@@ -1470,7 +2070,7 @@
     ui.videoPlaceholder.hidden = true;
     ui.video.muted = false;
     ui.video.volume = Number(ui.volume.value) / 100;
-    localReplayUrl = URL.createObjectURL(new Blob(savedChunks, { type: conversationRecorder.recordingMimeType }));
+    localReplayUrl = URL.createObjectURL(new Blob(savedChunks, { type: (assembledRecording || conversationRecorder).recordingMimeType }));
     localReplayActive = true;
     ui.video.src = localReplayUrl;
     ui.video.load();
@@ -1506,26 +2106,42 @@
   }
 
   function receiveRemoteChunk(kind, order, payload, timing) {
-    if (!player || player.closed || (kind !== 'audio' && kind !== 'video') || player[kind].closed) return;
-    // Sender capture times and receiver delivery times use their respective call
-    // starts. The legacy epoch creation field is retained only for wire compatibility.
+    if (!player || (kind !== 'audio' && kind !== 'video') || remoteReceived[kind].has(order)) return;
     const arrivedAtCallTimeMs = player.toCallTime(timing.arrivedAtEpochMs);
     const metadata = {
+      order, index: Number.isSafeInteger(timing.index) ? timing.index : order,
+      generation: timing.generation || 0, independent: timing.independent === true,
+      mimeType: timing.mimeType || player[kind].mimeType,
       senderStartTimeMs: timing.senderStartTimeMs,
       senderEndTimeMs: timing.senderEndTimeMs,
+      actualRecordingStartTimeMs: timing.actualRecordingStartTimeMs,
       createdAtCallTimeMs: timing.senderEndTimeMs,
-      arrivedAtCallTimeMs,
-      decryptedAtCallTimeMs: player.toCallTime(timing.decryptedAtEpochMs),
+      arrivedAtCallTimeMs, decryptedAtCallTimeMs: player.toCallTime(timing.decryptedAtEpochMs),
       estimatedDeliveryDelayMs: arrivedAtCallTimeMs === null ? null : arrivedAtCallTimeMs - timing.senderEndTimeMs,
-      playStart: timing.playStart,
-      playEnd: timing.playEnd
+      playStart: timing.playStart ?? null, playEnd: timing.playEnd ?? null
     };
     const timings = remoteChunkTimings[kind];
     timings.set(order, metadata);
     if (timings.size > 180) timings.delete(timings.keys().next().value);
     remoteReceived[kind].add(order);
-    player.receiveChunk({ index: order, mediaType: kind.toUpperCase(), ...metadata, binary: new Uint8Array(payload) });
-    if (kind === 'audio' && !player.audio.closed) queueEchoReference(metadata);
+    const binary = new Uint8Array(payload);
+    // Playback enqueues immediately. HQ storage is independent of buffer eviction,
+    // recorder generations, skipped late frames, and a disabled/failed player.
+    const history = remoteHistory[kind];
+    historyTail = historyTail.then(() => {
+      history.push({ ...metadata, startTime: timing.senderStartTimeMs, endTime: timing.senderEndTimeMs, binary });
+      remoteHistoryBytes += binary.byteLength;
+      checkConversationMemoryLimit();
+    }).catch(error => { console.error('Could not retain remote history:', error); });
+    if (!player.closed && !player[kind].closed) {
+      if (metadata.generation > player[kind].generation) {
+        player.restartTrack(kind, { generation: metadata.generation, mimeType: metadata.mimeType, firstIndex: metadata.index });
+      }
+      if (metadata.generation === player[kind].generation) {
+        player.receiveChunk({ ...metadata, mediaType: kind.toUpperCase(), binary });
+        if (kind === 'audio') queueEchoReference(metadata);
+      }
+    }
     maybeFinishRemote();
   }
 
@@ -1557,7 +2173,7 @@
       remoteFinishTimer = setTimeout(() => {
         remoteFinishTimer = null;
         for (const kind of ['audio', 'video']) {
-          if (remoteReceived[kind].size < counts[kind]) player?.failTrack(kind, new Error('Some remote chunks were not received'));
+          if (remoteReceived[kind].size < counts[kind]) player?.finishTrack(kind);
         }
         remotePlaybackFinished = true;
         updateStats();
@@ -1566,16 +2182,19 @@
   }
 
   async function abortPreparedMedia() {
+    stopPreparedAudioWatch();
     if (recording) {
       const counts = await stopRecording();
       await conversationRecorder?.stop();
       return counts;
     }
+    captureClock.close();
     releaseLocalReplay();
     stopVideoCapture();
     mediaStream?.getTracks().forEach(track => track.stop());
     mediaStream = null;
     preparedMimeTypes = null;
+    preparedAudioRecorderMime = null;
     ui.echoCancellationStatus.textContent = 'Microphone released.';
     ui.camera.srcObject = null;
     player?.close();
@@ -1588,6 +2207,24 @@
 
   window.RemoteCallMedia = {
     prepare: prepareRecording,
+    ensureReady: ensurePreparedAudioReady,
+    scheduleStart: (time, callback) => {
+      const id = captureClock.schedule(callback, time);
+      return () => captureClock.cancel(id);
+    },
+    setCallStartTime: time => { startedAt = time; player?.setCallStartTime(time); },
+    getRecordingStartTimes: () => ({ ...recorderSession?.actualStartTimes }),
+    setPeerRecordingStartTimes: times => {
+      if (['audio', 'video'].every(kind => times?.[kind] === null || Number.isFinite(times?.[kind]))) {
+        peerRecordingStartTimes = { ...times };
+      }
+    },
+    hasEncodedFrames: frame => new WebmOpusParser().push(frame.binary).length > 0,
+    getHistories: () => ({ own: recorderSession?.chunks, remote: remoteHistory,
+      localStartTime: startedAt, actualStarts: recorderSession?.actualStartTimes, peerActualStarts: peerRecordingStartTimes }),
+    reduceTransportQuality,
+    disableOutgoingVideo,
+    restartRemotePlayer: (kind, restart) => player?.restartTrack(kind, restart),
     start: startRecording,
     stop: stopRecording,
     setPeerMimeTypes,
@@ -1605,9 +2242,12 @@
   };
 
   async function saveRecording() {
-    const savedChunks = conversationRecorder?.chunks;
-    if (busy || !finished || !callEnded || recordingSaved
-      || !conversationRecorder?.finished || !savedChunks?.length) return;
+    if (busy || !finished || !callEnded || recordingSaved || !remotePlaybackFinished
+      || !recorderSession?.chunks.audio.length) return;
+    if (!window.RemoteCallConversationRecorder?.renderHistory) {
+      setStatus('History recording is unavailable. Reload this page with the conversation recorder script.', true);
+      return;
+    }
     const fileName = `${baseName}-conversation.webm`;
     busy = true;
     updateStats();
@@ -1618,15 +2258,30 @@
             types: [{ description: 'Audio and video recording', accept: { 'video/webm': ['.webm'] } }]
           })
         : null;
-      const blob = new Blob(savedChunks, { type: conversationRecorder.recordingMimeType });
+      await historyTail;
+      assembledRecording ||= await window.RemoteCallConversationRecorder.renderHistory({
+        ownAudio: recorderSession.chunks.audio,
+        remoteAudio: remoteHistory.audio,
+        remoteVideo: remoteHistory.video,
+        mimeType: recorderSession.recordingMimeType,
+        chunkMs: CHUNK_MS,
+        onProgress: (elapsedMs, durationMs) => setStatus(`Combining recorded audio and video: ${Math.min(100, Math.round(elapsedMs * 100 / durationMs))}%`)
+      });
+      const blob = new Blob(assembledRecording.chunks, { type: assembledRecording.recordingMimeType });
       if (handle) {
         const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
+        let completed = false;
+        try {
+          await writable.write(blob);
+          await writable.close();
+          completed = true;
+        } finally {
+          if (!completed) await writable.abort?.();
+        }
       } else downloadFallback(blob, fileName);
       recordingSaved = true;
       ui.save.textContent = 'Conversation saved';
-      setStatus('Conversation video and both voices saved.');
+      setStatus('Both recorded voices and received video saved on the synchronized call timeline.');
     } catch (error) {
       setStatus(error.name === 'AbortError' ? 'Recording save canceled.'
         : `Could not save recording: ${error.message}`, error.name !== 'AbortError');
@@ -1854,6 +2509,8 @@
     }
   });
   window.addEventListener('pagehide', () => {
+    stopPreparedAudioWatch();
+    captureClock.close();
     recording = false;
     clearInterval(elapsedTimer);
     recorderSession?.stopImmediately();

@@ -5,30 +5,38 @@
   if (kind !== 'audio' && kind !== 'video') return;
 
   const parentOrigin = window.location.origin;
-  const applicationId = `REMOTE-CALL-${kind.toUpperCase()}`;
   const wsUrl = 'wss://secure.fileshare.ovh:31085';
   const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
   const hkdfSalt = encoder.encode('remote-call-v9/media');
-  // Magic, start, end and creation time, then the playback marks at start and end
-  // (peer chunk number and play time; -1 when nothing from the peer was playing).
-  const CHUNK_HEADER_BYTES = 60;
-  const CHUNK_MAGIC = 0x364d4352; // "RCM6" in little-endian byte order.
-  const MAX_PENDING_SENDS = 512;
-  const MAX_PENDING_BYTES = (kind === 'video' ? 64 : 8) * 1048576;
-  // Serialize encryption and socket writes to preserve chunk order without waiting for acknowledgements.
-  const MAX_ACTIVE_SENDS = 1;
+  const FRAME_MAGIC = 0x31464352; // RCF1
+  const MAX_METADATA_BYTES = 4096;
+  const MAX_QUEUED_FRAMES = 100;
+  const MAX_QUEUED_BYTES = (kind === 'video' ? 32 : 8) * 1048576;
+  const workSpaceId = `REMOTE_CALL_${kind.toUpperCase()}_STREAM`;
+  const frameType = kind === 'audio' ? BinaryType.REMOTE_CALL_AUDIO_STREAM : BinaryType.REMOTE_CALL_VIDEO_STREAM;
   let initialized = false;
   let receiveDisabled = false;
   let aliasAttempt = 0;
-  let pendingSends = 0;
-  let pendingBytes = 0;
-  let activeSends = 0;
-  let connectionEpoch = 0;
-  const sendQueue = [];
-  const connectionWaiters = [];
+  let activeSend = false;
+  let queuedBytes = 0;
+  let reductions = 0;
+  let minimumGeneration = 0;
+  let adapting = false;
+  let stopped = false;
+  let finishing = false;
+  let finishTimer = null;
+  let pingTimer = null;
+  let acknowledgedFrames = 0;
+  let lastAcknowledgedOrder = null;
   let cryptoReady = null;
   let localRole = null;
+  let remoteCallId = null;
+  let peerClient = null;
+  let activeFrame = null;
   let encryptionEnabled = null;
+  const sendQueue = [];
+  const deliverySamples = [];
   const mediaKeys = new Map();
   const lastSentOrders = new Map();
 
@@ -84,83 +92,58 @@
     window.parent.postMessage({ type, kind, ...fields }, parentOrigin, transfer);
   }
 
-  function isPlaybackMark(mark) {
-    return mark === null || (Number.isSafeInteger(mark?.chunk) && mark.chunk >= 0
-      && Number.isFinite(mark.timeMs) && mark.timeMs >= 0);
+  function validFrame(frame) {
+    return typeof frame.binaryId === 'string' && !!frame.binaryId
+      && Number.isSafeInteger(frame.order) && frame.order >= 0 && frame.order <= 0x7fffffff
+      && Number.isSafeInteger(frame.index) && frame.index >= 0
+      && Number.isSafeInteger(frame.generation) && frame.generation >= 0
+      && Number.isSafeInteger(frame.senderStartTimeMs) && frame.senderStartTimeMs === frame.order
+      && Number.isSafeInteger(frame.senderEndTimeMs) && frame.senderEndTimeMs > frame.order
+      && Number.isFinite(frame.actualRecordingStartTimeMs) && frame.actualRecordingStartTimeMs >= 0
+      && typeof frame.mimeType === 'string' && frame.mimeType.startsWith(`${kind}/webm`)
+      && frame.independent === true;
   }
 
-  function writePlaybackMark(header, offset, mark) {
-    header.setFloat64(offset, mark ? mark.chunk : -1, true);
-    header.setFloat64(offset + 8, mark ? mark.timeMs : -1, true);
-  }
-
-  function readPlaybackMark(header, offset) {
-    const chunk = header.getFloat64(offset, true);
-    const timeMs = header.getFloat64(offset + 8, true);
-    const mark = chunk === -1 && timeMs === -1 ? null : { chunk, timeMs };
-    if (!isPlaybackMark(mark)) throw new Error('Invalid received playback mark');
-    return mark;
-  }
-
-  function packChunk(payload, startTime, endTime, createdAtEpochMs, playStart, playEnd) {
-    if (!(payload instanceof ArrayBuffer) || !Number.isSafeInteger(startTime)
-      || !Number.isSafeInteger(endTime) || startTime < 0 || endTime <= startTime
-      || !Number.isFinite(createdAtEpochMs) || createdAtEpochMs <= 0
-      || !isPlaybackMark(playStart) || !isPlaybackMark(playEnd)) {
-      throw new Error('Invalid recorded chunk timing');
-    }
-    const wrapped = new ArrayBuffer(CHUNK_HEADER_BYTES + payload.byteLength);
+  function packFrame(message) {
+    const metadata = {
+      binaryId: message.binaryId, order: message.order, index: message.index,
+      generation: message.generation, mimeType: message.mimeType, independent: true,
+      senderStartTimeMs: message.startTime, senderEndTimeMs: message.endTime,
+      actualRecordingStartTimeMs: message.actualRecordingStartTimeMs,
+      createdAtEpochMs: message.createdAtEpochMs
+    };
+    if (!validFrame(metadata)) throw new Error('Invalid recorded frame timing');
+    const encoded = encoder.encode(JSON.stringify(metadata));
+    const wrapped = new ArrayBuffer(8 + encoded.length + message.payload.byteLength);
     const header = new DataView(wrapped);
-    header.setUint32(0, CHUNK_MAGIC, true);
-    header.setFloat64(4, startTime, true);
-    header.setFloat64(12, endTime, true);
-    header.setFloat64(20, createdAtEpochMs, true);
-    writePlaybackMark(header, 28, playStart);
-    writePlaybackMark(header, 44, playEnd);
-    new Uint8Array(wrapped, CHUNK_HEADER_BYTES).set(new Uint8Array(payload));
+    header.setUint32(0, FRAME_MAGIC, true);
+    header.setUint32(4, encoded.length, true);
+    new Uint8Array(wrapped, 8, encoded.length).set(encoded);
+    new Uint8Array(wrapped, 8 + encoded.length).set(new Uint8Array(message.payload));
     return wrapped;
   }
 
-  function unpackChunk(payload) {
-    if (!(payload instanceof ArrayBuffer) || payload.byteLength <= CHUNK_HEADER_BYTES) {
-      throw new Error('Invalid received media chunk');
-    }
+  function unpackFrame(payload, wireOrder) {
+    if (!(payload instanceof ArrayBuffer) || payload.byteLength < 9) throw new Error('Invalid media frame');
     const header = new DataView(payload);
-    if (header.getUint32(0, true) !== CHUNK_MAGIC) throw new Error('Unsupported media chunk format');
-    const senderStartTimeMs = header.getFloat64(4, true);
-    const senderEndTimeMs = header.getFloat64(12, true);
-    const createdAtEpochMs = header.getFloat64(20, true);
-    if (!Number.isSafeInteger(senderStartTimeMs) || !Number.isSafeInteger(senderEndTimeMs)
-      || senderStartTimeMs < 0 || senderEndTimeMs <= senderStartTimeMs
-      || !Number.isFinite(createdAtEpochMs) || createdAtEpochMs <= 0) {
-      throw new Error('Invalid received chunk timing');
+    const length = header.getUint32(4, true);
+    if (header.getUint32(0, true) !== FRAME_MAGIC || length > MAX_METADATA_BYTES || 8 + length >= payload.byteLength) {
+      throw new Error('Unsupported media frame format');
     }
-    return {
-      senderStartTimeMs, senderEndTimeMs, createdAtEpochMs,
-      playStart: readPlaybackMark(header, 28),
-      playEnd: readPlaybackMark(header, 44),
-      payload: payload.slice(CHUNK_HEADER_BYTES)
-    };
+    const frame = JSON.parse(decoder.decode(new Uint8Array(payload, 8, length)));
+    if (!validFrame(frame) || frame.order !== wireOrder) throw new Error('Invalid received frame timing');
+    return { ...frame, payload: payload.slice(8 + length) };
   }
 
-  function reportReceivedChunk(binaryWithHeader, payload, arrivedAtEpochMs) {
-    if (receiveDisabled) return;
+  function reportReceivedFrame(frame, payload, arrivedAtEpochMs) {
     try {
-      const chunk = unpackChunk(payload);
-      report('remote-call:chunk', {
-        binaryId: binaryWithHeader.binaryId,
-        order: binaryWithHeader.order,
-        senderStartTimeMs: chunk.senderStartTimeMs,
-        senderEndTimeMs: chunk.senderEndTimeMs,
-        createdAtEpochMs: chunk.createdAtEpochMs,
-        arrivedAtEpochMs,
-        decryptedAtEpochMs: performance.timeOrigin + performance.now(),
-        playStart: chunk.playStart,
-        playEnd: chunk.playEnd,
-        payload: chunk.payload
-      }, [chunk.payload]);
+      const received = unpackFrame(payload, frame.order);
+      if (!receiveDisabled) report('remote-call:chunk', {
+        ...received, arrivedAtEpochMs,
+        decryptedAtEpochMs: performance.timeOrigin + performance.now()
+      }, [received.payload]);
     } catch (error) {
-      report('remote-call:error', { scope: 'receive', message: `${kind} chunk ${binaryWithHeader.order}: ${error.message}` });
+      report('remote-call:error', { scope: 'receive', message: `${kind} frame ${frame.order}: ${error.message}` });
     }
   }
 
@@ -176,131 +159,209 @@
     });
   }
 
-  function waitForConnection() {
-    if (PushcaClient.isOpen()) return Promise.resolve();
-    return new Promise(resolve => connectionWaiters.push(resolve));
+  function medianLatency() {
+    if (!deliverySamples.length) return null;
+    const sorted = deliverySamples.map(sample => sample.latencyMs).sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
-  async function transmitChunk(message) {
-    const wrapped = packChunk(message.payload, message.startTime, message.endTime,
-      message.createdAtEpochMs, message.playStart, message.playEnd);
-    const payload = encryptionEnabled
-      ? await encryptChunk(message.binaryId, message.order, wrapped)
-      : wrapped;
-    for (;;) {
-      await waitForConnection();
-      const attemptEpoch = connectionEpoch;
-      let result;
-      try {
-        result = await PushcaClient.transferBinaryChunkWithoutAcknowledge(
-          message.binaryId, message.order, message.destHashCode, payload
-        );
-      } catch (error) {
-        if (PushcaClient.isOpen() && connectionEpoch === attemptEpoch) throw error;
-        continue;
-      }
-      if (result.type === WaiterResponseType.SUCCESS) return;
-      if (PushcaClient.isOpen() && connectionEpoch === attemptEpoch) {
-        throw new Error(`${kind} chunk ${message.order} could not be sent.`);
-      }
+  function reportQueue() {
+    const sampleCount = deliverySamples.length;
+    report('remote-call:queue', {
+      queueSize: sendQueue.length, queuedBytes, activeSend,
+      medianDeliveryLatencyMs: medianLatency(), reductions, generation: minimumGeneration,
+      deliverySampleCount: sampleCount,
+      averageChunkSizeBytes: sampleCount
+        ? deliverySamples.reduce((total, sample) => total + sample.bytes, 0) / sampleCount : null,
+      averageDeliveryLatencyMs: sampleCount
+        ? deliverySamples.reduce((total, sample) => total + sample.latencyMs, 0) / sampleCount : null
+    });
+  }
+
+  function dropUnsentFrames() {
+    sendQueue.length = 0;
+    queuedBytes = 0;
+  }
+
+  function finishIfDrained() {
+    if (!finishing || activeSend || sendQueue.length) return;
+    clearTimeout(finishTimer);
+    finishTimer = null;
+    report('remote-call:finished', { count: acknowledgedFrames, lastOrder: lastAcknowledgedOrder });
+    finishing = false;
+  }
+
+  function handleCongestion() {
+    if (stopped || adapting || (sendQueue.length <= MAX_QUEUED_FRAMES && queuedBytes <= MAX_QUEUED_BYTES)) return;
+    dropUnsentFrames();
+    if (reductions === 2) {
+      stopped = true;
+      report('remote-call:congestion', { action: kind === 'audio' ? 'terminate' : 'disable', reductions });
+      finishIfDrained();
+      return;
     }
+    reductions++;
+    minimumGeneration++;
+    adapting = true;
+    report('remote-call:congestion', { action: 'reduce', reductions, generation: minimumGeneration });
+  }
+
+  async function transmitFrame(message) {
+    // Each media iframe has its own PushcaClient and CallableFuture waiting hall.
+    // The call UUID routes the frame; the sender hash identifies its source.
+    const wrapped = packFrame(message);
+    const payload = encryptionEnabled ? await encryptChunk(remoteCallId, message.order, wrapped) : wrapped;
+    const senderHash = PushcaClient.ClientObj.hashCode();
+    activeFrame = { order: message.order, ackId: `${workSpaceId}_${senderHash}_${remoteCallId}` };
+    const result = await PushcaClient.sendRemoteCallFrame(remoteCallId, message.order,
+      senderHash, payload, frameType);
+    activeFrame = null;
+    if (result.type !== WaiterResponseType.SUCCESS) throw new Error(`${kind} frame acknowledgment failed`);
+    if (Number.isFinite(result.body) && result.body >= 0) {
+      deliverySamples.push({ bytes: payload.byteLength, latencyMs: result.body });
+      if (deliverySamples.length > 5) deliverySamples.shift();
+    }
+    acknowledgedFrames++;
+    lastAcknowledgedOrder = message.order;
   }
 
   function pumpSends() {
-    while (PushcaClient.isOpen() && activeSends < MAX_ACTIVE_SENDS && sendQueue.length) {
-      const message = sendQueue.shift();
-      activeSends++;
-      void transmitChunk(message)
-        .catch(error => report('remote-call:error', { message: `${kind} channel: ${error.message}` }))
-        .finally(() => {
-          activeSends--;
-          pendingSends--;
-          pendingBytes -= message.payload.byteLength;
-          pumpSends();
-        });
+    if (stopped || adapting || activeSend || !PushcaClient.isOpen() || !sendQueue.length) {
+      finishIfDrained();
+      return;
     }
+    const message = sendQueue.shift();
+    queuedBytes -= message.payload.byteLength;
+    activeSend = true;
+    void transmitFrame(message).catch(error => {
+      if (stopped) return;
+      stopped = true;
+      dropUnsentFrames();
+      report('remote-call:error', { message: `${kind} channel: ${error.message}` });
+    }).finally(() => {
+      activeSend = false;
+      activeFrame = null;
+      reportQueue();
+      pumpSends();
+    });
   }
 
   PushcaClient.onOpenHandler = () => {
-    connectionEpoch++;
-    for (const resolve of connectionWaiters.splice(0)) resolve();
     pumpSends();
     report('remote-call:state', { connected: true });
   };
   PushcaClient.onCloseHandler = () => {
     if (!PushcaClient.isOpen()) report('remote-call:state', { connected: false });
   };
-  PushcaClient.onFileTransferChunkHandler = binaryWithHeader => {
-    if (encryptionEnabled === null || receiveDisabled) return;
+  PushcaClient[kind === 'audio' ? 'onRemoteCallAudioStreamHandler' : 'onRemoteCallVideoStreamHandler'] = frame => {
+    // Acknowledge delivery exactly as remote-call-frame-test.html does, before
+    // deciding whether this frame belongs in the current call's media history.
+    const ackId = `${workSpaceId}_${frame.destClientHash}_${frame.binaryId}`;
+    PushcaClient.sendAcknowledge(ackId);
+    if (encryptionEnabled === null || frame.binaryId !== remoteCallId) return;
+    if (!Number.isInteger(frame.destClientHash) || (peerClient && frame.destClientHash !== peerClient.hashCode())) return;
+    if (receiveDisabled) return;
     const arrivedAtEpochMs = performance.timeOrigin + performance.now();
     if (!encryptionEnabled) {
-      reportReceivedChunk(binaryWithHeader, binaryWithHeader.payload, arrivedAtEpochMs);
+      reportReceivedFrame(frame, frame.payload, arrivedAtEpochMs);
       return;
     }
-    void decryptChunk(binaryWithHeader.binaryId, binaryWithHeader.order, binaryWithHeader.payload).then(payload => {
-      reportReceivedChunk(binaryWithHeader, payload, arrivedAtEpochMs);
+    void decryptChunk(frame.binaryId, frame.order, frame.payload).then(payload => {
+      reportReceivedFrame(frame, payload, arrivedAtEpochMs);
     }).catch(() => {
-      if (!receiveDisabled) report('remote-call:error', { scope: 'receive', message: `Could not decrypt ${kind} chunk ${binaryWithHeader.order}.` });
+      if (!receiveDisabled) report('remote-call:error', { scope: 'receive', message: `Could not decrypt ${kind} frame ${frame.order}.` });
     });
   };
 
   window.addEventListener('message', event => {
     if (event.source !== window.parent || event.origin !== parentOrigin || event.data?.kind !== kind) return;
     const message = event.data;
+    if (message.type === 'remote-call:set-peer' && initialized) {
+      const peer = message.client;
+      if (peer?.workSpaceId !== workSpaceId || peer.applicationId !== remoteCallId
+        || !peer.accountId || peer.accountId !== peer.deviceId) return;
+      peerClient = new ClientFilter(peer.workSpaceId, peer.accountId, peer.deviceId, peer.applicationId);
+      return;
+    }
     if (message.type === 'remote-call:disable-receive' && kind === 'video') {
       receiveDisabled = true;
+      return;
+    }
+    if (message.type === 'remote-call:resume' && message.generation === minimumGeneration && !stopped) {
+      adapting = false;
+      handleCongestion();
+      reportQueue();
+      pumpSends();
+      return;
+    }
+    if (message.type === 'remote-call:finish') {
+      finishing = true;
+      // End-of-call cleanup stays bounded if the peer disappears before an ACK.
+      finishTimer ||= setTimeout(() => {
+        stopped = true;
+        dropUnsentFrames();
+        if (activeFrame) CallableFuture.releaseWaiterIfExistsWithError(activeFrame.ackId, 'Call ended before frame acknowledgment');
+        finishIfDrained();
+      }, 10000);
+      pumpSends();
       return;
     }
     if (message.type === 'remote-call:init' && !initialized) {
       if (typeof message.encrypted !== 'boolean'
         || (message.encrypted && (!(message.mediaSecret instanceof Uint8Array) || message.mediaSecret.length !== 32))
-        || !['caller', 'receiver'].includes(message.role)) {
-        report('remote-call:error', { message: 'Invalid call encryption key.' });
+        || !['caller', 'receiver'].includes(message.role)
+        || typeof message.remoteCallId !== 'string' || !message.remoteCallId
+        || typeof message.clientId !== 'string' || !message.clientId) {
+        report('remote-call:error', { message: 'Invalid call channel settings.' });
         return;
       }
       initialized = true;
       localRole = message.role;
+      remoteCallId = message.remoteCallId;
       encryptionEnabled = message.encrypted;
       cryptoReady = encryptionEnabled
         ? crypto.subtle.importKey('raw', message.mediaSecret, 'HKDF', false, ['deriveBits'])
         : Promise.resolve(null);
       void cryptoReady.then(async () => {
-        const client = new ClientFilter('remote-call', 'anonymous-sharing', uuid.v4().toString(), applicationId);
+        const client = new ClientFilter(workSpaceId, message.clientId, message.clientId, message.remoteCallId);
         waitForAlias(client);
         await PushcaClient.openWsConnection(wsUrl, client, connectedClient => {
-          const refreshed = new ClientFilter(
-            connectedClient.workSpaceId, connectedClient.accountId,
-            connectedClient.deviceId, connectedClient.applicationId
-          );
-          waitForAlias(refreshed);
-          return refreshed;
+          waitForAlias(connectedClient);
+          return connectedClient;
         });
         if (!PushcaClient.isOpen()) report('remote-call:error', { message: `Could not connect ${kind} channel.` });
       }).catch(error => report('remote-call:error', { message: `${kind} channel: ${error.message}` }));
-      window.setInterval(() => {
+      pingTimer = window.setInterval(() => {
         if (PushcaClient.isOpen()) PushcaClient.sendPing();
       }, 10000);
-    }
-    if (message.type !== 'remote-call:send' || !initialized) return;
-    if (!(message.payload instanceof ArrayBuffer) || !Number.isSafeInteger(message.order)
-      || message.order < 0 || !Number.isInteger(message.destHashCode)
-      || typeof message.binaryId !== 'string' || !message.binaryId
-      || !Number.isSafeInteger(message.startTime) || !Number.isSafeInteger(message.endTime)
-      || message.startTime < 0 || message.endTime <= message.startTime
-      || !Number.isFinite(message.createdAtEpochMs) || message.createdAtEpochMs <= 0
-      || !isPlaybackMark(message.playStart) || !isPlaybackMark(message.playEnd)) return;
-    if (message.order <= (lastSentOrders.get(message.binaryId) ?? -1)) {
-      report('remote-call:error', { message: `${kind} chunk order was reused.` });
       return;
     }
-    if (pendingSends >= MAX_PENDING_SENDS || pendingBytes + message.payload.byteLength > MAX_PENDING_BYTES) {
-      report('remote-call:error', { message: `${kind} send queue is full.` });
+    if (message.type !== 'remote-call:send' || !initialized || stopped) return;
+    if (!(message.payload instanceof ArrayBuffer) || !message.payload.byteLength) return;
+    if (!validFrame({ ...message, senderStartTimeMs: message.startTime, senderEndTimeMs: message.endTime })) return;
+    if (message.generation < minimumGeneration) return;
+    if (message.order <= (lastSentOrders.get(message.binaryId) ?? -1)) {
+      report('remote-call:error', { message: `${kind} capture timestamp was reused.` });
       return;
     }
     lastSentOrders.set(message.binaryId, message.order);
-    pendingSends++;
-    pendingBytes += message.payload.byteLength;
     sendQueue.push(message);
+    queuedBytes += message.payload.byteLength;
+    if (adapting) {
+      while (sendQueue.length > MAX_QUEUED_FRAMES || queuedBytes > MAX_QUEUED_BYTES) {
+        queuedBytes -= sendQueue.shift().payload.byteLength;
+      }
+    } else handleCongestion();
+    reportQueue();
     pumpSends();
+  });
+
+  window.addEventListener('pagehide', () => {
+    stopped = true;
+    clearTimeout(finishTimer);
+    window.clearInterval(pingTimer);
+    dropUnsentFrames();
+    PushcaClient.stopWebSocketPermanently();
   });
 })();
