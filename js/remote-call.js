@@ -28,6 +28,8 @@
   const MAX_RECORDING_BYTES = 512 * 1048576;
   // Opus needs decoded packets ahead of a snippet before its output settles.
   const ECHO_REFERENCE_PREROLL_MS = 120;
+  const ECHO_REFERENCE_CHUNKS = 4;
+  const ECHO_REFERENCE_SCAN_RATE = 3000;
   const WEBM_MASTER_IDS = new Set([
     0x18538067, 0x1549a966, 0x1654ae6b, 0xae, 0xe1, 0x1f43b675, 0xa0
   ]); // Segment, Info, Tracks, TrackEntry, Audio, Cluster, BlockGroup.
@@ -1596,7 +1598,7 @@
     return { startMs, endMs: startMs + samples.length * 1000 / data.sampleRate, sampleRate: data.sampleRate, samples };
   }
 
-  // Decodes our own stored audio chunks around the moments the peer reports playing.
+  // Decodes our own stored audio chunks for incoming echo reference windows.
   class LocalEchoReference {
     constructor(chunks) {
       this.chunks = chunks;
@@ -1658,8 +1660,8 @@
     }
   }
 
-  // The first implementation matches only synchronized capture orders. It does
-  // not estimate network/acoustic delay or use the peer's playback marks.
+  // Match the synchronized capture order and retain its three predecessors so
+  // the worklet can also find an echo of earlier local audio.
   async function buildEchoReference(reference, timing, sampleRate) {
     const chunks = reference.chunks;
     if (!chunks.length) return null;
@@ -1674,27 +1676,37 @@
     if (index > 0 && Math.abs(chunks[index - 1].order - timing.order) <= Math.abs(chunks[index].order - timing.order)) index--;
     const local = chunks[index];
     if (Math.abs(local.order - timing.order) > CHUNK_MS) return null;
-    const frames = await reference.decode(index, index, local.startTime, local.endTime);
+    const first = Math.max(0, index - ECHO_REFERENCE_CHUNKS + 1);
+    const referenceStartMs = chunks[first].startTime;
+    const frames = await reference.decode(first, index, referenceStartMs, local.endTime);
     if (!frames.length) return null;
-    const samples = new Float32Array(Math.round((timing.senderEndTimeMs - timing.senderStartTimeMs) * sampleRate / 1000));
+    const samples = new Float32Array(Math.round((local.endTime - referenceStartMs) * sampleRate / 1000));
     let frameIndex = 0;
     for (let i = 0; i < samples.length; i++) {
-      const captureTime = timing.senderStartTimeMs + i * 1000 / sampleRate;
+      const captureTime = referenceStartMs + i * 1000 / sampleRate;
       while (frameIndex < frames.length - 1 && frames[frameIndex].endMs <= captureTime) frameIndex++;
       const frame = frames[frameIndex];
       const position = Math.floor((captureTime - frame.startMs) * frame.sampleRate / 1000);
       if (position >= 0 && position < frame.samples.length) samples[i] = frame.samples[position];
     }
-    return samples;
+    const scanStride = Math.max(1, Math.floor(sampleRate / ECHO_REFERENCE_SCAN_RATE));
+    const scanSamples = new Float32Array(Math.floor(samples.length / scanStride));
+    for (let i = 0; i < scanSamples.length; i++) {
+      let sum = 0;
+      for (let j = 0; j < scanStride; j++) sum += samples[i * scanStride + j];
+      scanSamples[i] = sum / scanStride;
+    }
+    return { startMs: timing.senderStartTimeMs, endMs: timing.senderEndTimeMs,
+      referenceStartMs, samples, scanSamples, scanStride };
   }
 
   function queueEchoReference(timing) {
     const reference = echoReference;
     const generation = echoGeneration;
     if (!echoNode || !reference) return;
-    void buildEchoReference(reference, timing, echoContext.sampleRate).then(samples => {
-      if (!samples || generation !== echoGeneration || !echoNode) return;
-      echoNode.port.postMessage({ type: 'reference', startMs: timing.senderStartTimeMs, samples }, [samples.buffer]);
+    void buildEchoReference(reference, timing, echoContext.sampleRate).then(segment => {
+      if (!segment || generation !== echoGeneration || !echoNode) return;
+      echoNode.port.postMessage({ type: 'reference', ...segment }, [segment.samples.buffer, segment.scanSamples.buffer]);
     }).catch(error => {
       if (echoReference !== reference) return;
       bypassEchoProcessing();
@@ -1751,7 +1763,7 @@
         throw new Error('AudioWorklet is unavailable');
       }
       try {
-        await context.audioWorklet.addModule('js/remote-call-echo-worklet.js?v=2');
+        await context.audioWorklet.addModule('js/remote-call-echo-worklet.js?v=3');
         await resumeEchoContext(context);
         // Captured last: from here on the element is audible only through this context.
         echoPlayerSource = context.createMediaElementSource(ui.audio);
