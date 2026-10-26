@@ -7,7 +7,7 @@
   const APPLICATIONS = { manager: 'REMOTE-CALL-MANAGER' };
   const TRANSPORT_VERSION = 2;
   const LATENCY_TEST_COUNT = 20;
-  const START_LEAD_MS = 5000;
+  const START_LEAD_MS = 3000;
   const MAX_START_ATTEMPTS = 3;
   const MAX_START_LATENESS_MS = 250;
   const jointLink = document.getElementById('jointLink');
@@ -659,7 +659,7 @@
     confirmationTimer = null;
     phase = 'scheduled';
     window.RemoteCallMedia.setCallStartTime(localStartTime);
-    setConnectionStatus(`Call with ${peer.name} starts in five seconds…`);
+    setConnectionStatus(`Call with ${peer.name} starts in ${START_LEAD_MS / 1000} seconds…`);
     const start = () => {
       const remaining = localStartTime - performance.now();
       if (remaining > 0) {
