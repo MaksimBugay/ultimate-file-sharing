@@ -99,8 +99,16 @@ svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width:
 .brand-mark svg { width: 28px; height: 28px; }
 .eyebrow { display: block; margin-top: 6px; color: #83aef2; font-size: clamp(.5rem, 1.5vw, .62rem); font-weight: 800; letter-spacing: .17em; }
 h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 4vw, 1.9rem); line-height: 1.15; letter-spacing: -.035em; }
-.sharing-tools { display: flex; gap: 8px; }
+.sharing-tools { display: flex; flex-shrink: 0; gap: 8px; }
+.sharing-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #314664;
+}
 .utility-button {
+    text-decoration: none;
     display: grid;
     place-items: center;
     width: 38px;
@@ -363,9 +371,9 @@ kbd { padding: 3px 5px; border: 1px solid #405573; border-radius: 5px; backgroun
     body { padding: 18px 14px; }
     .sharing-shell { padding: 16px; border-radius: 22px; }
     .device-container { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-    .sharing-header { gap: 8px; }
+    .sharing-header { flex-wrap: wrap; gap: 8px; }
     .sharing-brand { gap: 10px; }
-    .sharing-tools { gap: 5px; }
+    .sharing-tools { margin-left: auto; gap: 5px; }
     .file-share-fieldset { padding: 14px; }
     .protection-options label { flex: 1; justify-content: center; }
 }
