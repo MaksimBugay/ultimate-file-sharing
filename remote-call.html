@@ -504,8 +504,9 @@
     .utility-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .utility-button:hover { background: #243e60; border-color: #648bbd; color: #fff; }
     .utility-button:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
-    .page-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; flex: 0 0 auto; min-width: 0; gap: 12px; }
-    .page-footer .utility-tools { grid-area: 1 / 2; }
+    .page-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; flex: 0 0 auto; min-width: 0; gap: 12px; }
+    .footer-motto { grid-area: 1 / 2; display: flex; align-items: center; justify-content: center; min-height: 38px; margin: 0; color: #afc0d2; font-size: .72rem; text-align: center; }
+    .page-footer .utility-tools { grid-area: 1 / 3; justify-self: end; }
     .call-footer { grid-area: 1 / 1 / 2 / -1; min-width: 0; }
     .call-footer summary {
       display: block;
@@ -547,6 +548,16 @@
       .header-tools { grid-area: 1 / 2; }
       .call-status { grid-area: 2 / 1 / 3 / -1; justify-self: stretch; width: 100%; }
       .intro { display: none; }
+      .page-footer { grid-template-columns: minmax(0, 1fr) auto; }
+      .page-footer .utility-tools { grid-area: 1 / 2; }
+      .footer-motto {
+        grid-area: 1 / 1;
+        align-self: start;
+        min-height: 38px;
+        margin-left: 136px;
+        font-size: clamp(1px, calc((100vw - 256px) / 12), .72rem);
+        white-space: nowrap;
+      }
       .viewport-stage { flex: 1 0 auto; height: min(62dvh, 520px); min-height: 300px; }
     }
     @media (max-width: 560px) {
@@ -707,6 +718,7 @@
         <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming audio and video play independently through separate MediaSources. A blue border indicates delayed video and offers Disable video; red indicates delayed audio. Delay estimates may include differences in when each person starts the call. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 0.5 seconds. Recording needs HTTPS or localhost.</p>
       </div>
     </details>
+    <p class="footer-motto">Talk freely. Stay private.</p>
     <nav class="utility-tools" aria-label="Contact and privacy">
       <a id="contactLink" class="utility-button" href="mailto:sfile4share@gmail.com" title="Contact us: sfile4share@gmail.com" aria-label="Contact us by email: sfile4share@gmail.com">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
