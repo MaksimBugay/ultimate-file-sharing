@@ -148,6 +148,11 @@ function makePage(urlString, options = {}) {
     decodeFromBase64UrlSafe: s => Buffer.from(s, 'base64url').toString(),
     console: { error: (...args) => page.errors.push(args), warn: (...args) => page.errors.push(args) }
   });
+  if (options.forbidCalendarClock) {
+    const forbidden = () => { throw new Error('Start synchronization must not read calendar or wall-clock time'); };
+    context.Date = new Proxy(Date, { get: forbidden, apply: forbidden, construct: forbidden });
+    context.Intl = new Proxy(Intl, { get: forbidden });
+  }
   vm.runInContext(securitySource, context);
   vm.runInContext(connectionSource, context);
   return page;
@@ -436,6 +441,42 @@ test('twenty acknowledged probes agree on a future start across different monoto
   assert.deepEqual(caller.errors, []);
   assert.deepEqual(receiver.errors, []);
 });
+
+
+// A time-zone change cannot affect synchronization when neither participant
+// reads calendar time. Clock origins are independently offset, not time zones.
+for (const direction of ['ahead', 'behind']) {
+  test(`start alignment ignores calendar time with the callee clock origin 26 hours ${direction}`, async () => {
+    const earlierOrigin = 400000;
+    const laterOrigin = earlierOrigin + 26 * 60 * 60 * 1000;
+    const callerOrigin = direction === 'ahead' ? earlierOrigin : laterOrigin;
+    const calleeOrigin = direction === 'ahead' ? laterOrigin : earlierOrigin;
+    const caller = makePage('https://example.test/remote-call.html', {
+      clockOffset: callerOrigin, forbidCalendarClock: true
+    });
+    await until(() => !!caller.byId('jointLink').value, 'invitation');
+    const callee = makePage(caller.byId('jointLink').value, {
+      clockOffset: calleeOrigin, forbidCalendarClock: true
+    });
+    await callee.byId('joinNameForm').emit('submit');
+    await until(() => caller.started && callee.started, 'call without calendar clock access');
+
+    const callerSync = caller.window.RemoteCallConnection.getSynchronization();
+    const calleeSync = callee.window.RemoteCallConnection.getSynchronization();
+    assert.equal(callerSync.samples.length, 20);
+    assert.equal(callerSync.localStartTime, calleeSync.peerStartTime);
+    assert.equal(calleeSync.localStartTime, callerSync.peerStartTime);
+    // Remove the artificial origins to compare both deadlines on the same clock.
+    const deadlineSkew = (callee.agreedStart - calleeOrigin) - (caller.agreedStart - callerOrigin);
+    const actualSkew = (callee.actualStart - calleeOrigin) - (caller.actualStart - callerOrigin);
+    assert.ok(Math.abs(deadlineSkew) < 100, `Deadline skew: ${deadlineSkew} ms`);
+    assert.ok(Math.abs(actualSkew) < 250, `Actual start skew: ${actualSkew} ms`);
+    assert.ok(caller.actualStart >= caller.agreedStart);
+    assert.ok(callee.actualStart >= callee.agreedStart);
+    assert.deepEqual(caller.errors, []);
+    assert.deepEqual(callee.errors, []);
+  });
+}
 
 async function unencryptedPair() {
   const caller = makePage('https://example.test/remote-call.html');
