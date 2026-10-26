@@ -90,11 +90,13 @@
     }
     .page-heading {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 8px 24px;
       align-items: center;
     }
-    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand { grid-area: 1 / 1; display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand > div { min-width: 0; }
+    .header-tools { grid-area: 1 / 3; justify-self: end; }
     .brand-mark {
       display: grid;
       place-items: center;
@@ -110,6 +112,7 @@
     h1 { margin: 1px 0 0; font-size: clamp(1.4rem, 2.4vw, 1.9rem); line-height: 1.1; }
     .status { min-height: 22px; margin: 0; font-size: .84rem; }
     .call-status {
+      grid-area: 1 / 2;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -484,12 +487,33 @@
     }
     .local-panel video { height: auto; aspect-ratio: 16 / 9; pointer-events: none; }
     .local-panel .caption { margin: 5px 9px 0; font-size: .7rem; line-height: 1.25; }
-    .call-footer { flex: 0 0 auto; min-width: 0; }
+    .utility-tools { display: flex; gap: 8px; }
+    .utility-button {
+      display: grid;
+      place-items: center;
+      flex: 0 0 38px;
+      width: 38px;
+      height: 38px;
+      padding: 8px;
+      border: 1px solid #314664;
+      border-radius: 12px;
+      background: #17263b;
+      color: #afc0d2;
+      text-decoration: none;
+    }
+    .utility-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .utility-button:hover { background: #243e60; border-color: #648bbd; color: #fff; }
+    .utility-button:focus-visible { outline: 3px solid #a7c7ff; outline-offset: 3px; }
+    .page-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; flex: 0 0 auto; min-width: 0; gap: 12px; }
+    .page-footer .utility-tools { grid-area: 1 / 2; }
+    .call-footer { grid-area: 1 / 1 / 2 / -1; min-width: 0; }
     .call-footer summary {
       display: block;
       width: max-content;
-      margin-left: auto;
-      padding: 4px 10px;
+      max-width: calc(100% - 96px);
+      min-height: 38px;
+      margin: 0;
+      padding: 8px 10px;
       border: 1px solid #405573;
       border-radius: 8px;
       background: #172334;
@@ -519,8 +543,9 @@
     @media (max-width: 760px) {
       body { height: auto; min-height: 100dvh; overflow: auto; padding: 12px; }
       main { height: auto; min-height: calc(100dvh - 24px); gap: 12px; }
-      .page-heading { grid-template-columns: 1fr; }
-      .call-status { justify-self: stretch; width: 100%; }
+      .page-heading { grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
+      .header-tools { grid-area: 1 / 2; }
+      .call-status { grid-area: 2 / 1 / 3 / -1; justify-self: stretch; width: 100%; }
       .intro { display: none; }
       .viewport-stage { flex: 1 0 auto; height: min(62dvh, 520px); min-height: 300px; }
     }
@@ -558,6 +583,14 @@
       </span>
       <div><span class="eyebrow">PRIVATE VIDEO ROOM</span><h1>Secure video calls</h1></div>
     </div>
+    <nav class="utility-tools header-tools" aria-label="Navigation and help">
+      <a id="homeLink" class="utility-button" href="https://secure.fileshare.ovh/" title="Home" aria-label="Home">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/></svg>
+      </a>
+      <a id="howToButton" class="utility-button" href="https://secure.fileshare.ovh/videos/remote-call-promo.webm" target="_blank" rel="noopener noreferrer" title="Watch remote call video" aria-label="Watch remote call video">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .5c0 1.5-2.5 2-2.5 3.5m0 3h.01"/></svg>
+      </a>
+    </nav>
     <div id="callStatus" class="call-status">
       <span class="call-status-mark" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg>
@@ -655,24 +688,34 @@
     </div>
   </div>
 
-  <details class="call-footer">
-    <summary>call details</summary>
-    <div class="call-footer-content">
-      <dl class="stats">
-        <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
-        <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
-        <div class="stat"><dt>Sent audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
-        <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
-        <div class="stat delivery-stat">
-          <dt>Chunk delivery (avg last 5)</dt>
-          <dd id="audioChunkDelivery">Audio: —</dd>
-          <dd id="videoChunkDelivery">Video: —</dd>
-        </div>
-      </dl>
-      <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
-      <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming audio and video play independently through separate MediaSources. A blue border indicates delayed video and offers Disable video; red indicates delayed audio. Delay estimates may include differences in when each person starts the call. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 0.5 seconds. Recording needs HTTPS or localhost.</p>
-    </div>
-  </details>
+  <footer class="page-footer">
+    <details class="call-footer">
+      <summary>call details</summary>
+      <div class="call-footer-content">
+        <dl class="stats">
+          <div class="stat"><dt>Elapsed</dt><dd id="elapsed">00:00</dd></div>
+          <div class="stat"><dt>Chunk interval</dt><dd id="chunkInterval">1 s</dd></div>
+          <div class="stat"><dt>Sent audio / video chunks</dt><dd id="chunkCount">0 / 0</dd></div>
+          <div class="stat"><dt>Stored in memory</dt><dd id="storedSize">0 MB</dd></div>
+          <div class="stat delivery-stat">
+            <dt>Chunk delivery (avg last 5)</dt>
+            <dd id="audioChunkDelivery">Audio: —</dd>
+            <dd id="videoChunkDelivery">Video: —</dd>
+          </div>
+        </dl>
+        <p id="diagnostics" class="diagnostics" aria-live="off">Audio and video buffer diagnostics appear during replay.</p>
+        <p class="details">The joint link contains the caller's routing information and call settings, but no cryptographic key. With encryption enabled, the receiver sends a temporary public key after joining. The caller encrypts a fresh call secret to that key; the receiver's private key stays on their device. 2FA adds a code comparison through another trusted channel before both people confirm the call; this helps detect someone substituting a public key during setup. Without code comparison, encryption still protects media, but an active intermediary could impersonate a participant. Camera and microphone permission is requested during call setup. If encryption is turned off, no call keys are exchanged and 2FA is unavailable. Advanced echo cancellation uses playback positions sent with audio chunks to find matching audio in your local recording, then suppresses that echo in incoming playback. Camera off sends black frames, and microphone mute sends silence. Incoming audio and video play independently through separate MediaSources. A blue border indicates delayed video and offers Disable video; red indicates delayed audio. Delay estimates may include differences in when each person starts the call. The local camera and microphone recording remains in memory. A separate conversation recording captures the other person's video and mixes incoming audio with your microphone on the live playback timeline; Replay and Save use that recording. Set the chunk interval with <code>?chunkSeconds=0.5</code>; the default is 0.5 seconds. Recording needs HTTPS or localhost.</p>
+      </div>
+    </details>
+    <nav class="utility-tools" aria-label="Contact and privacy">
+      <a id="contactLink" class="utility-button" href="mailto:sfile4share@gmail.com" title="Contact us: sfile4share@gmail.com" aria-label="Contact us by email: sfile4share@gmail.com">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+      </a>
+      <a id="privacyLink" class="utility-button" href="https://secure.fileshare.ovh/privacy/file-sharing-privacy.html" target="_blank" rel="noopener noreferrer" title="Privacy policy" aria-label="Privacy policy">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>
+      </a>
+    </nav>
+  </footer>
 </main>
 <script src="js/pushca.min.js?v=remote-call-12" defer></script>
 <script src="js/remote-call-connection.js?v=19" defer></script>
