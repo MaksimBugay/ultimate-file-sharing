@@ -98,8 +98,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, label:focus-visible 
 .brand-mark svg { width: 28px; height: 28px; }
 h1 { margin: 0; font-size: clamp(1.1rem, 3.2vw, 1.65rem); line-height: 1.15; letter-spacing: -.035em; }
 .eyebrow { display: block; margin-top: 7px; color: #83aef2; font-size: .64rem; font-weight: 700; letter-spacing: .1em; }
-.transfer-tools { display: flex; gap: 8px; }
+.transfer-tools { display: flex; flex-shrink: 0; gap: 8px; }
 .utility-button {
+    text-decoration: none;
     display: grid;
     place-items: center;
     width: 38px;
@@ -356,9 +357,20 @@ progress::-webkit-progress-bar { background: #0c1729; border-radius: 8px; }
 progress::-webkit-progress-value { background: #83aef2; border-radius: 8px; }
 progress::-moz-progress-bar { background: #83aef2; border-radius: 8px; }
 #ftProgressPercentage { display: block; margin-top: 8px; }
-.transfer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #8fa6c3; font-size: .68rem; }
+.transfer-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #314664;
+    color: #8fa6c3;
+    font-size: .68rem;
+}
+.transfer-page-hint { text-align: center; }
+.transfer-footer .transfer-tools { justify-self: end; margin-left: auto; }
 .security-note { display: flex; align-items: center; gap: 7px; color: #afc0d2; }
-.security-note svg { width: 16px; height: 16px; color: #83aef2; }
+.security-note svg { flex-shrink: 0; width: 16px; height: 16px; color: #83aef2; }
 
 .consent-dialog { padding: 16px; background: #050b17c9; backdrop-filter: blur(8px); }
 .dialog-box, .error-content, .info-content {
@@ -420,7 +432,8 @@ progress::-moz-progress-bar { background: #83aef2; border-radius: 8px; }
     .file-share-fieldset { padding: 14px 16px 16px; }
     .drop-zone { min-height: 168.35px; }
     .upload-panel { padding: 14px; }
-    .transfer-footer { flex-wrap: wrap; gap: 8px; }
+    .transfer-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .transfer-page-hint { display: none; }
 }
 @media (max-width: 480px) {
     body { padding: 12px 10px; }
