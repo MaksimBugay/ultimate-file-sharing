@@ -102,11 +102,25 @@ h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 4vw, 1.9rem); line-height: 1.15;
 .sharing-tools { display: flex; flex-shrink: 0; gap: 8px; }
 .sharing-footer {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-top: 18px;
     padding-top: 16px;
     border-top: 1px solid #314664;
 }
+.sharing-tagline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    margin: 0;
+    color: #afc0d2;
+    font-size: .72rem;
+}
+.sharing-tagline svg { flex: 0 0 16px; width: 16px; height: 16px; color: #83aef2; }
+.sharing-footer .sharing-tools { margin-left: auto; }
 .utility-button {
     text-decoration: none;
     display: grid;
