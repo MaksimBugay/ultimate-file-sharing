@@ -5,11 +5,15 @@
     <link rel="canonical" href="https://secure.fileshare.ovh/file-sharing-embedded.html"/>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ultimate file sharing</title>
+    <style>
+        /* Keep inactive dialogs out of the page even if a stylesheet fails to load. */
+        [class~="consent-dialog"]:not([class~="visible"]) { display: none; }
+    </style>
     <link rel="stylesheet" href="css/consent-dialog.css">
     <link rel="stylesheet" href="css/datetime-picker.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
     <link rel="stylesheet" href="css/url-input.css">
-    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=footer-tagline-16">
+    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=clipboard-dialog-17">
     <meta name="theme-color" content="#0d1420">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
@@ -43,13 +47,16 @@
     </div>
 </div>
 
-<div id="consentDialog" class="consent-dialog">
+<div id="consentDialog" class="consent-dialog" role="dialog" aria-modal="true"
+     aria-labelledby="clipboardDialogTitle" aria-describedby="clipboardDialogDescription">
     <div class="dialog-box">
-        <h2>Clipboard Access Request</h2>
-        <p>This website requires access to your clipboard to perform certain actions. Do you want to allow clipboard
-            access?</p>
-        <button id="allowClipboard">Allow</button>
-        <button id="denyClipboard">Deny</button>
+        <h2 id="clipboardDialogTitle">Clipboard Access Request</h2>
+        <p id="clipboardDialogDescription">Your browser blocked copying to the clipboard. Tap Allow to try again,
+            or Deny to continue without copying.</p>
+        <div class="clipboard-dialog-actions">
+            <button type="button" id="denyClipboard">Deny</button>
+            <button type="button" id="allowClipboard">Allow</button>
+        </div>
     </div>
 </div>
 
