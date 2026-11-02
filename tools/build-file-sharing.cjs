@@ -8,7 +8,7 @@ const bridge = `
 if (document.body.hasAttribute('data-secret-message-page')) {
     Object.assign(window, {PushcaClient, generateAESKeyFromPassword, EncryptionContract,
         arrayBufferToBase64, encryptWithAESUsingContract, decryptAESToArrayBuffer,
-        calculateSha256, byteArrayToBase64, base64ToArrayBuffer, getDeviceSecret});
+        calculateSha256, byteArrayToBase64, base64ToArrayBuffer, getDeviceSecret, isMobile});
     return;
 }
 `;

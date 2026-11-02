@@ -264,9 +264,33 @@
     form.querySelectorAll('[name="mode"]').forEach(input => input.addEventListener('change', updateMode));
     ui.messageInput.addEventListener('input', countInput);
     ui.clearInput.addEventListener('click', () => { ui.messageInput.value = ''; countInput(); ui.messageInput.focus(); });
+    function updateOutputAction() {
+        const share = isMobile() && typeof navigator.share === 'function';
+        ui.copyOutput.textContent = share ? 'Share output' : 'Copy output';
+        ui.copyOutput.title = share ? 'Share output using another app' : 'Copy output to the clipboard';
+    }
+    updateOutputAction();
+    window.addEventListener('resize', updateOutputAction);
     ui.copyOutput.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(ui.messageOutput.value); status('Output copied.'); }
-        catch (_) { ui.messageOutput.focus(); ui.messageOutput.select(); status('Select and copy the output using your browser.', true); }
+        const text = ui.messageOutput.value;
+        if (!text) return;
+        ui.copyOutput.disabled = true;
+        try {
+            if (isMobile() && typeof navigator.share === 'function') {
+                try {
+                    // Invoke directly from the click, before awaiting clipboard work.
+                    await navigator.share({title: mode() === 'encode' ? 'Public phrase' : 'Decoded message', text});
+                    status('Output shared.');
+                    return;
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                }
+            }
+            try { await navigator.clipboard.writeText(text); status('Output copied.'); }
+            catch (_) { ui.messageOutput.focus(); ui.messageOutput.select(); status('Select and copy the output using your browser.', true); }
+        } finally {
+            ui.copyOutput.disabled = busy || !ui.messageOutput.value;
+        }
     });
     form.addEventListener('submit', async event => {
         event.preventDefault();
