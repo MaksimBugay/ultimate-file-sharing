@@ -407,3 +407,102 @@ test('save does not retry other conflicts, malformed errors, or other HTTP statu
         assert.equal(calls, 1);
     }
 });
+
+test('save sends public conversation details separately from encrypted message content', async () => {
+    let body;
+    const page = browser({ fetch: async (_url, options) => {
+        body = JSON.parse(options.body);
+        return { ok: true, json: async () => ({ publicPhrase: 'Coffee by the station.' }) };
+    } });
+    const details = { topic: 'Travel', style: 'Friendly', history: ['Where shall we meet?', 'At the station.'] };
+    await page.textToSecreteMessagePublicPhrase('Private plans 🌍', password, workspace, 'owner', details);
+    assert.deepEqual(body.publicConversationDetails, { ...details, prohibitedMessages: [], locale: 'en' });
+    assert.equal(await page.secretMessageBytesToText(new Uint8Array(Buffer.from(body.message, 'base64')),
+        password, workspace), 'Private plans 🌍');
+    assert.equal(body.ownerSignature, 'owner');
+});
+
+test('save supplies non-null context defaults even when the conversation panel is unused', async () => {
+    let body;
+    const page = browser({ fetch: async (_url, options) => {
+        body = JSON.parse(options.body);
+        return { ok: true, json: async () => ({ publicPhrase: 'A sunny afternoon.' }) };
+    } });
+    await page.textToSecreteMessagePublicPhrase('secret', password, workspace, null, { topic: ' ', style: '', history: [] });
+    assert.deepEqual(body.publicConversationDetails, {
+        topic: 'Weather', style: 'Informal/Casual', history: [], prohibitedMessages: [], locale: 'en'
+    });
+});
+
+test('save rejects invalid public context before a request and accepts exact backend limits', async () => {
+    const page = browser();
+    for (const details of [[], 'context', { topic: 123 }, { style: false },
+        { topic: 't'.repeat(101) }, { style: 's'.repeat(101) }, { history: 'message' },
+        { history: [null] }, { history: ['a'.repeat(250), 'b'.repeat(251)] }]) {
+        await assert.rejects(page.textToSecreteMessagePublicPhrase('secret', password, workspace, null, details), /Conversation/);
+    }
+    let body;
+    const valid = browser({ fetch: async (_url, options) => {
+        body = JSON.parse(options.body);
+        return { ok: true, json: async () => ({ publicPhrase: 'A valid phrase.' }) };
+    } });
+    await valid.textToSecreteMessagePublicPhrase('secret', password, workspace, null,
+        { topic: 't'.repeat(100), style: 's'.repeat(100), history: ['a'.repeat(250), 'b'.repeat(250)] });
+    assert.equal(body.publicConversationDetails.history.join('').length, 500);
+});
+
+test('save retries the backend empty-body 409 without losing public context', async () => {
+    const bodies = [];
+    const page = browser({ fetch: async (_url, options) => {
+        bodies.push(options.body);
+        return bodies.length < 4
+            ? { ok: false, status: 409, text: async () => '' }
+            : { ok: true, json: async () => ({ publicPhrase: 'New phrase.' }) };
+    } });
+    await page.textToSecreteMessagePublicPhrase('secret', password, workspace, null, { history: ['Public context'] });
+    assert.equal(bodies.length, 4);
+    assert.equal(new Set(bodies).size, 1);
+    assert.deepEqual(JSON.parse(bodies[0]).publicConversationDetails.history, ['Public context']);
+});
+
+test('save includes a server description in a 500 error and does not retry it', async () => {
+    let calls = 0;
+    const page = browser({ fetch: async () => {
+        calls++;
+        return { ok: false, status: 500, text: async () => JSON.stringify({ description: 'Phrase generator unavailable' }) };
+    } });
+    await assert.rejects(page.textToSecreteMessagePublicPhrase('secret', password, workspace),
+        /HTTP 500.*Phrase generator unavailable/);
+    assert.equal(calls, 1);
+});
+
+test('live REST API round trip with public conversation details', {
+    skip: process.env.RUN_SECRET_MESSAGE_LIVE !== '1', timeout: 60000
+}, async () => {
+    const page = browser({ fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(25000) }) });
+    const id = `context-test-${webcrypto.randomUUID()}`;
+    const pwd = webcrypto.randomUUID();
+    const text = 'Synthetic encrypted context integration check 🌍';
+    const phrase = await page.textToSecreteMessagePublicPhrase(text, pwd, id, null, {
+        topic: 'Travel', style: 'Friendly', history: ['We are planning a train journey.', 'Shall we meet at the station?']
+    });
+    assert.ok(phrase.trim());
+    assert.equal(await page.secreteMessagePublicPhraseToText(phrase, pwd, id), text);
+});
+
+
+test('public context uses English for omitted/null locale and canonicalizes a chosen language', async () => {
+    let body;
+    const page = browser({fetch: async (_url, options) => {
+        body = JSON.parse(options.body);
+        return {ok: true, json: async () => ({publicPhrase: 'A language-aware phrase.'})};
+    }});
+    for (const [locale, expected] of [[undefined, 'en'], [null, 'en'], ['', 'en'], ['uk', 'uk'], ['pt_BR', 'pt-BR']]) {
+        await page.textToSecreteMessagePublicPhrase('secret', password, workspace, null, {locale});
+        assert.equal(body.publicConversationDetails.locale, expected);
+    }
+    for (const locale of [123, [], {}, 'not a locale', 'en--US']) {
+        await assert.rejects(browser().textToSecreteMessagePublicPhrase('secret', password, workspace, null, {locale}),
+            /Conversation language/);
+    }
+});

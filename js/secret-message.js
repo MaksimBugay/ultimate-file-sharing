@@ -132,6 +132,35 @@ async function secretMessageBytesToText(secretMessageBytes, pwd, workspaceId) {
 }
 
 //====================================with REST API calls===============================================================
+/** Normalize public phrase context to the backend's ConversationDetails contract. */
+function normalizePublicConversationDetails(details) {
+    if (!details || typeof details !== 'object' || Array.isArray(details)) {
+        throw new TypeError('Conversation details must be an object');
+    }
+    const topic = details.topic ?? 'Weather';
+    const style = details.style ?? 'Informal/Casual';
+    if (typeof topic !== 'string' || typeof style !== 'string') {
+        throw new TypeError('Conversation topic and style must be strings');
+    }
+    if (topic.length > 100 || style.length > 100) {
+        throw new Error('Conversation topic and style must each be at most 100 characters');
+    }
+    const history = details.history ?? [];
+    if (!Array.isArray(history) || history.some(message => typeof message !== 'string')) {
+        throw new TypeError('Conversation history must be a list of message strings');
+    }
+    if (history.reduce((total, message) => total + message.length, 0) > 500) {
+        throw new Error('Conversation history must be at most 500 characters in total');
+    }
+    const language = details.locale ?? 'en';
+    if (typeof language !== 'string') throw new TypeError('Conversation language must be a locale string');
+    let locale;
+    try { [locale] = Intl.getCanonicalLocales(language.trim().replace(/_/g, '-') || 'en'); }
+    catch (_) { throw new Error('Conversation language must be a valid locale, such as en or uk'); }
+    return {topic: topic.trim() || 'Weather', style: style.trim() || 'Informal/Casual',
+        history: [...history], prohibitedMessages: [], locale};
+}
+
 /**
  * Encrypt text and save it through the secret-message REST API.
  * Uses PushcaClient.clusterBaseUrl; the server receives encrypted bytes and a
@@ -140,9 +169,12 @@ async function secretMessageBytesToText(secretMessageBytes, pwd, workspaceId) {
  * @param {string} pwd
  * @param {string} workspaceId
  * @param {string|null} [ownerSignature=null]
+ * @param {{topic?: string, style?: string, history?: string[], locale?: string|null}|null} [publicConversationDetails=null]
+ * Public context sent to the server to guide phrase generation (not encrypted).
  * @returns {Promise<string>} Public phrase returned by the server.
  */
-async function textToSecreteMessagePublicPhrase(input, pwd, workspaceId, ownerSignature = null) {
+async function textToSecreteMessagePublicPhrase(input, pwd, workspaceId, ownerSignature = null, publicConversationDetails = null) {
+    const context = publicConversationDetails === null ? null : normalizePublicConversationDetails(publicConversationDetails);
     const messageBytes = await textIntoSecretMessageBytes(input, pwd, workspaceId);
     if (messageBytes.byteLength > 8 * 1024) {
         throw new Error('Encrypted secret message exceeds the 8 KiB API limit');
@@ -153,7 +185,8 @@ async function textToSecreteMessagePublicPhrase(input, pwd, workspaceId, ownerSi
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-            message: byteArrayToBase64(messageBytes), workspaceId, passwordHash, ownerSignature
+            message: byteArrayToBase64(messageBytes), workspaceId, passwordHash, ownerSignature,
+            ...(context === null ? {} : {publicConversationDetails: context})
         })
     };
     let response;
@@ -162,13 +195,24 @@ async function textToSecreteMessagePublicPhrase(input, pwd, workspaceId, ownerSi
         response = await fetch(url, options);
         if (response.ok) break;
         let errorBody;
-        if (response.status === 409) {
-            try { errorBody = await response.json(); } catch (_) { /* Not a collision response. */ }
-        }
+        let emptyBody = false;
+        try {
+            if (typeof response.text === 'function') {
+                const body = await response.text();
+                emptyBody = !body.trim();
+                if (!emptyBody) errorBody = JSON.parse(body);
+            } else {
+                errorBody = await response.json();
+            }
+        } catch (_) { /* Preserve the HTTP error for non-JSON responses. */ }
+        // The backend documents this collision but may return an empty 409 body.
         const collision = response.status === 409 &&
-            errorBody?.description === 'Public phrase is already used';
+            (emptyBody || errorBody?.description === 'Public phrase is already used');
         if (!collision || retry === 3) {
-            throw new Error(`Failed to save secret message (HTTP ${response.status})${collision ? ': Public phrase is already used' : ''}`);
+            const description = collision ? 'Public phrase is already used' :
+                errorBody?.description || errorBody?.detail || errorBody?.message;
+            const detail = typeof description === 'string' ? `: ${description.slice(0, 300)}` : '';
+            throw new Error(`Failed to save secret message (HTTP ${response.status})${detail}`);
         }
     }
     const result = await response.json();
