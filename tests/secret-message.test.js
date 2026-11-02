@@ -371,3 +371,39 @@ test('public phrase reader rejects missing messages, malformed data, and authent
         await assert.rejects(page.secreteMessagePublicPhraseToText('phrase', password, workspace));
     }
 });
+
+test('save retries phrase collisions up to three times with the same encrypted request', async () => {
+    const bodies = [];
+    const page = browser({ fetch: async (_url, options) => {
+        bodies.push(options.body);
+        return bodies.length < 4
+            ? { ok: false, status: 409, json: async () => ({ description: 'Public phrase is already used' }) }
+            : { ok: true, json: async () => ({ publicPhrase: 'A fresh phrase' }) };
+    } });
+    assert.equal(await page.textToSecreteMessagePublicPhrase('secret', password, workspace), 'A fresh phrase');
+    assert.equal(bodies.length, 4);
+    assert.equal(new Set(bodies).size, 1);
+});
+
+test('save stops after three collision retries', async () => {
+    let calls = 0;
+    const page = browser({ fetch: async () => {
+        calls++;
+        return { ok: false, status: 409, json: async () => ({ description: 'Public phrase is already used' }) };
+    } });
+    await assert.rejects(page.textToSecreteMessagePublicPhrase('secret', password, workspace), /HTTP 409.*Public phrase is already used/);
+    assert.equal(calls, 4);
+});
+
+test('save does not retry other conflicts, malformed errors, or other HTTP statuses', async () => {
+    for (const [status, json] of [
+        [409, async () => ({ description: 'Different conflict' })],
+        [409, async () => { throw new Error('Not JSON'); }],
+        [500, async () => ({ description: 'Public phrase is already used' })]
+    ]) {
+        let calls = 0;
+        const page = browser({ fetch: async () => { calls++; return { ok: false, status, json }; } });
+        await assert.rejects(page.textToSecreteMessagePublicPhrase('secret', password, workspace), new RegExp(`HTTP ${status}`));
+        assert.equal(calls, 1);
+    }
+});

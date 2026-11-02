@@ -148,18 +148,28 @@ async function textToSecreteMessagePublicPhrase(input, pwd, workspaceId, ownerSi
         throw new Error('Encrypted secret message exceeds the 8 KiB API limit');
     }
     const passwordHash = await calculateSha256(new TextEncoder().encode(pwd));
-    const response = await fetch(PushcaClient.clusterBaseUrl.replace(/\/$/, '') + '/pushca/secret-message/save', {
+    const url = PushcaClient.clusterBaseUrl.replace(/\/$/, '') + '/pushca/secret-message/save';
+    const options = {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-            message: byteArrayToBase64(messageBytes),
-            workspaceId,
-            passwordHash,
-            ownerSignature
+            message: byteArrayToBase64(messageBytes), workspaceId, passwordHash, ownerSignature
         })
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to save secret message (HTTP ${response.status})`);
+    };
+    let response;
+    // One initial request plus at most three retries, only for phrase collisions.
+    for (let retry = 0; retry <= 3; retry++) {
+        response = await fetch(url, options);
+        if (response.ok) break;
+        let errorBody;
+        if (response.status === 409) {
+            try { errorBody = await response.json(); } catch (_) { /* Not a collision response. */ }
+        }
+        const collision = response.status === 409 &&
+            errorBody?.description === 'Public phrase is already used';
+        if (!collision || retry === 3) {
+            throw new Error(`Failed to save secret message (HTTP ${response.status})${collision ? ': Public phrase is already used' : ''}`);
+        }
     }
     const result = await response.json();
     if (!result || typeof result.publicPhrase !== 'string' || !result.publicPhrase.trim()) {
