@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Secure FileShare: Protected content</title>
     <meta name="theme-color" content="#0d1420">
-    <link rel="stylesheet" href="css/protected-binary-ex.css?v=20261012">
+    <link rel="stylesheet" href="css/protected-binary-ex.css?v=20261103-compact-intro-2">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="images/file-sharing16.png">
@@ -31,7 +31,7 @@
 </head>
 <body>
 <a class="skip-link" href="#protectedContent">Skip to protected content</a>
-<iframe class="protected-header" src="html/header-modern.html#protected-download-header"
+<iframe class="protected-header" src="html/header-modern.html?v=home-link-1#protected-download-header"
         width="100%" height="102" title="Secure FileShare navigation"></iframe>
 <main id="protectedContent" class="main-container-full-height" tabindex="-1">
     <p id="errorMessage" role="alert" style="display: none;"></p>
@@ -92,11 +92,9 @@
                     <svg class="icon" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg>
                 </span>
                 <p class="eyebrow">PROTECTED CONTENT</p>
-                <h1>Unlock your shared file</h1>
-                <p class="intro-copy">Enter the password from the owner to access this content.</p>
             </div>
             <div class="input-group">
-                <label for="password">Password</label>
+                <label for="password" class="password-label">Password (Don't have it? Contact the content owner)</label>
                 <div class="password-container">
                     <input type="password" id="password" name="password" placeholder="Enter password" autocomplete="current-password" required>
                     <button type="button" id="togglePassword" class="toggle-password"

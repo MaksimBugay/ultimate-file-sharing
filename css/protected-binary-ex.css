@@ -85,13 +85,13 @@ h1, h2, h3, p { margin: 0; }
         0 24px 60px #03091470, 0 4px 12px #03091450;
 }
 .content-details-container { width: 100%; min-width: 0; }
-.access-intro { margin-bottom: 26px; padding-bottom: 25px; border-bottom: 1px solid var(--border); }
+.access-intro { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; padding-bottom: 25px; border-bottom: 1px solid var(--border); }
 .access-icon {
     display: grid;
     place-items: center;
+    flex-shrink: 0;
     width: 52px;
     height: 52px;
-    margin-bottom: 22px;
     border: 1px solid #496b98;
     border-radius: 16px;
     background: linear-gradient(145deg, #294d7b, #1b3457);
@@ -99,11 +99,12 @@ h1, h2, h3, p { margin: 0; }
     color: var(--blue);
 }
 .access-icon .icon { width: 27px; height: 27px; }
-.eyebrow { margin-bottom: 8px; color: #83aef2; font-size: .65rem; font-weight: 700; letter-spacing: .14em; }
+.eyebrow { margin: 0; white-space: nowrap; color: #83aef2; font-size: .65rem; font-weight: 700; letter-spacing: .14em; }
 h1 { font-size: clamp(1.4rem, 4.5vw, 1.8rem); line-height: 1.2; font-weight: 650; letter-spacing: -.035em; }
 .intro-copy { max-width: 360px; margin-top: 12px; color: var(--muted); font-size: .875rem; line-height: 1.7; }
 .input-group { width: 100%; min-width: 0; margin-bottom: 20px; }
 label { display: block; margin-bottom: 8px; color: #e0edff; font-size: .8125rem; font-weight: 600; }
+.password-label { white-space: nowrap; font-size: clamp(.5rem, 2.4vw, .75rem); font-weight: 400; }
 input[type="text"], input[type="password"], textarea {
     width: 100%;
     min-width: 0;
@@ -236,7 +237,7 @@ input:focus, textarea:focus { border-color: #83aef2; }
 }
 @media (max-width: 400px) {
     .login-container { padding: 22px 18px; border-radius: 20px; }
-    .access-icon { width: 46px; height: 46px; margin-bottom: 18px; border-radius: 14px; }
+    .access-icon { width: 46px; height: 46px; border-radius: 14px; }
     .intro-copy { font-size: .8125rem; }
     .reuse-credentials label { font-size: .75rem; }
     .misc-header { padding-inline: 12px; }
