@@ -30,7 +30,7 @@
        style="color: red; font-size: 20px; font-weight: bold;  display: none; position: absolute; z-index: 1000"></p>
 
     <div id="contentContainer" style="padding: 3px;background-color: white;display: none;">
-        <img id="contentImage" class="media-content-container" src="images/how-to-medium.png"
+        <img id="contentImage" class="media-content-container" src="images/how-to.png"
              alt="Open image in browser">
         <embed id="pdfViewer" type="application/pdf" class="pdf-content-container" width="100%" height="100%" />
         <video id="contentVideoPlayer" controls width="600" class="media-content-container">
@@ -78,11 +78,11 @@
             </div>
             <div class="input-group">
                 <input type="checkbox" id="reuseCredentialsCheckbox"/>
-                Use for all content from that owner
+                <label for="reuseCredentialsCheckbox">Use for all content from that owner</label>
             </div>
-            <input type="checkbox" id="openInBrowserCheckbox" checked style="display: none"/>
+            <input type="checkbox" id="openInBrowserCheckbox" aria-label="Open content in browser" checked style="display: none"/>
             <div id="pastCredentialsContainer" class="memo-container">
-            <textarea id="pastCredentials" rows="2" cols="30"
+            <textarea id="pastCredentials" aria-label="Credentials received from the content owner" rows="2" cols="30"
                       placeholder="Past string with credentials received from owner here or enter workspace ID and password manually"></textarea>
             </div>
             <div class="input-group" style="margin-bottom: 5px">
@@ -109,7 +109,7 @@
 <script src="js/pushca-binary-helper.js?v=<?= time(); ?>"></script>
 <script src="js/shared-binary.js?v=<?= time(); ?>"></script>
 <script src="js/protected-binary-commons.js?v=password-verifier-1"></script>
-<script src="js/protected-binary-ws.js?v=<?= time(); ?>"></script>
+<script src="js/protected-binary-ws.js?v=20261103-manifest-redirects"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
     window.dataLayer = window.dataLayer || [];

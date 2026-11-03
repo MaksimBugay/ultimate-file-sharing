@@ -27,6 +27,7 @@ async function downloadPublicBinaryManifest(workspaceId, binaryId, pageId, human
         humanToken: humanToken
     };
 
+    let failure;
     try {
         const response = await fetch(url, {
             method: "POST",
@@ -36,16 +37,22 @@ async function downloadPublicBinaryManifest(workspaceId, binaryId, pageId, human
             body: JSON.stringify(requestData)
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+        if (response.redirected) {
+            window.location.replace(response.url);
+            return null;
         }
-
-        return await response.json();
-
+        if (response.ok) {
+            return await response.json();
+        }
+        failure = new Error(`HTTP error! Status: ${response.status}`);
     } catch (error) {
-        console.error("Error during fetching binary manifest:", error);
-        throw error; // Rethrow error to handle it in the calling function
+        failure = error;
     }
+    console.error("Error during fetching binary manifest:", failure);
+    document.getElementById('contentPreviewContainer')?.remove();
+    errorMessage.textContent = 'Unable to load this file. Please try again.';
+    errorMessage.style.display = 'block';
+    throw failure; // Callers must stop before processing a missing manifest.
 }
 
 /**
@@ -174,6 +181,7 @@ async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, human
     let binaryMimeType;
     try {
         const manifest = await downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken);
+        if (!manifest) return;
         binaryMimeType = manifest.mimeType;
         encodedNameSuffix = `/${encodeURIComponent(manifest.name)}`;
     } catch (error) {
@@ -184,6 +192,7 @@ async function openPublicBinaryInTheSameTab(workspaceId, binaryId, pageId, human
             JSON.stringify(error);
 
         console.log(`Failed to load manifest:\n${message}`);
+        return;
     }
     let directDownloadUrl = `${serverUrl}/binary/${workspaceId}/${binaryId}${encodedNameSuffix}`;
     if (isPlayableMedia(binaryMimeType)) {
@@ -322,8 +331,13 @@ if (!humanOnly) {
             }
         }
 
-        manifest = await downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken);
+        try {
+            manifest = await downloadPublicBinaryManifest(workspaceId, binaryId, pageId, humanToken);
+        } catch (error) {
+            return userActionRequired;
+        }
 
+        if (!manifest) return userActionRequired;
         contentSize = manifest.datagrams.reduce((sum, datagram) => sum + datagram.size, 0);
         if (contentSize < MemoryBlock.MB100) {
             openInBrowserFlag = true;

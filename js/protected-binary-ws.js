@@ -102,6 +102,10 @@ async function downloadProtectedBinaryManifest(pwd, workspaceId, suffix) {
         },
         body: JSON.stringify(signedRequest)
     });
+    if (response.redirected) {
+        window.location.replace(response.url);
+        return null;
+    }
     if (!response.ok) {
         console.error('Failed download protected binary attempt ' + response.statusText);
         showErrorMessage('Failed download protected binary attempt ' + response.statusText);
