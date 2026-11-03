@@ -48,4 +48,8 @@
         <changefreq>yearly</changefreq>
         <priority>0.64</priority>
     </url>
+    <url>
+        <loc>https://secure.fileshare.ovh/secret-message.html</loc>
+        <lastmod>2026-11-02</lastmod>
+    </url>
 </urlset>
