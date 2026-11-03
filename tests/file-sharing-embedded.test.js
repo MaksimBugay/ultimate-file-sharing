@@ -70,7 +70,7 @@ function sharingHarness({finePointer = true, hover = true} = {}) {
             const listeners = new Map();
             const attributes = new Map();
             elements.set(id, {
-                id, style: {}, disabled: false, checked: false, value: '', hidden: false, readOnly: false, focusCalls: [],
+                id, style: {}, disabled: false, checked: false, value: id === 'downloadLimitInput' ? '1' : '', hidden: false, readOnly: false, focusCalls: [],
                 classList: {add() {}, remove() {}, contains: () => false},
                 addEventListener: (event, callback) => listeners.set(event, callback),
                 dispatch: (event, detail = {}) => listeners.get(event)?.(detail),
@@ -331,3 +331,138 @@ test('desktop clipboard focus preserves selected text and skips inactive or bloc
     h.element('heading').dispatch('click');
     assert.equal(h.context.document.activeElement, password);
 });
+
+
+test('removal tabs default to expiration and preserve the selected date when switching back', () => {
+    const h = sharingHarness();
+    vm.runInContext('FileSharing.binaryLinkExpirationTime = 1900000000;', h.context);
+    assert.equal(h.element('expirationTimeTab').getAttribute('aria-selected'), 'true');
+    assert.equal(h.element('downloadLimitPanel').hidden, true);
+    assert.equal(vm.runInContext('getBinaryLinkDownloadLimit()', h.context), null);
+    assert.equal(vm.runInContext('getBinaryLinkExpirationTime()', h.context), 1900000000);
+    h.element('expirationTimeTab').dispatch('keydown', {key: 'ArrowRight', preventDefault() {}});
+    assert.equal(h.context.document.activeElement, h.element('downloadLimitTab'));
+    assert.equal(h.element('expirationTimePanel').hidden, true);
+    assert.equal(h.element('downloadLimitPanel').hidden, false);
+    assert.equal(h.element('downloadLimitInput').disabled, false);
+    assert.equal(vm.runInContext('getBinaryLinkDownloadLimit()', h.context), 1);
+    const nowPlus30Days = Math.floor(Date.now() / 1000) + 30 * 86400;
+    assert.ok(Math.abs(vm.runInContext('getBinaryLinkExpirationTime()', h.context) - nowPlus30Days) <= 1);
+    h.element('downloadLimitTab').dispatch('keydown', {key: 'Home', preventDefault() {}});
+    assert.equal(h.context.document.activeElement, h.element('expirationTimeTab'));
+    assert.equal(h.element('downloadLimitInput').disabled, true);
+    assert.equal(vm.runInContext('getBinaryLinkDownloadLimit()', h.context), null);
+    assert.equal(vm.runInContext('getBinaryLinkExpirationTime()', h.context), 1900000000);
+});
+
+test('download limits accept digits only and reject invalid counts before uploading', async () => {
+    const h = sharingHarness();
+    h.element('downloadLimitTab').dispatch('click');
+    h.element('downloadLimitInput').value = 'a1b2!';
+    h.element('downloadLimitInput').dispatch('input');
+    assert.equal(h.element('downloadLimitInput').value, '12');
+    assert.equal(vm.runInContext('getBinaryLinkDownloadLimit()', h.context), 12);
+    for (const value of ['', '0', '-1', '1.5', '1e2', 'abc', '9007199254740992']) {
+        h.element('downloadLimitInput').value = value;
+        await assert.rejects(vm.runInContext('processSelectedFiles([{}])', h.context), /positive whole number/);
+        await assert.rejects(vm.runInContext('processClipboardItems([])', h.context), /positive whole number/);
+    }
+});
+
+test('download-limit mode prevents unrestricted remote-stream publication', () => {
+    const h = sharingHarness();
+    h.element('remoteStreamTab').dispatch('click');
+    h.element('downloadLimitTab').dispatch('click');
+    assert.equal(h.element('remoteStreamTab').disabled, true);
+    assert.equal(h.element('remoteStreamUrlSection').hidden, true);
+    assert.equal(h.element('selectFilesSection').hidden, false);
+    h.element('expirationTimeTab').dispatch('click');
+    assert.equal(h.element('remoteStreamTab').disabled, false);
+});
+
+test('removal settings cannot change while an upload is running', async () => {
+    const h = sharingHarness();
+    h.element('downloadLimitTab').dispatch('click');
+    let finish;
+    h.context.processAttempt = () => new Promise(resolve => { finish = resolve; });
+    const pending = vm.runInContext('shareContent(processAttempt)', h.context);
+    assert.equal(h.element('expirationTimeTab').disabled, true);
+    assert.equal(h.element('downloadLimitTab').disabled, true);
+    assert.equal(h.element('downloadLimitInput').disabled, true);
+    h.element('expirationTimeTab').dispatch('click');
+    assert.equal(h.element('downloadLimitPanel').hidden, false);
+    finish();
+    await pending;
+    assert.equal(h.element('expirationTimeTab').disabled, false);
+    assert.equal(h.element('downloadLimitInput').disabled, false);
+});
+
+for (const password of [null, 'private-password']) {
+    for (const entryPoint of ['file', 'clipboard']) {
+        test(`${entryPoint} ${password ? 'protected' : 'public'} uploads preserve removal settings in manifests and leave thumbnails unlimited`, async () => {
+            const h = sharingHarness();
+            const cached = [];
+            h.context.cached = cached;
+            h.context.sample = new Blob(['content'], {type: 'image/png'});
+            h.context.sample.name = 'picture.png';
+            h.context.samplePassword = password;
+            // Use the real manifest factory, serialization, and file/blob upload chains.
+            vm.runInContext(fs.readFileSync(require.resolve('../js/pushca-binary-helper.js'), 'utf8'), h.context);
+            vm.runInContext(`
+                isArrayNotEmpty = value => Array.isArray(value) && value.length > 0;
+                ClientFilter = class { constructor(workSpaceId) { this.workSpaceId = workSpaceId; } };
+                PushcaClient.ClientObj = {workSpaceId: 'workspace'};
+                FileSharing.workSpaceId = 'workspace';
+                WaiterResponseType = {SUCCESS: 'success', ERROR: 'error'};
+                WaiterResponse = class { constructor(type, body) { this.type = type; this.body = body; } };
+                CallableFuture = {
+                    callAsynchronously: async (_timeout, _id, callback) => {
+                        let captured;
+                        CallableFuture.releaseWaiterIfExistsWithSuccess = (_id, body) => { captured = body; };
+                        callback('waiter');
+                        await Promise.resolve();
+                        return {type: 'success', body: captured};
+                    }
+                };
+                createPrivateUrlSuffix = async () => 'private-suffix';
+                generateEncryptionContract = async () => ({base64Key: 'key', base64IV: 'iv'});
+                getReadMeText = async () => 'description';
+                readFileSequentially = async () => true;
+                blobToArrayBuffers = async () => [];
+                executeWithShowProgressBar = async callback => callback({setProgress() {}});
+                saveBinaryManifestToDatabase = async () => ({type: 'success'});
+                cacheBinaryManifestInCloud = async manifest => {
+                    cached.push(manifest.toDbJSON());
+                    return {type: 'success'};
+                };
+                sharePublicUrlViaInfoMessage = async () => {};
+                buildPublicUrl = async () => 'https://example.com/file';
+                ThumbnailGenerator = {buildAndSaveThumbnail: async (_id, blob, _name, type, _description, save, expiry) => {
+                    await save('thumbnail-id', 'thumbnail', 'thumbnail-picture.png', type, blob, expiry);
+                }};
+            `, h.context);
+            if (password) {
+                h.element('passwordInput').value = password;
+                vm.runInContext('makeShareWithPasswordUiAdjustments()', h.context);
+            }
+            const upload = () => vm.runInContext(entryPoint === 'file'
+                ? 'processSelectedFiles([sample])'
+                : 'processClipboardItems([{kind: "file", getAsFile: () => sample}])', h.context);
+            h.element('downloadLimitTab').dispatch('click');
+            h.element('downloadLimitInput').value = '3';
+            vm.runInContext('FileSharing.binaryLinkExpirationTime = 1900000000;', h.context);
+            const expiry = Math.floor(Date.now() / 1000) + 30 * 86400;
+            await upload();
+            assert.equal(cached.length, 2);
+            assert.equal(cached[0].numberOfDownloads, null);
+            assert.equal(cached[1].numberOfDownloads, 3);
+            assert.equal(cached[1].password, password);
+            assert.ok(Math.abs(cached[1].expireAt - expiry) <= 1);
+            assert.equal(cached[0].expireAt, cached[1].expireAt);
+            h.element('expirationTimeTab').dispatch('click');
+            await upload();
+            assert.equal(cached[3].numberOfDownloads, null);
+            assert.equal(cached[3].expireAt, 1900000000);
+        });
+    }
+}

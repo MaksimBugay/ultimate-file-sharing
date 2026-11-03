@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="css/datetime-picker.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
     <link rel="stylesheet" href="css/url-input.css">
-    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=clipboard-dialog-17">
+    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=removal-tabs-19">
     <meta name="theme-color" content="#0d1420">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
@@ -124,9 +124,20 @@
             </div>
 
             <fieldset class="file-share-fieldset expiration-panel">
-                <legend class="file-share-legend">Remove after</legend>
-                <p class="field-hint">Set an expiration for your content.</p>
-                <div id="additionalRulesContainer" class="centered-container"></div>
+                <legend class="file-share-legend">Remove when</legend>
+                <div class="sharing-tabs removal-tabs" role="tablist" aria-label="Content removal condition">
+                    <button type="button" id="expirationTimeTab" class="sharing-tab" role="tab"
+                            aria-controls="expirationTimePanel" aria-selected="true" tabindex="0">Expiration time reached</button>
+                    <button type="button" id="downloadLimitTab" class="sharing-tab" role="tab"
+                            aria-controls="downloadLimitPanel" aria-selected="false" tabindex="-1">Download limit exceeded</button>
+                </div>
+                <div id="expirationTimePanel" class="sharing-tab-panel" role="tabpanel" aria-labelledby="expirationTimeTab">
+                    <div id="additionalRulesContainer" class="centered-container"></div>
+                </div>
+                <div id="downloadLimitPanel" class="sharing-tab-panel" role="tabpanel" aria-labelledby="downloadLimitTab" hidden>
+                    <input id="downloadLimitInput" class="download-limit-input" type="text" inputmode="numeric"
+                           pattern="[0-9]+" maxlength="16" value="1" aria-label="Number of downloads" required disabled>
+                </div>
             </fieldset>
 
             <div id="transReceiverContainer">
@@ -223,7 +234,7 @@
 
 <script src="js/datetime-picker.js?v=<?= time(); ?>"></script>
 <script src="js/url-input.js?v=<?= time(); ?>"></script>
-<script src="js/file.sharing.min.js?v=password-verifier-1"></script>
+<script src="js/file.sharing.min.js?v=download-limit-1"></script>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>

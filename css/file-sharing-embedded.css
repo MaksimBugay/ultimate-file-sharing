@@ -231,25 +231,39 @@ h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 4vw, 1.9rem); line-height: 1.15;
 .fancy-password-input-with-warning::placeholder { color: #ff9d9d; }
 #selectFilesContainer { display: grid; gap: 18px; }
 .upload-panel { background: linear-gradient(135deg, #1c314b, #13243b); }
-.sharing-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid #314664; }
+.sharing-tabs { display: flex; flex-wrap: wrap; gap: 20px; border-bottom: 1px solid #314664; }
 .sharing-tab {
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
     min-height: 44px;
-    padding: 10px 14px;
-    border: 1px solid transparent;
-    border-radius: 10px;
+    padding: 10px 0;
+    margin-bottom: -1px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     background: transparent;
+    box-shadow: none;
     color: #afc0d2;
     text-align: left;
     font-size: .85rem;
     font-weight: 700;
 }
-#remoteStreamTab[aria-selected="false"] { border-color: #68717d; }
-.sharing-tab:hover:enabled { background: #243e60; color: #edf3fa; }
-.sharing-tab[aria-selected="true"] { border-color: #659aeb; background: #1d3a60; color: #edf3fa; }
+.sharing-tab:hover:enabled { background: transparent; color: #edf3fa; }
+.sharing-tab[aria-selected="true"] { border-bottom-color: #659aeb; color: #edf3fa; }
+.removal-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.removal-tabs .sharing-tab { font-size: .78rem; line-height: 1.4; }
+.download-limit-input {
+    width: 100%;
+    max-width: 300px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid #37506e;
+    border-radius: 10px;
+    background: #0c1729;
+    color: #edf3fa;
+}
 .sharing-tab .experimental-badge { margin-left: 0; }
 .sharing-tab-panel { min-width: 0; width: 100%; margin: 0; padding: 0; border: 0; }
 .sharing-tab-panel[hidden] { display: none; }

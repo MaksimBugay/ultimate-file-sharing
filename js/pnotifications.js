@@ -494,6 +494,9 @@ PushcaClient.serverBaseUrl = 'http://localhost:8080'
 PushcaClient.pusherInstanceId = null;
 PushcaClient.verbose = false;
 PushcaClient.uploadBinaryLimitWasReached = false;
+PushcaClient.downloadLimitWasExceeded = false;
+
+const DOWNLOAD_LIMIT_EXCEEDED_ERROR = "number-of-downloads-exceeded";
 
 //handlers
 PushcaClient.onOpenHandler = null;
@@ -1188,10 +1191,31 @@ PushcaClient.sendUploadBinaryAppeal = async function (owner, binaryId, chunkSize
 
     let commandWithId = PushcaClient.buildCommandMessage(Command.SEND_UPLOAD_BINARY_APPEAL, metaData);
     let result = await PushcaClient.executeWithRepeatOnFailure(null, commandWithId)
+    if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
+        const error = parseWsResponseError(result.body);
+        if (error) {
+            result = new WaiterResponse(WaiterResponseType.ERROR, error);
+        }
+    }
     if (WaiterResponseType.ERROR === result.type) {
         console.log("Failed send upload binary appeal attempt: " + result.body);
     }
     return result;
+}
+
+/**
+ * Extract error code from a command response body like {"error":"..."}
+ *
+ * @param body - raw response body
+ * @returns error code or null if the response is not an error
+ */
+function parseWsResponseError(body) {
+    try {
+        const response = JSON.parse(body);
+        return (response && response.error) ? response.error : null;
+    } catch (e) {
+        return null;
+    }
 }
 
 PushcaClient.downloadBinaryChunk = async function (owner, binaryId, order, chunkSize) {
@@ -1218,10 +1242,17 @@ PushcaClient.downloadBinaryChunk = async function (owner, binaryId, order, chunk
                 ownerFilter, binaryId, chunkSize, false, [order]
             ).then(result => {
                 if (WaiterResponseType.ERROR === result.type) {
-                    CallableFuture.releaseWaiterIfExistsWithError(chunkId, "Failed download binary chunk attempt: " + result.body);
+                    if (DOWNLOAD_LIMIT_EXCEEDED_ERROR === result.body) {
+                        PushcaClient.downloadLimitWasExceeded = true;
+                        CallableFuture.releaseWaiterIfExistsWithError(chunkId, DOWNLOAD_LIMIT_EXCEEDED_ERROR);
+                    } else {
+                        CallableFuture.releaseWaiterIfExistsWithError(chunkId, "Failed download binary chunk attempt: " + result.body);
+                    }
                 }
             });
-        }
+        },
+        false,
+        (failure) => DOWNLOAD_LIMIT_EXCEEDED_ERROR === failure.body
     );
     if (WaiterResponseType.ERROR === result.type) {
         console.log(`Failed send chunk of binary with id ${binaryId} and order = ${order} attempt: ` + result.body);

@@ -51,14 +51,52 @@ const toolBarPasteArea = document.getElementById('toolBarPasteArea');
 const selectFilesTab = document.getElementById('selectFilesTab');
 const remoteStreamTab = document.getElementById('remoteStreamTab');
 let activeSharingTab = 'files';
+const expirationTimeTab = document.getElementById('expirationTimeTab');
+const downloadLimitTab = document.getElementById('downloadLimitTab');
+const expirationTimePanel = document.getElementById('expirationTimePanel');
+const downloadLimitPanel = document.getElementById('downloadLimitPanel');
+const downloadLimitInput = document.getElementById('downloadLimitInput');
+let activeRemovalTab = 'expiration';
+
+function updateRemovalTabs(busy) {
+    const expirationSelected = activeRemovalTab === 'expiration';
+    expirationTimeTab.disabled = busy;
+    downloadLimitTab.disabled = busy;
+    expirationTimeTab.setAttribute('aria-selected', String(expirationSelected));
+    downloadLimitTab.setAttribute('aria-selected', String(!expirationSelected));
+    expirationTimeTab.tabIndex = expirationSelected ? 0 : -1;
+    downloadLimitTab.tabIndex = expirationSelected ? -1 : 0;
+    expirationTimePanel.hidden = !expirationSelected;
+    downloadLimitPanel.hidden = expirationSelected;
+    downloadLimitInput.disabled = busy || expirationSelected;
+}
+
+function selectRemovalTab(tab) {
+    const button = tab === 'downloads' ? downloadLimitTab : expirationTimeTab;
+    if (button.disabled) return;
+    activeRemovalTab = tab;
+    updateSharingTabs();
+}
+
+function getBinaryLinkDownloadLimit() {
+    if (activeRemovalTab !== 'downloads') return null;
+    const value = downloadLimitInput.value;
+    const count = Number(value);
+    if (!/^[0-9]+$/.test(value) || !Number.isSafeInteger(count) || count < 1) {
+        throw new Error('Enter a positive whole number for the download limit.');
+    }
+    return count;
+}
 
 function updateSharingTabs() {
-    if (protectWithPasswordChoice.checked) {
+    if (protectWithPasswordChoice.checked || activeRemovalTab === 'downloads') {
         activeSharingTab = 'files';
     }
     const busy = remoteStreamUrlSection.disabled || selectFilesBtn.disabled;
     selectFilesTab.disabled = busy;
-    remoteStreamTab.disabled = busy || protectWithPasswordChoice.checked;
+    remoteStreamTab.disabled = busy || protectWithPasswordChoice.checked || activeRemovalTab === 'downloads';
+    remoteStreamTab.title = activeRemovalTab === 'downloads' ? 'Remote streams require expiration-time removal.' : '';
+    updateRemovalTabs(busy);
     const filesSelected = activeSharingTab === 'files';
     selectFilesTab.setAttribute('aria-selected', String(filesSelected));
     remoteStreamTab.setAttribute('aria-selected', String(!filesSelected));
@@ -78,25 +116,29 @@ function selectSharingTab(tab) {
     updateSharingTabs();
 }
 
-function initSharingTabs() {
-    [[selectFilesTab, 'files'], [remoteStreamTab, 'stream']].forEach(([button, tab]) => {
-        button.addEventListener('click', () => selectSharingTab(tab));
+function bindTabEvents(tabs, selectTab) {
+    tabs.forEach(([button, tab]) => {
+        button.addEventListener('click', () => selectTab(tab));
         button.addEventListener('keydown', event => {
-            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
-                return;
-            }
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
             event.preventDefault();
-            const enabledTabs = [selectFilesTab, remoteStreamTab].filter(item => !item.disabled);
-            if (!enabledTabs.length) {
-                return;
-            }
-            const index = enabledTabs.indexOf(button);
+            const enabledTabs = tabs.filter(([item]) => !item.disabled);
+            if (!enabledTabs.length) return;
+            const index = enabledTabs.findIndex(([item]) => item === button);
             const next = event.key === 'Home' ? enabledTabs[0]
                 : event.key === 'End' ? enabledTabs[enabledTabs.length - 1]
                 : enabledTabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + enabledTabs.length) % enabledTabs.length];
-            selectSharingTab(next === remoteStreamTab ? 'stream' : 'files');
-            next.focus();
+            selectTab(next[1]);
+            next[0].focus();
         });
+    });
+}
+
+function initSharingTabs() {
+    bindTabEvents([[selectFilesTab, 'files'], [remoteStreamTab, 'stream']], selectSharingTab);
+    bindTabEvents([[expirationTimeTab, 'expiration'], [downloadLimitTab, 'downloads']], selectRemovalTab);
+    downloadLimitInput.addEventListener('input', () => {
+        downloadLimitInput.value = downloadLimitInput.value.replace(/[^0-9]/g, '');
     });
     updateSharingTabs();
 }
@@ -174,7 +216,7 @@ function currentTimestampPlusDays(n) {
 }
 
 function getBinaryLinkExpirationTime() {
-    if (FileSharing.binaryLinkExpirationTime) {
+    if (activeRemovalTab === 'expiration' && FileSharing.binaryLinkExpirationTime) {
         return FileSharing.binaryLinkExpirationTime;
     } else {
         return currentTimestampPlusDays(30);
@@ -182,6 +224,7 @@ function getBinaryLinkExpirationTime() {
 }
 
 async function processSelectedFiles(files) {
+    const numberOfDownloads = getBinaryLinkDownloadLimit();
     let i = 0;
     FileSharing.extraProgressHandler = function () {
         i += 1;
@@ -201,7 +244,8 @@ async function processSelectedFiles(files) {
             await getReadMeText(),
             protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false,
             (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null,
-            getBinaryLinkExpirationTime()
+            getBinaryLinkExpirationTime(),
+            numberOfDownloads
         );
     }
 }
@@ -345,6 +389,7 @@ async function processClipboardItems(clipboardItems) {
     const forHuman = protectionAttributes ? (ProtectionType.CAPTCHA === protectionAttributes.type) : false;
     const binaryPassword = (protectionAttributes && (ProtectionType.PASSWORD === protectionAttributes.type)) ? protectionAttributes.pwd : null;
     const expiredAt = getBinaryLinkExpirationTime();
+    const numberOfDownloads = getBinaryLinkDownloadLimit();
 
     for (let item of clipboardItems) {
         if (item.kind === 'file') {
@@ -360,7 +405,8 @@ async function processClipboardItems(clipboardItems) {
                 blob,
                 forHuman,
                 binaryPassword,
-                expiredAt
+                expiredAt,
+                numberOfDownloads
             );
         } else if (item.kind === 'string') {
             if (textItems) {
@@ -385,7 +431,8 @@ async function processClipboardItems(clipboardItems) {
                 textBlob,
                 forHuman,
                 binaryPassword,
-                expiredAt
+                expiredAt,
+                numberOfDownloads
             );
         }
     }
@@ -686,7 +733,7 @@ function disableRemoteStreamUrlSection() {
 }
 
 //==================================File sharing implementation=========================================================
-FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password, expiredAt) {
+FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, password, expiredAt, numberOfDownloads = null) {
     const binaryId = uuid.v4().toString();
     //generate and save thumbnail here
     await ThumbnailGenerator.buildAndSaveThumbnail(
@@ -709,11 +756,12 @@ FileSharing.saveFileInCloud = async function (file, inReadMeText, forHuman, pass
         },
         forHuman,
         password,
-        expiredAt
+        expiredAt,
+        numberOfDownloads
     );
 }
 
-FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, forHuman, password, expiredAt) {
+FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, forHuman, password, expiredAt, numberOfDownloads = null) {
     const binaryId = uuid.v4().toString();
     //generate and save thumbnail here
     await ThumbnailGenerator.buildAndSaveThumbnail(
@@ -735,12 +783,13 @@ FileSharing.saveBlobInCloud = async function (name, type, inReadMeText, blob, fo
         blob,
         forHuman,
         password,
-        expiredAt
+        expiredAt,
+        numberOfDownloads
     )
 }
 
 FileSharing.saveBlobWithIdInCloud = async function (binaryId, workSpaceId, name, type, readMeText, blob,
-                                                    forHuman, password, expiredAt) {
+                                                    forHuman, password, expiredAt, numberOfDownloads = null) {
     return await FileSharing.saveContentWithWorkSpaceIdInCloud(
         binaryId,
         workSpaceId,
@@ -779,12 +828,13 @@ FileSharing.saveBlobWithIdInCloud = async function (binaryId, workSpaceId, name,
         },
         forHuman,
         password,
-        expiredAt
+        expiredAt,
+        numberOfDownloads
     );
 }
 
 FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inReadMeText, splitAndStoreProcessor,
-                                                 forHuman, password, expiredAt) {
+                                                 forHuman, password, expiredAt, numberOfDownloads = null) {
     return await FileSharing.saveContentWithWorkSpaceIdInCloud(
         binaryId,
         FileSharing.workSpaceId,
@@ -795,7 +845,8 @@ FileSharing.saveContentInCloud = async function (binaryId, name, type, size, inR
         splitAndStoreProcessor,
         forHuman,
         password,
-        expiredAt
+        expiredAt,
+        numberOfDownloads
     );
 }
 
@@ -808,7 +859,7 @@ function calculateDisplaySizeMb(size) {
 }
 
 FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSpaceId, name, type, size, inReadMeText,
-                                                                splitAndStoreProcessor, forHuman, password, expiredAt) {
+                                                                splitAndStoreProcessor, forHuman, password, expiredAt, numberOfDownloads = null) {
     let readMeText = inReadMeText ? inReadMeText : '';
     if (FileSharing.defaultReadMeText === inReadMeText) {
         readMeText = `name = ${name}; size = ${calculateDisplaySizeMb(size)} Mb; content-type = ${type}`;
@@ -825,7 +876,7 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
         forHuman,
         workSpaceId,
         expiredAt,
-        null
+        numberOfDownloads
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(

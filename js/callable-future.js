@@ -59,7 +59,8 @@ CallableFuture.releaseWaiterIfExistsWithError = function (id, error) {
 
 CallableFuture.callAsynchronouslyWithRepeatOfFailure = async function (inTimeoutMs, inWaiterId,
                                                                        numberOfRepeat, asyncOperation,
-                                                                       checkUploadBinaryLimit = false) {
+                                                                       checkUploadBinaryLimit = false,
+                                                                       isFinalError = null) {
     let result;
     for (let i = 0; i < numberOfRepeat; i++) {
         if (checkUploadBinaryLimit && PushcaClient.uploadBinaryLimitWasReached) {
@@ -67,6 +68,9 @@ CallableFuture.callAsynchronouslyWithRepeatOfFailure = async function (inTimeout
         } else {
             result = await CallableFuture.callAsynchronously(inTimeoutMs, inWaiterId, asyncOperation);
             if (WaiterResponseType.SUCCESS === result.type) {
+                return result;
+            }
+            if ((typeof isFinalError === 'function') && isFinalError(result)) {
                 return result;
             }
         }

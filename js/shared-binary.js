@@ -295,6 +295,9 @@ async function downloadSharedBinaryViaWebSocket(manifest, binaryChunkProcessor, 
         );
 
         if (!chunk) {
+            if (PushcaClient.downloadLimitWasExceeded) {
+                showErrorMessage("Download limit for this file has been reached");
+            }
             return false;
         }
 
