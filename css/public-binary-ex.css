@@ -72,7 +72,8 @@ h1, h2 { font-size: clamp(1.4rem, 4.5vw, 1.8rem); line-height: 1.25; font-weight
 }
 .main-container-full-height:focus { outline: none; }
 .login-container {
-    width: min(100%, 520px);
+    width: fit-content;
+    max-width: 100%;
     min-width: 0;
     padding: 32px;
     border: 2px solid transparent;
@@ -88,7 +89,6 @@ h1, h2 { font-size: clamp(1.4rem, 4.5vw, 1.8rem); line-height: 1.25; font-weight
     place-items: center;
     width: 52px;
     height: 52px;
-    margin-bottom: 22px;
     border: 1px solid #496b98;
     border-radius: 16px;
     background: linear-gradient(145deg, #294d7b, #1b3457);
@@ -96,9 +96,12 @@ h1, h2 { font-size: clamp(1.4rem, 4.5vw, 1.8rem); line-height: 1.25; font-weight
     color: var(--blue);
 }
 .access-icon .icon { width: 27px; height: 27px; }
-.eyebrow { margin-bottom: 8px; color: #83aef2; font-size: .65rem; font-weight: 700; letter-spacing: .14em; }
+.eyebrow { margin: 0; white-space: nowrap; color: #83aef2; font-size: .65rem; font-weight: 700; letter-spacing: .14em; }
+.access-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.opening-title, .opening-copy { text-align: center; }
 .intro-copy { margin-top: 12px; color: var(--muted); font-size: .875rem; line-height: 1.7; }
 /* The existing scripts insert, hide, and remove the challenge and preview. */
+.login-container:has(#scDialog, #previewBox[style*="display: block"]) { width: min(100%, 520px); }
 .login-container:has(#scDialog, #previewBox[style*="display: block"]) .opening-title,
 .login-container:has(#scDialog, #previewBox[style*="display: block"]) .opening-copy { display: none; }
 .challenge-pending { display: none; }
@@ -220,7 +223,7 @@ label { display: block; margin-bottom: 8px; color: #e0edff; font-size: .8125rem;
 }
 @media (max-width: 400px) {
     .login-container { padding: 22px 18px; border-radius: 20px; }
-    .access-icon { width: 46px; height: 46px; margin-bottom: 18px; border-radius: 14px; }
+    .access-icon { width: 46px; height: 46px; border-radius: 14px; }
     .intro-copy, .sc-dialog-normal-text { font-size: .8125rem; }
     .product-dialog { padding: 12px; }
     .product-dialog-content { max-height: calc(var(--viewport-height) - 24px); padding: 24px 18px; }

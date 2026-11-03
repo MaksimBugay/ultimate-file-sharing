@@ -267,7 +267,7 @@
 </head>
 <body id="protected-download-header">
     <header class="modern-header">
-        <a href="javascript:void(0)" class="logo-container" id="logoLink" aria-label="Choose a Secure FileShare product">
+        <a href="../index.html" target="_top" class="logo-container" id="logoLink" aria-label="Secure FileShare home">
             <img src="../images/secure_fileshare_logo.png" alt="Secure FileShare Logo" class="logo-image">
             <span class="protected-brand" aria-hidden="true">
                 <span class="protected-brand-mark"><svg viewBox="0 0 24 24"><path d="m12 3-8 3v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z"/><path d="M12 16V8m-3 3 3-3 3 3"/></svg></span>
@@ -294,18 +294,7 @@
         </div>
     </header>
 
-    <script>
-        // Send message to parent window when logo is clicked
-        document.addEventListener('DOMContentLoaded', function() {
-            const logoLink = document.getElementById('logoLink');
 
-            logoLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                // Send message to parent window to show dialog
-                window.parent.postMessage('showProductDialog', window.location.origin);
-            });
-        });
-    </script>
 </body>
 </html>
 
