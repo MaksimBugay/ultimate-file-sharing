@@ -113,7 +113,8 @@ async function manifestToJsonObjectWithProtectedAttributes(manifest) {
         passwordHash: passwordHash,
         deviceSecret: FileSharing.deviceSecret,
         forHuman: manifest.forHuman,
-        expireAt: manifest.expireAt
+        expireAt: manifest.expireAt,
+        numberOfDownloads: manifest.numberOfDownloads
     };
 }
 

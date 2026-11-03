@@ -139,7 +139,8 @@ SaveInCloudHelper.cacheContentInCloud = async function (binaryId, workspaceId, n
         storeInCloud,
         forHuman,
         workspaceId,
-        expiredAt
+        expiredAt,
+        null
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(`Cannot create manifest for file ${name}`, null);

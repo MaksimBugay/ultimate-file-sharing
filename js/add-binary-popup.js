@@ -586,9 +586,9 @@ async function createAndStoreBinaryFromSlices(inSlices, binaryId, binaryName, mi
         let result;
         const readMeText = await getReadMeText();
         if (passwordField.value) {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, passwordField.value, encryptionContract, false, false, null, null);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, passwordField.value, encryptionContract, false, false, null, null, null);
         } else {
-            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, null, null, false, false, null, null);
+            result = await createBinaryManifest(binaryId, binaryName, mimeType, readMeText, null, null, false, false, null, null, null);
         }
         if ((WaiterResponseType.SUCCESS === result.type) && result.body) {
             tmpManifest = result.body;

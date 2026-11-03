@@ -824,7 +824,8 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
         true,
         forHuman,
         workSpaceId,
-        expiredAt
+        expiredAt,
+        null
     );
     if ((WaiterResponseType.ERROR === createManifestResult.type) && createManifestResult.body) {
         showErrorMsg(

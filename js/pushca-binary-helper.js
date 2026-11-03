@@ -38,7 +38,7 @@ class Datagram {
 class BinaryManifest {
     constructor(id, name, mimeType, readMeText, sender, pusherInstanceId, datagrams,
                 totalSize, timestamp, password, privateUrlSuffix, downloadCounter,
-                base64Key, base64IV, cachedInCloud, forHuman, expireAt) {
+                base64Key, base64IV, cachedInCloud, forHuman, expireAt, numberOfDownloads) {
         this.id = id;
         this.name = name;
         this.mimeType = mimeType;
@@ -56,6 +56,7 @@ class BinaryManifest {
         this.cachedInCloud = cachedInCloud;
         this.forHuman = forHuman;
         this.expireAt = expireAt;
+        this.numberOfDownloads = numberOfDownloads;
     }
 
     getPrivateUrlShortSuffix() {
@@ -149,7 +150,8 @@ class BinaryManifest {
             sender: this.sender,
             pusherInstanceId: this.pusherInstanceId,
             datagrams: this.datagrams,
-            expireAt: this.expireAt
+            expireAt: this.expireAt,
+            numberOfDownloads: this.numberOfDownloads
         };
     }
 
@@ -168,7 +170,8 @@ class BinaryManifest {
             base64IV: this.base64IV,
             cachedInCloud: this.cachedInCloud,
             forHuman: this.forHuman,
-            expireAt: this.expireAt
+            expireAt: this.expireAt,
+            numberOfDownloads: this.numberOfDownloads
         };
     }
 
@@ -205,7 +208,8 @@ class BinaryManifest {
             jsonObject.base64IV,
             jsonObject.cachedInCloud,
             jsonObject.forHuman,
-            jsonObject.expireAt
+            jsonObject.expireAt,
+            jsonObject.numberOfDownloads
         );
     }
 
@@ -347,7 +351,7 @@ async function addBinaryToStorage(binaryId, originalFileName, mimeType, arrayBuf
 }
 
 async function createBinaryManifest(id, name, mimeType, readMeText, password, encryptionContract, cachedInCloud, forHuman,
-                                    inWorkSpaceId, expireAt
+                                    inWorkSpaceId, expireAt, numberOfDownloads
 ) {
     if (!PushcaClient.ClientObj) {
         return new WaiterResponse(WaiterResponseType.ERROR, "Owner connection is absent");
@@ -376,7 +380,8 @@ async function createBinaryManifest(id, name, mimeType, readMeText, password, en
             null,
             cachedInCloud,
             forHuman,
-            expireAt
+            expireAt,
+            numberOfDownloads
         );
         return new WaiterResponse(WaiterResponseType.SUCCESS, binaryManifest);
     }
@@ -401,7 +406,8 @@ async function createBinaryManifest(id, name, mimeType, readMeText, password, en
                 encryptionContract ? encryptionContract.base64IV : null,
                 cachedInCloud,
                 forHuman,
-                expireAt
+                expireAt,
+                numberOfDownloads
             );
             CallableFuture.releaseWaiterIfExistsWithSuccess(waiteId, binaryManifest);
         });
