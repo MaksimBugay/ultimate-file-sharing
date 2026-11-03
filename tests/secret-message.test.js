@@ -286,8 +286,8 @@ test('public phrase request rejects invalid text and credentials before sending'
     await assert.rejects(page.textToSecreteMessagePublicPhrase('hello', '', workspace), /nonempty strings/);
     await assert.rejects(page.textToSecreteMessagePublicPhrase('hello', password, ''), /nonempty strings/);
     // A large, poorly compressible message must not be sent past the server limit.
-    const input = Buffer.from(webcrypto.getRandomValues(new Uint8Array(12000))).toString('base64');
-    await assert.rejects(page.textToSecreteMessagePublicPhrase(input, password, workspace), /8 KiB API limit/);
+    const input = Buffer.from(webcrypto.getRandomValues(new Uint8Array(40000))).toString('base64');
+    await assert.rejects(page.textToSecreteMessagePublicPhrase(input, password, workspace), /32 KiB API limit/);
 });
 
 // Run explicitly: RUN_SECRET_MESSAGE_LIVE=1 node --test tests/secret-message.test.js
@@ -437,8 +437,9 @@ test('save supplies non-null context defaults even when the conversation panel i
 test('save rejects invalid public context before a request and accepts exact backend limits', async () => {
     const page = browser();
     for (const details of [[], 'context', { topic: 123 }, { style: false },
-        { topic: 't'.repeat(101) }, { style: 's'.repeat(101) }, { history: 'message' },
-        { history: [null] }, { history: ['a'.repeat(250), 'b'.repeat(251)] }]) {
+        { topic: 't'.repeat(501) }, { style: 's'.repeat(101) }, { history: 'message' },
+        { history: [null] }, { history: ['a'.repeat(750), 'b'.repeat(751)] },
+        { prohibitedMessages: ['a'.repeat(1501)] }]) {
         await assert.rejects(page.textToSecreteMessagePublicPhrase('secret', password, workspace, null, details), /Conversation/);
     }
     let body;
@@ -447,8 +448,11 @@ test('save rejects invalid public context before a request and accepts exact bac
         return { ok: true, json: async () => ({ publicPhrase: 'A valid phrase.' }) };
     } });
     await valid.textToSecreteMessagePublicPhrase('secret', password, workspace, null,
-        { topic: 't'.repeat(100), style: 's'.repeat(100), history: ['a'.repeat(250), 'b'.repeat(250)] });
-    assert.equal(body.publicConversationDetails.history.join('').length, 500);
+        { topic: 't'.repeat(500), style: 's'.repeat(100), history: ['a'.repeat(750), 'b'.repeat(750)],
+            prohibitedMessages: ['c'.repeat(750), 'd'.repeat(750)] });
+    assert.equal(body.publicConversationDetails.topic.length, 500);
+    assert.equal(body.publicConversationDetails.history.join('').length, 1500);
+    assert.equal(body.publicConversationDetails.prohibitedMessages.join('').length, 1500);
 });
 
 test('save retries the backend empty-body 409 without losing public context', async () => {
@@ -504,5 +508,49 @@ test('public context uses English for omitted/null locale and canonicalizes a ch
     for (const locale of [123, [], {}, 'not a locale', 'en--US']) {
         await assert.rejects(browser().textToSecreteMessagePublicPhrase('secret', password, workspace, null, {locale}),
             /Conversation language/);
+    }
+});
+
+
+test('save accepts exactly 32 KiB encrypted bytes and rejects one extra byte before sending', async () => {
+    const bodies = [];
+    const page = browser({ fetch: async (_url, options) => {
+        bodies.push(JSON.parse(options.body));
+        return { ok: true, json: async () => ({ publicPhrase: 'Public phrase.' }) };
+    } });
+    page.textIntoSecretMessageBytes = async () => new Uint8Array(32 * 1024);
+    await page.textToSecreteMessagePublicPhrase('secret', password, workspace);
+    assert.equal(Buffer.from(bodies[0].message, 'base64').length, 32 * 1024);
+    page.textIntoSecretMessageBytes = async () => new Uint8Array(32 * 1024 + 1);
+    await assert.rejects(page.textToSecreteMessagePublicPhrase('secret', password, workspace), /32 KiB/);
+    assert.equal(bodies.length, 1);
+});
+
+test('save and fetch enforce workspace and owner limits before sending', async () => {
+    const page = browser();
+    for (const helper of [page.textToSecreteMessagePublicPhrase, page.secreteMessagePublicPhraseToText]) {
+        await assert.rejects(helper('text', password, 'w'.repeat(101)), /Workspace ID.*100/);
+        await assert.rejects(helper('text', password, workspace, 'o'.repeat(201)), /Owner signature.*200/);
+    }
+    await assert.rejects(page.secreteMessagePublicPhraseToText('p'.repeat(5001), password, workspace), /Public phrase.*5000/);
+});
+
+test('fetch accepts a 5000-character phrase and both APIs accept maximum length identifiers', async () => {
+    const bodies = [];
+    const longWorkspace = 'w'.repeat(100);
+    const owner = 'o'.repeat(200);
+    const phrase = 'p'.repeat(5000);
+    const page = browser({ fetch: async (url, options) => {
+        const body = JSON.parse(options.body);
+        bodies.push(body);
+        return { ok: true, json: async () => url.endsWith('/save')
+            ? { publicPhrase: phrase } : { message: bodies[0].message } };
+    } });
+    assert.equal(await page.textToSecreteMessagePublicPhrase('secret', password, longWorkspace, owner), phrase);
+    assert.equal(await page.secreteMessagePublicPhraseToText(phrase, password, longWorkspace, owner), 'secret');
+    assert.equal(bodies[1].publicPhrase.length, 5000);
+    for (const body of bodies) {
+        assert.equal(body.workspaceId, longWorkspace);
+        assert.equal(body.ownerSignature, owner);
     }
 });

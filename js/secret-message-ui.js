@@ -316,7 +316,7 @@
             if (encode && ui.appendToHistory.checked) {
                 const removed = appendMessageToHistory(ui.messageOutput.value);
                 if (removed === null) {
-                    message += ' Not appended: this phrase alone exceeds 500 characters.';
+                    message += ' Not appended: this phrase alone exceeds 1500 characters.';
                 } else {
                     message += ' Public phrase appended to history.';
                     if (removed) message += ` Removed ${removed} oldest ${removed === 1 ? 'message' : 'messages'}.`;
@@ -335,10 +335,10 @@
     const updateHistoryCount = () => { ui.historyCount.textContent = `${history.length} ${history.length === 1 ? 'message' : 'messages'}`; };
     function appendMessageToHistory(message) {
         // A single oversized message cannot fit without changing its content.
-        if (message.length > 500) return null;
+        if (message.length > 1500) return null;
         let total = history.reduce((length, item) => length + item.length, 0) + message.length;
         let removed = 0;
-        while (history.length && total > 500) {
+        while (history.length && total > 1500) {
             total -= history.shift().length;
             removed++;
         }
@@ -381,7 +381,7 @@
         if (!message.trim()) { ui.historyStatus.textContent = 'Write a message before appending.'; ui.newHistoryMessage.focus(); return; }
         const removed = appendMessageToHistory(message);
         if (removed === null) {
-            ui.historyStatus.textContent = 'A single history message must be at most 500 characters.';
+            ui.historyStatus.textContent = 'A single history message must be at most 1500 characters.';
             ui.newHistoryMessage.focus();
             return;
         }

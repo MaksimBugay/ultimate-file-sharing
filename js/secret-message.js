@@ -142,15 +142,25 @@ function normalizePublicConversationDetails(details) {
     if (typeof topic !== 'string' || typeof style !== 'string') {
         throw new TypeError('Conversation topic and style must be strings');
     }
-    if (topic.length > 100 || style.length > 100) {
-        throw new Error('Conversation topic and style must each be at most 100 characters');
+    if (topic.length > 500) {
+        throw new Error('Conversation topic must be at most 500 characters');
+    }
+    if (style.length > 100) {
+        throw new Error('Conversation style must be at most 100 characters');
     }
     const history = details.history ?? [];
     if (!Array.isArray(history) || history.some(message => typeof message !== 'string')) {
         throw new TypeError('Conversation history must be a list of message strings');
     }
-    if (history.reduce((total, message) => total + message.length, 0) > 500) {
-        throw new Error('Conversation history must be at most 500 characters in total');
+    if (history.reduce((total, message) => total + message.length, 0) > 1500) {
+        throw new Error('Conversation history must be at most 1500 characters in total');
+    }
+    const prohibitedMessages = details.prohibitedMessages ?? [];
+    if (!Array.isArray(prohibitedMessages) || prohibitedMessages.some(message => typeof message !== 'string')) {
+        throw new TypeError('Conversation prohibited messages must be a list of message strings');
+    }
+    if (prohibitedMessages.reduce((total, message) => total + message.length, 0) > 1500) {
+        throw new Error('Conversation prohibited messages must be at most 1500 characters in total');
     }
     const language = details.locale ?? 'en';
     if (typeof language !== 'string') throw new TypeError('Conversation language must be a locale string');
@@ -158,7 +168,16 @@ function normalizePublicConversationDetails(details) {
     try { [locale] = Intl.getCanonicalLocales(language.trim().replace(/_/g, '-') || 'en'); }
     catch (_) { throw new Error('Conversation language must be a valid locale, such as en or uk'); }
     return {topic: topic.trim() || 'Weather', style: style.trim() || 'Informal/Casual',
-        history: [...history], prohibitedMessages: [], locale};
+        history: [...history], prohibitedMessages: [...prohibitedMessages], locale};
+}
+
+function validateSecretMessageIdentifiers(workspaceId, ownerSignature) {
+    if (typeof workspaceId === 'string' && workspaceId.length > 100) {
+        throw new Error('Workspace ID must be at most 100 characters');
+    }
+    if (ownerSignature != null && (typeof ownerSignature !== 'string' || ownerSignature.length > 200)) {
+        throw new Error('Owner signature must be a string of at most 200 characters');
+    }
 }
 
 /**
@@ -169,15 +188,16 @@ function normalizePublicConversationDetails(details) {
  * @param {string} pwd
  * @param {string} workspaceId
  * @param {string|null} [ownerSignature=null]
- * @param {{topic?: string, style?: string, history?: string[], locale?: string|null}|null} [publicConversationDetails=null]
+ * @param {{topic?: string, style?: string, history?: string[], prohibitedMessages?: string[], locale?: string|null}|null} [publicConversationDetails=null]
  * Public context sent to the server to guide phrase generation (not encrypted).
  * @returns {Promise<string>} Public phrase returned by the server.
  */
 async function textToSecreteMessagePublicPhrase(input, pwd, workspaceId, ownerSignature = null, publicConversationDetails = null) {
+    validateSecretMessageIdentifiers(workspaceId, ownerSignature);
     const context = publicConversationDetails === null ? null : normalizePublicConversationDetails(publicConversationDetails);
     const messageBytes = await textIntoSecretMessageBytes(input, pwd, workspaceId);
-    if (messageBytes.byteLength > 8 * 1024) {
-        throw new Error('Encrypted secret message exceeds the 8 KiB API limit');
+    if (messageBytes.byteLength > 32 * 1024) {
+        throw new Error('Encrypted secret message exceeds the 32 KiB API limit');
     }
     const passwordHash = await calculateSha256(new TextEncoder().encode(pwd));
     const url = PushcaClient.clusterBaseUrl.replace(/\/$/, '') + '/pushca/secret-message/save';
@@ -235,6 +255,10 @@ async function secreteMessagePublicPhraseToText(publicPhrase, pwd, workspaceId, 
     if (typeof publicPhrase !== 'string' || !publicPhrase.trim()) {
         throw new TypeError('Public phrase must be a nonempty string');
     }
+    if (publicPhrase.length > 5000) {
+        throw new Error('Public phrase must be at most 5000 characters');
+    }
+    validateSecretMessageIdentifiers(workspaceId, ownerSignature);
     if (typeof pwd !== 'string' || pwd.length === 0 ||
         typeof workspaceId !== 'string' || workspaceId.length === 0) {
         throw new TypeError('Password and workspace ID must be nonempty strings');
