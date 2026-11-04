@@ -186,7 +186,26 @@ input:focus, textarea:focus { border-color: #83aef2; }
 .read-me-text-memo img, .text-message-memo img { max-width: 100%; height: auto; }
 #ownerSignatureLabel { color: #92e6d4; font-size: .75rem; line-height: 1.7; overflow-wrap: anywhere; }
 .memo-container textarea { display: block; resize: vertical; min-height: 100px; }
-#errorMessage { width: min(100%, 520px); padding: 22px 24px; border: 1px solid #875156; border-radius: 16px; background: #321e29; color: #ffb9b9; font-size: .9375rem; line-height: 1.7; overflow-wrap: anywhere; }
+#errorMessage {
+    width: max-content;
+    max-width: min(100%, 80vw);
+    max-height: 80vh;
+    padding: 22px 24px;
+    overflow: auto;
+    border: 1px solid #875156;
+    border-radius: 16px;
+    background: #321e29;
+    color: #ffb9b9;
+    font-size: .9375rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+@supports (width: 100dvw) {
+    #errorMessage { max-width: min(100%, 80dvw); }
+}
+@supports (height: 100dvh) {
+    #errorMessage { max-height: 80dvh; }
+}
 .content-container {
     width: 100%;
     height: max(320px, calc(var(--viewport-height) - 270px));
