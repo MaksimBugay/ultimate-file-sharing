@@ -401,6 +401,9 @@ kbd { padding: 3px 5px; border: 1px solid #405573; border-radius: 5px; backgroun
 .link-like:hover { color: #d8e5f5; }
 #qrcode:not(:empty) { width: fit-content; max-width: calc(100% - 32px); margin: 16px auto; padding: 12px; border-radius: 12px; background: white; }
 #qrcode img { max-width: 100%; height: auto; }
+.qr-image-actions { display: flex; justify-content: center; gap: 12px; margin: 0 16px 16px; }
+.qr-image-actions[hidden] { display: none; }
+.qr-image-actions .utility-button { width: 44px; height: 44px; }
 .dropdown-button, .dropdown-list { border-color: #49617e; border-radius: 8px; background: #17263b; color: #edf3fa; }
 .dropdown-list li:hover { background: #243e60; }
 @media (min-width: 621px) {

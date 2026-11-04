@@ -587,6 +587,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     document.addEventListener("keydown", function (event) {
         if (event.key === "Enter") {
+            if (event.target?.closest?.('#qrImageActions')) {
+                return;
+            }
             if (isErrorDialogVisible()) {
                 closeErrorDialog();
             } else if (isInfoDialogVisible()) {
@@ -996,13 +999,13 @@ function isInfoDialogVisible() {
     return infoDialog.classList.contains('visible');
 }
 
-function closeInfoDialog() {
+function closeInfoDialog({shareLink = true} = {}) {
     infoDialog.classList.remove('visible');
     if (FileSharing.actveInfoMsgId) {
         CallableFuture.releaseWaiterIfExistsWithSuccess(FileSharing.actveInfoMsgId, "closed");
         FileSharing.actveInfoMsgId = null;
     }
-    if (FileSharing.activeInfoUrl) {
+    if (FileSharing.activeInfoUrl && shareLink) {
         copyTextToClipboard(FileSharing.activeInfoUrl);
         if (isMobile()) {
             showNativeShareDialog(name, FileSharing.activeInfoUrl).then(ableToShow => {
@@ -1011,8 +1014,10 @@ function closeInfoDialog() {
                 }
             });
         }
-        FileSharing.activeInfoUrl = null;
     }
+    FileSharing.activeInfoUrl = null;
+    activeQrImageUrl = null;
+    ++qrImageGeneration;
 }
 
 async function showNativeShareDialog(vText, vUrl) {
@@ -1041,21 +1046,112 @@ closeInfoBtn.addEventListener('click', function () {
     closeInfoDialog();
 });
 
+const qrImageActions = document.getElementById('qrImageActions');
+const copyQrImageBtn = document.getElementById('copyQrImageBtn');
+let activeQrImageUrl = null;
+let qrImageGeneration = 0;
+
+function qrImagePngBlob(dataUrl) {
+    const bytes = Uint8Array.from(atob(dataUrl.split(',')[1]), char => char.charCodeAt(0));
+    return new Blob([bytes], {type: 'image/png'});
+}
+
+copyQrImageBtn?.addEventListener('click', async function () {
+    if (!activeQrImageUrl) return;
+    const generation = qrImageGeneration;
+    const image = qrImagePngBlob(activeQrImageUrl);
+    try {
+        await navigator.clipboard.write([new ClipboardItem({'image/png': image})]);
+    } catch (error) {
+        if (generation === qrImageGeneration) {
+            infoMsg.textContent = 'Could not copy the image. Allow clipboard access or save the PNG instead.';
+        }
+        return;
+    }
+    if (generation !== qrImageGeneration || !isInfoDialogVisible()) return;
+    closeInfoDialog({shareLink: false});
+    if (isMobile() && navigator.share) {
+        const file = new File([image], 'fileshare-qr-code.png', {type: 'image/png'});
+        const shareData = {files: [file]};
+        try {
+            if (!navigator.canShare || navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+            }
+        } catch (error) {
+            // Cancelling or denying native sharing leaves the copied image intact.
+            console.log('Cannot share QR code image:', error);
+        }
+    }
+});
+
+document.getElementById('saveQrImageBtn')?.addEventListener('click', function () {
+    if (!activeQrImageUrl) return;
+    const link = document.createElement('a');
+    link.href = activeQrImageUrl;
+    link.download = 'fileshare-qr-code.png';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+});
+
+document.getElementById('printQrImageBtn')?.addEventListener('click', function () {
+    if (!activeQrImageUrl) return;
+    const printWindow = window.open('', '_blank', 'popup,width=600,height=600');
+    if (!printWindow) {
+        infoMsg.textContent = 'Allow popups to print the QR code.';
+        return;
+    }
+    printWindow.opener = null;
+    const printDocument = printWindow.document;
+    printDocument.title = 'Secure FileShare QR code';
+    const style = printDocument.createElement('style');
+    style.textContent = '@page { margin: 16mm; } body { margin: 0; background: white; text-align: center; } img { width: 80mm; max-width: 100%; height: auto; image-rendering: pixelated; }';
+    printDocument.head.appendChild(style);
+    const image = printDocument.createElement('img');
+    image.alt = 'Secure FileShare download QR code';
+    image.onload = function () {
+        printWindow.focus();
+        printWindow.print();
+    };
+    image.onerror = function () {
+        infoMsg.textContent = 'Could not load the QR code for printing. Save the PNG and print it instead.';
+        printWindow.close();
+    };
+    printWindow.addEventListener('afterprint', () => printWindow.close(), {once: true});
+    image.src = activeQrImageUrl;
+    printDocument.body.appendChild(image);
+});
+
 function showInfoMsg(dialogId, msg, url = null) {
     FileSharing.actveInfoMsgId = dialogId;
     FileSharing.activeInfoUrl = url;
     infoMsg.textContent = msg;
+    activeQrImageUrl = null;
+    const generation = ++qrImageGeneration;
+    if (qrImageActions) qrImageActions.hidden = true;
     const qrCodeContainer = document.getElementById('qrcode');
+    if (qrCodeContainer) qrCodeContainer.innerHTML = '';
     if (url && qrCodeContainer) {
-        qrCodeContainer.innerHTML = '';
-        QRCode.toDataURL(url, {width: 200, height: 200}, (err, url) => {
+        QRCode.toDataURL(url, {width: 800, height: 800}, (err, imageUrl) => {
+            if (generation !== qrImageGeneration) return;
             if (err) {
                 console.error('Failed to generate QR code:', err);
                 return;
             }
             const img = document.createElement('img');
-            img.src = url;
+            img.alt = 'Scan to open the shared content';
+            img.width = 200;
+            img.height = 200;
+            img.src = imageUrl;
             qrCodeContainer.appendChild(img);
+            activeQrImageUrl = imageUrl;
+            if (qrImageActions) qrImageActions.hidden = false;
+            if (copyQrImageBtn) {
+                copyQrImageBtn.disabled = !navigator.clipboard?.write || typeof ClipboardItem === 'undefined';
+                copyQrImageBtn.title = copyQrImageBtn.disabled
+                    ? 'Image copying is unavailable in this browser. Save the PNG instead.'
+                    : 'Copy QR code image';
+            }
         });
     }
     showInfoDialog();

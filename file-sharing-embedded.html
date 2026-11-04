@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="css/datetime-picker.css">
     <link rel="stylesheet" href="css/file-transfer-embedded.css">
     <link rel="stylesheet" href="css/url-input.css">
-    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=removal-tabs-19">
+    <link rel="stylesheet" href="css/file-sharing-embedded.css?v=qr-image-actions-1">
     <meta name="theme-color" content="#0d1420">
 
     <link rel="icon" type="image/png" sizes="32x32" href="images/file-sharing32.png">
@@ -69,7 +69,18 @@
             </div>
         </div>
         <div id="qrcode" class="centered-container"></div>
-        <p id="infoMsg" class="message-text"></p>
+        <div id="qrImageActions" class="qr-image-actions" role="group" aria-label="QR code image actions" hidden>
+            <button type="button" id="copyQrImageBtn" class="utility-button" title="Copy QR code image" aria-label="Copy QR code image">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+            <button type="button" id="saveQrImageBtn" class="utility-button" title="Save QR code as PNG" aria-label="Save QR code as PNG">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>
+            </button>
+            <button type="button" id="printQrImageBtn" class="utility-button" title="Print QR code" aria-label="Print QR code">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 17H3V9h18v8h-3"/><path d="M6 14h12v7H6zM17 12h1"/></svg>
+            </button>
+        </div>
+        <p id="infoMsg" class="message-text" role="status" aria-live="polite"></p>
     </div>
 </div>
 
@@ -234,7 +245,7 @@
 
 <script src="js/datetime-picker.js?v=<?= time(); ?>"></script>
 <script src="js/url-input.js?v=<?= time(); ?>"></script>
-<script src="js/file.sharing.min.js?v=download-limit-1"></script>
+<script src="js/file.sharing.min.js?v=qr-image-share-2"></script>
 
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-W6XK68E4CF"></script>
 <script>
