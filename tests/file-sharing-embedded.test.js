@@ -403,6 +403,8 @@ for (const password of [null, 'private-password']) {
             const h = sharingHarness();
             const cached = [];
             h.context.cached = cached;
+            const shownManifests = [];
+            h.context.shownManifests = shownManifests;
             h.context.sample = new Blob(['content'], {type: 'image/png'});
             h.context.sample.name = 'picture.png';
             h.context.samplePassword = password;
@@ -435,7 +437,7 @@ for (const password of [null, 'private-password']) {
                     cached.push(manifest.toDbJSON());
                     return {type: 'success'};
                 };
-                sharePublicUrlViaInfoMessage = async () => {};
+                sharePublicUrlViaInfoMessage = async (_url, _id, manifest) => { shownManifests.push(manifest); };
                 buildPublicUrl = async () => 'https://example.com/file';
                 ThumbnailGenerator = {buildAndSaveThumbnail: async (_id, blob, _name, type, _description, save, expiry) => {
                     await save('thumbnail-id', 'thumbnail', 'thumbnail-picture.png', type, blob, expiry);
@@ -459,10 +461,19 @@ for (const password of [null, 'private-password']) {
             assert.equal(cached[1].password, password);
             assert.ok(Math.abs(cached[1].expireAt - expiry) <= 1);
             assert.equal(cached[0].expireAt, cached[1].expireAt);
+            assert.equal(shownManifests[0].name, 'picture.png');
+            assert.equal(shownManifests[0].readMeText, 'description');
+            assert.equal(shownManifests[0].expireAt, cached[1].expireAt);
+            assert.equal(shownManifests[0].numberOfDownloads, 3);
             h.element('expirationTimeTab').dispatch('click');
+            vm.runInContext('getReadMeText = async () => FileSharing.defaultReadMeText;', h.context);
             await upload();
             assert.equal(cached[3].numberOfDownloads, null);
             assert.equal(cached[3].expireAt, 1900000000);
+            assert.equal(shownManifests[1].expireAt, 1900000000);
+            assert.equal(shownManifests[1].numberOfDownloads, null);
+            assert.equal(shownManifests[1].readMeText, null);
+            assert.match(cached[3].readMeText, /^name = picture.png; size = /);
         });
     }
 }

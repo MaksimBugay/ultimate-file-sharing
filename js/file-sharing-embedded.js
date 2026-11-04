@@ -932,7 +932,10 @@ FileSharing.saveContentWithWorkSpaceIdInCloud = async function (binaryId, workSp
         300_000,
         dialogId,
         () => {
-            sharePublicUrlViaInfoMessage(urlWithThumbnail, dialogId);
+            sharePublicUrlViaInfoMessage(urlWithThumbnail, dialogId, {
+                ...manifest,
+                readMeText: inReadMeText === FileSharing.defaultReadMeText ? null : manifest.readMeText
+            });
         }
     );
     if (WaiterResponseType.SUCCESS !== dialogResult.type) {
@@ -982,9 +985,8 @@ async function buildPublicUrl(manifest) {
     return publicUrl.replace("public-binary.html", "public-binary-ex.html");
 }
 
-async function sharePublicUrlViaInfoMessage(publicUrlWithThumbnail, dialogId) {
-    //copyTextToClipboard(publicUrlWithThumbnail);
-    showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail);
+async function sharePublicUrlViaInfoMessage(publicUrlWithThumbnail, dialogId, manifest = null) {
+    showInfoMsg(dialogId, `Public url was copied to clipboard`, publicUrlWithThumbnail, manifest);
 }
 
 //======================================================================================================================
@@ -1049,6 +1051,7 @@ closeInfoBtn.addEventListener('click', function () {
 const qrImageActions = document.getElementById('qrImageActions');
 const copyQrImageBtn = document.getElementById('copyQrImageBtn');
 let activeQrImageUrl = null;
+let activeQrPrintDetails = null;
 let qrImageGeneration = 0;
 
 function qrImagePngBlob(dataUrl) {
@@ -1103,10 +1106,19 @@ document.getElementById('printQrImageBtn')?.addEventListener('click', function (
     }
     printWindow.opener = null;
     const printDocument = printWindow.document;
-    printDocument.title = 'Secure FileShare QR code';
+    const details = activeQrPrintDetails;
+    const originalName = details?.name || 'Shared content';
+    const extensionIndex = originalName.lastIndexOf('.');
+    const binaryName = details?.mimeType?.split(';')[0].trim().toLowerCase() === 'text/plain'
+        ? 'Note' : extensionIndex > 0 ? originalName.slice(0, extensionIndex) : originalName;
+    printDocument.title = binaryName;
     const style = printDocument.createElement('style');
-    style.textContent = '@page { margin: 16mm; } body { margin: 0; background: white; text-align: center; } img { width: 80mm; max-width: 100%; height: auto; image-rendering: pixelated; }';
+    style.textContent = '@page { margin: 16mm; } body { margin: 0; background: white; color: black; text-align: center; font: 14pt/1.5 system-ui, sans-serif; } main { break-inside: avoid; } h1 { margin: 0 0 12mm; font-size: 20pt; overflow-wrap: anywhere; } img { display: block; margin: 0 auto; width: 80mm; max-width: 100%; height: auto; image-rendering: pixelated; } footer { margin-top: 10mm; font-size: 11pt; overflow-wrap: anywhere; } footer p { margin: 2mm 0; } .print-readme { margin-top: 6mm; white-space: pre-wrap; text-align: start; } .print-readme pre { white-space: pre-wrap; } .print-readme a { color: inherit; }';
     printDocument.head.appendChild(style);
+    const layout = printDocument.createElement('main');
+    const header = printDocument.createElement('h1');
+    header.textContent = binaryName;
+    layout.appendChild(header);
     const image = printDocument.createElement('img');
     image.alt = 'Secure FileShare download QR code';
     image.onload = function () {
@@ -1119,14 +1131,60 @@ document.getElementById('printQrImageBtn')?.addEventListener('click', function (
     };
     printWindow.addEventListener('afterprint', () => printWindow.close(), {once: true});
     image.src = activeQrImageUrl;
-    printDocument.body.appendChild(image);
+    layout.appendChild(image);
+    const footer = printDocument.createElement('footer');
+    const expiry = printDocument.createElement('p');
+    const expiryDate = details?.expireAt != null ? new Date(details.expireAt * 1000) : null;
+    const expiryLabel = expiryDate && Number.isFinite(expiryDate.getTime())
+        ? expiryDate.toLocaleString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        }) : 'Not specified';
+    expiry.textContent = `Expires at: ${expiryLabel}`;
+    footer.appendChild(expiry);
+    if (details?.numberOfDownloads != null) {
+        const downloads = printDocument.createElement('p');
+        downloads.textContent = `${details.numberOfDownloads} allowed downloads`;
+        footer.appendChild(downloads);
+    }
+    if (details?.isPrivate && details.readMeText?.trim()
+        && details.readMeText.trim() !== FileSharing.defaultReadMeText) {
+        const readme = printDocument.createElement('div');
+        readme.className = 'print-readme';
+        readme.textContent = details.readMeText;
+        // Rich descriptions are stored as URL-safe Base64 HTML; plain text stays literal.
+        if (/^[A-Za-z0-9+/_-]+={0,2}$/.test(details.readMeText)) {
+            try {
+                const html = decodeFromBase64UrlSafe(details.readMeText);
+                if (/<\/?[a-z][^>]*>/i.test(html)) {
+                    readme.innerHTML = DOMPurify.sanitize(html, {
+                        ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'a', 'blockquote', 'code', 'pre'],
+                        ALLOWED_ATTR: ['href']
+                    });
+                }
+            } catch (error) {
+                console.log('Cannot decode QR print description:', error);
+            }
+        }
+        footer.appendChild(readme);
+    }
+    layout.appendChild(footer);
+    printDocument.body.appendChild(layout);
 });
 
-function showInfoMsg(dialogId, msg, url = null) {
+function showInfoMsg(dialogId, msg, url = null, manifest = null) {
     FileSharing.actveInfoMsgId = dialogId;
     FileSharing.activeInfoUrl = url;
     infoMsg.textContent = msg;
     activeQrImageUrl = null;
+    activeQrPrintDetails = manifest ? {
+        name: manifest.name,
+        mimeType: manifest.mimeType,
+        isPrivate: Boolean(manifest.password),
+        readMeText: manifest.readMeText,
+        expireAt: manifest.expireAt,
+        numberOfDownloads: manifest.numberOfDownloads
+    } : null;
     const generation = ++qrImageGeneration;
     if (qrImageActions) qrImageActions.hidden = true;
     const qrCodeContainer = document.getElementById('qrcode');

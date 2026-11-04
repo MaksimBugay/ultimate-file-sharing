@@ -20,13 +20,19 @@ function harness({mobile = false, copyFails = false, shareFails = false, deferre
         }
         return elements.get(id);
     };
+    const node = tag => ({tag, children: [], appendChild(child) {this.children.push(child);}});
+    const printer = {
+        document: {head: node('head'), body: node('body'), createElement: node},
+        addEventListener() {}, focus() {}, print() {this.printed = true;}
+    };
     let finishCopy;
     const context = vm.createContext({
         console: {log() {}, error() {}}, Blob, File, Uint8Array, atob, name: 'Shared content',
-        FileSharing: {}, isMobile: () => mobile,
+        FileSharing: {defaultReadMeText: 'Default description'}, isMobile: () => mobile,
         CallableFuture: {releaseWaiterIfExistsWithSuccess: id => released.push(id)},
         copyTextToClipboard: url => links.push(url),
-        document: {getElementById: element, createElement: () => ({})},
+        document: {getElementById: element, createElement: node},
+        window: {open: () => printer},
         QRCode: {toDataURL: (url, options, callback) => callback(null, 'data:image/png;base64,iVBORw0KGgo=')},
         ClipboardItem: class {constructor(data) {this.data = data;}},
         navigator: {
@@ -44,7 +50,7 @@ function harness({mobile = false, copyFails = false, shareFails = false, deferre
     });
     vm.runInContext(dialogSource, context);
     context.showInfoMsg('dialog-id', 'Download link', 'https://example.com/file');
-    return {context, element, links, shares, copied, released, finishCopy: () => finishCopy()};
+    return {context, element, links, shares, copied, released, printer, finishCopy: () => finishCopy()};
 }
 
 test('Copy closes the dialog and preserves PNG clipboard data without copying the link', async () => {
@@ -108,3 +114,75 @@ test('a pending copy cannot close or share a newly opened dialog', async () => {
     assert.deepEqual(h.released, []);
     assert.deepEqual(h.shares, []);
 });
+
+for (const numberOfDownloads of [null, undefined, 3]) {
+    test(`print includes the binary name and expiry, with optional download limit (${numberOfDownloads})`, () => {
+        const h = harness();
+        const manifest = {name: 'Report <draft> & final.pdf', expireAt: 1900000000, numberOfDownloads};
+        h.context.showInfoMsg('print', 'Link', 'https://example.com/file', manifest);
+        h.element('printQrImageBtn').click();
+        const layout = h.printer.document.body.children[0];
+        assert.deepEqual(layout.children.map(child => child.tag), ['h1', 'img', 'footer']);
+        assert.equal(layout.children[0].textContent, 'Report <draft> & final');
+        assert.equal(h.printer.document.title, 'Report <draft> & final');
+        const footer = layout.children[2];
+        const expiry = new Date(manifest.expireAt * 1000).toLocaleString(undefined, {
+            year: 'numeric', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        });
+        assert.equal(footer.children[0].textContent, `Expires at: ${expiry}`);
+        assert.equal(footer.children.length, numberOfDownloads == null ? 1 : 2);
+        if (numberOfDownloads != null) assert.equal(footer.children[1].textContent, '3 allowed downloads');
+        assert.equal(h.printer.printed, undefined);
+        layout.children[1].onload();
+        assert.equal(h.printer.printed, true);
+    });
+}
+
+test('a new QR dialog does not reuse the previous binary print metadata', () => {
+    const h = harness();
+    h.context.showInfoMsg('old', 'Link', 'https://example.com/old', {name: 'Old file', expireAt: 1900000000, numberOfDownloads: 2});
+    h.context.showInfoMsg('new', 'Link', 'https://example.com/new');
+    h.element('printQrImageBtn').click();
+    const layout = h.printer.document.body.children[0];
+    assert.equal(layout.children[0].textContent, 'Shared content');
+    assert.equal(layout.children[2].children[0].textContent, 'Expires at: Not specified');
+    assert.equal(layout.children[2].children.length, 1);
+});
+
+for (const [name, mimeType, expected] of [
+    ['Holiday.jpg', 'image/jpeg', 'Holiday'],
+    ['Report.final.pdf', 'application/pdf', 'Report.final'],
+    ['No extension', 'application/octet-stream', 'No extension'],
+    ['.hidden', 'application/octet-stream', '.hidden'],
+    ['message.txt', 'text/plain', 'Note'],
+    ['message.txt', 'text/plain; charset=utf-8', 'Note']
+]) {
+    test(`printed title for ${name} (${mimeType}) is ${expected}`, () => {
+        const h = harness();
+        h.context.showInfoMsg('print', 'Link', 'https://example.com/file', {name, mimeType});
+        h.element('printQrImageBtn').click();
+        assert.equal(h.printer.document.title, expected);
+        assert.equal(h.printer.document.body.children[0].children[0].textContent, expected);
+    });
+}
+
+for (const [password, readMeText, included] of [
+    ['secret', 'Private description\nSecond line', true],
+    ['secret', 'Default description', false],
+    ['secret', '', false],
+    ['secret', '   ', false],
+    [null, 'Public description', false]
+]) {
+    test(`printed description: private=${Boolean(password)}, readme=${JSON.stringify(readMeText)}`, () => {
+        const h = harness();
+        h.context.showInfoMsg('print', 'Link', 'https://example.com/file', {name: 'file.jpg', password, readMeText});
+        h.element('printQrImageBtn').click();
+        const footer = h.printer.document.body.children[0].children[2];
+        assert.equal(footer.children.length, included ? 2 : 1);
+        if (included) {
+            assert.equal(footer.children[1].textContent, readMeText);
+            assert.equal(footer.children[1].className, 'print-readme');
+        }
+    });
+}
