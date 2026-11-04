@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function () {
             toggleDescriptionBtn.setAttribute('aria-expanded', 'true');
             readMeTextMemo.focus({preventScroll: true});
         } else {
-            readMeTextMemo.textContent = FileSharing.defaultReadMeText;
+            readMeTextMemo.textContent = '';
             descriptionEditor.hidden = true;
             toggleDescriptionBtn.textContent = 'Add description';
             toggleDescriptionBtn.setAttribute('aria-expanded', 'false');
