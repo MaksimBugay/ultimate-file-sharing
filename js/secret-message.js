@@ -37,10 +37,60 @@ async function unZipText(zipBytes) {
     return message.async('string');
 }
 
+// PBKDF2-SHA-256 iterations of the message key and of the lookup verifier (wire format version 2; version 1 used
+// 100,000 iterations and a plain SHA-256 of the password for lookups, and is no longer read).
+const SECRET_MESSAGE_ITERATIONS = 600000;
+const SECRET_MESSAGE_FORMAT_VERSION = 2;
+// The verifier is sent to the server, so its salt differs from the key's: the same password and workspace must never
+// give the server the message key.
+const SECRET_MESSAGE_VERIFIER_SALT_PREFIX = 'secret-message-verifier:';
+
+// Values derived from the last password and workspace. Each takes a noticeable moment (600,000 iterations), and auto
+// decoding needs them for every lookup; other credentials replace them.
+let derivedCredentials = null;
+let derivedValues = new Map();
+
+function derivedOnce(name, pwd, workspaceId, compute) {
+    const credentials = JSON.stringify([pwd, workspaceId]);
+    if (credentials !== derivedCredentials) {
+        derivedCredentials = credentials;
+        derivedValues = new Map();
+    }
+    const values = derivedValues;
+    if (!values.has(name)) {
+        const value = compute();
+        values.set(name, value);
+        // A failed derivation is tried again next time.
+        value.catch(() => { if (values.get(name) === value) values.delete(name); });
+    }
+    return values.get(name);
+}
+
+async function pbkdf2Base64(pwd, salt, iterations) {
+    const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({name: 'PBKDF2', salt, iterations, hash: 'SHA-256'}, material, 256);
+    return arrayBufferToBase64(bits);
+}
+
+/** Base64 AES-256 message key: PBKDF2 of the password with the UTF-8 workspace ID as the salt. */
+function secretMessageKey(pwd, workspaceId) {
+    return derivedOnce('key', pwd, workspaceId,
+        () => pbkdf2Base64(pwd, new TextEncoder().encode(workspaceId), SECRET_MESSAGE_ITERATIONS));
+}
+
+/**
+ * Base64 lookup verifier sent to the server instead of the password: as slow to test as the message key, salted with
+ * the workspace ID, so a copy of the server's data does not allow fast password guessing.
+ */
+function secretMessagePasswordVerifier(pwd, workspaceId) {
+    return derivedOnce('verifier', pwd, workspaceId, () => pbkdf2Base64(pwd,
+        new TextEncoder().encode(SECRET_MESSAGE_VERIFIER_SALT_PREFIX + workspaceId), SECRET_MESSAGE_ITERATIONS));
+}
+
 /**
  * Encrypt ZIP bytes using security-utils.js and browser Web Crypto (HTTPS/localhost).
  * The UTF-8 workspace ID is the PBKDF2 salt; each encryption uses a fresh IV.
- * Wire format: version (1 byte, currently 1), IV (12 bytes), ciphertext + GCM tag.
+ * Wire format: version (1 byte, currently 2), IV (12 bytes), ciphertext + GCM tag.
  * @param {Uint8Array|ArrayBuffer} zipBytes
  * @param {string} pwd Nonempty password, used verbatim.
  * @param {string} workspaceId Nonempty workspace ID, used verbatim as the salt.
@@ -54,15 +104,12 @@ async function encryptZipBytes(zipBytes, pwd, workspaceId) {
         typeof workspaceId !== 'string' || workspaceId.length === 0) {
         throw new TypeError('Password and workspace ID must be nonempty strings');
     }
-    const key = await generateAESKeyFromPassword(pwd, new TextEncoder().encode(workspaceId));
+    const key = await secretMessageKey(pwd, workspaceId);
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const contract = new EncryptionContract(
-        arrayBufferToBase64(await crypto.subtle.exportKey('raw', key)),
-        arrayBufferToBase64(iv)
-    );
+    const contract = new EncryptionContract(key, arrayBufferToBase64(iv));
     const ciphertext = await encryptWithAESUsingContract(zipBytes, contract);
     const encryptedBytes = new Uint8Array(1 + iv.length + ciphertext.byteLength);
-    encryptedBytes[0] = 1;
+    encryptedBytes[0] = SECRET_MESSAGE_FORMAT_VERSION;
     encryptedBytes.set(iv, 1);
     encryptedBytes.set(new Uint8Array(ciphertext), 13);
     return encryptedBytes;
@@ -87,15 +134,11 @@ async function decryptZipBytes(encryptedBytes, pwd, workspaceId) {
     // Copy the input so it cannot change while the password key is being derived.
     const bytes = new Uint8Array(encryptedBytes).slice();
     // Version + 12-byte IV + 16-byte authentication tag (even for empty plaintext).
-    if (bytes.length < 29 || bytes[0] !== 1) {
+    if (bytes.length < 29 || bytes[0] !== SECRET_MESSAGE_FORMAT_VERSION) {
         throw new Error('Invalid or unsupported encrypted ZIP format');
     }
-    const key = await generateAESKeyFromPassword(pwd, new TextEncoder().encode(workspaceId));
-    const decrypted = await decryptAESToArrayBuffer(
-        bytes.subarray(13),
-        arrayBufferToBase64(await crypto.subtle.exportKey('raw', key)),
-        arrayBufferToBase64(bytes.subarray(1, 13))
-    );
+    const key = await secretMessageKey(pwd, workspaceId);
+    const decrypted = await decryptAESToArrayBuffer(bytes.subarray(13), key, arrayBufferToBase64(bytes.subarray(1, 13)));
     // The shared helper logs authentication errors and returns undefined.
     if (decrypted === undefined) {
         throw new Error('Unable to decrypt ZIP: invalid credentials or corrupted data');
@@ -182,8 +225,8 @@ function validateSecretMessageIdentifiers(workspaceId, ownerSignature) {
 
 /**
  * Encrypt text and save it through the secret-message REST API.
- * Uses PushcaClient.clusterBaseUrl; the server receives encrypted bytes and a
- * Base64 SHA-256 password hash, never the plaintext message or password.
+ * Uses PushcaClient.clusterBaseUrl; the server receives encrypted bytes and the
+ * Base64 password verifier (secretMessagePasswordVerifier), never the plaintext message or password.
  * @param {string} input
  * @param {string} pwd
  * @param {string} workspaceId
@@ -199,7 +242,7 @@ async function textToSecreteMessagePublicPhrase(input, pwd, workspaceId, ownerSi
     if (messageBytes.byteLength > 32 * 1024) {
         throw new Error('Encrypted secret message exceeds the 32 KiB API limit');
     }
-    const passwordHash = await calculateSha256(new TextEncoder().encode(pwd));
+    const passwordHash = await secretMessagePasswordVerifier(pwd, workspaceId);
     const url = PushcaClient.clusterBaseUrl.replace(/\/$/, '') + '/pushca/secret-message/save';
     const options = {
         method: 'POST',
@@ -263,7 +306,7 @@ async function secreteMessagePublicPhraseToText(publicPhrase, pwd, workspaceId, 
         typeof workspaceId !== 'string' || workspaceId.length === 0) {
         throw new TypeError('Password and workspace ID must be nonempty strings');
     }
-    const passwordHash = await calculateSha256(new TextEncoder().encode(pwd));
+    const passwordHash = await secretMessagePasswordVerifier(pwd, workspaceId);
     const response = await fetch(PushcaClient.clusterBaseUrl.replace(/\/$/, '') + '/pushca/secret-message/fetch', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},

@@ -10,11 +10,11 @@ const library = fs.readFileSync(require.resolve('../js/jszip.min.js'), 'utf8');
 
 const security = fs.readFileSync(require.resolve('../js/security-utils.js'), 'utf8');
 
-function browser({ withLibrary = true, fetch: fetchImpl } = {}) {
+function browser({ withLibrary = true, fetch: fetchImpl, crypto = webcrypto } = {}) {
     // Execute the browser bundle without require, module, Buffer, or Node APIs.
     const context = vm.createContext({
         Uint8Array, ArrayBuffer, setTimeout, clearTimeout,
-        crypto: webcrypto, TextEncoder, btoa, atob, console: { error() {} },
+        crypto, TextEncoder, btoa, atob, console: { error() {} },
         PushcaClient: { clusterBaseUrl: 'https://secure.fileshare.ovh' },
         fetch: fetchImpl || (() => { throw new Error('Unexpected network request'); })
     });
@@ -24,6 +24,14 @@ function browser({ withLibrary = true, fetch: fetchImpl } = {}) {
     vm.runInContext(source, context);
     return context;
 }
+
+// Independent PBKDF2-SHA-256 with 600,000 iterations, as the message key and the lookup verifier use.
+async function pbkdf2(pwd, salt) {
+    const material = await webcrypto.subtle.importKey('raw', new TextEncoder().encode(pwd), 'PBKDF2', false, ['deriveBits']);
+    return Buffer.from(await webcrypto.subtle.deriveBits({ name: 'PBKDF2', salt: new TextEncoder().encode(salt),
+        iterations: 600000, hash: 'SHA-256' }, material, 256));
+}
+const verifierOf = async (pwd, id) => (await pbkdf2(pwd, `secret-message-verifier:${id}`)).toString('base64');
 
 for (const input of ['', 'Hello, world!', 'Привіт 🌍 你好 café e\u0301\n\t\0', 'Repeated text 🌍 '.repeat(20000)]) {
     test(`browser ZIP round trip: ${input.length} characters`, async () => {
@@ -116,7 +124,7 @@ test('ZIP encrypt/decrypt round trip in separate browser contexts', async () => 
     assert.equal(await receiver.unZipText(decrypted), text);
 });
 
-test('uses the workspace ID directly as the PBKDF2 salt and a fresh IV', async () => {
+test('uses the workspace ID directly as the PBKDF2 salt, 600,000 iterations and a fresh IV', async () => {
     const page = browser();
     const input = new Uint8Array([0, 1, 127, 128, 255]);
     const first = await page.encryptZipBytes(input, password, workspace);
@@ -127,10 +135,10 @@ test('uses the workspace ID directly as the PBKDF2 salt and a fresh IV', async (
     const material = await webcrypto.subtle.importKey('raw', new TextEncoder().encode(password),
         'PBKDF2', false, ['deriveKey']);
     const key = await webcrypto.subtle.deriveKey({ name: 'PBKDF2',
-        salt: new TextEncoder().encode(workspace), iterations: 100000, hash: 'SHA-256' },
+        salt: new TextEncoder().encode(workspace), iterations: 600000, hash: 'SHA-256' },
         material, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
     for (const bytes of [first, second]) {
-        assert.equal(bytes[0], 1);
+        assert.equal(bytes[0], 2);
         const plain = await webcrypto.subtle.decrypt(
             { name: 'AES-GCM', iv: bytes.subarray(1, 13) }, key, bytes.subarray(13));
         assert.deepEqual(new Uint8Array(plain), input);
@@ -178,9 +186,9 @@ test('rejects modified IV, ciphertext, tag, truncated data, and unknown versions
     }
     await assert.rejects(page.decryptZipBytes(encrypted.subarray(0, encrypted.length - 1),
         password, workspace), /Unable to decrypt ZIP/);
-    const unsupported = encrypted.slice();
-    unsupported[0] = 2;
-    for (const malformed of [new Uint8Array(), encrypted.subarray(0, 28), unsupported]) {
+    // Version 1 (100,000 iterations, SHA-256 lookups) is no longer read.
+    const unsupported = [1, 3].map((version) => Object.assign(encrypted.slice(), { 0: version }));
+    for (const malformed of [new Uint8Array(), encrypted.subarray(0, 28), ...unsupported]) {
         await assert.rejects(page.decryptZipBytes(malformed, password, workspace), /encrypted ZIP format/);
     }
 });
@@ -255,8 +263,7 @@ test('public phrase request sends Base64 encrypted ZIP bytes, password hash, and
         assert.deepEqual(Object.keys(body).sort(), ['message', 'ownerSignature', 'passwordHash', 'workspaceId']);
         assert.equal(body.workspaceId, workspace);
         assert.equal(body.ownerSignature, owner ?? null);
-        const expectedHash = Buffer.from(await webcrypto.subtle.digest('SHA-256', new TextEncoder().encode(password))).toString('base64');
-        assert.equal(body.passwordHash, expectedHash);
+        assert.equal(body.passwordHash, await verifierOf(password, workspace));
         assert.equal(await page.secretMessageBytesToText(new Uint8Array(Buffer.from(body.message, 'base64')),
             password, workspace), 'Private text 🌍');
         assert.ok(!options.body.includes(password));
@@ -326,13 +333,50 @@ test('public phrase reader posts lookup credentials and decrypts the returned Ba
         assert.equal(url, 'https://secure.fileshare.ovh/pushca/secret-message/fetch');
         assert.equal(options.method, 'POST');
         assert.equal(options.headers['Content-Type'], 'application/json');
-        const passwordHash = Buffer.from(await webcrypto.subtle.digest('SHA-256',
-            new TextEncoder().encode(password))).toString('base64');
+        const passwordHash = await verifierOf(password, workspace);
         assert.deepEqual(JSON.parse(options.body), {
             workspaceId: workspace, passwordHash, ownerSignature: owner ?? null, publicPhrase: phrase
         });
         assert.ok(!options.body.includes(password));
     }
+});
+
+test('password verifier is salted PBKDF2, never the message key or a plain SHA-256', async () => {
+    const page = browser();
+    const verifier = await page.secretMessagePasswordVerifier(password, workspace);
+    assert.equal(verifier, await verifierOf(password, workspace));
+    assert.equal(Buffer.from(verifier, 'base64').length, 32);
+    assert.notEqual(verifier, (await pbkdf2(password, workspace)).toString('base64'));
+    assert.notEqual(verifier, Buffer.from(await webcrypto.subtle.digest('SHA-256',
+        new TextEncoder().encode(password))).toString('base64'));
+    // The same password in another workspace gives another verifier.
+    assert.notEqual(verifier, await page.secretMessagePasswordVerifier(password, `${workspace}-other`));
+});
+
+test('key and verifier are derived once per password and workspace, and again after a change', async () => {
+    let derivations = 0;
+    const counting = { getRandomValues: (array) => webcrypto.getRandomValues(array), subtle: new Proxy(webcrypto.subtle, {
+        get(subtle, name) {
+            const value = subtle[name].bind(subtle);
+            return name === 'deriveBits' ? (...args) => { derivations++; return value(...args); } : value;
+        }
+    }) };
+    let saved;
+    const page = browser({ crypto: counting, fetch: async (url, options) => {
+        const body = JSON.parse(options.body);
+        if (url.endsWith('/save')) { saved = body.message; return { ok: true, json: async () => ({ publicPhrase: 'Hi' }) }; }
+        return { ok: true, json: async () => ({ message: saved }) };
+    } });
+    for (let i = 0; i < 3; i++) {
+        await page.textToSecreteMessagePublicPhrase(`text ${i}`, password, workspace);
+        assert.equal(await page.secreteMessagePublicPhraseToText('Hi', password, workspace), `text ${i}`);
+    }
+    assert.equal(derivations, 2);
+    // Concurrent requests share the derivations in progress.
+    await Promise.all([1, 2].map(() => page.textToSecreteMessagePublicPhrase('text', `${password}2`, workspace)));
+    assert.equal(derivations, 4);
+    await page.textToSecreteMessagePublicPhrase('text', password, `${workspace}2`);
+    assert.equal(derivations, 6);
 });
 
 test('public phrase reader rejects invalid arguments before making a request', async () => {
