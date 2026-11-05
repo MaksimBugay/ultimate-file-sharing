@@ -87,7 +87,6 @@ function harness({legacy = false, mobileViewport = false, mobileDevice = false, 
         WaiterResponseType: {SUCCESS: 'success'}, delay: async () => {}
     });
     context.document.activeElement = element('body');
-    context.infoMsg = element('infoMsg');
     vm.runInContext(source, context);
     const run = code => vm.runInContext(code, context);
     const ready = () => {
@@ -290,6 +289,8 @@ test('clipboard files transfer to the selected receiver and preserve their names
 
 test('clipboard text passes through sanitization before transfer as a text file', async () => {
     const h = harness(); h.ready();
+    // A previous QR dialog must not leak into the transfer confirmation.
+    h.element('qrcode').innerHTML = '<img alt="Previous QR code" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%221%22 height=%221%22/%3E">';
     h.control.sanitize = text => { assert.equal(text, '<b>private note</b>'); return 'private note'; };
     await h.element('toolBarPasteArea').dispatch('paste', clipboardEvent([
         {kind: 'string', getAsString: callback => callback('<b>private note</b>')}
@@ -298,6 +299,9 @@ test('clipboard text passes through sanitization before transfer as a text file'
     assert.equal(await blob.text(), 'private note');
     assert.match(name, /^text-message-\d+\.txt$/);
     assert.equal(type, 'text/plain');
+    assert.equal(h.element('infoMsg').textContent, `File was successfully transferred: ${name}`);
+    assert.equal(h.element('infoDialog').classList.contains('visible'), true);
+    assert.equal(h.element('qrcode').innerHTML, '');
 });
 
 test('an active paste blocks overlapping paste and drop operations and releases the controls afterward', async () => {

@@ -361,6 +361,7 @@ const ownerQrCodeBtn = document.getElementById('ownerQrCodeBtn');
 const ownerQrCodeTitleBtn = document.getElementById("ownerQrCodeTitleBtn");
 const copyJointLinkBtn = document.getElementById("copyJointLinkBtn");
 const infoDialog = document.getElementById("infoDialog");
+const infoMsg = document.getElementById("infoMsg");
 const closeInfoBtn = document.getElementById("closeInfoBtn");
 
 if (!isMobile()) {
@@ -418,8 +419,10 @@ closeInfoBtn.addEventListener('click', function () {
 function showInfoMsg(msg, url = null) {
     infoMsg.textContent = msg;
     const qrCodeContainer = document.getElementById('qrcode');
-    if (url && qrCodeContainer) {
+    if (qrCodeContainer) {
         qrCodeContainer.innerHTML = '';
+    }
+    if (url && qrCodeContainer) {
         QRCode.toDataURL(url, {width: 200, height: 200}, (err, url) => {
             if (err) {
                 console.error('Failed to generate QR code:', err);
