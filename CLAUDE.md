@@ -26,6 +26,7 @@ CSS, served by nginx from `/data/nginx-pusher/data` on the server. The backend i
 | `file-sharing-embedded.html` | Current file-sharing app (upload → shareable link, password/CAPTCHA protection, expiry) | `file.sharing.min.js` bundle (source: `file-sharing-embedded.js` + commons, thumbnails, `binary-chunks-db.js`), `datetime-picker.js`, `url-input.js` |
 | `file-transfer-embedded.html` | Current device-to-device transfer app (virtual host / QR, paste, drag & drop) | `pushca.file-transfer.min.js` bundle (source: `transfer-site.js`, `transfer-commons.js`, `localization.js`, …), `file-transfer-embedded-theme.css` |
 | `file-transfer.html` | Older transfer page loading unminified sources | same sources as above |
+| `chat-room.html` | Channel chat (`?channelId=&accountId=&avatar=human-manager\|ai-agent`); joins or creates the channel | `pushca.min.js`, `pushca-channel.js`, `chat-room.js`, theme CSS + `chat-room.css` |
 | `remote-call.html` | Encrypted 1:1 video call | `pushca.min.js`, `remote-call-connection.js`, `remote-call-conversation.js`, `remote-call.js` |
 | `remote-call-channel.html` | Hidden iframe, one per media kind (`?kind=audio` or `?kind=video`) | `remote-call-channel.js` |
 | `public-binary*.html`, `public-content.html` | Viewer/downloader for a publicly shared file (optionally CAPTCHA-gated) | `shared-binary.js`, `public-binary.js`, `validate-human-token.js`, `similarity-captcha-integration.js` |
@@ -57,6 +58,9 @@ Other: `html/` header/footer/popup fragments, `privacy/`, `manual/` (user docs +
   (`transfer-verification::reveal::`) and both pages show an 8-digit code; after the sender confirms,
   the pages stay paired for the session. Transfer RSA keys are one non-extractable pair per page
   (`getTransferKeyPair` in `transfer-commons.js`).
+- `pushca-channel.js` — `PushcaChannel` sessions over the `PushcaClient` channel commands: join (Pushca
+  creates a missing channel on `ADD_MEMBERS_TO_CHANNEL`), de-duplicated history paging, presence, push
+  routing per channel; the avatar code travels in the `ClientFilter` JSON `deviceId` (as in free-comments).
 - `binary-chunks-db.js`, `credentials-db.js` — IndexedDB storage.
 - `thumbnail-*.js` — image/video/text thumbnails for shared files.
 - Vendored libraries (never edit): `fp.min.js`, `detect.min.js`, `client.min.js`,
