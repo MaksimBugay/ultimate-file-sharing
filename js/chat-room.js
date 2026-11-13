@@ -1,5 +1,7 @@
-// Chat room page: connects to Pushca as ?accountId=, joins ?channelId= (a missing channel is created) and renders
-// the conversation. ?avatar=ai-agent|human-manager (or ai|human) picks the avatar, human manager by default.
+// Chat room page: connects to Pushca as ?accountId=, joins ?channelId= and renders the conversation. A room given in
+// the link is never created: a missing one is reported. Only a new room entered in the setup dialog is created. ?avatar=ai-agent|human-manager (or ai|human) picks the avatar, human manager by default.
+// ?workspaceId= picks the Pushca workspace (secure-chat by default): a room only admits members of its own workspace,
+// e.g. comagents agent sessions use comagents-secure-chat.
 // Channel commands, history and member presence live in pushca-channel.js. The socket URL comes from the Pushca
 // REST open-connection endpoint (not the public WebSocket sign-in), and this page reconnects the same way.
 (() => {
@@ -7,7 +9,7 @@
 
     const OPEN_CONNECTION_URL = 'https://secure.fileshare.ovh/pushca/open-connection';
     const RECONNECT_DELAYS_MS = Object.freeze([1000, 2000, 5000, 10000, 30000]);
-    const WORKSPACE_ID = 'secure-chat';
+    const DEFAULT_WORKSPACE_ID = 'secure-chat';
     const APPLICATION_ID = 'CHAT_ROOM';
     const MAX_ID_LENGTH = 128;
     const GROUP_WINDOW_MS = 5 * 60 * 1000;
@@ -69,6 +71,8 @@
 
     let session = null;
     let joined = false;
+    // true only for a new room entered in the setup dialog; a room from the link must already exist
+    let allowCreate = false;
     let syncing = null;
     let resyncTimer = null;
     let reconnectTimer = null;
@@ -92,6 +96,7 @@
         const text = name => (params.get(name) || '').trim();
         const avatar = text('avatar').toLowerCase();
         return {
+            workspaceId: validId(text('workspaceId')) || DEFAULT_WORKSPACE_ID,
             channelId: validId(text('channelId')),
             accountId: validId(text('accountId')),
             avatar: AVATAR_ALIASES[avatar] || (Object.values(Avatar).includes(avatar) ? avatar : Avatar.HUMAN_MANAGER)
@@ -117,12 +122,21 @@
                 ui.setupAccountId.focus();
                 return;
             }
-            const query = new URLSearchParams({
+            const chosen = {
+                ...params,
                 channelId: validId(ui.setupChannelId.value.trim()) || crypto.randomUUID(),
                 accountId,
                 avatar: ui.setupForm.elements.avatar.value
-            });
-            window.location.search = query.toString();
+            };
+            const query = new URLSearchParams({channelId: chosen.channelId, accountId, avatar: chosen.avatar});
+            // keeps a non-default workspace from the link the dialog was opened with
+            if (params.workspaceId !== DEFAULT_WORKSPACE_ID) {
+                query.set('workspaceId', params.workspaceId);
+            }
+            // no reload: a reloaded page would treat the room as given in the link, which must already exist
+            window.history.replaceState(null, '', `?${query}`);
+            ui.setupDialog.hidden = true;
+            start(chosen, chosen.channelId !== params.channelId);
         });
     }
 
@@ -549,7 +563,7 @@
 
     async function runSync() {
         if (!joined) {
-            const result = await session.join();
+            const result = await session.join({allowCreate});
             joined = true;
             ui.channelCaption.textContent = `# ${session.channel.name}`;
             if (result.created) {
@@ -575,6 +589,10 @@
         if (!syncing) {
             syncing = runSync()
                 .catch(error => {
+                    if (error.code === PushcaChannel.CHANNEL_NOT_FOUND) {
+                        roomNotFound();
+                        return;
+                    }
                     console.error(error);
                     showToast('Could not open the chat room. Retrying…', true);
                     resyncTimer = window.setTimeout(() => {
@@ -631,8 +649,16 @@
         }
     }
 
-    function start(params) {
-        const member = PushcaChannel.createMember(WORKSPACE_ID, params.accountId, APPLICATION_ID, params.avatar);
+    // nothing to retry: the room has to be created by its owner first
+    function roomNotFound() {
+        ui.channelCaption.textContent = `# ${session.channel.id} · not found`;
+        addSystemNote(`Room “${session.channel.id}” does not exist. Check the link, or ask its owner to create it.`);
+        showToast('This room does not exist', true);
+    }
+
+    function start(params, createMissingRoom = false) {
+        allowCreate = createMissingRoom;
+        const member = PushcaChannel.createMember(params.workspaceId, params.accountId, APPLICATION_ID, params.avatar);
         session = PushcaChannel.open(params.channelId, member, {
             onMessage: renderLive,
             onMembersChange: renderMembers
@@ -735,13 +761,6 @@
 
     // ---------- start ----------
 
-    const params = readParams();
-    if (!enterSends) ui.input.enterKeyHint = 'enter';
-    if (!params.channelId || !params.accountId) {
-        showSetup(params);
-        return;
-    }
-    start(params);
     // Back online: retry now instead of waiting for the backoff delay.
     window.addEventListener('online', () => {
         if (!session || PushcaClient.isOpen()) return;
@@ -749,4 +768,12 @@
         reconnectTimer = null;
         void connect();
     });
+
+    const params = readParams();
+    if (!enterSends) ui.input.enterKeyHint = 'enter';
+    if (!params.channelId || !params.accountId) {
+        showSetup(params);
+    } else {
+        start(params);
+    }
 })();

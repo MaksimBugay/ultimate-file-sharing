@@ -5,7 +5,7 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(require.resolve('../js/chat-room.js'), 'utf8');
 const start = source.indexOf('    // Pushca registers the client');
-const end = source.indexOf('    function start(params)');
+const end = source.indexOf('    function start(params');
 assert.ok(start >= 0 && end > start, 'Connection functions not found in chat-room.js');
 const constants = source.match(/const OPEN_CONNECTION_URL[^\n]+\n\s+const RECONNECT_DELAYS_MS[^\n]+\n/)[0];
 

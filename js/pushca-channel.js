@@ -1,5 +1,6 @@
 // Channel chat sessions on top of the PushcaClient channel commands (pnotifications.js, callable-future.js).
-// A session joins one channel - Pushca creates a missing channel on the first ADD_MEMBERS_TO_CHANNEL - keeps a
+// A session joins one channel - Pushca creates a missing channel on the first ADD_MEMBERS_TO_CHANNEL, which join()
+// sends for a missing channel only when allowed to create it - keeps a
 // de-duplicated message log, pages through history and receives the CHANNEL_MESSAGE / CHANNEL_EVENT pushes of its
 // channel. Membership is per account (the filter without deviceId); a client announces its avatar in the JSON
 // deviceId that ClientFilter builds, the same way free-comments does.
@@ -26,6 +27,13 @@ const PushcaChannel = (() => {
 
     function createMember(workSpaceId, accountId, applicationId, avatar) {
         return new ClientFilter(workSpaceId, accountId, crypto.randomUUID(), applicationId, avatar);
+    }
+
+    // join() of a channel that does not exist, when not allowed to create it
+    const CHANNEL_NOT_FOUND = 'CHANNEL_NOT_FOUND';
+
+    function channelNotFound(channelId) {
+        return Object.assign(new Error(`Room ${channelId} does not exist`), {code: CHANNEL_NOT_FOUND});
     }
 
     // PushcaClient channel commands log failures and return null/false; parsing can also throw.
@@ -72,14 +80,18 @@ const PushcaChannel = (() => {
             return [...this.members.values()];
         }
 
-        // Adds the account to the channel unless it is a member already.
-        async join() {
+        // Adds the account to the channel unless it is a member already. A missing channel is created only with
+        // allowCreate; otherwise join() rejects with code CHANNEL_NOT_FOUND and sends nothing that could create it.
+        async join({allowCreate = false} = {}) {
             if (await this.loadInfo()) {
                 return {created: false, joined: false};
             }
             const publicInfo = await request(() => PushcaClient.getChannelsPublicInfo([this.channel.id]),
                 'Could not look up the channel');
             const existing = findChannel(publicInfo, this.channel.id);
+            if (!existing && !allowCreate) {
+                throw channelNotFound(this.channel.id);
+            }
             if (existing && existing.channel.name) {
                 this.channel = new PChannel(existing.channel.id, existing.channel.name);
             }
@@ -250,5 +262,5 @@ const PushcaChannel = (() => {
         return session;
     }
 
-    return {Avatar, EventType, avatarOf, createMember, open};
+    return {Avatar, EventType, CHANNEL_NOT_FOUND, avatarOf, createMember, open};
 })();

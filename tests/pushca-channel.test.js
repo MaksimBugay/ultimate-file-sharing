@@ -102,11 +102,26 @@ const commandNames = server => server.commands.map(entry => entry.command);
 
 test('joining a missing channel creates it with the account (without device) as member', async () => {
   const p = page();
-  same({ ...await p.session.join() }, { created: true, joined: true });
+  same({ ...await p.session.join({ allowCreate: true }) }, { created: true, joined: true });
   const add = p.server.commands.find(entry => entry.command === 'ADD_MEMBERS_TO_CHANNEL');
   same(add.args.channel, { id: 'room-1', name: 'room-1' });
   // ClientFilter.toJSON receives the array index from JSON.stringify, as in free-comments.
   same(add.args.filters, [{ workSpaceId: 'ws', accountId: 'anna', deviceId: null, applicationId: 'app', findAny: false }]);
+  assert.ok(p.server.channels.get('room-1').members.has('anna'));
+});
+
+test('a missing channel is never created unless allowed', async () => {
+  const p = page();
+  await assert.rejects(p.session.join(), error => error.code === p.PushcaChannel.CHANNEL_NOT_FOUND
+    && /Room room-1 does not exist/.test(error.message));
+  assert.ok(!commandNames(p.server).includes('ADD_MEMBERS_TO_CHANNEL'));
+  assert.ok(!p.server.channels.has('room-1'));
+});
+
+test('an existing channel is joined without being allowed to create one', async () => {
+  const p = page();
+  p.server.create('room-1', 'Support', ['bot']);
+  same({ ...await p.session.join() }, { created: false, joined: true });
   assert.ok(p.server.channels.get('room-1').members.has('anna'));
 });
 
@@ -164,7 +179,7 @@ test('pushes are routed to the session of their channel once; other channels rea
 
 test('a sent message echoed before the send response is reported as echoed, not delivered twice', async () => {
   const p = page();
-  await p.session.join();
+  await p.session.join({ allowCreate: true });
   const send = p.session.send('first line\nsecond line');
   p.incoming('room-1', 'm1', 'anna', 'first line\nsecond line'); // the push wins the race
   const result = await send;
